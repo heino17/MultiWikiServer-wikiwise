@@ -53,7 +53,7 @@ export class AuthState {
     cookieString.split(';').forEach(cookie => {
       const parts = cookie.split('=');
       if (parts.length >= 2) {
-        const key = parts[0].trim();
+        const key = parts[0]!.trim();
         const value = parts.slice(1).join('=').trim();
         this.cookies[key] = decodeURIComponent(value);
       }

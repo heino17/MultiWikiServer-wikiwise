@@ -59,6 +59,7 @@ export function recieveMultipartData(this: Router, request: StateObject<any, any
           const currentHeaders: IncomingHttpHeaders = {};
           headersPart.split("\r\n").forEach(headerLine => {
             const [key, value] = headerLine.split(": ");
+            ok(typeof key === "string");
             currentHeaders[key.toLowerCase()] = value;
           });
           // Parse the content disposition header
