@@ -1,7 +1,8 @@
 {
-  "name": "multiwiki2",
-  "version": "1.0.0",
+  "name": "tiddlywiki-multiwiki-server",
+  "version": "0.1.0",
   "main": "index.js",
+  "engines": {"node": ">14"},
   "scripts": {
     "start": "npx tsx src/server.ts"
   },
