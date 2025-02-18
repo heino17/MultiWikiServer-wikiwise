@@ -69,16 +69,10 @@ export default function AuthRoutes(parent: rootRoute) {
     }),
     path: /^\/register\/2/
   }, async (state) => {
+    const { username, registrationRecord } = state.data;
 
-    // still have to make this actually take the bodyFormat into account
-    ok(state.data instanceof URLSearchParams);
-    const username = state.data.get("username");
-    ok(typeof username === "string");
     const userIdentifier = userIdentifiers.get(username); // userId/email/username
     ok(typeof userIdentifier === "string");
-
-    const registrationRequest = state.data.get("registrationRequest");
-    ok(typeof registrationRequest === "string");
 
     registrationRecords.set(userIdentifier, state.data);
     return state.sendEmpty(200, {});
