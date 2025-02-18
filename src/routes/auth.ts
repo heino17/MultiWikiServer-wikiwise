@@ -40,18 +40,13 @@ export default function AuthRoutes(parent: rootRoute) {
     method: ["POST"],
     bodyFormat: "www-form-urlencoded-object",
     path: /^\/register\/1/,
-    zod: z.object({}),
-  }, async (state) => {
-    ok(state.isBodyFormat("www-form-urlencoded-object"));
-    const args = Object.fromEntries(state.data);
-    const { success } = z.object({
+    zod: z.object({
       username: z.string(),
       registrationRequest: z.string(),
-    }).safeParse(args);
-    z.object({})
-    if (!success) { return state.sendEmpty(400, {}); }
-
-    const { username, registrationRequest } = args;
+    }),
+  }, async (state) => {
+    // zod types are supposed to infer here
+    const { username, registrationRequest } = state.data;
 
     const userIdentifier = userIdentifiers.get(username);
     ok(typeof userIdentifier === "string");
@@ -70,7 +65,7 @@ export default function AuthRoutes(parent: rootRoute) {
     bodyFormat: "www-form-urlencoded-object",
     zod: z.object({
       username: z.string(),
-      registrationRequest: z.string(),
+      registrationRecord: z.string(),
     }),
     path: /^\/register\/2/
   }, async (state) => {
@@ -106,17 +101,17 @@ export default function AuthRoutes(parent: rootRoute) {
   authRoute.defineRoute({
     useACL: {},
     method: ["POST"],
-    bodyFormat: "www-form-urlencoded",
+    bodyFormat: "www-form-urlencoded-object",
+    zod: z.object({
+      username: z.string(),
+      startLoginRequest: z.string(),
+    }),
     path: /^\/login\/1/,
   }, async (state) => {
-    ok(state.data instanceof URLSearchParams);
-    const username = state.data.get("username");
-    ok(typeof username === "string");
-    const userIdentifier = userIdentifiers.get(username); // userId/email/username
-    ok(typeof userIdentifier === "string");
+    const { username, startLoginRequest } = state.data;
 
-    const startLoginRequest = state.data.get("startLoginRequest");
-    ok(typeof startLoginRequest === "string");
+    const userIdentifier = userIdentifiers.get(username);
+    ok(typeof userIdentifier === "string");
 
     const registrationRecord = await registrationRecords.get(userIdentifier);
 
@@ -135,16 +130,17 @@ export default function AuthRoutes(parent: rootRoute) {
   authRoute.defineRoute({
     useACL: {},
     method: ["POST"],
-    bodyFormat: "www-form-urlencoded",
+    bodyFormat: "www-form-urlencoded-object",
     path: /^\/login\/2/,
+    zod: z.object({
+      username: z.string(),
+      finishLoginRequest: z.string(),
+    }),
   }, async (state) => {
-    ok(state.data instanceof URLSearchParams);
-    const username = state.data.get("username");
-    ok(typeof username === "string");
+    const { username, finishLoginRequest } = state.data;
+
     const userIdentifier = userIdentifiers.get(username); // userId/email/username
     ok(typeof userIdentifier === "string");
-    const finishLoginRequest = state.data.get("finishLoginRequest");
-    ok(typeof finishLoginRequest === "string");
 
     const serverLoginState = userLoginStates.get(userIdentifier);
     ok(typeof serverLoginState === "string");
@@ -165,7 +161,13 @@ export default function AuthRoutes(parent: rootRoute) {
 }
 
 declare const serverSetup: string;
-async function* serverOPAQUE1(registrationRequest: string) {
+
+
+async function* OPAQUE1() {
+  // client
+  const password = "sup-krah.42-UOI"; // user password
+
+  const { clientRegistrationState, registrationRequest } = opaque.client.startRegistration({ password });
 
   // server
   const userIdentifier = "20e14cd8-ab09-4f4b-87a8-06d2e2e9ff68"; // userId/email/username
@@ -175,20 +177,6 @@ async function* serverOPAQUE1(registrationRequest: string) {
     userIdentifier,
     registrationRequest,
   });
-
-  const registrationRecord: string = yield registrationResponse;
-
-  return registrationRecord;
-
-}
-
-async function* clientOPAQUE1() {
-  // client
-  const password = "sup-krah.42-UOI"; // user password
-
-  const { clientRegistrationState, registrationRequest } = opaque.client.startRegistration({ password });
-
-  const registrationResponse: string = yield registrationRequest;
 
   // client
   const { registrationRecord } = opaque.client.finishRegistration({
@@ -202,7 +190,7 @@ async function* clientOPAQUE1() {
 }
 
 
-async function* serverOPAQUE2(registrationRecord: string) {
+async function* OPAQUE2(registrationRecord: string) {
   await opaque.ready;
   const serverSetup = opaque.server.createSetup();
   // client
@@ -234,11 +222,14 @@ async function* serverOPAQUE2(registrationRecord: string) {
   const { finishLoginRequest, sessionKey } = loginResult;
 
   // server
-
-  const { sessionKey: ssessionkey } = opaque.server.finishLogin({
+  // the server session key is only returned after verifying the client's response, 
+  // which validates that the client actually has the session key.
+  const { sessionKey: serversessionkey } = opaque.server.finishLogin({
     finishLoginRequest,
     serverLoginState,
   });
+
+  ok(sessionKey === serversessionkey);
 
 }
 

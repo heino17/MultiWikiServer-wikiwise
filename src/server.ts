@@ -1,4 +1,5 @@
 import * as http2 from 'node:http2';
+import * as opaque from "@serenity-kit/opaque";
 import send from 'send';
 import { Readable } from 'stream';
 import { createServer, IncomingMessage, Server, ServerResponse, IncomingHttpHeaders as NodeIncomingHeaders, OutgoingHttpHeaders } from 'node:http';
@@ -83,7 +84,7 @@ export class Streamer {
 
   readBody = () => new Promise<Buffer>((resolve: (chunk: Buffer) => void) => {
     const chunks: Buffer[] = [];
-    
+
     this.reader.on('data', chunk => chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk));
     this.reader.on('end', () => resolve(Buffer.concat(chunks)));
   });
@@ -259,16 +260,16 @@ function errorHandler(server: http2.Http2SecureServer | Server, port: any) {
   }
 }
 
-const { server } = new ListenerHTTPS(new Router(), readFileSync("./localhost.key"), readFileSync("./localhost.crt"));
-// const { server } = new ListenerHTTP(new Router());
-server.on('error', errorHandler(server, 5000));
-server.on('listening', listenHandler(server));
-server.listen(5000);
+async function setupServers(useHTTPS: boolean, port: number) {
+  // await lazy-loaded or async models
+  await opaque.ready;
 
-export function setupServers(router: Router, opts: ListenerOptions[]) {
-  return opts.map(e => {
-    const server = e.key && e.cert ? new ListenerHTTPS(router, e.key, e.cert) : new ListenerHTTP(router);
-    server.server.listen(e.port, e.hostname);
-    return server;
-  });
+  const { server } = useHTTPS
+    ? new ListenerHTTPS(new Router(), readFileSync("./localhost.key"), readFileSync("./localhost.crt"))
+    : new ListenerHTTP(new Router());
+  server.on('error', errorHandler(server, port));
+  server.on('listening', listenHandler(server));
+  server.listen(port);
 }
+
+setupServers(true, 5000);
