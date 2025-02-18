@@ -41,6 +41,7 @@ export class StateObject<B extends BodyFormat = BodyFormat, M extends AllowedMet
     B extends "buffer" ? Buffer :
     B extends "www-form-urlencoded" ? URLSearchParams :
     B extends "stream" ? Readable :
+    B extends "ignore" ? undefined :
     D;
   params: string[][];
   constructor(

@@ -43,9 +43,7 @@ export class Router {
       useACL: {},
       method: AllowedMethods,
       path: /^/,
-      // we can put handler stuff here if we want, but at the moment that's not necessary
-      handler: async (state: any) => state,
-    });
+    }, async (state: any) => state);
     RootRoute(this.rootRoute as rootRoute);
   }
 
@@ -80,11 +78,12 @@ export class Router {
     // anything that sends a response before this should have thrown, but just in case
     if (streamer.headersSent) return;
 
+    if (["GET", "HEAD"].includes(method)) state.bodyFormat = "ignore";
 
-    if (state.bodyFormat === "stream" || state.bodyFormat === "ignore" || ["GET", "HEAD"].includes(method)) {
+    if (state.bodyFormat === "stream" || state.bodyFormat === "ignore") {
       // this starts dumping bytes early, rather than letting node do it once the res finishes.
       // the only advantage is that it eases congestion on the socket.
-      if (state.bodyFormat === "ignore" || ["GET", "HEAD"].includes(method)) streamer.reader.resume();
+      if (state.bodyFormat === "ignore") streamer.reader.resume();
 
       return await this.handleRoute(state, routePath);
     }
@@ -205,7 +204,7 @@ export class Router {
 }
 
 
-interface RouteOptBase<B extends BodyFormat, M extends AllowedMethod[], R, Z extends z.ZodTypeAny> {
+interface RouteOptBase<B extends BodyFormat, M extends AllowedMethod[]> {
   /** The ACL options for this route. It is required to simplify updates, but could be empty by default */
   useACL: AuthStateRouteACL;
   /** 
@@ -218,16 +217,13 @@ interface RouteOptBase<B extends BodyFormat, M extends AllowedMethod[], R, Z ext
   /** 
    * The highest bodyformat in the chain always takes precedent. Type-wise, only one is allowed, 
    * but at runtime the first one found is the one used. 
+   * 
+   * Note that bodyFormat is completely ignored for GET and HEAD requests.
    */
   bodyFormat?: B;
-  /**
-   * If this route's handler sends headers, the matched child route will not be called.
-   */
-  handler: (state: StateObject<B, M[number], RouteMatch[], Z extends z.ZodTypeAny ? z.infer<Z> : undefined>) => Promise<R>
 
-  zod?: Z;
 }
-interface RouteOptAny extends RouteOptBase<BodyFormat, AllowedMethod[], any, any> { }
+interface RouteOptAny extends RouteOptBase<BodyFormat, AllowedMethod[]> { }
 
 export interface Route extends RouteDef<[BodyFormat | undefined, AllowedMethod[], any], any> { }
 
@@ -239,13 +235,33 @@ export interface RouteMatch<Params extends string[] = string[]> {
   remainingPath: string;
 }
 
+type DetermineRouteOptions<
+  P extends [
+    BodyFormat | undefined,
+    AllowedMethod[],
+    any
+  ]
+> = P extends [BodyFormat, AllowedMethod[], any]
+  ?
+  RouteOptBase<P[0], P[1]> & { bodyFormat?: undefined; }
+  :
+  P extends [undefined, AllowedMethod[], any]
+  ?
+  | { [K in BodyFormat]: RouteOptBase<K, P[1]> & { bodyFormat: K; }; }[BodyFormat]
+  | RouteOptBase<BodyFormat, P[1]> & { bodyFormat?: undefined; }
+  : never;
+
+
 interface RouteDef<P extends [BodyFormat | undefined, AllowedMethod[], any], PZ extends z.ZodTypeAny>
-  extends RouteOptBase<P[0] & {}, P[1], P[2], PZ> {
+  extends RouteOptBase<P[0] & {}, P[1]> {
 
+  zod?: PZ;
 
-  // the jsdoc comment doesn't show up here in VSCode, so I put it on each overload. annoying!
-  defineRoute:
-  P extends [BodyFormat, AllowedMethod[], any] ?
+  /**
+   * If this route's handler sends headers, the matched child route will not be called.
+   */
+  handler: (state: StateObject<P[0] & {}, P[1][number], RouteMatch[], z.infer<PZ>>) => Promise<P[2]>
+
   /**
    * ### ROUTING
    *
@@ -263,71 +279,52 @@ interface RouteDef<P extends [BodyFormat | undefined, AllowedMethod[], any], PZ 
    * 
    * Note that GET and HEAD are always bodyFormat: "ignore", regardless of what is set here.
    */
-  <R, Z extends z.ZodTypeAny, T extends RouteOptBase<P[0], P[1], R, Z> & { bodyFormat?: undefined }>(
-    route: T
-  ) => RouteDef<[P[0], T["method"], R], T["zod"] & {}>
-
-  : P extends [undefined, AllowedMethod[], any] ? {
-    /**
-     * ### ROUTING
-     *
-     * @param route The route definition.
-     *
-     * If the parent route sends headers, or returns the STREAM_ENDED symbol, 
-     * this route will not be called.
-     *
-     * Inner routes are matched on the remaining portion of the parent route
-     * using `pathname.slice(match[0].length)`. If the parent route entirely 
-     * matches the pathname, this route will be matched on "/".
-     * 
-     * If the body format is "stream", "buffer", "ignore" or not yet defined at this level in the tree,
-     * then zod cannot be used. 
-     * 
-     * Note that GET and HEAD are always bodyFormat: "ignore", regardless of what is set here.
-     */
-    <R, Z extends z.ZodTypeAny, K extends BodyFormat, T extends RouteOptBase<K, P[1], R, Z> & { bodyFormat: K }>(
-      route: T
-    ): RouteDef<[T["bodyFormat"], T["method"], R], T["zod"] & {}>
-    // <R, Z extends z.ZodTypeAny, T extends {
-    //   [K in BodyFormat]: RouteOptBase<K, P[1], R, Z> & { bodyFormat: K, zod?: Z }
-    // }[BodyFormat]>(
-    //   route: T
-    // ): RouteDef<[T["bodyFormat"], T["method"], R], T["zod"]>
-    /**
-     * ### ROUTING
-     *
-     * @param route The route definition.
-     *
-     * If the parent route sends headers, or returns the STREAM_ENDED symbol, 
-     * this route will not be called.
-     *
-     * Inner routes are matched on the remaining portion of the parent route
-     * using `pathname.slice(match[0].length)`. If the parent route entirely 
-     * matches the pathname, this route will be matched on "/".
-     * 
-     * If the body format is "stream", "buffer", "ignore" or not yet defined at this level in the tree,
-     * then zod cannot be used. 
-     * 
-     * Note that GET and HEAD are always bodyFormat: "ignore", regardless of what is set here.
-     */
-    <R, T extends RouteOptBase<BodyFormat, P[1], R, never> & { bodyFormat?: undefined }>(
-      route: T
-    ): RouteDef<[undefined, T["method"], R], never>
-
-  }
-
-  : never;
+  defineRoute: <R, Z extends z.ZodTypeAny,
+    T extends DetermineRouteOptions<P> & { zod?: Z }
+  >(
+    route: T,
+    handler: (state: StateObject<
+      // if the route only specifies "GET" and/or "HEAD", then the bodyFormat can only be "ignore"
+      (Exclude<T["method"][number], "GET" | "HEAD"> extends never ? never : (
+        // parent route specified bodyFormat?
+        P[0] extends BodyFormat ? P[0] :
+        // this route specified bodyFormat?
+        T["bodyFormat"] extends BodyFormat ? T["bodyFormat"] :
+        // otherwise it could be anything
+        BodyFormat
+      )) | (
+        // GET and HEAD requests imply "ignore"
+        T["method"][number] extends "GET" | "HEAD" ? "ignore" : never
+      ),
+      // HTTP method
+      T["method"][number],
+      // possible placeholder for declaring routes
+      RouteMatch[],
+      // infer zod, if set for this route
+      z.infer<Z>
+    >) => Promise<R>
+  ) =>
+    P[0] extends BodyFormat ? RouteDef<[P[0], T["method"], R], Z> :
+    T["bodyFormat"] extends BodyFormat ? RouteDef<[T["bodyFormat"], T["method"], R], Z> :
+    RouteDef<[undefined, T["method"], R], never>
 
   $o?: P;
 }
 
 
+function test<T extends z.ZodTypeAny>(schema: { schema: T }): T {
+  return schema.schema;
+}
+const test1 = test({ schema: z.object({ test: z.string() }) })
+type t1 = typeof test1;
+type t2 = z.infer<t1>;
 
 const ROOT_ROUTE: unique symbol = Symbol("ROOT_ROUTE");
 
 function defineRoute(
   parent: { $o?: any, method: any } | typeof ROOT_ROUTE,
-  route: RouteOptAny
+  route: RouteOptAny,
+  handler: (state: any) => any,
 ) {
 
   if (route.bodyFormat && !BodyFormats.includes(route.bodyFormat))
@@ -343,7 +340,9 @@ function defineRoute(
     (parent as any).childRoutes.push(route);
   }
 
-  (route as any).defineRoute = defineRoute.bind(null, route)
+  (route as any).defineRoute = (...args: [any, any]) => defineRoute(route, ...args)
+
+    (route as any).handler = handler;
 
   return route as any; // this is usually ignored except for the root route.
 }
@@ -355,9 +354,8 @@ function testroute(root: rootRoute) {
     path: /^test/,
     method: ["GET", "POST"],
     bodyFormat: undefined,
-    handler: async state => {
-      const test: BodyFormat = state.bodyFormat;
-    },
+  }, async state => {
+    const test: BodyFormat = state.bodyFormat;
   });
 
   const test2_2 = test1.defineRoute({
@@ -366,11 +364,10 @@ function testroute(root: rootRoute) {
     bodyFormat: "www-form-urlencoded-object",
     method: ["POST"],
     zod: z.object({ test: z.string() }),
-    handler: async state => {
+  }, async state => {
 
 
-    }
-  })
+  });
 
   const test2 = test1.defineRoute({
     useACL: {},
@@ -378,16 +375,16 @@ function testroute(root: rootRoute) {
     bodyFormat: "string",
     method: ["GET"],
     zod: z.string(),
-    handler: async state => {
-      // // @ts-expect-error because we didn't include "string"
-      // const test: Exclude<BodyFormat, "string"> = state.bodyFormat;
-      // // no error here if bodyFormat is correctly typed
-      // const test2: "string" = state.bodyFormat
-      // // @ts-expect-error because it should be "string"
-      // state.isBodyFormat("buffer");
-      // // this should never be an error unless something is really messed up
-      // state.isBodyFormat("string");
-    },
+    // handler: ,
+  }, async (state) => {
+    //@ts-expect-error because we didn't include "string"
+    const test: Exclude<BodyFormat, "ignore"> = state.bodyFormat;
+    // no error here if bodyFormat is correctly typed
+    const test2: "ignore" = state.bodyFormat
+    // @ts-expect-error because it should be "string"
+    state.isBodyFormat("buffer");
+    // this should never be an error unless something is really messed up
+    state.isBodyFormat("ignore");
   });
 
   const test3 = test2.defineRoute({
@@ -397,15 +394,50 @@ function testroute(root: rootRoute) {
     // // @ts-expect-error because it's already been defined by the parent
     // bodyFormat: "buffer",
     zod: z.string(),
-    handler: async state => {
-      // //@ts-expect-error because we didn't include "string"
-      // const test: Exclude<BodyFormat, "string"> = state.bodyFormat;
-      // // no error here if bodyFormat is correctly typed
-      // const test2: "string" = state.bodyFormat
-      // // @ts-expect-error because it should be "string"
-      // state.isBodyFormat("buffer");
-      // // this should never be an error unless something is really messed up
-      // state.isBodyFormat("string");
-    },
+  }, async (state) => {
+    //@ts-expect-error because we didn't include "string"
+    const test: Exclude<BodyFormat, "ignore"> = state.bodyFormat;
+    // no error here if bodyFormat is correctly typed
+    const test2: "ignore" = state.bodyFormat
+    // @ts-expect-error because it should be "string"
+    state.isBodyFormat("buffer");
+    // this should never be an error unless something is really messed up
+    state.isBodyFormat("ignore");
+  })
+
+  const test2post = test1.defineRoute({
+    useACL: {},
+    path: /^test/,
+    bodyFormat: "string",
+    method: ["POST"],
+    zod: z.string(),
+    // handler: ,
+  }, async (state) => {
+    // @ts-expect-error because we didn't include "string"
+    const test: Exclude<BodyFormat, "string"> = state.bodyFormat;
+    // no error here if bodyFormat is correctly typed
+    const test2: "string" = state.bodyFormat
+    // @ts-expect-error because it should be "string"
+    state.isBodyFormat("buffer");
+    // this should never be an error unless something is really messed up
+    state.isBodyFormat("string");
+  });
+
+  const test3post = test2post.defineRoute({
+    useACL: {},
+    path: /^test/,
+    method: ["POST"],
+    // // @ts-expect-error because it's already been defined by the parent
+    // bodyFormat: "buffer",
+    zod: z.string(),
+  }, async (state) => {
+    // @ts-expect-error because we didn't include "string"
+    const test: Exclude<BodyFormat, "string"> = state.bodyFormat;
+    // no error here if bodyFormat is correctly typed
+    const test2: "string" = state.bodyFormat
+    // @ts-expect-error because it should be "string"
+    state.isBodyFormat("buffer");
+    // this should never be an error unless something is really messed up
+    state.isBodyFormat("string");
   })
 }
