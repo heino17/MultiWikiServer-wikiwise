@@ -2,19 +2,17 @@
   "compilerOptions": {
     /* Visit https://aka.ms/tsconfig to read more about this file */
     "types": [
-      "node"
+      "node",
     ],
     "lib": [
       "es2020"
     ],
     "target": "es2020", /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
-    // "lib": [],                                        /* Specify a set of bundled library declaration files that describe the target runtime environment. */
     // "experimentalDecorators": true,                   /* Enable experimental support for legacy experimental decorators. */
     // "emitDecoratorMetadata": true,                    /* Emit design-type metadata for decorated declarations in source files. */
     // "noLib": true,                                    /* Disable including any library files, including the default lib.d.ts. */
     // "useDefineForClassFields": true,                  /* Emit ECMAScript-standard-compliant class fields. */
     "module": "commonjs", /* Specify what module code is generated. */
-    // "types": [],                                      /* Specify type package names to be included without being referenced in a source file. */
     // "resolveJsonModule": true,                        /* Enable importing .json files. */
     /* Emit */
     // "declaration": true,                              /* Generate .d.ts files from TypeScript and JavaScript files in your project. */

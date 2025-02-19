@@ -1,6 +1,6 @@
 import { Readable } from 'stream';
 import { recieveMultipartData as readMultipartData, sendResponse } from './helpers';
-import { Streamer } from './server';
+import { STREAM_ENDED, Streamer } from './server';
 import { AuthState } from './AuthState';
 import { PassThrough } from 'node:stream';
 import { AllowedMethod, BodyFormat, RouteMatch, Router } from './router';
@@ -79,7 +79,17 @@ export class StateObject<B extends BodyFormat = BodyFormat, M extends AllowedMet
   isBodyFormat<T extends B, S extends { [K in B]: StateObject<K, M, R, D> }[T]>(format: T): this is S {
     return this.bodyFormat as BodyFormat === format;
   }
-
+  /**
+   *
+   * - **301 Moved Permanently:** The resource has been permanently moved to a new URL.
+   * - **302 Found:** The resource is temporarily located at a different URL.
+   * - **303 See Other:** Fetch the resource from another URI using a GET request.
+   * - **307 Temporary Redirect:** The resource is temporarily located at a different URL; the same HTTP method should be used.
+   * - **308 Permanent Redirect:** The resource has permanently moved; the client should use the new URL in future requests.
+   */
+  redirect(statusCode: number, location: string): typeof STREAM_ENDED {
+    return this.sendEmpty(statusCode, { 'Location': location });
+  }
 
   sendSSE(retryMilliseconds: number) {
     if (typeof retryMilliseconds !== "number" || retryMilliseconds < 0)

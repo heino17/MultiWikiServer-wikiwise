@@ -2,3 +2,5 @@ node_modules
 scratch
 localhost.*
 src/oldroutes
+oldtwserver
+multiwikiserver

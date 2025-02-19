@@ -2,7 +2,9 @@
   "name": "tiddlywiki-multiwiki-server",
   "version": "0.1.0",
   "main": "index.js",
-  "engines": {"node": ">14"},
+  "engines": {
+    "node": ">14"
+  },
   "scripts": {
     "start": "npx tsx src/server.ts"
   },
@@ -11,8 +13,10 @@
     "@types/mime-types": "^2.1.4",
     "@types/node": "^22.13.1",
     "@types/send": "^0.17.4",
+    "@types/tiddlywiki": "npm:tw5-typed@^0.5.14",
     "mime-types": "^2.1.35",
     "send": "^1.1.0",
+    "tiddlywiki": "^5.3.6",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "zod": "^3.24.2"

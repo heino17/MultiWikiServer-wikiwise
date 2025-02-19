@@ -6,6 +6,7 @@ import RootRoute from "./routes";
 import * as z from "zod";
 import { is } from "./helpers";
 
+
 export const AllowedMethods = [...["GET", "HEAD", "OPTIONS", "POST", "PUT", "DELETE"] as const];
 export type AllowedMethod = typeof AllowedMethods[number];
 
@@ -26,8 +27,8 @@ const zodJSON = (arg: string, ctx: z.RefinementCtx) => {
   }
 };
 
-
 export class Router {
+
   pathPrefix: string = "";
   enableBrowserCache: boolean = true;
   enableGzip: boolean = true;
@@ -37,14 +38,17 @@ export class Router {
   get(name: string): string {
     return this.variables.get(name) || "";
   }
-  rootRoute: Route;
+
+
+
+  rootRoute: rootRoute;
   constructor() {
     this.rootRoute = defineRoute(ROOT_ROUTE, {
       useACL: {},
       method: AllowedMethods,
       path: /^/,
     }, async (state: any) => state);
-    RootRoute(this.rootRoute as rootRoute);
+    RootRoute(this, this.rootRoute as rootRoute);
   }
 
   async handle(streamer: Streamer) {
@@ -63,7 +67,8 @@ export class Router {
     // Optionally output debug info
     // if (this.get("debug-level") !== "none") {
     console.log("Request path:", JSON.stringify(streamer.url));
-    console.log("Request headers:", JSON.stringify(streamer.headers));
+    routePath.forEach(e => console.log("Matched route:", e.route.path.source));
+    // console.log("Request headers:", JSON.stringify(streamer.headers));
     console.log(authState.toDebug());
     // }
 
@@ -198,7 +203,7 @@ export class Router {
     let testPath = url.pathname || "/";
     if (this.pathPrefix && testPath.startsWith(this.pathPrefix))
       testPath = testPath.slice(this.pathPrefix.length) || "/";
-    return this.findRouteRecursive([this.rootRoute], testPath, method);
+    return this.findRouteRecursive([this.rootRoute as Route], testPath, method);
   }
 
 }
@@ -221,6 +226,8 @@ interface RouteOptBase<B extends BodyFormat, M extends AllowedMethod[]> {
    * Note that bodyFormat is completely ignored for GET and HEAD requests.
    */
   bodyFormat?: B;
+
+  zod?: z.ZodTypeAny;
 
 }
 interface RouteOptAny extends RouteOptBase<BodyFormat, AllowedMethod[]> { }
@@ -249,13 +256,11 @@ type DetermineRouteOptions<
   ?
   | { [K in BodyFormat]: RouteOptBase<K, P[1]> & { bodyFormat: K; }; }[BodyFormat]
   | RouteOptBase<BodyFormat, P[1]> & { bodyFormat?: undefined; }
-  : never;
+  : never;// RouteOptBase<BodyFormat, P[1]>;
 
 
 interface RouteDef<P extends [BodyFormat | undefined, AllowedMethod[], any], PZ extends z.ZodTypeAny>
   extends RouteOptBase<P[0] & {}, P[1]> {
-
-  zod?: PZ;
 
   /**
    * If this route's handler sends headers, the matched child route will not be called.
@@ -340,9 +345,9 @@ function defineRoute(
     (parent as any).childRoutes.push(route);
   }
 
-  (route as any).defineRoute = (...args: [any, any]) => defineRoute(route, ...args)
+  (route as any).defineRoute = (...args: [any, any]) => defineRoute(route, ...args);
 
-    (route as any).handler = handler;
+  (route as any).handler = handler;
 
   return route as any; // this is usually ignored except for the root route.
 }

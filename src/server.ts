@@ -70,9 +70,7 @@ export class Streamer {
     console.error(tag, error);
   }
 
-  redirect(statusCode: number, location: string): typeof STREAM_ENDED {
-    return this.sendEmpty(statusCode, { 'Location': location });
-  }
+
 
 
 
@@ -202,6 +200,7 @@ class ListenerHTTPS {
       req: IncomingMessage | http2.Http2ServerRequest,
       res: ServerResponse | http2.Http2ServerResponse
     ) => {
+      console.log("request");
       const streamer = new Streamer(req, res, router);
       router.handle(streamer).catch(streamer.catcher);
     });
@@ -269,7 +268,7 @@ async function setupServers(useHTTPS: boolean, port: number) {
     : new ListenerHTTP(new Router());
   server.on('error', errorHandler(server, port));
   server.on('listening', listenHandler(server));
-  server.listen(port);
+  server.listen(port, "::");
 }
 
 setupServers(true, 5000);

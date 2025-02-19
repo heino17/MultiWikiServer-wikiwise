@@ -1,10 +1,10 @@
 import { ok } from "assert";
-import { rootRoute } from "../router";
+import { rootRoute, Router } from "../router";
 import * as opaque from "@serenity-kit/opaque";
 import { z } from "zod";
 
 
-export default function AuthRoutes(parent: rootRoute) {
+export default function AuthRoutes(router: Router, parent: rootRoute) {
 
   const authRoute = parent.defineRoute({
     useACL: {},
