@@ -1,14 +1,17 @@
 # MultiWikiServer
 MultiWikiServer for TiddlyWiki
 
-### Testing
+### How to run
 
 - Clone the repo
 - `npm install`
 - `npm start`
 
-Then navigate to https://localhost:5000/test/, which currently just 
-forwards requests to a loaded instance of the TiddlyWiki server.
-Changes should sync to the editions/mws-server folder.
+### New server
 
+The main server instance runs on port 5000. The code for it is at the end of `src/server.ts`.
+
+### Old server
+
+The old `npm start` runs on port 5001. This will go away eventually but it's still there for easy reference while we transfer everything over. The code for this is in `src/routes/tw-test.ts`.
 

@@ -3,4 +3,5 @@ scratch
 localhost.*
 src/oldroutes
 oldtwserver
-multiwikiserver
+editions/mws/store
+editions/mws/tiddlers
