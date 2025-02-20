@@ -13,9 +13,12 @@
     "mws-add-user": "exit 1 && tiddlywiki ./editions/multiwikiserver --build load-mws-demo-data --mws-listen --build mws-add-user --quit",
     "test": "exit 1 && npm run build:test-edition && npm run test:multiwikiserver-edition",
     "lint:fix": "exit 1 && eslint . --fix",
-    "lint": "exit 1 && eslint ."
+    "lint": "exit 1 && eslint .",
+    "jsc": "tsc -p jsconfig.json --noEmit"
+
   },
   "dependencies": {
+    "@prisma/client": "^6.4.0",
     "@serenity-kit/opaque": "^0.8.4",
     "@types/mime-types": "^2.1.4",
     "@types/node": "^22.13.1",
@@ -23,6 +26,7 @@
     "@types/tiddlywiki": "npm:tw5-typed@^0.5.14",
     "better-sqlite3": "^11.8.1",
     "mime-types": "^2.1.35",
+    "prisma": "^6.4.0",
     "send": "^1.1.0",
     "tiddlywiki": "^5.3.6",
     "tsx": "^4.19.2",
