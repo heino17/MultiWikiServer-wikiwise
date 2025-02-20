@@ -1,3 +1,4 @@
+import "../jsglobal";
 import * as http2 from 'node:http2';
 import * as opaque from "@serenity-kit/opaque";
 import send from 'send';

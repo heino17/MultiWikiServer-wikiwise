@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ES2022",
+    "jsx": "react",
+    "allowImportingTsExtensions": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "checkJs": true,
+    "allowJs": true,
+    "types":["node"],
+    "paths":{
+      "$:/plugins/tiddlywiki/multiwikiserver/auth/*": [
+        "./src/auth/*"
+      ],
+      "$:/plugins/tiddlywiki/multiwikiserver/routes/*": [
+        "./src/routes/*"
+      ],
+    }
+  },
+  "include":[
+    "./src/routes/handlers/*.js",
+    "./jsglobal.d.ts"
+  ]
+}

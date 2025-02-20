@@ -5,6 +5,7 @@ import { AuthState } from './AuthState';
 import { PassThrough } from 'node:stream';
 import { AllowedMethod, BodyFormat, RouteMatch, Router } from './router';
 import { z } from 'zod';
+import { SqlTiddlerStore } from './store/sql-tiddler-store';
 
 // This class abstracts the request/response cycle into a single object.
 // It hides most of the details from the routes, allowing us to easily change the underlying server implementation.
@@ -44,6 +45,9 @@ export class StateObject<B extends BodyFormat = BodyFormat, M extends AllowedMet
     B extends "ignore" ? undefined :
     D;
   params: string[][];
+
+  store!: SqlTiddlerStore;
+
   constructor(
     private streamer: Streamer,
     /** The array of Route tree nodes the request matched. */
