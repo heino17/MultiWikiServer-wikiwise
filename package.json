@@ -6,7 +6,14 @@
     "node": ">14"
   },
   "scripts": {
-    "start": "npx tsx src/server.ts"
+    "start": "npx tsx src/server.ts",
+    "start-mws": "exit 1 && tiddlywiki ./editions/multiwikiserver --mws-load-plugin-bags --build load-mws-demo-data --mws-listen",
+    "build:test-edition": "exit 1 && tiddlywiki ./editions/test --verbose --version --build index",
+    "test:multiwikiserver-edition": "exit 1 && tiddlywiki ./editions/multiwikiserver/ --build load-mws-demo-data --mws-listen --mws-test-server http://127.0.0.1:8080/ --quit",
+    "mws-add-user": "exit 1 && tiddlywiki ./editions/multiwikiserver --build load-mws-demo-data --mws-listen --build mws-add-user --quit",
+    "test": "exit 1 && npm run build:test-edition && npm run test:multiwikiserver-edition",
+    "lint:fix": "exit 1 && eslint . --fix",
+    "lint": "exit 1 && eslint ."
   },
   "dependencies": {
     "@serenity-kit/opaque": "^0.8.4",
@@ -14,6 +21,7 @@
     "@types/node": "^22.13.1",
     "@types/send": "^0.17.4",
     "@types/tiddlywiki": "npm:tw5-typed@^0.5.14",
+    "better-sqlite3": "^11.8.1",
     "mime-types": "^2.1.35",
     "send": "^1.1.0",
     "tiddlywiki": "^5.3.6",
