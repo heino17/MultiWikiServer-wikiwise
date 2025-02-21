@@ -1,5 +1,13 @@
 # MultiWikiServer
-MultiWikiServer for TiddlyWiki
+
+MultiWikiServer for TiddlyWiki. 
+
+At the moment, we're in the process of converting the code in the TiddlyWiki5:multi-wiki-support branch
+
+- Converting to TypeScript
+- Converting to Prisma
+- Converting to async concurrency.
+- Bug fixes and deduplication.
 
 ### How to run
 
