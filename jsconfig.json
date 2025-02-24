@@ -21,7 +21,7 @@
     }
   },
   "include":[
-    "./src/routes/handlers/*.js",
+    "./src/routes/handlers/**/*.js",
     "./jsglobal.d.ts",
     "./src/global.ts",
   ]

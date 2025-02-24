@@ -1,4 +1,4 @@
-import { readdirSync } from "fs";
+import { readdirSync, statSync } from "fs";
 import { rootRoute, Router } from "../router";
 import AuthRoutes from "./auth";
 import { TWRoutes } from "./tw-test";
@@ -13,11 +13,17 @@ import { TWRoutes } from "./tw-test";
 export default async function RootRoute(root: rootRoute) {
   // AuthRoutes(root);
   // TWRoutes(root);
-
-  await Promise.all(readdirSync("src/routes/handlers").map(async (file) => {
-    (await import(`./handlers/${file}`).then(e => {
-      if(!e.route) console.error(`No route defined in ${file}`);
-      return e;
-    })).route(root);
+  await importDir(root, 'handlers');
+}
+async function importDir(root: rootRoute, folder: string) {
+  await Promise.all(readdirSync(`src/routes/${folder}`).map(async (item) => {
+    const stat = statSync(`src/routes/${folder}/${item}`);
+    if (stat.isFile()) {
+      const e = await import(`./${folder}/${item}`);
+      if (!e.route) throw new Error(`No route defined in ${item}`);
+      e.route(root);
+    } else if (stat.isDirectory()) {
+      await importDir(root, `${folder}/${item}`);
+    }
   }));
 }

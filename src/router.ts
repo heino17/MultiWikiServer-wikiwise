@@ -67,7 +67,6 @@ export class Router {
     ];
     await new Promise<void>(resolve => $tw.boot.boot(resolve));
     (global as any).$tw = $tw;
-    console.log($tw.wiki.isShadowTiddler("$:/plugins/tiddlywiki/multiwikiserver/system-files/styles.css"));
     return new Router(rootRoute, $tw);
   }
 
@@ -84,7 +83,7 @@ export class Router {
 
     // Optionally output debug info
     console.log("Request path:", JSON.stringify(streamer.url));
-    routePath.forEach(e => console.log("Matched route:", e.route.path.source));
+    console.log("Matched route:", routePath[routePath.length - 1]?.route.path.source)
 
     // if no bodyFormat is specified, we default to "buffer" since we do still need to recieve the body
     const bodyFormat = routePath.find(e => e.route.bodyFormat)?.route.bodyFormat || "buffer";

@@ -237,7 +237,6 @@ class ListenerHTTPS {
       req: IncomingMessage | http2.Http2ServerRequest,
       res: ServerResponse | http2.Http2ServerResponse
     ) => {
-      console.log("request");
       const streamer = new Streamer(req, res, router);
       router.handle(streamer).catch(streamer.catcher);
     });
