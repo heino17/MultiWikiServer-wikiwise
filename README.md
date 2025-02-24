@@ -15,11 +15,6 @@ At the moment, we're in the process of converting the code in the TiddlyWiki5:mu
 - `npm install`
 - `npm start`
 
-### New server
+The server runs on port 5000, wildcard host. The entry point is at the end of `src/server.ts`.
 
-The main server instance runs on port 5000. The code for it is at the end of `src/server.ts`.
-
-### Old server
-
-The old `npm start` runs on port 5001. This will go away eventually but it's still there for easy reference while we transfer everything over. The code for this is in `src/routes/tw-test.ts`.
-
+At this commit, the server is running with the new routes and they are calling the old `store` and `store.adminWiki`. 
