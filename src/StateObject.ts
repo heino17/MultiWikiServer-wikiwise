@@ -3,8 +3,13 @@ import { createStrictAwaitProxy, processIncomingStream, readMultipartData, sendR
 import { STREAM_ENDED, Streamer } from './server';
 import { PassThrough } from 'node:stream';
 import { AllowedMethod, BodyFormat, RouteMatch, Router } from './router';
-import { SqlTiddlerStore } from './store/sql-tiddler-store';
+import { SqlTiddlerStore } from './store/new-sql-tiddler-store';
 import * as z from 'zod';
+import * as crypto from "crypto";
+import { SqlTiddlerDatabase } from './store/new-sql-tiddler-database';
+import { resolve } from 'node:path';
+import { Prisma, PrismaClient } from '@prisma/client';
+import { DefaultArgs } from '@prisma/client/runtime/library';
 
 const authLevelNeededForMethod: Record<AllowedMethod, "readers" | "writers" | undefined> = {
   "GET": "readers",
@@ -120,6 +125,10 @@ export class StateObject<
   firstGuestUser: boolean = false;
   store!: SqlTiddlerStore;
   auth: Authenticator;
+  databasePath
+  attachmentStore
+  adminWiki
+  engine
   constructor(
     private streamer: Streamer,
     /** The array of Route tree nodes the request matched. */
@@ -128,7 +137,26 @@ export class StateObject<
     public bodyFormat: B,
     private router: Router
   ) {
-    this.store = this.router.$tw.mws.store;
+    // this.store = this.router.$tw.mws.store;
+    this.databasePath = resolve(this.router.$tw.boot.wikiPath, "store/database.sqlite");
+    this.attachmentStore = this.router.$tw.mws.store.attachmentStore;
+    this.adminWiki = this.router.$tw.wiki;
+
+    this.engine = new PrismaClient<{ datasourceUrl: string }, never, {
+      result: {
+        [T in Prisma.ModelName]: {
+          [K in keyof PrismaPayloadScalars<T>]: () => {
+            compute: () => PrismaField<T, K>
+          }
+        }
+      },
+      client: {},
+      model: {},
+      query: {},
+    }>({ datasourceUrl: "file:" + this.databasePath });
+
+    this.store = this.createStore(this.engine);
+
 
     this.readBody = this.streamer.readBody.bind(this.streamer);
     this.readMultipartData = readMultipartData.bind(this);
@@ -165,6 +193,17 @@ export class StateObject<
     this.authLevelNeeded = authLevelNeededForMethod[this.streamer.method] ?? "writers";
     this.authorizationType = this.authLevelNeeded;
 
+  }
+
+  createStore(engine: PrismaTxnClient) {
+    const sql = createStrictAwaitProxy(new SqlTiddlerDatabase(engine, this.$transaction));
+    return createStrictAwaitProxy(new SqlTiddlerStore(sql, this.attachmentStore, this.adminWiki));
+  }
+
+  $transaction = async <T>(fn: (store: SqlTiddlerStore) => Promise<T>): Promise<T> => {
+    return await this.engine.$transaction(async prisma => {
+      return await fn(this.createStore(prisma as PrismaTxnClient));
+    });
   }
 
   public cookies: Record<string, string | undefined>;
@@ -416,8 +455,7 @@ export class StateObject<
 
   };
 }
-import * as crypto from "crypto";
-import { okType } from './store/sql-tiddler-database';
+
 export class Authenticator {
   sqlTiddlerDatabase;
   constructor(state: StateObject) {

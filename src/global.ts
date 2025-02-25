@@ -6,13 +6,40 @@ import * as assert from "assert";
 import "../jsglobal";
 import { Prisma } from "@prisma/client";
 
-type PrismaPayload<T extends PrismaTables> = Prisma.TypeMap["model"][T]["payload"];
+(global as any).asPrismaKey = function (table: string, field: string, value: any) { };
 
+// type PrismaPayload<T extends Prisma.ModelName> = Prisma.TypeMap["model"][T]["payload"];
 declare global {
-  type PrismaTables = Prisma.ModelName
-  type PrismaField<T extends PrismaTables, K extends keyof PrismaPayload<T>["scalars"]> = PrismaPayload<T>["scalars"][K] & { __prisma_table: T, __prisma_field: K }
+
+  /** 
+   * If you assign values like `5 as PrismaField<"bags", "bag_name">`, 
+   * this will result in a type error on the as keyword, 
+   * allowing you to catch incorrect types quickly.
+  */
+  type PrismaField<T extends Prisma.ModelName, K extends keyof PrismaPayloadScalars<T>>
+    // =PrismaPayloadScalars<T>[K] & { __prisma_table: T, __prisma_field: K }
+    = (PrismaPayloadScalars<T>[K] & { __prisma_table: T, __prisma_field: K })
+    | (null extends PrismaPayloadScalars<T>[K] ? null : never);
+  type PrismaPayloadScalars<T extends Prisma.ModelName>
+    = Prisma.TypeMap["model"][T]["payload"]["scalars"]
+
+  type PrismaKey<T extends Prisma.ModelName, K extends keyof PrismaPayloadScalars<T>, V> =
+    V extends (infer X) & { __prisma_table: any, __prisma_field: any } ? X & PrismaField<T, K> : never;
+
+  /** 
+   * Accepts any value that matches the specified field type, regardless of whether it is already for a different prisma field. 
+   * This is mainly needed to convert foriegn key fields. 
+   * 
+   * For now it's still a manual process, but at least this gives us a reference point to come back to later. 
+   */
+  function asPrismaField<T extends Prisma.ModelName, K extends keyof PrismaPayloadScalars<T>>(
+    table: T, field: K, value: PrismaPayloadScalars<T>[K]
+  ): PrismaField<T, K>;
 
 
+  type t2<T extends Prisma.ModelName> = Prisma.TypeMap["model"][T]["fields"]
+
+  type t1 = null extends PrismaPayloadScalars<"bags">["accesscontrol"] ? true : false;
 
   /** 
    * This is a type assertion function that is used to assert that a value is a field value. 
@@ -36,12 +63,12 @@ declare global {
   ```
    */
 
-  function okField<T extends PrismaTables, K extends keyof PrismaPayload<T>["scalars"]>(
-    table: T, field: K, value: PrismaPayload<T>["scalars"][K]
-  ): asserts value is PrismaField<T, K>;
+  // function okField<T extends Prisma.ModelName, K extends keyof PrismaPayloadScalars<T>>(
+  //   table: T, field: K, value: PrismaPayloadScalars<T>[K]
+  // ): asserts value is PrismaField<T, K>;
 
 }
-(global as any).okField = function (table: string, field: string, value: any) { };
+// (global as any).okField = function (table: string, field: string, value: any) { };
 
 
 declare global { const rootRoute: rootRoute; }
@@ -49,7 +76,14 @@ declare global { const rootRoute: rootRoute; }
 declare global { const ok: typeof assert.ok; }
 (global as any).ok = assert.ok;
 
-declare global { const okEntityType: typeof sql.okEntityType; type EntityType = "recipe" | "bag"; }
+declare global {
+  const okEntityType: typeof sql.okEntityType;
+  type EntityName<T extends EntityType> =
+    T extends "bag" ? PrismaField<"bags", "bag_name"> :
+    T extends "recipe" ? PrismaField<"recipes", "recipe_name"> :
+    never;
+  type EntityType = "recipe" | "bag";
+}
 (global as any).okEntityType = sql.okEntityType;
 
 
@@ -158,7 +192,7 @@ const _zodAssert = (
     throw state.sendEmpty(500);
   }
   const schema2: any = schema(z2);
-  
+
   const { success, data, error } = z.any().pipe(
     input === "data" ? schema2 : z.object(schema2)
   ).safeParse(state[input]);
@@ -166,9 +200,9 @@ const _zodAssert = (
     const status = input === "pathParams" ? 404 : 400;
     const message = onError?.(error);
     if (typeof message === "string")
-      throw state.sendString(status, {"x-reason": input}, message ?? "", "utf8");
+      throw state.sendString(status, { "x-reason": input }, message ?? "", "utf8");
     else
-      throw state.sendEmpty(status, {"x-reason": input});
+      throw state.sendEmpty(status, { "x-reason": input });
   }
   state[input] = data;
 };

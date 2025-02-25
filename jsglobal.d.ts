@@ -15,6 +15,7 @@ declare global {
 
 
   const $tw: {
+    // wiki: any;
     boot: any;
     sjcl: any;
     utils: any;
@@ -85,7 +86,7 @@ declare global {
 
   interface ServerResponse extends HTTPServerResponse { }
 
-  type PrismaTxnClient = Omit<PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">
+  type PrismaTxnClient = Omit<StateObject["engine"], "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">
   interface ServerRoute {
     path: RegExp;
     handler: ServerRouteHandler<number>;

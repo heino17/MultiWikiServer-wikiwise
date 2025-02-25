@@ -22,7 +22,7 @@ model acl {
 model bags {
   bag_id        Int           @id @default(autoincrement())
   bag_name      String        @unique(map: "sqlite_autoindex_bags_1")
-  accesscontrol String
+  accesscontrol String?
   description   String
   recipe_bags   recipe_bags[]
   tiddlers      tiddlers[]
