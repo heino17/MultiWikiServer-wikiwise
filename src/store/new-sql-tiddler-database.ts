@@ -1258,598 +1258,865 @@ export class SqlTiddlerDatabase extends DataChecks {
 		// 	});
 		// 	return row ? row.attachment_blob : null;
 	}
-	// 	// User CRUD operations
-	// 	createUser(
-	// 		username,
-	// 		email,
-	// 		password
-	// 	) {
-	// 		const result = this.engine.runStatement(`
-	// 			INSERT INTO users (username, email, password)
-	// 			VALUES ($username, $email, $password)
-	// 	`, {
-	// 			$username: username,
-	// 			$email: email,
-	// 			$password: password
-	// 		});
-	// 		return result.lastInsertRowid;
-	// 	}
-	// 	getUser(userId) {
-	// 		return this.engine.runStatementGet(`
-	// 			SELECT * FROM users WHERE user_id = $userId
-	// 	`, {
-	// 			$userId: userId
-	// 		});
-	// 	}
-	// 	getUserByUsername(username) {
-	// 		return this.engine.runStatementGet(`
-	// 			SELECT * FROM users WHERE username = $username
-	// 	`, {
-	// 			$username: username
-	// 		});
-	// 	}
-	// 	getUserByEmail(email) {
-	// 		return this.engine.runStatementGet(`
-	// 			SELECT * FROM users WHERE email = $email
-	// 	`, {
-	// 			$email: email
-	// 		});
-	// 	}
-	// 	listUsersByRoleId(roleId) {
-	// 		return this.engine.runStatementGetAll(`
-	// 			SELECT u.*
-	// 			FROM users u
-	// 			JOIN user_roles ur ON u.user_id = ur.user_id
-	// 			WHERE ur.role_id = $roleId
-	// 			ORDER BY u.username
-	// 	`, {
-	// 			$roleId: roleId
-	// 		});
-	// 	}
-	// 	updateUser(userId, username, email, roleId) {
-	// 		const existingUser = this.engine.runStatement(`
-	// 		SELECT user_id FROM users
-	// 		WHERE email = $email AND user_id != $userId
-	// `, {
-	// 			$email: email,
-	// 			$userId: userId
-	// 		});
+	// User CRUD operations
+	createUser(
+		username: string,
+		email: string,
+		password: string
+	) {
+		return this.engine.users.create({
+			data: {
+				username,
+				email,
+				password
+			}
+		}).then(e => e.user_id);
+		// const result = this.engine.runStatement(`
+		// 		INSERT INTO users (username, email, password)
+		// 		VALUES ($username, $email, $password)
+		// `, {
+		// 	$username: username,
+		// 	$email: email,
+		// 	$password: password
+		// });
+		// return result.lastInsertRowid;
+	}
+	getUser(userId: PrismaField<"users", "user_id">) {
+		return this.engine.users.findUnique({ where: { user_id: userId } });
+		// return this.engine.runStatementGet(`
+		// 		SELECT * FROM users WHERE user_id = $userId
+		// `, {
+		// 	$userId: userId
+		// });
+	}
+	getUserByUsername(username: PrismaField<"users", "username">) {
+		return this.engine.users.findUnique({ where: { username } });
+		// return this.engine.runStatementGet(`
+		// 		SELECT * FROM users WHERE username = $username
+		// `, {
+		// 	$username: username
+		// });
+	}
+	getUserByEmail(email: PrismaField<"users", "email">) {
+		return this.engine.users.findUnique({ where: { email } });
+		// return this.engine.runStatementGet(`
+		// 		SELECT * FROM users WHERE email = $email
+		// `, {
+		// 	$email: email
+		// });
+	}
+	listUsersByRoleId(role_id: PrismaField<"roles", "role_id">) {
+		return this.engine.users.findMany({
+			where: { user_roles: { some: { role_id } } },
+			orderBy: { username: "asc" }
+		});
+		// return this.engine.runStatementGetAll(`
+		// 		SELECT u.*
+		// 		FROM users u
+		// 		JOIN user_roles ur ON u.user_id = ur.user_id
+		// 		WHERE ur.role_id = $roleId
+		// 		ORDER BY u.username
+		// `, {
+		// 	$roleId: roleId
+		// });
+	}
+	async updateUser(
+		user_id: PrismaField<"users", "user_id">,
+		username: PrismaField<"users", "username">,
+		email: PrismaField<"users", "email">,
+		role_id: PrismaField<"roles", "role_id"> | undefined
+	) {
+		try {
+			const emailExists = await this.engine.users.findFirst({
+				where: { email, user_id: { not: user_id } }
+			});
 
-	// 		if (existingUser.length > 0) {
-	// 			return {
-	// 				success: false,
-	// 				message: "Email address already in use by another user."
-	// 			};
-	// 		}
+			if (emailExists) {
+				return { success: false, message: "Email address already in use by another user." };
+			}
 
-	// 		try {
-	// 			this.engine.transaction(() => {
-	// 				// Update user information
-	// 				this.engine.runStatement(`
-	// 				UPDATE users
-	// 				SET username = $username, email = $email
-	// 				WHERE user_id = $userId
-	// 			`, {
-	// 					$userId: userId,
-	// 					$username: username,
-	// 					$email: email
-	// 				});
+			await this.engine.users.update({
+				where: { user_id: user_id },
+				data: { username, email, }
+			});
 
-	// 				if (roleId) {
-	// 					// Remove all existing roles for the user
-	// 					this.engine.runStatement(`
-	// 					DELETE FROM user_roles
-	// 					WHERE user_id = $userId
-	// 				`, {
-	// 						$userId: userId
-	// 					});
+			if (role_id) {
+				await this.engine.user_roles.deleteMany({ where: { user_id } });
+				await this.engine.user_roles.create({ data: { user_id, role_id } });
+			}
 
-	// 					// Add the new role
-	// 					this.engine.runStatement(`
-	// 					INSERT INTO user_roles (user_id, role_id)
-	// 					VALUES ($userId, $roleId)
-	// 				`, {
-	// 						$userId: userId,
-	// 						$roleId: roleId
-	// 					});
-	// 				}
-	// 			});
+			return { success: true, message: "User profile and role updated successfully." };
+		} catch (e) {
+			return { success: false, message: "Failed to update user profile: " + (e instanceof Error ? e.message : `${e}`) };
+		}
 
-	// 			return {
-	// 				success: true,
-	// 				message: "User profile and role updated successfully."
-	// 			};
-	// 		} catch (error) {
-	// 			return {
-	// 				success: false,
-	// 				message: "Failed to update user profile: " + error.message
-	// 			};
-	// 		}
-	// 	}
-	// 	updateUserPassword(userId, newHash) {
-	// 		try {
-	// 			this.engine.runStatement(`
-	// 				UPDATE users
-	// 				SET password = $newHash
-	// 				WHERE user_id = $userId
-	// 		`, {
-	// 				$userId: userId,
-	// 				$newHash: newHash,
-	// 			});
+		// 	const existingUser = this.engine.runStatement(`
+		// 		SELECT user_id FROM users
+		// 		WHERE email = $email AND user_id != $userId
+		// `, {
+		// 		$email: email,
+		// 		$userId: userId
+		// 	});
 
-	// 			return {
-	// 				success: true,
-	// 				message: "Password updated successfully."
-	// 			};
-	// 		} catch (error) {
-	// 			return {
-	// 				success: false,
-	// 				message: "Failed to update password: " + error.message
-	// 			};
-	// 		}
-	// 	}
-	// 	deleteUser(userId) {
-	// 		this.engine.runStatement(`
-	// 			DELETE FROM users WHERE user_id = $userId
-	// 	`, {
-	// 			$userId: userId
-	// 		});
-	// 	}
-	// 	listUsers() {
-	// 		return this.engine.runStatementGetAll(`
-	// 			SELECT * FROM users ORDER BY username
-	// 	`);
-	// 	}
-	// 	createOrUpdateUserSession(userId, sessionId) {
-	// 		const currentTimestamp = new Date().toISOString();
+		// 	if (existingUser.length > 0) {
+		// 		return {
+		// 			success: false,
+		// 			message: "Email address already in use by another user."
+		// 		};
+		// 	}
 
-	// 		// First, try to update an existing session
-	// 		const updateResult = this.engine.runStatement(`
-	// 			UPDATE sessions
-	// 			SET session_id = $sessionId, last_accessed = $timestamp
-	// 			WHERE user_id = $userId
-	// 	`, {
-	// 			$userId: userId,
-	// 			$sessionId: sessionId,
-	// 			$timestamp: currentTimestamp
-	// 		});
+		// 	try {
+		// 		this.engine.transaction(() => {
+		// 			// Update user information
+		// 			this.engine.runStatement(`
+		// 				UPDATE users
+		// 				SET username = $username, email = $email
+		// 				WHERE user_id = $userId
+		// 			`, {
+		// 				$userId: userId,
+		// 				$username: username,
+		// 				$email: email
+		// 			});
 
-	// 		// If no existing session was updated, create a new one
-	// 		if (updateResult.changes === 0) {
-	// 			this.engine.runStatement(`
-	// 					INSERT INTO sessions (user_id, session_id, created_at, last_accessed)
-	// 					VALUES ($userId, $sessionId, $timestamp, $timestamp)
-	// 			`, {
-	// 				$userId: userId,
-	// 				$sessionId: sessionId,
-	// 				$timestamp: currentTimestamp
-	// 			});
-	// 		}
+		// 			if (roleId) {
+		// 				// Remove all existing roles for the user
+		// 				this.engine.runStatement(`
+		// 					DELETE FROM user_roles
+		// 					WHERE user_id = $userId
+		// 				`, {
+		// 					$userId: userId
+		// 				});
 
-	// 		return sessionId;
-	// 	}
-	// 	createUserSession(userId, sessionId) {
-	// 		const currentTimestamp = new Date().toISOString();
-	// 		this.engine.runStatement(`
-	// 			INSERT INTO sessions (user_id, session_id, created_at, last_accessed)
-	// 			VALUES ($userId, $sessionId, $timestamp, $timestamp)
-	// 	`, {
-	// 			$userId: userId,
-	// 			$sessionId: sessionId,
-	// 			$timestamp: currentTimestamp
-	// 		});
+		// 				// Add the new role
+		// 				this.engine.runStatement(`
+		// 					INSERT INTO user_roles (user_id, role_id)
+		// 					VALUES ($userId, $roleId)
+		// 				`, {
+		// 					$userId: userId,
+		// 					$roleId: roleId
+		// 				});
+		// 			}
+		// 		});
 
-	// 		return sessionId;
-	// 	}
-	// 	findUserBySessionId(sessionId) {
-	// 		// First, get the user_id from the sessions table
-	// 		const sessionResult = this.engine.runStatementGet(`
-	// 			SELECT user_id, last_accessed
-	// 			FROM sessions
-	// 			WHERE session_id = $sessionId
-	// 	`, {
-	// 			$sessionId: sessionId
-	// 		});
+		// 		return {
+		// 			success: true,
+		// 			message: "User profile and role updated successfully."
+		// 		};
+		// 	} catch (error) {
+		// 		return {
+		// 			success: false,
+		// 			message: "Failed to update user profile: " + error.message
+		// 		};
+		// 	}
+	}
+	async updateUserPassword(
+		userId: PrismaField<"users", "user_id">,
+		newHash: string
+	) {
+		return await this.engine.users.update({
+			where: { user_id: userId },
+			data: { password: newHash }
+		}).then(() => ({
+			success: true,
+			message: "Password updated successfully."
+		})).catch(e => ({
+			success: false,
+			message: "Failed to update password: " + (e instanceof Error ? e.message : `${e}`)
+		}));
+		// try {
+		// 	this.engine.runStatement(`
+		// 			UPDATE users
+		// 			SET password = $newHash
+		// 			WHERE user_id = $userId
+		// 	`, {
+		// 		$userId: userId,
+		// 		$newHash: newHash,
+		// 	});
 
-	// 		if (!sessionResult) {
-	// 			return null; // Session not found
-	// 		}
+		// 	return {
+		// 		success: true,
+		// 		message: "Password updated successfully."
+		// 	};
+		// } catch (error) {
+		// 	return {
+		// 		success: false,
+		// 		message: "Failed to update password: " + error.message
+		// 	};
+		// }
+	}
+	deleteUser(userId: PrismaField<"users", "user_id">) {
+		return this.engine.users.delete({ where: { user_id: userId } });
+		// this.engine.runStatement(`
+		// 		DELETE FROM users WHERE user_id = $userId
+		// `, {
+		// 	$userId: userId
+		// });
+	}
+	listUsers() {
+		return this.engine.users.findMany({ orderBy: { username: "asc" } });
+		// return this.engine.runStatementGetAll(`
+		// 		SELECT * FROM users ORDER BY username
+		// `);
+	}
+	async createOrUpdateUserSession(
+		userId: PrismaField<"users", "user_id">,
+		sessionId: PrismaField<"sessions", "session_id">
+	) {
+		const currentTimestamp = new Date().toISOString();
+		return await this.engine.sessions.upsert({
+			where: { user_id: userId, session_id: sessionId },
+			create: {
+				user_id: userId,
+				session_id: sessionId,
+				created_at: currentTimestamp,
+				last_accessed: currentTimestamp,
+			},
+			update: {
+				session_id: sessionId,
+				last_accessed: currentTimestamp
+			},
+			select: { session_id: true }
+		}).then(e => e.session_id);
 
-	// 		const lastAccessed = new Date(sessionResult.last_accessed);
-	// 		const expirationTime = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-	// 		if (new Date() - lastAccessed > expirationTime) {
-	// 			// Session has expired
-	// 			this.deleteSession(sessionId);
-	// 			return null;
-	// 		}
+		// const currentTimestamp = new Date().toISOString();
 
-	// 		// Update the last_accessed timestamp
-	// 		const currentTimestamp = new Date().toISOString();
-	// 		this.engine.runStatement(`
-	// 			UPDATE sessions
-	// 			SET last_accessed = $timestamp
-	// 			WHERE session_id = $sessionId
-	// 	`, {
-	// 			$sessionId: sessionId,
-	// 			$timestamp: currentTimestamp
-	// 		});
+		// // First, try to update an existing session
+		// const updateResult = this.engine.runStatement(`
+		// 		UPDATE sessions
+		// 		SET session_id = $sessionId, last_accessed = $timestamp
+		// 		WHERE user_id = $userId
+		// `, {
+		// 	$userId: userId,
+		// 	$sessionId: sessionId,
+		// 	$timestamp: currentTimestamp
+		// });
 
-	// 		const userResult = this.engine.runStatementGet(`
-	// 			SELECT *
-	// 			FROM users
-	// 			WHERE user_id = $userId
-	// 	`, {
-	// 			$userId: sessionResult.user_id
-	// 		});
+		// // If no existing session was updated, create a new one
+		// if (updateResult.changes === 0) {
+		// 	this.engine.runStatement(`
+		// 				INSERT INTO sessions (user_id, session_id, created_at, last_accessed)
+		// 				VALUES ($userId, $sessionId, $timestamp, $timestamp)
+		// 		`, {
+		// 		$userId: userId,
+		// 		$sessionId: sessionId,
+		// 		$timestamp: currentTimestamp
+		// 	});
+		// }
 
-	// 		if (!userResult) {
-	// 			return null;
-	// 		}
+		// return sessionId;
+	}
+	async createUserSession(
+		userId: PrismaField<"users", "user_id">,
+		sessionId: PrismaField<"sessions", "session_id">
+	) {
+		const currentTimestamp = new Date().toISOString();
+		return await this.engine.sessions.create({
+			data: {
+				user_id: userId,
+				session_id: sessionId,
+				created_at: currentTimestamp,
+				last_accessed: currentTimestamp,
+			}
+		}).then(e => e.session_id);
+		// const currentTimestamp = new Date().toISOString();
+		// this.engine.runStatement(`
+		// 		INSERT INTO sessions (user_id, session_id, created_at, last_accessed)
+		// 		VALUES ($userId, $sessionId, $timestamp, $timestamp)
+		// `, {
+		// 	$userId: userId,
+		// 	$sessionId: sessionId,
+		// 	$timestamp: currentTimestamp
+		// });
 
-	// 		return userResult;
-	// 	}
-	// 	deleteSession(sessionId) {
-	// 		this.engine.runStatement(`
-	// 			DELETE FROM sessions
-	// 			WHERE session_id = $sessionId
-	// 	`, {
-	// 			$sessionId: sessionId
-	// 		});
-	// 	}
-	// 	deleteUserSessions(userId) {
-	// 		this.engine.runStatement(`
-	// 			DELETE FROM sessions
-	// 			WHERE user_id = $userId
-	// 	`, {
-	// 			$userId: userId
-	// 		});
-	// 	}
-	// 	// Set the user as an admin
-	// 	setUserAdmin(userId) {
-	// 		var admin = this.getRoleByName("ADMIN");
-	// 		if (admin) {
-	// 			this.addRoleToUser(userId, admin.role_id);
-	// 		}
-	// 	}
-	// 	// Group CRUD operations
-	// 	createGroup(groupName, description) {
-	// 		const result = this.engine.runStatement(`
-	// 			INSERT INTO groups (group_name, description)
-	// 			VALUES ($groupName, $description)
-	// 	`, {
-	// 			$groupName: groupName,
-	// 			$description: description
-	// 		});
-	// 		return result.lastInsertRowid;
-	// 	}
-	// 	getGroup(groupId) {
-	// 		return this.engine.runStatementGet(`
-	// 			SELECT * FROM groups WHERE group_id = $groupId
-	// 	`, {
-	// 			$groupId: groupId
-	// 		});
-	// 	}
-	// 	updateGroup(groupId, groupName, description) {
-	// 		this.engine.runStatement(`
-	// 			UPDATE groups
-	// 			SET group_name = $groupName, description = $description
-	// 			WHERE group_id = $groupId
-	// 	`, {
-	// 			$groupId: groupId,
-	// 			$groupName: groupName,
-	// 			$description: description
-	// 		});
-	// 	}
-	// 	deleteGroup(groupId) {
-	// 		this.engine.runStatement(`
-	// 			DELETE FROM groups WHERE group_id = $groupId
-	// 	`, {
-	// 			$groupId: groupId
-	// 		});
-	// 	}
-	// 	listGroups() {
-	// 		return this.engine.runStatementGetAll(`
-	// 			SELECT * FROM groups ORDER BY group_name
-	// 	`);
-	// 	}
-	// 	// Role CRUD operations
-	// 	createRole(roleName, description) {
-	// 		const result = this.engine.runStatement(`
-	// 			INSERT OR IGNORE INTO roles (role_name, description)
-	// 			VALUES ($roleName, $description)
-	// 	`, {
-	// 			$roleName: roleName,
-	// 			$description: description
-	// 		});
-	// 		return result.lastInsertRowid;
-	// 	}
-	// 	getRole(roleId) {
-	// 		return this.engine.runStatementGet(`
-	// 			SELECT * FROM roles WHERE role_id = $roleId
-	// 	`, {
-	// 			$roleId: roleId
-	// 		});
-	// 	}
-	// 	getRoleByName(roleName) {
-	// 		return this.engine.runStatementGet(`
-	// 			SELECT * FROM roles WHERE role_name = $roleName
-	// 	`, {
-	// 			$roleName: roleName
-	// 		});
-	// 	}
-	// 	updateRole(roleId, roleName, description) {
-	// 		this.engine.runStatement(`
-	// 			UPDATE roles
-	// 			SET role_name = $roleName, description = $description
-	// 			WHERE role_id = $roleId
-	// 	`, {
-	// 			$roleId: roleId,
-	// 			$roleName: roleName,
-	// 			$description: description
-	// 		});
-	// 	}
-	// 	deleteRole(roleId) {
-	// 		this.engine.runStatement(`
-	// 			DELETE FROM roles WHERE role_id = $roleId
-	// 	`, {
-	// 			$roleId: roleId
-	// 		});
-	// 	}
-	// 	listRoles() {
-	// 		return this.engine.runStatementGetAll(`
-	// 			SELECT * FROM roles ORDER BY role_name DESC
-	// 	`);
-	// 	}
-	// 	// Permission CRUD operations
-	// 	createPermission(permissionName, description) {
-	// 		const result = this.engine.runStatement(`
-	// 		INSERT OR IGNORE INTO permissions (permission_name, description)
-	// 		VALUES ($permissionName, $description)
-	// 	`, {
-	// 			$permissionName: permissionName,
-	// 			$description: description
-	// 		});
-	// 		return result.lastInsertRowid;
-	// 	}
-	// 	getPermission(permissionId) {
-	// 		return this.engine.runStatementGet(`
-	// 			SELECT * FROM permissions WHERE permission_id = $permissionId
-	// 	`, {
-	// 			$permissionId: permissionId
-	// 		});
-	// 	}
-	// 	getPermissionByName(permissionName) {
-	// 		return this.engine.runStatementGet(`
-	// 			SELECT * FROM permissions WHERE permission_name = $permissionName
-	// 	`, {
-	// 			$permissionName: permissionName
-	// 		});
-	// 	}
-	// 	updatePermission(permissionId, permissionName, description) {
-	// 		this.engine.runStatement(`
-	// 			UPDATE permissions
-	// 			SET permission_name = $permissionName, description = $description
-	// 			WHERE permission_id = $permissionId
-	// 	`, {
-	// 			$permissionId: permissionId,
-	// 			$permissionName: permissionName,
-	// 			$description: description
-	// 		});
-	// 	}
-	// 	deletePermission(permissionId) {
-	// 		this.engine.runStatement(`
-	// 			DELETE FROM permissions WHERE permission_id = $permissionId
-	// 	`, {
-	// 			$permissionId: permissionId
-	// 		});
-	// 	}
-	// 	listPermissions() {
-	// 		return this.engine.runStatementGetAll(`
-	// 			SELECT * FROM permissions ORDER BY permission_name
-	// 	`);
-	// 	}
-	// 	// ACL CRUD operations
-	// 	createACL(entityName, entityType, roleId, permissionId) {
-	// 		if (!entityName.startsWith("$:/")) {
-	// 			const result = this.engine.runStatement(`
-	// 			INSERT OR IGNORE INTO acl (entity_name, entity_type, role_id, permission_id)
-	// 			VALUES ($entityName, $entityType, $roleId, $permissionId)
-	// 		`,
-	// 				{
-	// 					$entityName: entityName,
-	// 					$entityType: entityType,
-	// 					$roleId: roleId,
-	// 					$permissionId: permissionId
-	// 				});
-	// 			return result.lastInsertRowid;
-	// 		}
-	// 	}
-	// 	getACL(aclId) {
-	// 		return this.engine.runStatementGet(`
-	// 			SELECT * FROM acl WHERE acl_id = $aclId
-	// 	`, {
-	// 			$aclId: aclId
-	// 		});
-	// 	}
-	// 	updateACL(aclId, entityId, entityType, roleId, permissionId) {
-	// 		this.engine.runStatement(`
-	// 			UPDATE acl
-	// 			SET entity_name = $entityId, entity_type = $entityType, 
-	// 					role_id = $roleId, permission_id = $permissionId
-	// 			WHERE acl_id = $aclId
-	// 	`, {
-	// 			$aclId: aclId,
-	// 			$entityId: entityId,
-	// 			$entityType: entityType,
-	// 			$roleId: roleId,
-	// 			$permissionId: permissionId
-	// 		});
-	// 	}
-	// 	deleteACL(aclId) {
-	// 		this.engine.runStatement(`
-	// 			DELETE FROM acl WHERE acl_id = $aclId
-	// 	`, {
-	// 			$aclId: aclId
-	// 		});
-	// 	}
-	// 	listACLs() {
-	// 		return this.engine.runStatementGetAll(`
-	// 			SELECT * FROM acl ORDER BY entity_type, entity_name
-	// 	`);
-	// 	}
-	// 	// Association management functions
-	// 	addUserToGroup(userId, groupId) {
-	// 		this.engine.runStatement(`
-	// 			INSERT OR IGNORE INTO user_groups (user_id, group_id)
-	// 			VALUES ($userId, $groupId)
-	// 	`, {
-	// 			$userId: userId,
-	// 			$groupId: groupId
-	// 		});
-	// 	}
-	// 	isUserInGroup(userId, groupId) {
-	// 		const result = this.engine.runStatementGet(`
-	// 			SELECT 1 FROM user_groups
-	// 			WHERE user_id = $userId AND group_id = $groupId
-	// 	`, {
-	// 			$userId: userId,
-	// 			$groupId: groupId
-	// 		});
-	// 		return result !== undefined;
-	// 	}
-	// 	removeUserFromGroup(userId, groupId) {
-	// 		this.engine.runStatement(`
-	// 			DELETE FROM user_groups
-	// 			WHERE user_id = $userId AND group_id = $groupId
-	// 	`, {
-	// 			$userId: userId,
-	// 			$groupId: groupId
-	// 		});
-	// 	}
-	// 	addRoleToUser(userId, roleId) {
-	// 		this.engine.runStatement(`
-	// 			INSERT OR IGNORE INTO user_roles (user_id, role_id)
-	// 			VALUES ($userId, $roleId)
-	// 	`, {
-	// 			$userId: userId,
-	// 			$roleId: roleId
-	// 		});
-	// 	}
-	// 	removeRoleFromUser(userId, roleId) {
-	// 		this.engine.runStatement(`
-	// 			DELETE FROM user_roles
-	// 			WHERE user_id = $userId AND role_id = $roleId
-	// 	`, {
-	// 			$userId: userId,
-	// 			$roleId: roleId
-	// 		});
-	// 	}
-	// 	addRoleToGroup(groupId, roleId) {
-	// 		this.engine.runStatement(`
-	// 			INSERT OR IGNORE INTO group_roles (group_id, role_id)
-	// 			VALUES ($groupId, $roleId)
-	// 	`, {
-	// 			$groupId: groupId,
-	// 			$roleId: roleId
-	// 		});
-	// 	}
-	// 	removeRoleFromGroup(groupId, roleId) {
-	// 		this.engine.runStatement(`
-	// 			DELETE FROM group_roles
-	// 			WHERE group_id = $groupId AND role_id = $roleId
-	// 	`, {
-	// 			$groupId: groupId,
-	// 			$roleId: roleId
-	// 		});
-	// 	}
-	// 	addPermissionToRole(roleId, permissionId) {
-	// 		this.engine.runStatement(`
-	// 			INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
-	// 			VALUES ($roleId, $permissionId)
-	// 	`, {
-	// 			$roleId: roleId,
-	// 			$permissionId: permissionId
-	// 		});
-	// 	}
-	// 	removePermissionFromRole(roleId, permissionId) {
-	// 		this.engine.runStatement(`
-	// 			DELETE FROM role_permissions
-	// 			WHERE role_id = $roleId AND permission_id = $permissionId
-	// 	`, {
-	// 			$roleId: roleId,
-	// 			$permissionId: permissionId
-	// 		});
-	// 	}
-	// 	getUserRoles(userId) {
-	// 		const query = `
-	// 			SELECT r.role_id, r.role_name
-	// 			FROM user_roles ur
-	// 			JOIN roles r ON ur.role_id = r.role_id
-	// 			WHERE ur.user_id = $userId
-	// 			LIMIT 1
-	// 	`;
+		// return sessionId;
+	}
+	async findUserBySessionId(
+		session_id: PrismaField<"sessions", "session_id">
+	) {
+		// const lastAccessed = new Date(sessionResult.last_accessed);
+		const expirationTime = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+		const expires = new Date(Date.now() - expirationTime).toISOString();
 
-	// 		return this.engine.runStatementGet(query, { $userId: userId });
-	// 	}
-	// 	deleteUserRolesByRoleId(roleId) {
-	// 		this.engine.runStatement(`
-	// 			DELETE FROM user_roles
-	// 			WHERE role_id = $roleId
-	// 	`, {
-	// 			$roleId: roleId
-	// 		});
-	// 	}
-	// 	deleteUserRolesByUserId(userId) {
-	// 		this.engine.runStatement(`
-	// 			DELETE FROM user_roles
-	// 			WHERE user_id = $userId
-	// 	`, {
-	// 			$userId: userId
-	// 		});
-	// 	}
-	// 	isRoleInUse(roleId) {
-	// 		// Check if the role is assigned to any users
-	// 		const userRoleCheck = this.engine.runStatementGet(`
-	// 		SELECT 1
-	// 		FROM user_roles
-	// 		WHERE role_id = $roleId
-	// 		LIMIT 1
-	// 	`, {
-	// 			$roleId: roleId
-	// 		});
+		const { count: deleted } = await this.engine.sessions.deleteMany({
+			where: { session_id, last_accessed: { lte: expires } }
+		});
+		if (deleted) return null;
 
-	// 		if (userRoleCheck) {
-	// 			return true;
-	// 		}
+		return await this.engine.sessions.updateManyAndReturn({
+			where: { session_id },
+			data: { last_accessed: new Date().toISOString() },
+			select: { session_id: true, user: true }
+		}).then(e => e[0]?.user ?? null);
 
-	// 		// Check if the role is used in any ACLs
-	// 		const aclRoleCheck = this.engine.runStatementGet(`
-	// 		SELECT 1
-	// 		FROM acl
-	// 		WHERE role_id = $roleId
-	// 		LIMIT 1
-	// 	`, {
-	// 			$roleId: roleId
-	// 		});
+		// // First, get the user_id from the sessions table
+		// const sessionResult = this.engine.runStatementGet(`
+		// 		SELECT user_id, last_accessed
+		// 		FROM sessions
+		// 		WHERE session_id = $sessionId
+		// `, {
+		// 	$sessionId: sessionId
+		// });
 
-	// 		if (aclRoleCheck) {
-	// 			return true;
-	// 		}
+		// if (!sessionResult) {
+		// 	return null; // Session not found
+		// }
 
-	// 		// If we've reached this point, the role is not in use
-	// 		return false;
-	// 	}
-	// 	getRoleById(roleId) {
-	// 		const role = this.engine.runStatementGet(`
-	// 		SELECT role_id, role_name, description
-	// 		FROM roles
-	// 		WHERE role_id = $roleId
-	// 	`, {
-	// 			$roleId: roleId
-	// 		});
 
-	// 		return role;
-	// 	}
+		// if (new Date() - lastAccessed > expirationTime) {
+		// 	// Session has expired
+		// 	this.deleteSession(sessionId);
+		// 	return null;
+		// }
+
+		// // Update the last_accessed timestamp
+		// const currentTimestamp = new Date().toISOString();
+		// this.engine.runStatement(`
+		// 		UPDATE sessions
+		// 		SET last_accessed = $timestamp
+		// 		WHERE session_id = $sessionId
+		// `, {
+		// 	$sessionId: sessionId,
+		// 	$timestamp: currentTimestamp
+		// });
+
+		// const userResult = this.engine.runStatementGet(`
+		// 		SELECT *
+		// 		FROM users
+		// 		WHERE user_id = $userId
+		// `, {
+		// 	$userId: sessionResult.user_id
+		// });
+
+		// if (!userResult) {
+		// 	return null;
+		// }
+
+		// return userResult;
+	}
+	deleteSession(sessionId: PrismaField<"sessions", "session_id">) {
+		return this.engine.sessions.delete({ where: { session_id: sessionId } });
+		// this.engine.runStatement(`
+		// 		DELETE FROM sessions
+		// 		WHERE session_id = $sessionId
+		// `, {
+		// 	$sessionId: sessionId
+		// });
+	}
+	deleteUserSessions(userId: PrismaField<"users", "user_id">) {
+		return this.engine.sessions.deleteMany({ where: { user_id: userId } });
+		// this.engine.runStatement(`
+		// 		DELETE FROM sessions
+		// 		WHERE user_id = $userId
+		// `, {
+		// 	$userId: userId
+		// });
+	}
+	// Set the user as an admin
+	setUserAdmin(userId: PrismaField<"users", "user_id">) {
+		var admin = this.getRoleByName("ADMIN");
+		if (admin) { this.addRoleToUser(userId, admin.role_id); }
+	}
+	// Group CRUD operations
+	createGroup(
+		group_name: PrismaField<"groups", "group_name">,
+		description: PrismaField<"groups", "description">
+	) {
+		return this.engine.groups.create({
+			data: { group_name, description }
+		}).then(e => e.group_id);
+		// const result = this.engine.runStatement(`
+		// 		INSERT INTO groups (group_name, description)
+		// 		VALUES ($groupName, $description)
+		// `, {
+		// 	$groupName: groupName,
+		// 	$description: description
+		// });
+		// return result.lastInsertRowid;
+	}
+	getGroup(groupId: PrismaField<"groups", "group_id">) {
+		return this.engine.groups.findUnique({
+			where: { group_id: groupId }
+		});
+		// return this.engine.runStatementGet(`
+		// 		SELECT * FROM groups WHERE group_id = $groupId
+		// `, {
+		// 	$groupId: groupId
+		// });
+	}
+	updateGroup(
+		groupId: PrismaField<"groups", "group_id">,
+		groupName: PrismaField<"groups", "group_name">,
+		description: PrismaField<"groups", "description">
+	) {
+		return this.engine.groups.update({
+			where: { group_id: groupId },
+			data: { group_name: groupName, description }
+		});
+		// this.engine.runStatement(`
+		// 		UPDATE groups
+		// 		SET group_name = $groupName, description = $description
+		// 		WHERE group_id = $groupId
+		// `, {
+		// 	$groupId: groupId,
+		// 	$groupName: groupName,
+		// 	$description: description
+		// });
+	}
+	deleteGroup(groupId: PrismaField<"groups", "group_id">) {
+		return this.engine.groups.delete({ where: { group_id: groupId } });
+		// this.engine.runStatement(`
+		// 		DELETE FROM groups WHERE group_id = $groupId
+		// `, {
+		// 	$groupId: groupId
+		// });
+	}
+	listGroups() {
+		return this.engine.groups.findMany({ orderBy: { group_name: "asc" } });
+		// return this.engine.runStatementGetAll(`
+		// 		SELECT * FROM groups ORDER BY group_name
+		// `);
+	}
+	// Role CRUD operations
+	createRole(
+		roleName: PrismaField<"roles", "role_name">,
+		description: PrismaField<"roles", "description">
+	) {
+		return this.engine.roles.create({
+			data: { role_name: roleName, description }
+		}).then(e => e.role_id);
+		// const result = this.engine.runStatement(`
+		// 		INSERT OR IGNORE INTO roles (role_name, description)
+		// 		VALUES ($roleName, $description)
+		// `, {
+		// 	$roleName: roleName,
+		// 	$description: description
+		// });
+		// return result.lastInsertRowid;
+	}
+	getRole(roleId: PrismaField<"roles", "role_id">) {
+		return this.engine.roles.findUnique({
+			where: { role_id: roleId }
+		});
+		// return this.engine.runStatementGet(`
+		// 		SELECT * FROM roles WHERE role_id = $roleId
+		// `, {
+		// 	$roleId: roleId
+		// });
+	}
+	getRoleByName(roleName: PrismaField<"roles", "role_name">) {
+		return this.engine.roles.findUnique({
+			where: { role_name: roleName }
+		});
+		// return this.engine.runStatementGet(`
+		// 		SELECT * FROM roles WHERE role_name = $roleName
+		// `, {
+		// 	$roleName: roleName
+		// });
+	}
+	updateRole(
+		roleId: PrismaField<"roles", "role_id">,
+		roleName: PrismaField<"roles", "role_name">,
+		description: PrismaField<"roles", "description">
+	) {
+		return this.engine.roles.update({
+			where: { role_id: roleId },
+			data: { role_name: roleName, description }
+		});
+		// this.engine.runStatement(`
+		// 		UPDATE roles
+		// 		SET role_name = $roleName, description = $description
+		// 		WHERE role_id = $roleId
+		// `, {
+		// 	$roleId: roleId,
+		// 	$roleName: roleName,
+		// 	$description: description
+		// });
+	}
+	deleteRole(roleId: PrismaField<"roles", "role_id">) {
+		return this.engine.roles.delete({ where: { role_id: roleId } });
+		// this.engine.runStatement(`
+		// 		DELETE FROM roles WHERE role_id = $roleId
+		// `, {
+		// 	$roleId: roleId
+		// });
+	}
+	listRoles() {
+		return this.engine.roles.findMany({ orderBy: { role_name: "asc" } });
+		// return this.engine.runStatementGetAll(`
+		// 		SELECT * FROM roles ORDER BY role_name DESC
+		// `);
+	}
+	// Permission CRUD operations
+	createPermission(
+		permissionName: PrismaField<"permissions", "permission_name">,
+		description: PrismaField<"permissions", "description">
+	) {
+		return this.engine.permissions.create({
+			data: { permission_name: permissionName, description }
+		}).then(e => e.permission_id);
+		// const result = this.engine.runStatement(`
+		// 	INSERT OR IGNORE INTO permissions (permission_name, description)
+		// 	VALUES ($permissionName, $description)
+		// `, {
+		// 	$permissionName: permissionName,
+		// 	$description: description
+		// });
+		// return result.lastInsertRowid;
+	}
+	getPermission(permissionId: PrismaField<"permissions", "permission_id">) {
+		return this.engine.permissions.findUnique({
+			where: { permission_id: permissionId }
+		});
+		// return this.engine.runStatementGet(`
+		// 		SELECT * FROM permissions WHERE permission_id = $permissionId
+		// `, {
+		// 	$permissionId: permissionId
+		// });
+	}
+	getPermissionByName(permissionName: PrismaField<"permissions", "permission_name">) {
+		return this.engine.permissions.findUnique({
+			where: { permission_name: permissionName }
+		});
+		// return this.engine.runStatementGet(`
+		// 		SELECT * FROM permissions WHERE permission_name = $permissionName
+		// `, {
+		// 	$permissionName: permissionName
+		// });
+	}
+	updatePermission(
+		permissionId: PrismaField<"permissions", "permission_id">,
+		permissionName: PrismaField<"permissions", "permission_name">,
+		description: PrismaField<"permissions", "description">
+	) {
+		return this.engine.permissions.update({
+			where: { permission_id: permissionId },
+			data: { permission_name: permissionName, description }
+		});
+		// this.engine.runStatement(`
+		// 		UPDATE permissions
+		// 		SET permission_name = $permissionName, description = $description
+		// 		WHERE permission_id = $permissionId
+		// `, {
+		// 	$permissionId: permissionId,
+		// 	$permissionName: permissionName,
+		// 	$description: description
+		// });
+	}
+	deletePermission(permissionId: PrismaField<"permissions", "permission_id">) {
+		return this.engine.permissions.delete({ where: { permission_id: permissionId } });
+		// this.engine.runStatement(`
+		// 		DELETE FROM permissions WHERE permission_id = $permissionId
+		// `, {
+		// 	$permissionId: permissionId
+		// });
+	}
+	listPermissions() {
+		return this.engine.permissions.findMany({ orderBy: { permission_name: "asc" } });
+		// return this.engine.runStatementGetAll(`
+		// 		SELECT * FROM permissions ORDER BY permission_name
+		// `);
+	}
+	// ACL CRUD operations
+	createACL<T extends EntityType>(
+		entityName: PrismaField<"acl", "entity_name">,
+		entityType: T,
+		roleId: PrismaField<"roles", "role_id">,
+		permissionId: PrismaField<"permissions", "permission_id">
+	) {
+		if (entityName.startsWith("$:/")) return;
+		return this.engine.acl.create({
+			data: {
+				entity_name: entityName,
+				entity_type: entityType,
+				role_id: roleId,
+				permission_id: permissionId
+			}
+		}).then(e => e.acl_id);
+		// if (!entityName.startsWith("$:/")) {
+		// 	const result = this.engine.runStatement(`
+		// 		INSERT OR IGNORE INTO acl (entity_name, entity_type, role_id, permission_id)
+		// 		VALUES ($entityName, $entityType, $roleId, $permissionId)
+		// 	`,
+		// 		{
+		// 			$entityName: entityName,
+		// 			$entityType: entityType,
+		// 			$roleId: roleId,
+		// 			$permissionId: permissionId
+		// 		});
+		// 	return result.lastInsertRowid;
+		// }
+	}
+	getACL(aclId: PrismaField<"acl", "acl_id">) {
+		return this.engine.acl.findUnique({
+			where: { acl_id: aclId }
+		});
+		// return this.engine.runStatementGet(`
+		// 		SELECT * FROM acl WHERE acl_id = $aclId
+		// `, {
+		// 	$aclId: aclId
+		// });
+	}
+	updateACL<T extends EntityType>(
+		aclId: PrismaField<"acl", "acl_id">,
+		entityName: PrismaField<"acl", "entity_name">,
+		entityType: T,
+		roleId: PrismaField<"acl", "role_id">,
+		permissionId: PrismaField<"acl", "permission_id">
+	) {
+		return this.engine.acl.update({
+			where: { acl_id: aclId },
+			data: {
+				entity_name: entityName,
+				entity_type: entityType,
+				role_id: roleId,
+				permission_id: permissionId
+			}
+		});
+		// this.engine.runStatement(`
+		// 		UPDATE acl
+		// 		SET entity_name = $entityId, entity_type = $entityType, 
+		// 				role_id = $roleId, permission_id = $permissionId
+		// 		WHERE acl_id = $aclId
+		// `, {
+		// 	$aclId: aclId,
+		// 	$entityId: entityId,
+		// 	$entityType: entityType,
+		// 	$roleId: roleId,
+		// 	$permissionId: permissionId
+		// });
+	}
+	deleteACL(aclId: PrismaField<"acl", "acl_id">) {
+		return this.engine.acl.delete({ where: { acl_id: aclId } });
+		// this.engine.runStatement(`
+		// 		DELETE FROM acl WHERE acl_id = $aclId
+		// `, {
+		// 	$aclId: aclId
+		// });
+	}
+	listACLs() {
+		return this.engine.acl.findMany();
+		// return this.engine.runStatementGetAll(`
+		// 		SELECT * FROM acl ORDER BY entity_type, entity_name
+		// `);
+	}
+	// Association management functions
+	addUserToGroup(
+		userId: PrismaField<"users", "user_id">,
+		groupId: PrismaField<"groups", "group_id">
+	) {
+		return this.engine.user_groups.create({
+			data: { user_id: userId, group_id: groupId }
+		});
+		// this.engine.runStatement(`
+		// 		INSERT OR IGNORE INTO user_groups (user_id, group_id)
+		// 		VALUES ($userId, $groupId)
+		// `, {
+		// 	$userId: userId,
+		// 	$groupId: groupId
+		// });
+	}
+	isUserInGroup(
+		userId: PrismaField<"users", "user_id">,
+		groupId: PrismaField<"groups", "group_id">
+	) {
+		return this.engine.user_groups.count({
+			where: { user_id: userId, group_id: groupId }
+		}).then(e => e > 0);
+		// const result = this.engine.runStatementGet(`
+		// 		SELECT 1 FROM user_groups
+		// 		WHERE user_id = $userId AND group_id = $groupId
+		// `, {
+		// 	$userId: userId,
+		// 	$groupId: groupId
+		// });
+		// return result !== undefined;
+	}
+	removeUserFromGroup(
+		userId: PrismaField<"users", "user_id">,
+		groupId: PrismaField<"groups", "group_id">
+	) {
+		return this.engine.user_groups.delete({
+			where: { user_id_group_id: { user_id: userId, group_id: groupId } }
+		});
+		// this.engine.runStatement(`
+		// 		DELETE FROM user_groups
+		// 		WHERE user_id = $userId AND group_id = $groupId
+		// `, {
+		// 	$userId: userId,
+		// 	$groupId: groupId
+		// });
+	}
+	addRoleToUser(
+		userId: PrismaField<"users", "user_id">,
+		roleId: PrismaField<"roles", "role_id">
+	) {
+		return this.engine.user_roles.create({
+			data: { user_id: userId, role_id: roleId }
+		});
+		// this.engine.runStatement(`
+		// 		INSERT OR IGNORE INTO user_roles (user_id, role_id)
+		// 		VALUES ($userId, $roleId)
+		// `, {
+		// 	$userId: userId,
+		// 	$roleId: roleId
+		// });
+	}
+	removeRoleFromUser(
+		userId: PrismaField<"users", "user_id">,
+		roleId: PrismaField<"roles", "role_id">
+	) {
+		return this.engine.user_roles.delete({
+			where: { user_id_role_id: { user_id: userId, role_id: roleId } }
+		});
+		// this.engine.runStatement(`
+		// 		DELETE FROM user_roles
+		// 		WHERE user_id = $userId AND role_id = $roleId
+		// `, {
+		// 	$userId: userId,
+		// 	$roleId: roleId
+		// });
+	}
+	addRoleToGroup(
+		groupId: PrismaField<"groups", "group_id">,
+		roleId: PrismaField<"roles", "role_id">
+	) {
+		return this.engine.group_roles.create({
+			data: { group_id: groupId, role_id: roleId }
+		});
+		// this.engine.runStatement(`
+		// 		INSERT OR IGNORE INTO group_roles (group_id, role_id)
+		// 		VALUES ($groupId, $roleId)
+		// `, {
+		// 	$groupId: groupId,
+		// 	$roleId: roleId
+		// });
+	}
+	removeRoleFromGroup(
+		groupId: PrismaField<"groups", "group_id">,
+		roleId: PrismaField<"roles", "role_id">
+	) {
+		return this.engine.group_roles.delete({
+			where: { group_id_role_id: { group_id: groupId, role_id: roleId } }
+		});
+		// this.engine.runStatement(`
+		// 		DELETE FROM group_roles
+		// 		WHERE group_id = $groupId AND role_id = $roleId
+		// `, {
+		// 	$groupId: groupId,
+		// 	$roleId: roleId
+		// });
+	}
+	addPermissionToRole(
+		roleId: PrismaField<"roles", "role_id">,
+		permissionId: PrismaField<"permissions", "permission_id">
+	) {
+		return this.engine.role_permissions.create({
+			data: { role_id: roleId, permission_id: permissionId }
+		});
+		// this.engine.runStatement(`
+		// 		INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
+		// 		VALUES ($roleId, $permissionId)
+		// `, {
+		// 	$roleId: roleId,
+		// 	$permissionId: permissionId
+		// });
+	}
+	removePermissionFromRole(
+		roleId: PrismaField<"roles", "role_id">,
+		permissionId: PrismaField<"permissions", "permission_id">
+	) {
+		return this.engine.role_permissions.delete({
+			where: { role_id_permission_id: { role_id: roleId, permission_id: permissionId } }
+		});
+		// this.engine.runStatement(`
+		// 		DELETE FROM role_permissions
+		// 		WHERE role_id = $roleId AND permission_id = $permissionId
+		// `, {
+		// 	$roleId: roleId,
+		// 	$permissionId: permissionId
+		// });
+	}
+	getUserRoles(userId: PrismaField<"users", "user_id">) {
+		return this.engine.user_roles.findMany({
+			where: { user_id: userId },
+			select: { role: true }
+		});
+		// const query = `
+		// 		SELECT r.role_id, r.role_name
+		// 		FROM user_roles ur
+		// 		JOIN roles r ON ur.role_id = r.role_id
+		// 		WHERE ur.user_id = $userId
+		// 		LIMIT 1
+		// `;
+
+		// return this.engine.runStatementGet(query, { $userId: userId });
+	}
+	deleteUserRolesByRoleId(roleId: PrismaField<"roles", "role_id">) {
+		return this.engine.user_roles.deleteMany({ where: { role_id: roleId } });
+		// this.engine.runStatement(`
+		// 		DELETE FROM user_roles
+		// 		WHERE role_id = $roleId
+		// `, {
+		// 	$roleId: roleId
+		// });
+	}
+	deleteUserRolesByUserId(userId: PrismaField<"users", "user_id">) {
+		return this.engine.user_roles.deleteMany({ where: { user_id: userId } });
+		// this.engine.runStatement(`
+		// 		DELETE FROM user_roles
+		// 		WHERE user_id = $userId
+		// `, {
+		// 	$userId: userId
+		// });
+	}
+	async isRoleInUse(roleId: PrismaField<"roles", "role_id">) {
+		return await this.engine.user_roles.count({ where: { role_id: roleId } }).then(e => e > 0)
+			|| await this.engine.acl.count({ where: { role_id: roleId } }).then(e => e > 0);
+
+		// // Check if the role is assigned to any users
+		// const userRoleCheck = this.engine.runStatementGet(`
+		// 	SELECT 1
+		// 	FROM user_roles
+		// 	WHERE role_id = $roleId
+		// 	LIMIT 1
+		// `, {
+		// 	$roleId: roleId
+		// });
+
+		// if (userRoleCheck) {
+		// 	return true;
+		// }
+
+		// // Check if the role is used in any ACLs
+		// const aclRoleCheck = this.engine.runStatementGet(`
+		// 	SELECT 1
+		// 	FROM acl
+		// 	WHERE role_id = $roleId
+		// 	LIMIT 1
+		// `, {
+		// 	$roleId: roleId
+		// });
+
+		// if (aclRoleCheck) {
+		// 	return true;
+		// }
+
+		// // If we've reached this point, the role is not in use
+		// return false;
+	}
+	getRoleById(roleId: PrismaField<"roles", "role_id">) {
+		return this.engine.roles.findUnique({
+			where: { role_id: roleId }
+		});
+		// const role = this.engine.runStatementGet(`
+		// 	SELECT role_id, role_name, description
+		// 	FROM roles
+		// 	WHERE role_id = $roleId
+		// `, {
+		// 	$roleId: roleId
+		// });
+		// return role;
+	}
 }
 
 

@@ -28,6 +28,8 @@ exports.startup = function() {
 
 function setupStore() {
 	const path = require("path");
+	const fs = require("fs");
+	const runsql = !fs.existsSync(path.resolve($tw.boot.wikiPath,"store"));
 	// Create and initialise the attachment store and the tiddler store
 	const AttachmentStore = require("$:/plugins/tiddlywiki/multiwikiserver/store/attachments.js").AttachmentStore,
 		attachmentStore = new AttachmentStore({
@@ -40,6 +42,7 @@ function setupStore() {
 			attachmentStore: attachmentStore,
 			adminWiki: $tw.wiki,
 		});
+	if(runsql) try {store.sql.engine.db.exec(require("fs").readFileSync("./prisma/schema.prisma.sql", "utf8"));} catch(e) { console.log(e);}
 	return store;
 }
 

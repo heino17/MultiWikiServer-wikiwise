@@ -4,7 +4,7 @@ import * as opaque from "@serenity-kit/opaque";
 import { z } from "zod";
 
 
-export default function AuthRoutes( parent: rootRoute) {
+export default function AuthRoutes(parent: rootRoute) {
 
   const authRoute = parent.defineRoute({
     useACL: {},
@@ -33,7 +33,17 @@ export default function AuthRoutes( parent: rootRoute) {
       reqpath: "register.html",
     });
   });
-
+  authRoute.defineRoute({
+    useACL: {},
+    method: ["GET", "HEAD"],
+    bodyFormat: undefined,
+    path: /^\/login/,
+  }, async (state) => {
+    return state.sendFile(200, {}, {
+      root: "public",
+      reqpath: "login.html",
+    });
+  });
 
   authRoute.defineRoute({
     useACL: {},
@@ -65,7 +75,7 @@ export default function AuthRoutes( parent: rootRoute) {
     return state.sendString(200, {}, registrationResponse, "utf8");
   });
 
-  const test2 = authRoute.defineRoute({
+  authRoute.defineRoute({
     useACL: {},
     method: ["POST"],
     bodyFormat: "www-form-urlencoded",
@@ -82,20 +92,8 @@ export default function AuthRoutes( parent: rootRoute) {
     const userIdentifier = userIdentifiers.get(username); // userId/email/username
     ok(typeof userIdentifier === "string");
 
-    registrationRecords.set(userIdentifier, state.data);
+    registrationRecords.set(userIdentifier, registrationRecord);
     return state.sendEmpty(200, {});
-  });
-
-  authRoute.defineRoute({
-    useACL: {},
-    method: ["GET", "HEAD"],
-    bodyFormat: undefined,
-    path: /^\/login/,
-  }, async (state) => {
-    return state.sendFile(200, {}, {
-      root: "public",
-      reqpath: "login.html",
-    });
   });
 
   authRoute.defineRoute({
@@ -135,10 +133,12 @@ export default function AuthRoutes( parent: rootRoute) {
     bodyFormat: "www-form-urlencoded",
     path: /^\/login\/2/,
   }, async (state) => {
+
     zodAssert.data(state, z => z.object({
       username: z.string(),
       finishLoginRequest: z.string(),
     }));
+
     const { username, finishLoginRequest } = state.data;
 
     const userIdentifier = userIdentifiers.get(username); // userId/email/username
@@ -157,6 +157,7 @@ export default function AuthRoutes( parent: rootRoute) {
     userSessionKeys.set(userIdentifier, sessionKey);
 
     return state.sendEmpty(200, {});
+
   });
 
   return authRoute;

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { StateObject } from "./StateObject";
 import { rootRoute } from "./router";
-import * as sql from "./store/sql-tiddler-database";
+import * as sql from "./store/new-sql-tiddler-database";
 import * as assert from "assert";
 import "../jsglobal";
 import { Prisma } from "@prisma/client";

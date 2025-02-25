@@ -42,7 +42,7 @@ function SqlTiddlerStore(options) {
 		databasePath: this.databasePath,
 		engine: options.engine
 	});
-	this.sqlTiddlerDatabase.createTables();
+	// this.sqlTiddlerDatabase.createTables();
 	this.sql = this.sqlTiddlerDatabase;
 }
 

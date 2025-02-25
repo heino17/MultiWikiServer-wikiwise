@@ -3,8 +3,8 @@ CREATE TABLE "acl" (
     "acl_id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "entity_name" TEXT NOT NULL,
     "entity_type" TEXT NOT NULL,
-    "role_id" INTEGER,
-    "permission_id" INTEGER,
+    "role_id" INTEGER NOT NULL,
+    "permission_id" INTEGER NOT NULL,
     CONSTRAINT "acl_permission_id_fkey" FOREIGN KEY ("permission_id") REFERENCES "permissions" ("permission_id") ON DELETE NO ACTION ON UPDATE NO ACTION,
     CONSTRAINT "acl_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles" ("role_id") ON DELETE NO ACTION ON UPDATE NO ACTION
 );
@@ -13,18 +13,8 @@ CREATE TABLE "acl" (
 CREATE TABLE "bags" (
     "bag_id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "bag_name" TEXT NOT NULL,
-    "accesscontrol" TEXT NOT NULL,
+    "accesscontrol" TEXT,
     "description" TEXT NOT NULL
-);
-
--- CreateTable
-CREATE TABLE "fields" (
-    "tiddler_id" INTEGER NOT NULL,
-    "field_name" TEXT NOT NULL,
-    "field_value" TEXT NOT NULL,
-
-    PRIMARY KEY ("tiddler_id", "field_name"),
-    CONSTRAINT "fields_tiddler_id_fkey" FOREIGN KEY ("tiddler_id") REFERENCES "tiddlers" ("tiddler_id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -88,10 +78,11 @@ CREATE TABLE "roles" (
 
 -- CreateTable
 CREATE TABLE "sessions" (
-    "user_id" INTEGER NOT NULL,
     "session_id" TEXT NOT NULL PRIMARY KEY,
     "created_at" TEXT NOT NULL,
     "last_accessed" TEXT NOT NULL,
+    "session_login_state" TEXT,
+    "user_id" INTEGER NOT NULL,
     CONSTRAINT "sessions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("user_id") ON DELETE NO ACTION ON UPDATE NO ACTION
 );
 
@@ -103,6 +94,16 @@ CREATE TABLE "tiddlers" (
     "is_deleted" BOOLEAN NOT NULL,
     "attachment_blob" TEXT,
     CONSTRAINT "tiddlers_bag_id_fkey" FOREIGN KEY ("bag_id") REFERENCES "bags" ("bag_id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "fields" (
+    "tiddler_id" INTEGER NOT NULL,
+    "field_name" TEXT NOT NULL,
+    "field_value" TEXT NOT NULL,
+
+    PRIMARY KEY ("tiddler_id", "field_name"),
+    CONSTRAINT "fields_tiddler_id_fkey" FOREIGN KEY ("tiddler_id") REFERENCES "tiddlers" ("tiddler_id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -131,64 +132,46 @@ CREATE TABLE "users" (
     "username" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "password" TEXT NOT NULL,
-    "created_at" TEXT DEFAULT 'datetime(''now'')',
+    "created_at" TEXT NOT NULL DEFAULT 'datetime(''now'')',
     "last_login" TEXT
 );
 
 -- CreateIndex
-CREATE INDEX "idx_acl_entity_id" ON "acl"("entity_name");
+CREATE INDEX "acl_entity_name_idx" ON "acl"("entity_name");
 
 -- CreateIndex
-Pragma writable_schema=1;
-CREATE UNIQUE INDEX "sqlite_autoindex_bags_1" ON "bags"("bag_name");
-Pragma writable_schema=0;
+CREATE UNIQUE INDEX "bags_bag_name_key" ON "bags"("bag_name");
 
 -- CreateIndex
-CREATE INDEX "idx_fields_tiddler_id" ON "fields"("tiddler_id");
+CREATE UNIQUE INDEX "groups_group_name_key" ON "groups"("group_name");
 
 -- CreateIndex
-Pragma writable_schema=1;
-CREATE UNIQUE INDEX "sqlite_autoindex_groups_1" ON "groups"("group_name");
-Pragma writable_schema=0;
+CREATE UNIQUE INDEX "permissions_permission_name_key" ON "permissions"("permission_name");
 
 -- CreateIndex
-Pragma writable_schema=1;
-CREATE UNIQUE INDEX "sqlite_autoindex_permissions_1" ON "permissions"("permission_name");
-Pragma writable_schema=0;
+CREATE INDEX "recipe_bags_recipe_id_idx" ON "recipe_bags"("recipe_id");
 
 -- CreateIndex
-CREATE INDEX "idx_recipe_bags_recipe_id" ON "recipe_bags"("recipe_id");
+CREATE UNIQUE INDEX "recipe_bags_recipe_id_bag_id_key" ON "recipe_bags"("recipe_id", "bag_id");
 
 -- CreateIndex
-Pragma writable_schema=1;
-CREATE UNIQUE INDEX "sqlite_autoindex_recipe_bags_1" ON "recipe_bags"("recipe_id", "bag_id");
-Pragma writable_schema=0;
+CREATE UNIQUE INDEX "recipes_recipe_name_key" ON "recipes"("recipe_name");
 
 -- CreateIndex
-Pragma writable_schema=1;
-CREATE UNIQUE INDEX "sqlite_autoindex_recipes_1" ON "recipes"("recipe_name");
-Pragma writable_schema=0;
+CREATE UNIQUE INDEX "roles_role_name_key" ON "roles"("role_name");
 
 -- CreateIndex
-Pragma writable_schema=1;
-CREATE UNIQUE INDEX "sqlite_autoindex_roles_1" ON "roles"("role_name");
-Pragma writable_schema=0;
+CREATE INDEX "tiddlers_bag_id_idx" ON "tiddlers"("bag_id");
 
 -- CreateIndex
-CREATE INDEX "idx_tiddlers_bag_id" ON "tiddlers"("bag_id");
+CREATE UNIQUE INDEX "tiddlers_bag_id_title_key" ON "tiddlers"("bag_id", "title");
 
 -- CreateIndex
-Pragma writable_schema=1;
-CREATE UNIQUE INDEX "sqlite_autoindex_tiddlers_1" ON "tiddlers"("bag_id", "title");
-Pragma writable_schema=0;
+CREATE INDEX "fields_tiddler_id_idx" ON "fields"("tiddler_id");
 
 -- CreateIndex
-Pragma writable_schema=1;
-CREATE UNIQUE INDEX "sqlite_autoindex_users_1" ON "users"("username");
-Pragma writable_schema=0;
+CREATE UNIQUE INDEX "users_username_key" ON "users"("username");
 
 -- CreateIndex
-Pragma writable_schema=1;
-CREATE UNIQUE INDEX "sqlite_autoindex_users_2" ON "users"("email");
-Pragma writable_schema=0;
+CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 

@@ -16,12 +16,12 @@ model acl {
   permission   permissions? @relation(fields: [permission_id], references: [permission_id], onDelete: NoAction, onUpdate: NoAction)
   role         roles?       @relation(fields: [role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@index([entity_name], map: "idx_acl_entity_id")
+  @@index([entity_name])
 }
 
 model bags {
   bag_id        Int           @id @default(autoincrement())
-  bag_name      String        @unique(map: "sqlite_autoindex_bags_1")
+  bag_name      String        @unique()
   accesscontrol String?
   description   String
   recipe_bags   recipe_bags[]
@@ -39,7 +39,7 @@ model group_roles {
 
 model groups {
   group_id    Int           @id @default(autoincrement())
-  group_name  String        @unique(map: "sqlite_autoindex_groups_1")
+  group_name  String        @unique()
   description String?
   group_roles group_roles[] 
   user_groups user_groups[] 
@@ -47,7 +47,7 @@ model groups {
 
 model permissions {
   permission_id    Int                @id @default(autoincrement())
-  permission_name  String             @unique(map: "sqlite_autoindex_permissions_1")
+  permission_name  String             @unique()
   description      String?
   acl              acl[]
   role_permissions role_permissions[] 
@@ -60,13 +60,13 @@ model recipe_bags {
   bag      bags    @relation(fields: [bag_id], references: [bag_id], onDelete: Cascade)
   recipe   recipes @relation(fields: [recipe_id], references: [recipe_id], onDelete: Cascade)
 
-  @@unique([recipe_id, bag_id], map: "sqlite_autoindex_recipe_bags_1")
-  @@index([recipe_id], map: "idx_recipe_bags_recipe_id")
+  @@unique([recipe_id, bag_id])
+  @@index([recipe_id])
 }
 
 model recipes {
   recipe_id   Int           @id @default(autoincrement())
-  recipe_name String        @unique(map: "sqlite_autoindex_recipes_1")
+  recipe_name String        @unique()
   description String
   recipe_bags recipe_bags[]
   owner_id    Int?
@@ -85,7 +85,7 @@ model role_permissions {
 
 model roles {
   role_id          Int                @id @default(autoincrement())
-  role_name        String             @unique(map: "sqlite_autoindex_roles_1")
+  role_name        String             @unique()
   description      String?
   acls             acl[]
   group_roles      group_roles[]      
@@ -97,6 +97,7 @@ model sessions {
   session_id    String @id
   created_at    String
   last_accessed String
+  session_login_state String?
   user_id       Int
   user          users  @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
 }
@@ -111,8 +112,8 @@ model tiddlers {
   // Deleting a referenced record (bag_id) will trigger the deletion of referencing record (tiddler).
   bag             bags     @relation(fields: [bag_id], references: [bag_id], onDelete: Cascade)
 
-  @@unique([bag_id, title], map: "sqlite_autoindex_tiddlers_1")
-  @@index([bag_id], map: "idx_tiddlers_bag_id")
+  @@unique([bag_id, title])
+  @@index([bag_id])
 }
 
 model fields {
@@ -123,7 +124,7 @@ model fields {
   tiddler    tiddlers @relation(fields: [tiddler_id], references: [tiddler_id], onDelete: Cascade)
 
   @@id([tiddler_id, field_name])
-  @@index([tiddler_id], map: "idx_fields_tiddler_id")
+  @@index([tiddler_id])
 }
 
 model user_groups {
@@ -149,8 +150,8 @@ model user_roles {
 
 model users {
   user_id     Int           @id @default(autoincrement())
-  username    String        @unique(map: "sqlite_autoindex_users_1")
-  email       String        @unique(map: "sqlite_autoindex_users_2")
+  username    String        @unique()
+  email       String        @unique()
   password    String
   created_at  String        @default("datetime('now')")
   last_login  String?

@@ -5,6 +5,7 @@ import RootRoute from "./routes";
 import * as z from "zod";
 import { createStrictAwaitProxy, is } from "./helpers";
 import { TiddlyWiki } from "tiddlywiki";
+import { readFileSync } from "fs";
 
 export const AllowedMethods = [...["GET", "HEAD", "OPTIONS", "POST", "PUT", "DELETE"] as const];
 export type AllowedMethod = typeof AllowedMethods[number];
@@ -66,6 +67,12 @@ export class Router {
       // "--mws-listen", "port=5001", "host=::"
     ];
     await new Promise<void>(resolve => $tw.boot.boot(resolve));
+    try {
+      
+    } catch(e){
+      console.error(e);
+    }
+
     (global as any).$tw = $tw;
     return new Router(rootRoute, $tw);
   }
