@@ -48,10 +48,6 @@ export function okTypeTruthy<T>(value: any, type: TYPEOF_ENUM, msg?: string) {
 	}
 }
 
-export function okEntityType(value: any): asserts value is EntityType {
-	ok(value === "bag" || value === "recipe", "Invalid entity type: " + value);
-}
-
 type EntityType = "bag" | "recipe";
 type TiddlerFields = Record<string, string>
 /*
@@ -62,7 +58,7 @@ engine - wasm | better
 
 Most of this class was converted using VSCode copilot suggestions
 */
-export class SqlTiddlerDatabase {
+class SqlTiddlerDatabase {
 
 	constructor(public engine: PrismaTxnClient) {
 
