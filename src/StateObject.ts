@@ -10,6 +10,7 @@ import { SqlTiddlerDatabase } from './store/new-sql-tiddler-database';
 import { resolve } from 'node:path';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { DefaultArgs } from '@prisma/client/runtime/library';
+import { DataChecks } from './store/data-checks';
 
 const authLevelNeededForMethod: Record<AllowedMethod, "readers" | "writers" | undefined> = {
   "GET": "readers",
@@ -113,7 +114,14 @@ export class StateObject<
   queryParams: Record<string, string[] | undefined>;
   authLevelNeeded: "readers" | "writers";
   authorizationType: string;
-  authenticatedUser: { user_id: number, isAdmin: boolean, username: string, sessionId: string } | null = null;
+  authenticatedUser: {
+    user_id: PrismaField<"users", "user_id">,
+    recipe_owner_id: PrismaField<"recipes", "owner_id"> & {},
+    isAdmin: boolean,
+    username: string,
+    sessionId: PrismaField<"sessions", "session_id">,
+  } | null = null;
+
   authenticatedUsername: string | null = null;
   anonAccessConfigured: boolean = false;
   allowAnon: boolean = false;
@@ -196,15 +204,13 @@ export class StateObject<
   }
 
   createStore(engine: PrismaTxnClient) {
-    const sql = createStrictAwaitProxy(new SqlTiddlerDatabase(engine, this.$transaction));
+    const sql = createStrictAwaitProxy(new SqlTiddlerDatabase(engine));
     return createStrictAwaitProxy(new SqlTiddlerStore(sql, this.attachmentStore, this.adminWiki));
   }
 
-  $transaction = async <T>(fn: (store: SqlTiddlerStore) => Promise<T>): Promise<T> => {
-    return await this.engine.$transaction(async prisma => {
-      return await fn(this.createStore(prisma as PrismaTxnClient));
-    });
-  }
+  // $transaction = async <T>(fn: (store: SqlTiddlerStore) => Promise<T>): Promise<T> =>
+  //   await this.engine.$transaction(async prisma => await fn(this.createStore(prisma as PrismaTxnClient)));
+
 
   public cookies: Record<string, string | undefined>;
   parseCookieString(cookieString: string) {
@@ -222,9 +228,9 @@ export class StateObject<
   }
   async authenticateUser() {
     const session_id = this.cookies.session;
-    if (!session_id) {
-      return null;
-    }
+    if (!session_id) { return null; }
+
+    this.store.okSessionID(session_id);
     // get user info
     const user: any = await this.store.sql.findUserBySessionId(session_id);
     if (!user) {
@@ -232,7 +238,7 @@ export class StateObject<
     }
     delete user.password;
     const userRole = await this.store.sql.getUserRoles(user.user_id);
-    user['isAdmin'] = userRole?.role_name?.toLowerCase() === 'admin';
+    user['isAdmin'] = userRole.some(e => e.role.role_name === 'ADMIN');
     user['sessionId'] = session_id;
 
     return user;
@@ -357,8 +363,11 @@ export class StateObject<
   // - it does not check whether headers have been sent before throwing. 
   // - headers should not be sent before it is called. 
   // - it should not send a response more than once since it should throw every time it does.
-  async checkACL(entityType: EntityType, entityName: string, permissionName: string): Promise<void> {
-    okType(permissionName, "string");
+  async checkACL(entityType: EntityType, entityName: string, permissionName: ACLPermissionName): Promise<void> {
+
+    this.store.okPermissionName(permissionName);
+
+
     if (permissionName !== {
       "GET": "READ",
       "HEAD": "READ",
@@ -371,7 +380,7 @@ export class StateObject<
       throw new Error("invalid permissionName for method")
     }
 
-    okEntityType(entityType);
+    this.store.okEntityType(entityType);
     var extensionRegex = /\.[A-Za-z0-9]{1,4}$/;
 
 
@@ -380,12 +389,14 @@ export class StateObject<
     // First, replace '%3A' with ':' to handle TiddlyWiki's system tiddlers
     var partiallyDecoded = entityName?.replace(/%3A/g, ":");
     // Then use decodeURIComponent for the rest
-    var decodedEntityName = decodeURIComponent(partiallyDecoded);
-    var aclRecord = await this.store.sql.getACLByName(entityType, decodedEntityName);
+    var decodedEntityName = decodeURIComponent(partiallyDecoded) as
+      PrismaField<"bags", "bag_name"> | PrismaField<"recipes", "recipe_name">;
+    var aclRecord = await this.store.sql.getACLByName(entityType, decodedEntityName, undefined, false);
     var isGetRequest = this.method === "GET";
     var hasAnonymousAccess = this.allowAnon ? (isGetRequest ? this.allowAnonReads : this.allowAnonWrites) : false;
     var anonymousAccessConfigured = this.anonAccessConfigured;
-    const { value: entity } = await this.store.sql.getEntityByName(entityType, decodedEntityName);
+    const { value: entity } = await this.store.sql.getEntityByName(entityType, decodedEntityName) as any;
+
     var isAdmin = this.authenticatedUser?.isAdmin;
 
     if (isAdmin) {

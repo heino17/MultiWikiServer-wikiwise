@@ -7,8 +7,8 @@ module-type: mws-route
 GET /?show_system=true
 
 \*/
-
 "use strict";
+
 /** @type {ServerRouteDefinition} */
 export const route = (root) => root.defineRoute({
 	method: ["GET"],
@@ -31,10 +31,11 @@ export const route = (root) => root.defineRoute({
 		const allowedRecipes = await filterAsync(recipeList, async recipe =>
 			recipe.recipe_name.startsWith("$:/")
 			|| state.authenticatedUser?.isAdmin
-			|| await state.store.sql.hasRecipePermission(
-				state.authenticatedUser?.user_id,
+			|| state.authenticatedUser
+			&& await state.store.sql.hasRecipePermission(
+				state.authenticatedUser.user_id,
 				recipe.recipe_name,
-				'READ'
+				state.store.permissions.READ
 			)
 			|| state.allowAnon && state.allowAnonReads
 		);
@@ -42,20 +43,25 @@ export const route = (root) => root.defineRoute({
 		const allowedBags = await filterAsync(bagList, async bag =>
 			bag.bag_name.startsWith("$:/")
 			|| state.authenticatedUser?.isAdmin
-			|| await state.store.sql.hasBagPermission(
-				state.authenticatedUser?.user_id,
+			|| state.authenticatedUser && await state.store.sql.hasBagPermission(
+				state.authenticatedUser.user_id,
 				bag.bag_name,
-				'READ'
+				state.store.permissions.READ
 			)
 			|| state.allowAnon && state.allowAnonReads
 		);
 
 		const allowedRecipesWithWrite = await mapAsync(allowedRecipes, async recipe => ({
 			...recipe,
-			has_acl_access: state.authenticatedUser?.isAdmin
-				|| recipe.owner_id === state.authenticatedUser?.user_id
+			has_acl_access: state.authenticatedUser && (
+				state.authenticatedUser.isAdmin
+				|| recipe.owner_id === state.authenticatedUser.recipe_owner_id
 				|| await state.store.sql.hasRecipePermission(
-					state.authenticatedUser?.user_id, recipe.recipe_name, 'WRITE')
+					state.authenticatedUser.user_id,
+					recipe.recipe_name,
+					state.store.permissions.WRITE
+				)
+			)
 		}))
 
 		// Render the html

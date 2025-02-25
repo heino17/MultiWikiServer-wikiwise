@@ -17,11 +17,11 @@ export const route = (root) => root.defineRoute({
 }, async state => {
 
 	zodAssert.pathParams(state, z => ({
-		recipe_name: z.uriComponent(),
+		recipe_name: z.prismaField("recipes", "recipe_name", "string"),
 	}));
 
 	zodAssert.queryParams(state, z => ({
-		last_known_tiddler_id: z.array(z.parsedNumber()).optional(),
+		last_known_tiddler_id: z.array(z.prismaField("tiddlers", "tiddler_id", "parse-number")).optional(),
 		include_deleted: z.array(z.string()).optional(),
 	}));
 

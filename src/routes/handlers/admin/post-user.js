@@ -16,10 +16,10 @@ export const route = (root) => root.defineRoute({
   useACL: {csrfDisable: true},
 }, async state => {
   zodAssert.data(state, z => z.object({
-    username: z.string(),
-    email: z.string(),
-    password: z.string(),
-    confirmPassword: z.string(),
+    username: z.prismaField("users", "username", "string"),
+    email: z.prismaField("users", "email", "string"),
+    password: z.prismaField("users", "password", "string"),
+    confirmPassword: z.prismaField("users", "password", "string"),
   }));
 
   function deleteTempTiddlers() {

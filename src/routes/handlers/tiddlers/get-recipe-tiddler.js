@@ -20,8 +20,8 @@ export const route = (root) => root.defineRoute({
 }, async state => {
 
 	zodAssert.pathParams(state, z => ({
-		recipe_name: z.uriComponent(),
-		title: z.uriComponent(),
+		recipe_name: z.prismaField("recipes", "recipe_name", "string"),
+		title: z.prismaField("tiddlers", "title", "string"),
 	}));
 
 	zodAssert.queryParams(state, z => ({

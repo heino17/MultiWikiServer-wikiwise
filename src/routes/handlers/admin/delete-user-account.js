@@ -19,10 +19,7 @@ export const route = (root) => root.defineRoute({
 }, async state => {
 
 	zodAssert.data(state, z => z.object({
-		userId: z.string()
-			.transform(x => parseInt(x))
-			.refine(x => !isNaN(x))
-			.describe("userId must be an integer"),
+		userId: z.prismaField("users", "user_id", "parse-number"),
 	}));
 
 

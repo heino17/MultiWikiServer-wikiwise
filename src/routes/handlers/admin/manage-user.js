@@ -15,7 +15,7 @@ export const route = (root) => root.defineRoute({
 	useACL: {},
 }, async state => {
 	zodAssert.pathParams(state, z => ({
-		user_id: z.parsedNumber()
+		user_id: z.prismaField("users", "user_id", "parse-number"),
 	}));
 
 	var user_id = state.pathParams.user_id;

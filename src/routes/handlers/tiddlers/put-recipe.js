@@ -16,7 +16,7 @@ export const route = (root) => root.defineRoute({
 }, async state => {
 
 	zodAssert.pathParams(state, z => ({
-		recipe_name: z.uriComponent(),
+		recipe_name: z.prismaField("recipes", "recipe_name", "string"),
 	}));
 
 	const {recipe_name} = state.pathParams;
@@ -24,8 +24,8 @@ export const route = (root) => root.defineRoute({
 	await state.checkACL("recipe", recipe_name, "WRITE");
 
 	zodAssert.data(state, z => z.object({
-		bag_names: z.array(z.string()).optional(),
-		description: z.string().optional(),
+		bag_names: z.array(z.prismaField("bags", "bag_name", "string")).optional(),
+		description: z.prismaField("recipes", "description", "string").default(""),
 	}));
 
 	// result is a validation error object

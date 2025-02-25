@@ -21,15 +21,10 @@ export const route = (root) => root.defineRoute({
 }, async state => {
 
 	zodAssert.data(state, z => z.object({
-		recipe_name: z.string(),
-		bag_name: z.string(),
-		acl_id: z.string()
-			.transform(x => parseInt(x))
-			.refine(x => !isNaN(x))
-			.describe("acl_id must be an integer"),
-		entity_type: z.string()
-			.refine(isEntityType)
-			.describe("entity_type must be 'recipe' or 'bag'")
+		recipe_name: z.prismaField("recipes", "recipe_name", "string"),
+		bag_name: z.prismaField("bags", "bag_name", "string"),
+		acl_id: z.prismaField("acl", "acl_id", "parse-number"),
+		entity_type: z.string().refine(isEntityType).describe("entity_type must be 'recipe' or 'bag'")
 	}));
 
 	const {

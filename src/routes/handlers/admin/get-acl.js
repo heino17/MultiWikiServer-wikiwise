@@ -14,18 +14,17 @@ GET /admin/acl
 /** @type {ServerRouteDefinition} */
 export const route = (root) => root.defineRoute({
 	method: ["GET"],
-	path: /^\/admin\/acl\/(.+)$/,
-	pathParams: ["recipe_name"],
+	path: /^\/admin\/acl\/([^\/]+)\/(?:[^\/]+\/)([^\/]+)$/,
+	pathParams: ["recipe_name", "bag_name"],
 	useACL: {},
 }, async state => {
 
 	zodAssert.pathParams(state, z => ({
-		recipe_name: z.string(),
+		recipe_name: z.prismaField("recipes", "recipe_name", "string"),
+		bag_name: z.prismaField("bags", "bag_name", "string")
 	}));
 
-	var params = state.pathParams.recipe_name.split("/")
-	var recipeName = params[0];
-	var bagName = params[params.length - 1];
+	const {recipe_name: recipeName, bag_name: bagName} = state.pathParams;
 
 	var recipes = await state.store.sql.listRecipes()
 	var bags = await state.store.sql.listBags()
@@ -37,8 +36,8 @@ export const route = (root) => root.defineRoute({
 		return state.sendEmpty(500, {"Content-Type": "text/html"});
 	}
 
-	var recipeAclRecords = await state.store.sql.getEntityAclRecords(recipe.recipe_name);
-	var bagAclRecords = await state.store.sql.getEntityAclRecords(bag.bag_name);
+	var recipeAclRecords = await state.store.sql.getEntityAclRecords("recipe", recipe.recipe_name);
+	var bagAclRecords = await state.store.sql.getEntityAclRecords("bag", bag.bag_name);
 	var roles = await state.store.sql.listRoles();
 	var permissions = await state.store.sql.listPermissions();
 
@@ -57,7 +56,7 @@ export const route = (root) => root.defineRoute({
 	}
 
 	// Enhance ACL records with role and permission details
-	recipeAclRecords = recipeAclRecords.map(record => {
+	const recipeAclRecords2 = recipeAclRecords.map(record => {
 		var role = roles.find(role => role.role_id === record.role_id);
 		var permission = permissions.find(perm => perm.permission_id === record.permission_id);
 		return ({
@@ -71,7 +70,7 @@ export const route = (root) => root.defineRoute({
 		})
 	});
 
-	bagAclRecords = bagAclRecords.map(record => {
+	const bagAclRecords2 = bagAclRecords.map(record => {
 		var role = roles.find(role => role.role_id === record.role_id);
 		var permission = permissions.find(perm => perm.permission_id === record.permission_id);
 		return ({
@@ -95,8 +94,8 @@ export const route = (root) => root.defineRoute({
 			"permissions-list": JSON.stringify(permissions),
 			"bag": JSON.stringify(bag),
 			"recipe": JSON.stringify(recipe),
-			"recipe-acl-records": JSON.stringify(recipeAclRecords),
-			"bag-acl-records": JSON.stringify(bagAclRecords),
+			"recipe-acl-records": JSON.stringify(recipeAclRecords2),
+			"bag-acl-records": JSON.stringify(bagAclRecords2),
 			"username": state.authenticatedUser ? state.authenticatedUser.username : state.firstGuestUser ? "Anonymous User" : "Guest",
 			"user-is-admin": state.authenticatedUser && state.authenticatedUser.isAdmin ? "yes" : "no"
 		}

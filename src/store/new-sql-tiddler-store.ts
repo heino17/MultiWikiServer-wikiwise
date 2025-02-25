@@ -231,8 +231,8 @@ export class SqlTiddlerStore extends DataChecks {
   */
   async createRecipe(
     recipe_name: PrismaField<"recipes", "recipe_name">,
-    description: PrismaField<"recipes", "description">,
     bag_names: PrismaField<"bags", "bag_name">[] = [],
+    description: PrismaField<"recipes", "description">,
     { allowPrivilegedCharacters = false }: { allowPrivilegedCharacters?: boolean } = {}
   ) {
 

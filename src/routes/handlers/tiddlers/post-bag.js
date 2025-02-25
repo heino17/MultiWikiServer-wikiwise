@@ -21,14 +21,14 @@ export const route = (root) => root.defineRoute({
 }, async state => {
 
 	zodAssert.data(state, z => z.object({
-		bag_name: z.string(),
-		description: z.string().optional()
+		bag_name: z.prismaField("bags", "bag_name", "string"),
+		description: z.prismaField("bags", "description", "string").default("")
 	}));
 
 	await state.checkACL("bag", state.data.bag_name, "WRITE");
 
 	// this returns a validation result object
-	const error = await state.store.createBag(state.data.bag_name, state.data.description ?? "");
+	const error = await state.store.createBag(state.data.bag_name, state.data.description);
 
 	if(!error) {
 		return state.redirect("/");

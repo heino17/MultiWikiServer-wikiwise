@@ -16,8 +16,8 @@ export const route = (root) => root.defineRoute({
 	useACL: {},
 }, async state => {
 	zodAssert.pathParams(state, z => ({
-		recipe_name: z.uriComponent(),
-		title: z.uriComponent(),
+		recipe_name: z.prismaField("recipes", "recipe_name", "string"),
+		title: z.prismaField("tiddlers", "title", "string"),
 	}));
 
 	await state.checkACL("recipe", state.pathParams.recipe_name, "WRITE");
@@ -29,7 +29,7 @@ export const route = (root) => root.defineRoute({
 	// so it wouldn't match that path and would return a 404, but a 400 is better to return,
 	// so we'll just rely on the router to return 400 if the body is not valid JSON
 	// here we'll just make sure that data is an object. 
-	zodAssert.data(state, z => z.record(z.any()));
+	zodAssert.data(state, z => z.object({title: z.string()}).passthrough());
 	const fields = state.data;
 
 	if(title !== fields.title)

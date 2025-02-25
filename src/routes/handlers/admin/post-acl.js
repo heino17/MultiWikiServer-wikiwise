@@ -16,12 +16,12 @@ export const route = (root) => root.defineRoute({
 }, async state => {
 
 	zodAssert.data(state, z => z.object({
-		entity_name: z.string(),
+		entity_name: z.prismaField("acl", "entity_name", "string"),
 		entity_type: z.enum(["recipe", "bag"]),
-		recipe_name: z.string(),
-		bag_name: z.string(),
-		role_id: z.parsedNumber().optional(),
-		permission_id: z.parsedNumber().optional()
+		recipe_name: z.prismaField("recipes", "recipe_name", "string"),
+		bag_name: z.prismaField("bags", "bag_name", "string"),
+		role_id: z.prismaField("roles", "role_id", "parse-number").optional(),
+		permission_id: z.prismaField("permissions", "permission_id", "parse-number").optional()
 	}));
 
 	const {
@@ -37,7 +37,7 @@ export const route = (root) => root.defineRoute({
 	var isRecipe = entity_type === "recipe"
 
 	try {
-		var entityAclRecords = await state.store.sql.getACLByName(entity_type, entity_name, true);
+		var entityAclRecords = await state.store.sql.getACLByName(entity_type, entity_name, undefined, true);
 
 		var aclExists = entityAclRecords.some((record) => (
 			record.role_id == role_id && record.permission_id == permission_id

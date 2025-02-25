@@ -39,6 +39,28 @@ export class DataChecks {
     ok(entityName, 'entityName must not be empty');
   }
 
+  okSessionID(sessionID: string): asserts sessionID is PrismaField<"sessions", "session_id"> {
+    ok(typeof sessionID === "string", 'sessionID must be a string');
+    ok(sessionID, 'sessionID must not be empty');
+  }
+
+  okPermissionName(permissionName: string): asserts permissionName is PrismaField<"permissions", "permission_name"> {
+    ok(typeof permissionName === "string", 'permissionName must be a string');
+    ok(permissionName, 'permissionName must not be empty');
+    // using a record keeps the enum type in sync with this check
+    ok(this.permissions[permissionName as ACLPermissionName], 'permissionName must be ' + Object.keys(this.permissions).join(', '));
+  }
+  permissions: Record<ACLPermissionName, PrismaField<"permissions", "permission_name"> & ACLPermissionName> = {
+    READ: "READ",
+    WRITE: "WRITE",
+    ADMIN: "ADMIN",
+  } as any;
+  // permissions: {
+  //   READ: PrismaField<"permissions", "permission_name">,
+  //   WRITE: PrismaField<"permissions", "permission_name">,
+  //   ADMIN: PrismaField<"permissions", "permission_name">
+  // } = { READ: "READ", WRITE: "WRITE", ADMIN: "ADMIN" } as any;
+
 }
 
 /**

@@ -20,8 +20,8 @@ export const route = (root) => root.defineRoute({
 	useACL: {csrfDisable: true}
 }, async state => {
 	zodAssert.data(state, z => z.object({
-		username: z.string(),
-		password: z.string()
+		username: z.prismaField("users", "username", "string"),
+		password: z.prismaField("users", "password", "string")
 	}));
 
 
@@ -35,7 +35,9 @@ export const route = (root) => root.defineRoute({
 		var returnUrl = state.cookies.returnUrl;
 		state.setHeader('Set-Cookie', `session=${sessionId}; HttpOnly; Path=/`);
 		if(state.headers.accept && state.headers.accept.indexOf("application/json") !== -1) {
-			return state.sendResponse(200, {"Content-Type": "application/json"}, JSON.stringify({
+			return state.sendResponse(200, {
+				"Content-Type": "application/json"
+			}, JSON.stringify({
 				"sessionId": sessionId
 			}));
 		} else {

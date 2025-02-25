@@ -19,10 +19,7 @@ export const route = (root) => root.defineRoute({
 }, async state => {
 
 	zodAssert.data(state, z => z.object({
-		role_id: z.string()
-			.transform(x => parseInt(x))
-			.refine(x => !isNaN(x))
-			.describe("role_id must be an integer"),
+		role_id: z.prismaField("roles", "role_id", "parse-number"),
 	}));
 
 	var role_id = state.data.role_id;

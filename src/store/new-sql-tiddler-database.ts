@@ -53,7 +53,8 @@ export class SqlTiddlerDatabase extends DataChecks {
 			column: "recipe_name"
 		}
 	}
-	constructor(private engine: PrismaTxnClient, public $transaction: <T>(fn: (store: SqlTiddlerStore) => Promise<T>) => Promise<T>) {
+	// public $transaction: <T>(fn: (store: SqlTiddlerStore) => Promise<T>) => Promise<T>
+	constructor(private engine: PrismaTxnClient) {
 		super();
 	}
 
@@ -280,7 +281,11 @@ export class SqlTiddlerDatabase extends DataChecks {
 			orderBy: {
 				recipe_name: "asc"
 			}
-		});
+		}).then(recipes => recipes.map(recipe => ({
+			...recipe,
+			recipe_bags: undefined,
+			bag_names: recipe.recipe_bags.map(e => e.bag.bag_name)
+		})));
 
 		// const rows = this.engine.runStatementGetAll(`
 		// 	SELECT r.recipe_name, r.recipe_id, r.description, r.owner_id, b.bag_name, rb.position
@@ -747,7 +752,7 @@ export class SqlTiddlerDatabase extends DataChecks {
 	async hasRecipePermission(
 		userId: PrismaField<"users", "user_id">,
 		recipeName: PrismaField<"recipes", "recipe_name">,
-		permissionName: PrismaField<"permissions", "permission_name">
+		permissionName: ACLPermissionName
 	) {
 		const recipe = await this.engine.recipes.findUnique({
 			where: { recipe_name: recipeName },
@@ -789,7 +794,7 @@ export class SqlTiddlerDatabase extends DataChecks {
 	async hasBagPermission(
 		userId: PrismaField<"users", "user_id">,
 		bagName: PrismaField<"bags", "bag_name">,
-		permissionName: PrismaField<"permissions", "permission_name">
+		permissionName: ACLPermissionName
 	) {
 		return this.checkACLPermission(userId, "bag", bagName, permissionName, undefined);
 	}
@@ -840,7 +845,7 @@ export class SqlTiddlerDatabase extends DataChecks {
 		user_id: PrismaField<"users", "user_id">,
 		entity_type: T,
 		entity_name: EntityName<T>,
-		permission_name: PrismaField<"permissions", "permission_name">,
+		permission_name: ACLPermissionName,
 		ownerId: PrismaField<"users", "user_id"> | undefined
 	) {
 		this.okEntityType(entity_type);
@@ -927,14 +932,14 @@ export class SqlTiddlerDatabase extends DataChecks {
 	/**
 	Get the entity by name
 	*/
-	getEntityByName<T extends EntityType>(
+	async getEntityByName<T extends EntityType>(
 		entity_type: T,
 		entity_name: EntityName<T>
 	) {
 
 		switch (entity_type) {
-			case "bag": return this.engine.bags.findUnique({ where: { bag_name: entity_name } });
-			case "recipe": return this.engine.recipes.findUnique({ where: { recipe_name: entity_name } });
+			case "bag": return { entity_type: "bag" as const, value: await this.engine.bags.findUnique({ where: { bag_name: entity_name } }) };
+			case "recipe": return { entity_type: "recipe" as const, value: await this.engine.recipes.findUnique({ where: { recipe_name: entity_name } }) };
 			default: throw new Error("Invalid entity type: " + entity_type);
 		}
 
@@ -1211,15 +1216,16 @@ export class SqlTiddlerDatabase extends DataChecks {
 	/**
 	Get the attachment value of a bag, if any exist
 	*/
-	getBagTiddlerAttachmentBlob(
+	async getBagTiddlerAttachmentBlob(
 		title: PrismaField<"tiddlers", "title">,
 		bag_name: PrismaField<"bags", "bag_name">
 	) {
 
-		return this.engine.tiddlers.findFirst({
+		const e = await this.engine.tiddlers.findFirst({
 			where: { title, bag: { bag_name } },
 			select: { attachment_blob: true }
-		}).then(e => e?.attachment_blob ?? null);
+		});
+		return e?.attachment_blob ?? null;
 
 		// 	const row = this.engine.runStatementGet(`
 		// 	SELECT t.attachment_blob
@@ -1259,18 +1265,19 @@ export class SqlTiddlerDatabase extends DataChecks {
 		// 	return row ? row.attachment_blob : null;
 	}
 	// User CRUD operations
-	createUser(
+	async createUser(
 		username: string,
 		email: string,
 		password: string
 	) {
-		return this.engine.users.create({
+		const e = await this.engine.users.create({
 			data: {
 				username,
 				email,
 				password
 			}
-		}).then(e => e.user_id);
+		});
+		return e.user_id;
 		// const result = this.engine.runStatement(`
 		// 		INSERT INTO users (username, email, password)
 		// 		VALUES ($username, $email, $password)
@@ -1612,18 +1619,19 @@ export class SqlTiddlerDatabase extends DataChecks {
 		// });
 	}
 	// Set the user as an admin
-	setUserAdmin(userId: PrismaField<"users", "user_id">) {
-		var admin = this.getRoleByName("ADMIN");
+	async setUserAdmin(userId: PrismaField<"users", "user_id">) {
+		var admin = await this.getRoleByName("ADMIN" as PrismaField<"roles", "role_name">);
 		if (admin) { this.addRoleToUser(userId, admin.role_id); }
 	}
 	// Group CRUD operations
-	createGroup(
+	async createGroup(
 		group_name: PrismaField<"groups", "group_name">,
 		description: PrismaField<"groups", "description">
 	) {
-		return this.engine.groups.create({
+		const e = await this.engine.groups.create({
 			data: { group_name, description }
-		}).then(e => e.group_id);
+		});
+		return e.group_id;
 		// const result = this.engine.runStatement(`
 		// 		INSERT INTO groups (group_name, description)
 		// 		VALUES ($groupName, $description)
@@ -1677,13 +1685,14 @@ export class SqlTiddlerDatabase extends DataChecks {
 		// `);
 	}
 	// Role CRUD operations
-	createRole(
+	async createRole(
 		roleName: PrismaField<"roles", "role_name">,
 		description: PrismaField<"roles", "description">
 	) {
-		return this.engine.roles.create({
+		const e = await this.engine.roles.create({
 			data: { role_name: roleName, description }
-		}).then(e => e.role_id);
+		});
+		return e.role_id;
 		// const result = this.engine.runStatement(`
 		// 		INSERT OR IGNORE INTO roles (role_name, description)
 		// 		VALUES ($roleName, $description)
@@ -1747,13 +1756,14 @@ export class SqlTiddlerDatabase extends DataChecks {
 		// `);
 	}
 	// Permission CRUD operations
-	createPermission(
+	async createPermission(
 		permissionName: PrismaField<"permissions", "permission_name">,
 		description: PrismaField<"permissions", "description">
 	) {
-		return this.engine.permissions.create({
+		const e = await this.engine.permissions.create({
 			data: { permission_name: permissionName, description }
-		}).then(e => e.permission_id);
+		});
+		return e.permission_id;
 		// const result = this.engine.runStatement(`
 		// 	INSERT OR IGNORE INTO permissions (permission_name, description)
 		// 	VALUES ($permissionName, $description)
@@ -1915,13 +1925,14 @@ export class SqlTiddlerDatabase extends DataChecks {
 		// 	$groupId: groupId
 		// });
 	}
-	isUserInGroup(
+	async isUserInGroup(
 		userId: PrismaField<"users", "user_id">,
 		groupId: PrismaField<"groups", "group_id">
 	) {
-		return this.engine.user_groups.count({
+		const e = await this.engine.user_groups.count({
 			where: { user_id: userId, group_id: groupId }
-		}).then(e => e > 0);
+		});
+		return e > 0;
 		// const result = this.engine.runStatementGet(`
 		// 		SELECT 1 FROM user_groups
 		// 		WHERE user_id = $userId AND group_id = $groupId

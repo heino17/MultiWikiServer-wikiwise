@@ -23,10 +23,10 @@ export const route = (root) => root.defineRoute({
   }
 
   zodAssert.data(state, z => z.object({
-    userId: z.parsedNumber(),
-    username: z.string().min(1),
-    email: z.string().min(1),
-    role: z.parsedNumber(),
+    userId: z.prismaField("users", "user_id", "parse-number"),
+    username: z.prismaField("users", "username", "string"),
+    email: z.prismaField("users", "email", "string"),
+    role: z.prismaField("roles", "role_id", "parse-number"),
   }));
 
   var userId = state.data.userId;
