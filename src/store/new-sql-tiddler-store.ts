@@ -386,7 +386,7 @@ export class SqlTiddlerStore extends DataChecks {
     title: PrismaField<"tiddlers", "title">,
     recipe_name: PrismaField<"recipes", "recipe_name">
   ) {
-    var tiddlerInfo = await this.sql.getRecipeTiddler(title, recipe_name, { attachment_blob: true });
+    var tiddlerInfo = await this.sql.getRecipeTiddler(title, recipe_name, { attachment_blob: true, fields: true });
     if (tiddlerInfo) {
       return Object.assign({}, tiddlerInfo, {
         tiddler: await this.processOutgoingTiddler(tiddlerInfo.tiddler, tiddlerInfo.tiddler_id, tiddlerInfo.bag_name, tiddlerInfo.attachment_blob ?? null)

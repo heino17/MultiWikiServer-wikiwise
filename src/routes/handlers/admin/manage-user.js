@@ -35,7 +35,7 @@ export const route = (root) => root.defineRoute({
 	}
 
 	if(!userData) {
-		state.writeHead(404,  {"Content-Type": "text/html"});
+		state.writeHead(404, {"Content-Type": "text/html"});
 		var errorHtml = state.store.adminWiki.renderTiddler("text/plain", "$:/plugins/tiddlywiki/multiwikiserver/templates/error", {
 			variables: {
 				"error-message": "User not found"
@@ -66,7 +66,9 @@ export const route = (root) => root.defineRoute({
 	var allRoles = await state.store.sql.listRoles();
 
 	// sort allRoles by placing the user's role at the top of the list
-	allRoles.sort(function(a, b) {return (a.role_id === userRole?.role_id ? -1 : 1)});
+	allRoles.sort(function(a, b) {
+		return (userRole.some(e => e.role_id === a.role_id) ? -1 : 1)
+	});
 
 	state.store.adminWiki.addTiddler(new $tw.Tiddler({
 		title: "$:/temp/mws/user-info/" + user_id + "/preview-user-id",

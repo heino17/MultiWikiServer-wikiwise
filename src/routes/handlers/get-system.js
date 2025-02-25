@@ -31,6 +31,7 @@ export const route = (root) => root.defineRoute({
 	tiddler = state.store.adminWiki.getTiddler(title),
 	isSystemFile = tiddler && tiddler.hasTag("$:/tags/MWS/SystemFile"),
 	isSystemFileWikified = tiddler && tiddler.hasTag("$:/tags/MWS/SystemFileWikified");
+
 	if(tiddler && (isSystemFile || isSystemFileWikified)) {
 		let text = tiddler.fields.text || "";
 		const sysFileType = tiddler.fields["system-file-type"];

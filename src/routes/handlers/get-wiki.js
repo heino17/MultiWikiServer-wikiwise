@@ -21,9 +21,15 @@ export const route = (root) => root.defineRoute({
 
 	// Get the recipe name from the parameters
 	var recipe_name = state.pathParams.recipe_name,
-		recipeTiddlers = recipe_name && await state.store.getRecipeTiddlers(recipe_name);
+		allTiddlers = recipe_name && await state.store.getRecipeTiddlers(recipe_name);
 
-	console.log("GET /wiki/:recipe_name",recipe_name,!!recipeTiddlers);
+	allTiddlers.sort((a, b) => a.position - b.position);
+
+	const recipeTiddlers = Array.from(new Map(allTiddlers.flatMap(bag => bag.tiddlers.map(tiddler => {
+		return [tiddler.title, tiddler];
+	})))).map(e => e[1]);
+
+	console.log("GET /wiki/:recipe_name", recipe_name, !!recipeTiddlers);
 	// Check request is valid
 	if(!recipe_name || !recipeTiddlers) {
 		return state.sendEmpty(404);
@@ -34,7 +40,7 @@ export const route = (root) => root.defineRoute({
 	});
 	// Get the tiddlers in the recipe
 	// Render the template
-	var template = state.store.adminWiki.renderTiddler("text/plain","$:/core/templates/tiddlywiki5.html",{
+	var template = state.store.adminWiki.renderTiddler("text/plain", "$:/core/templates/tiddlywiki5.html", {
 		variables: {
 			saveTiddlerFilter: `
 				$:/boot/boot.css
@@ -59,18 +65,18 @@ export const route = (root) => root.defineRoute({
 	 * @param {Record<string, string>} tiddlerFields 
 	 */
 	function writeTiddler(tiddlerFields) {
-		state.write(JSON.stringify(tiddlerFields).replace(/</g,"\\u003c"));
+		state.write(JSON.stringify(tiddlerFields).replace(/</g, "\\u003c"));
 		state.write(",\n");
 	}
-	state.write(template.substring(0,markerPos + marker.length));
-	const 
+	state.write(template.substring(0, markerPos + marker.length));
+	const
 		/** @type {Record<string, string>} */
 		bagInfo = {},
 		/** @type {Record<string, string>} */
 		revisionInfo = {};
-	
-	for(const recipeTiddlerInfo of recipeTiddlers){
-		var result = await state.store.getRecipeTiddler(recipeTiddlerInfo.title,recipe_name);
+
+	for(const recipeTiddlerInfo of recipeTiddlers) {
+		var result = await state.store.getRecipeTiddler(recipeTiddlerInfo.title, recipe_name);
 		if(result) {
 			bagInfo[result.tiddler.title] = result.bag_name;
 			revisionInfo[result.tiddler.title] = result.tiddler_id.toString();

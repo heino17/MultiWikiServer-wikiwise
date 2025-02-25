@@ -64,6 +64,8 @@ export const route = (root) => root.defineRoute({
 			)
 		}))
 
+		console.log(bagList, recipeList);
+
 		// Render the html
 		var html = state.store.adminWiki.renderTiddler("text/plain", "$:/plugins/tiddlywiki/multiwikiserver/templates/page", {
 			variables: {

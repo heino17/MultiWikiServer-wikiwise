@@ -32,10 +32,14 @@ export const route = (root) => root.defineRoute({
 	await state.checkACL("recipe", recipe_name, "READ");
 
 	// Get the  parameters
-	var recipeTiddlers = await state.store.getRecipeTiddlers(recipe_name, {
+	var allTiddlers = await state.store.getRecipeTiddlers(recipe_name, {
 		last_known_tiddler_id,
 		include_deleted,
 	});
+	allTiddlers.sort((a, b) => a.position - b.position);
+	const recipeTiddlers = Array.from(new Map(allTiddlers.flatMap(bag => bag.tiddlers.map(tiddler => {
+		return [tiddler.title, tiddler];
+	})))).map(e => e[1]);
 	if(recipeTiddlers) {
 		return state.sendResponse(200, {
 			"Content-Type": "application/json"

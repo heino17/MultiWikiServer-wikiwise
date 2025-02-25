@@ -55,12 +55,21 @@ export const route = (root) => root.defineRoute({
 	// Method to get changed tiddler events and send to the client
 	async function sendUpdates() {
 		// Get the tiddlers in the recipe since the last known tiddler_id
-		var recipeTiddlers = await state.store.getRecipeTiddlers(recipe_name, {
+		var allTiddlers = await state.store.getRecipeTiddlers(recipe_name, {
 			include_deleted: true,
-			last_known_tiddler_id: last_known_tiddler_id
+			last_known_tiddler_id
 		});
+		// the original method seems wrong. 
+		// The client should get the changes from all bags, not just the top for each title.
+		// I guess it depends on how the client handles bags. 
+		allTiddlers.sort((a, b) => a.position - b.position);
+		const recipeTiddlers = Array.from(new Map(allTiddlers.flatMap(bag => bag.tiddlers.map(tiddler => {
+			return [tiddler.title, tiddler];
+		})))).map(e => e[1]);
 		// Send to the client
 		if(recipeTiddlers) {
+
+
 			for(let index = recipeTiddlers.length - 1; index >= 0; index--) {
 				const tiddlerInfo = recipeTiddlers[index];
 				if(tiddlerInfo.tiddler_id > last_known_tiddler_id) {

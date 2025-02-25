@@ -16,9 +16,12 @@ declare global {
    * this will result in a type error on the as keyword, 
    * allowing you to catch incorrect types quickly.
   */
-  type PrismaField<T extends Prisma.ModelName, K extends keyof PrismaPayloadScalars<T>>
-    // =PrismaPayloadScalars<T>[K] & { __prisma_table: T, __prisma_field: K }
-    = (PrismaPayloadScalars<T>[K] & { __prisma_table: T, __prisma_field: K })
+  type PrismaField<T extends Prisma.ModelName, K extends keyof PrismaPayloadScalars<T>> =
+    // manually map foriegn keys to their corresponding primary key so comparisons work
+    [T, K] extends ["acl", "role_id"] ? PrismaField<"roles", "role_id"> :
+    [T, K] extends ["acl", "permission_id"] ? PrismaField<"permissions", "permission_id"> :
+    [T, K] extends ["user_roles", "role_id"] ? PrismaField<"roles", "role_id"> :
+    (PrismaPayloadScalars<T>[K] & { __prisma_table: T, __prisma_field: K })
     | (null extends PrismaPayloadScalars<T>[K] ? null : never);
   type PrismaPayloadScalars<T extends Prisma.ModelName>
     = Prisma.TypeMap["model"][T]["payload"]["scalars"]
@@ -231,7 +234,7 @@ z2.prismaField = function (table: any, field: any, fieldtype: ExtraFieldType): a
   switch (fieldtype) {
     case "string":
       return z.string().transform(zodURIComponent)
-        .refine(x => (x.length < 1), { message: "String must have length" });
+        .refine(x => x.length, { message: "String must have length" });
     case "parse-number":
       return z.string().min(1).transform(zodURIComponent)
         .pipe(z.bigint({ coerce: true }))

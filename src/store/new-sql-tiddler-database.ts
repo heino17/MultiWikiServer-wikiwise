@@ -538,7 +538,7 @@ export class SqlTiddlerDatabase extends DataChecks {
 		await this.engine.tiddlers.deleteMany({
 			where: { title, bag: { bag_name } },
 		});
-		return await this.engine.tiddlers.create({
+		const { tiddler_id } = await this.engine.tiddlers.create({
 			data: {
 				title,
 				bag: { connect: { bag_name } },
@@ -549,6 +549,8 @@ export class SqlTiddlerDatabase extends DataChecks {
 				tiddler_id: true
 			}
 		});
+
+		return { bag_name, tiddler_id }
 
 		// 	// Delete the fields of this tiddler
 		// 	this.engine.runStatement(`
@@ -705,7 +707,7 @@ export class SqlTiddlerDatabase extends DataChecks {
 			tiddler_id: tiddler.tiddler_id,
 			attachment_blob: tiddler.attachment_blob,
 			tiddler: Object.fromEntries([
-				...tiddler.fields.map(e => [e.field_name, e.field_value] as const),
+				...tiddler.fields?.map(e => [e.field_name, e.field_value] as const) ?? [],
 				["title", title]
 			])
 		};
@@ -805,9 +807,9 @@ export class SqlTiddlerDatabase extends DataChecks {
 		fetchAll: boolean
 	) {
 		this.okEntityType(entityType);
-
+		// TODO, make sure permission_name can be null to return all permissions
 		// First, check if there's an ACL record for the entity and get the permission_id
-		await this.engine.acl.findMany({
+		return await this.engine.acl.findMany({
 			where: {
 				entity_name: entityName,
 				entity_type: entityType,
@@ -1828,8 +1830,8 @@ export class SqlTiddlerDatabase extends DataChecks {
 	}
 	// ACL CRUD operations
 	createACL<T extends EntityType>(
-		entityName: PrismaField<"acl", "entity_name">,
 		entityType: T,
+		entityName: EntityName<T>,
 		roleId: PrismaField<"roles", "role_id">,
 		permissionId: PrismaField<"permissions", "permission_id">
 	) {
@@ -2050,7 +2052,7 @@ export class SqlTiddlerDatabase extends DataChecks {
 	getUserRoles(userId: PrismaField<"users", "user_id">) {
 		return this.engine.user_roles.findMany({
 			where: { user_id: userId },
-			select: { role: true }
+			select: { role: true, role_id: true, }
 		});
 		// const query = `
 		// 		SELECT r.role_id, r.role_name

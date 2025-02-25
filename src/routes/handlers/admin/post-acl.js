@@ -16,12 +16,13 @@ export const route = (root) => root.defineRoute({
 }, async state => {
 
 	zodAssert.data(state, z => z.object({
-		entity_name: z.prismaField("acl", "entity_name", "string"),
+		entity_name: z.prismaField("acl", "entity_name", "string").pipe(z.any()),
 		entity_type: z.enum(["recipe", "bag"]),
 		recipe_name: z.prismaField("recipes", "recipe_name", "string"),
 		bag_name: z.prismaField("bags", "bag_name", "string"),
-		role_id: z.prismaField("roles", "role_id", "parse-number").optional(),
-		permission_id: z.prismaField("permissions", "permission_id", "parse-number").optional()
+		// I don't know why these were optional in the original code
+		role_id: z.prismaField("roles", "role_id", "parse-number"),
+		permission_id: z.prismaField("permissions", "permission_id", "parse-number")
 	}));
 
 	const {
@@ -37,7 +38,7 @@ export const route = (root) => root.defineRoute({
 	var isRecipe = entity_type === "recipe"
 
 	try {
-		var entityAclRecords = await state.store.sql.getACLByName(entity_type, entity_name, undefined, true);
+		var entityAclRecords = await state.store.sql.getACLByName(entity_type, entity_name, undefined, false);
 
 		var aclExists = entityAclRecords.some((record) => (
 			record.role_id == role_id && record.permission_id == permission_id
@@ -56,8 +57,8 @@ export const route = (root) => root.defineRoute({
 		}
 
 		await state.store.sql.createACL(
-			isRecipe ? recipe_name : bag_name,
 			entity_type,
+			isRecipe ? recipe_name : bag_name,
 			role_id,
 			permission_id
 		)
@@ -66,25 +67,3 @@ export const route = (root) => root.defineRoute({
 		return state.redirect(`/admin/acl/${recipe_name}/${bag_name}`);
 	}
 });
-(function() {
-	// const {okEntityType, okType} = require("$:/plugins/tiddlywiki/multiwikiserver/store/sql-tiddler-database");
-	// const {ok} = require("assert");
-
-	/*jslint node: true, browser: true */
-	/*global $tw: false */
-	"use strict";
-
-	exports.method = "POST";
-
-	exports.path = /^\/admin\/post-acl\/?$/;
-
-	exports.bodyFormat = "www-form-urlencoded";
-
-	exports.csrfDisable = true;
-	/** @type {ServerRouteHandler<0,"www-form-urlencoded">} */
-	exports.handler = async function(request, response, state) {
-
-
-	};
-
-}());

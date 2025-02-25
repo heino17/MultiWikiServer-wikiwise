@@ -277,6 +277,7 @@ export class StateObject<
 
   }
   makeTiddlerEtag(options: { bag_name: string; tiddler_id: string | number; }) {
+    // why do we need tiddler_id AND bag_name? tiddler_id is unique across all tiddlers
     if (options.bag_name || options.tiddler_id) {
       return `"tiddler:${options.bag_name}/${options.tiddler_id}"`;
     } else {
