@@ -19,4 +19,6 @@ The server runs on port 5000, wildcard host. The entry point is at the end of `s
 
 At this commit, the server is running with the new routes, store, and prisma. 
 
+This is a map of the current database layout.
 
+![prisma-editor](https://github.com/user-attachments/assets/c4d5d467-a7c9-4d90-8646-79fa1729e61c)
