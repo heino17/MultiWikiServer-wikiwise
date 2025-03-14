@@ -1,11 +1,28 @@
-import { ok } from "assert";
-import { Streamer } from "./server";
-import { AuthStateRouteACL, StateObject } from "./StateObject";
+import { Streamer } from "./streamer";
+import { StateObject } from "./StateObject";
 import RootRoute from "./routes";
 import * as z from "zod";
-import { createStrictAwaitProxy, is } from "./helpers";
-import { TiddlyWiki } from "tiddlywiki";
-import { readFileSync } from "fs";
+import { createStrictAwaitProxy } from "./utils";
+import { existsSync, mkdirSync, readFileSync } from "fs";
+// import { AttachmentStore } from "./routes/attachments";
+import { resolve } from "path";
+import { Prisma, PrismaClient } from "@prisma/client";
+import { bootTiddlyWiki } from "./tiddlywiki";
+import {
+  Route,
+  rootRoute,
+  RouteOptAny,
+  RouteMatch,
+} from "./utils";
+import { setupDevServer } from "./utils";
+import { createPasswordService, PasswordService } from "./Authenticator";
+import { MWSConfig, MWSConfigConfig } from "./server";
+import * as sessions from "./routes/services/sessions";
+import * as attacher from "./routes/services/attachments";
+import { PrismaLibSQL } from "@prisma/adapter-libsql";
+import { createClient } from "@libsql/client";
+
+export { RouteMatch, Route, rootRoute };
 
 export const AllowedMethods = [...["GET", "HEAD", "OPTIONS", "POST", "PUT", "DELETE"] as const];
 export type AllowedMethod = typeof AllowedMethods[number];
@@ -13,9 +30,15 @@ export type AllowedMethod = typeof AllowedMethods[number];
 export const BodyFormats = ["stream", "string", "json", "buffer", "www-form-urlencoded", "www-form-urlencoded-urlsearchparams", "ignore"] as const;
 export type BodyFormat = typeof BodyFormats[number];
 
+export const PermissionName = []
+
+export function adminWiki() {
+  return (global as any).$tw.wiki;
+}
 
 const zodTransformJSON = (arg: string, ctx: z.RefinementCtx) => {
   try {
+    if (arg === "") return undefined;
     return JSON.parse(arg, (key, value) => {
       //https://github.com/fastify/secure-json-parse
       if (key === '__proto__')
@@ -34,11 +57,122 @@ const zodTransformJSON = (arg: string, ctx: z.RefinementCtx) => {
   }
 };
 
+export interface RouterConfig extends MWSConfigConfig {
+  attachmentSizeLimit: number;
+  attachmentsEnabled: boolean;
+  contentTypeInfo: Record<string, any>;
+  saveLargeTextToFileSystem: never;
+  storePath: string;
+}
+
 export class Router {
+
+
+  static async makeRouter(
+    config: MWSConfig["config"],
+    passwordKey: string,
+    SessionManager: typeof sessions.SessionManager,
+    AttachmentService: typeof attacher.AttachmentService,
+  ) {
+    const { wikiPath } = config;
+
+    const rootRoute = defineRoute(ROOT_ROUTE, {
+      useACL: { csrfDisable: true },
+      method: AllowedMethods,
+      path: /^/,
+      denyFinal: true,
+    }, async (state: any) => state);
+
+    await SessionManager.defineRoutes(rootRoute);
+
+    await RootRoute(rootRoute);
+
+    const storePath = resolve(wikiPath, "store");
+
+    const createTables = !existsSync(resolve(storePath, "database.sqlite"));
+
+    mkdirSync(storePath, { recursive: true });
+
+
+
+    const routerConfig: RouterConfig = {
+      ...config,
+      attachmentsEnabled: !!config.saveLargeTextToFileSystem,
+      attachmentSizeLimit: config.saveLargeTextToFileSystem ?? 0,
+      contentTypeInfo: {},
+      saveLargeTextToFileSystem: undefined as never,
+      storePath: storePath,
+    };
+
+    const sendDevServer = await setupDevServer();
+
+    const PasswordService = await createPasswordService(passwordKey);
+
+    const router = new Router(rootRoute, routerConfig,
+      sendDevServer,
+      PasswordService,
+      SessionManager,
+      AttachmentService,
+    );
+
+    if (createTables) await router.libsql.executeMultiple(readFileSync("./prisma/schema.prisma.sql", "utf8"));
+
+    (global as any).$tw = await bootTiddlyWiki(createTables, wikiPath, router);
+
+
+
+    await this.initDatabase(router);
+
+    return router;
+  }
+
+  static async initDatabase(router: Router) {
+    // await router.engine.sessions.deleteMany();
+    // delete these during dev stuff
+    // const users = await router.engine.users.findMany();
+    // for (const user of users) {
+    //   await router.engine.users.update({
+    //     data: { roles: { set: [] } },
+    //     where: { user_id: user.user_id }
+    //   })
+    // }
+    // await router.engine.acl.deleteMany();
+    // await router.engine.users.deleteMany();
+    // await router.engine.groups.deleteMany();
+    // await router.engine.roles.deleteMany();
+    // await router.engine.permissions.deleteMany();
+
+
+    const userCount = await router.engine.users.count();
+
+    if (!userCount) {
+
+      await router.engine.roles.createMany({
+        data: [
+          { role_id: 1, role_name: "ADMIN", description: "System Administrator" },
+          { role_id: 2, role_name: "USER", description: "Basic User" },
+        ]
+      });
+
+      const user = await router.engine.users.create({
+        data: { username: "admin", email: "", password: "", roles: { connect: { role_id: 1 } } },
+        select: { user_id: true }
+      });
+
+      const password = await router.PasswordService.PasswordCreation(user.user_id.toString(), "1234");
+
+      await router.engine.users.update({
+        where: { user_id: user.user_id },
+        data: { password: password }
+      });
+
+    }
+
+  }
 
   pathPrefix: string = "";
   enableBrowserCache: boolean = true;
-  enableGzip: boolean = true;
+  enableGzip: boolean = false;
   csrfDisable: boolean = false;
   servername: string = "";
   variables = new Map();
@@ -46,51 +180,62 @@ export class Router {
     return this.variables.get(name) || "";
   }
 
+  libsql;
+  engine: PrismaClient<Prisma.PrismaClientOptions, never, {
+    result: {
+      // this types every output field with PrismaField
+      [T in Uncapitalize<Prisma.ModelName>]: {
+        [K in keyof PrismaPayloadScalars<Capitalize<T>>]: () => {
+          compute: () => PrismaField<Capitalize<T>, K>
+        }
+      }
+    },
+    client: {},
+    model: {},
+    query: {},
+  }>;
+  // devuser: number = 0;
+  storePath: string;
+  databasePath: string;
+  constructor(
+    private rootRoute: rootRoute,
+    public config: RouterConfig,
+    // public attachmentStore: AttachmentStore,
+    public sendDevServer: (this: Router, state: StateObject) => Promise<symbol>,
+    public PasswordService: PasswordService,
+    public SessionManager: typeof sessions.SessionManager,
+    public AttachmentService: typeof attacher.AttachmentService,
+  ) {
+    this.storePath = resolve(config.wikiPath, "store");
+    this.databasePath = resolve(this.storePath, "database.sqlite");
 
-  static async makeRouter() {
-    const rootRoute = defineRoute(ROOT_ROUTE, {
-      useACL: { csrfDisable: true },
-      method: AllowedMethods,
-      path: /^/,
-      denyFinal: true,
-    }, async (state: any) => state);
-    await RootRoute(rootRoute);
+    // for some reason prisma was freezing when loading the system bag favicons.
+    // the libsql adapter has an additional advantage of letting us specify pragma 
+    // and also gives us more control over connections. 
 
-    const $tw = TiddlyWiki();
-    // tiddlywiki [+<pluginname> | ++<pluginpath>] [<wikipath>] ...[--command ...args]
-    $tw.boot.argv = [
-      "++plugins/client",
-      "++plugins/server",
-      "./editions/mws",
-      "--mws-load-plugin-bags",
-      "--build", "load-mws-demo-data",
-      // "--mws-listen", "port=5001", "host=::"
-    ];
-    await new Promise<void>(resolve => $tw.boot.boot(resolve));
-    try {
-      
-    } catch(e){
-      console.error(e);
-    }
-
-    (global as any).$tw = $tw;
-    return new Router(rootRoute, $tw);
-  }
-
-  constructor(private rootRoute: rootRoute, public $tw: any) {
-
+    this.libsql = createClient({ url: "file:" + this.databasePath });
+    this.libsql.execute("pragma synchronous=off");
+    const adapter = new PrismaLibSQL(this.libsql);
+    this.engine = new PrismaClient({
+      log: ["error", "info", "warn"],
+      // datasourceUrl: "file:" + this.databasePath,
+      adapter,
+    });
   }
 
   async handle(streamer: Streamer) {
 
+    const authUser = await this.SessionManager.parseIncomingRequest(streamer, this);
+
     /** This should always have a length of at least 1 because of the root route. */
     const routePath = this.findRoute(streamer);
     if (!routePath.length || routePath[routePath.length - 1]?.route.denyFinal)
-      return streamer.sendString(404, {}, "Not found", "utf8");
+      return streamer.sendEmpty(404, { "x-reason": "no-route" });
 
     // Optionally output debug info
-    console.log("Request path:", JSON.stringify(streamer.url));
-    console.log("Matched route:", routePath[routePath.length - 1]?.route.path.source)
+    console.log(streamer.method, streamer.url);
+    // const matchedRoute = routePath[routePath.length - 1];
+    // console.log("Matched route:", matchedRoute?.route.method, matchedRoute?.route.path.source)
 
     // if no bodyFormat is specified, we default to "buffer" since we do still need to recieve the body
     const bodyFormat = routePath.find(e => e.route.bodyFormat)?.route.bodyFormat || "buffer";
@@ -98,14 +243,18 @@ export class Router {
     type statetype = { [K in BodyFormat]: StateObject<K> }[BodyFormat]
 
     const state = createStrictAwaitProxy(
-      new StateObject(streamer, routePath, bodyFormat, this) as statetype
+      new StateObject(streamer, routePath, bodyFormat, authUser.isLoggedIn ? authUser : null, this) as statetype
     );
 
-    Object.assign(state, await state.getOldAuthState());
-
     routePath.forEach(match => {
-      if (!this.csrfDisable && !match.route.useACL.csrfDisable && state.authLevelNeeded === "writers" && state.headers["x-requested-with"] !== "TiddlyWiki")
-        throw streamer.sendString(403, {}, "'X-Requested-With' header required to login to '" + this.servername + "'", "utf8");
+      if (!this.csrfDisable
+        && !match.route.useACL.csrfDisable
+        && ["POST", "PUT", "DELETE"].includes(streamer.method)
+        && state.headers["x-requested-with"] !== "TiddlyWiki"
+      )
+        throw streamer.sendString(403, {
+          "x-reason": "x-requested-with missing"
+        }, `'X-Requested-With' header required to login to '${this.servername}'`, "utf8");
     })
 
 
@@ -129,10 +278,9 @@ export class Router {
         // make sure this parses as valid data
         const { success, data } = z.string().transform(zodTransformJSON).safeParse(state.data);
         if (!success) return state.sendEmpty(400, {});
-        console.log(state.data, data);
         state.data = data;
       }
-    } else if (state.bodyFormat === "www-form-urlencoded-urlsearchparams" 
+    } else if (state.bodyFormat === "www-form-urlencoded-urlsearchparams"
       || state.bodyFormat === "www-form-urlencoded") {
       const data = state.data = new URLSearchParams((await state.readBody()).toString("utf8"));
       if (state.bodyFormat === "www-form-urlencoded") {
@@ -156,17 +304,16 @@ export class Router {
 
   async handleRoute(state: StateObject<BodyFormat>, route: RouteMatch[]) {
 
-    {
-      let result: any = state;
-      for (const match of route) {
-        await match.route.handler(result);
-        if (state.headersSent) return;
-      }
-      if (!state.headersSent) {
-        state.sendEmpty(404, {});
-        console.log("No handler sent headers before the promise resolved.");
-      }
+    let result: any = state;
+    for (const match of route) {
+      await match.route.handler(result);
+      if (state.headersSent) return;
     }
+    if (!state.headersSent) {
+      state.sendEmpty(404, {});
+      console.log("No handler sent headers before the promise resolved.");
+    }
+
   }
 
   findRouteRecursive(
@@ -227,150 +374,7 @@ export class Router {
 
 }
 
-
-interface RouteOptAny extends RouteOptBase<BodyFormat, AllowedMethod[], string[]> { }
-
-export interface Route extends RouteDef<ParentTuple, string[]> { }
-
-export interface rootRoute extends RouteDef<[
-  undefined,
-  AllowedMethod[],
-  StateObject<BodyFormat, AllowedMethod>,
-  [[]]
-], []> { }
-
-export interface RouteMatch {
-  route: Route;
-  params: (string | undefined)[];
-  remainingPath: string;
-}
-
-type DetermineRouteOptions<
-  P extends ParentTuple, PA extends string[]
-> = P extends [BodyFormat, AllowedMethod[], any, any]
-  ?
-  RouteOptBase<P[0], P[1], PA> & { bodyFormat?: undefined; }
-  :
-  P extends [undefined, AllowedMethod[], any, any]
-  ?
-  | { [K in BodyFormat]: RouteOptBase<K, P[1], PA> & { bodyFormat: K; }; }[BodyFormat]
-  | RouteOptBase<BodyFormat, P[1], PA> & { bodyFormat?: undefined; }
-  : never;
-
-type ParentTuple = [BodyFormat | undefined, AllowedMethod[], any, string[][]];
-
-interface RouteOptBase<B extends BodyFormat, M extends AllowedMethod[], PA extends string[]> {
-  /** The ACL options for this route. It is required to simplify updates, but could be empty by default */
-  useACL: AuthStateRouteACL;
-  /** 
-   * Regex to test the pathname on. It must start with `^`. If this is a child route, 
-   * it will be tested against the remaining portion of the parent route.  
-   */
-  path: RegExp;
-  pathParams?: PA;
-  /** The uppercase method names to match this route */
-  method: M;
-  /** 
-   * The highest bodyformat in the chain always takes precedent. Type-wise, only one is allowed, 
-   * but at runtime the first one found is the one used. 
-   * 
-   * Note that bodyFormat is completely ignored for GET and HEAD requests.
-   */
-  bodyFormat?: B;
-  /** If this route is the last one matched, it will NOT be called, and a 404 will be returned. */
-  denyFinal?: boolean;
-}
-
-interface RouteDef<P extends ParentTuple, PA extends string[]> extends RouteOptBase<P[0] & {}, P[1], PA> {
-
-  /**
-   * If this route's handler sends headers, the matched child route will not be called.
-   */
-  handler: (state: StateObject<P[0] extends undefined ? BodyFormat : (P[0] & {}), P[1][number], [...P[3], [...PA]], unknown>) => Promise<P[2]>
-
-  /**
-   * ### ROUTING
-   *
-   * @param route The route definition.
-   *
-   * If the parent route sends headers, or returns the STREAM_ENDED symbol, 
-   * this route will not be called.
-   *
-   * Inner routes are matched on the remaining portion of the parent route
-   * using `pathname.slice(match[0].length)`. If the parent route entirely 
-   * matches the pathname, this route will be matched on "/".
-   * 
-   * If the body format is "stream", "buffer", "ignore" or not yet defined at this level in the tree,
-   * then zod cannot be used. 
-   * 
-   * Note that GET and HEAD are always bodyFormat: "ignore", regardless of what is set here.
-   */
-  defineRoute: <R, PA extends string[],
-    // T extends DetermineRouteOptions<P, [...PA]>
-    T extends P extends [BodyFormat, AllowedMethod[], any, any]
-    ?
-    RouteOptBase<P[0], P[1], [...PA]> & { bodyFormat?: undefined; }
-    :
-    P extends [undefined, AllowedMethod[], any, any]
-    ?
-    | { [K in BodyFormat]: RouteOptBase<K, P[1], [...PA]> & { bodyFormat: K; }; }[BodyFormat]
-    | RouteOptBase<BodyFormat, P[1], [...PA]> & { bodyFormat?: undefined; }
-    : never
-  >(
-    route: T,
-    handler: (
-      /** 
-       * The state object for this route.
-       * 
-       * If the route only specifies "GET" and/or "HEAD", then the bodyFormat can only be "ignore"
-       * 
-       * Otherwise, the bodyFormat is determined by the first parent route that specifies it.
-       * 
-       * The state object is wrapped in a proxy which throws if methods return a promise that 
-       * doesn't get awaited before the next property access. It only enforces the first layer 
-       * of properties, so if you have a nested object, you will need to wrap it in a proxy as well.
-       * 
-       * store and store.sql will probably also be wrapped in this proxy.
-       */
-      state: StateObject<
-        // if the route only specifies "GET" and/or "HEAD", then the bodyFormat can only be "ignore"
-        (Exclude<T["method"][number], "GET" | "HEAD"> extends never ? never : (
-          // parent route specified bodyFormat?
-          P[0] extends BodyFormat ? P[0] :
-          // this route specified bodyFormat?
-          T["bodyFormat"] extends BodyFormat ? T["bodyFormat"] :
-          // otherwise it could be anything
-          BodyFormat
-        )) | (
-          // GET and HEAD requests imply "ignore"
-          T["method"][number] extends "GET" | "HEAD" ? "ignore" : never
-        ),
-        // HTTP method
-        T["method"][number],
-        // possible placeholder for declaring routes
-        getPA<P, T>,
-        // infer zod, if set for this route
-        unknown
-      >) => Promise<R>
-  ) =>
-    P[0] extends BodyFormat ? RouteDef<[P[0], T["method"], R, P[3]], [...PA]> :
-    T["bodyFormat"] extends BodyFormat ? RouteDef<[T["bodyFormat"], T["method"], R, P[3]], [...PA]> :
-    RouteDef<[undefined, T["method"], R, P[3]], [...PA]>
-
-  $o?: P;
-}
-
-type getPA<P extends ParentTuple, T extends DetermineRouteOptions<P, any>> =
-  [...P[3], ...T["pathParams"] extends string[] ? [T["pathParams"]] : []];
-function test<T extends z.ZodTypeAny>(schema: { schema: T }): T {
-  return schema.schema;
-}
-const test1 = test({ schema: z.object({ test: z.string() }) })
-type t1 = typeof test1;
-type t2 = z.infer<t1>;
-
 const ROOT_ROUTE: unique symbol = Symbol("ROOT_ROUTE");
-
 function defineRoute(
   parent: { $o?: any, method: any } | typeof ROOT_ROUTE,
   route: RouteOptAny,
@@ -395,99 +399,4 @@ function defineRoute(
   (route as any).handler = handler;
 
   return route as any; // this is usually ignored except for the root route.
-}
-/** This doesn't need to run, it's just to test types */
-function testroute(root: rootRoute) {
-
-  const test1 = root.defineRoute({
-    useACL: {},
-    path: /^test/,
-    method: ["GET", "POST"],
-    bodyFormat: undefined,
-  }, async state => {
-    const test: BodyFormat = state.bodyFormat;
-  });
-
-  const test2_2 = test1.defineRoute({
-    useACL: {},
-    path: /^test/,
-    bodyFormat: "www-form-urlencoded",
-    method: ["POST"],
-  }, async state => {
-    // zod: z.object({ test: z.string() }),
-
-
-  });
-
-  const test2 = test1.defineRoute({
-    useACL: {},
-    path: /^test/,
-    bodyFormat: "string",
-    method: ["GET"],
-    zod: z.string(),
-    // handler: ,
-  }, async (state) => {
-    //@ts-expect-error because we didn't include "string"
-    const test: Exclude<BodyFormat, "ignore"> = state.bodyFormat;
-    // no error here if bodyFormat is correctly typed
-    const test2: "ignore" = state.bodyFormat
-    // @ts-expect-error because it should be "string"
-    state.isBodyFormat("buffer");
-    // this should never be an error unless something is really messed up
-    state.isBodyFormat("ignore");
-  });
-
-  const test3 = test2.defineRoute({
-    useACL: {},
-    path: /^test/,
-    method: ["GET"],
-    // // @ts-expect-error because it's already been defined by the parent
-    // bodyFormat: "buffer",
-    zod: z.string(),
-  }, async (state) => {
-    //@ts-expect-error because we didn't include "string"
-    const test: Exclude<BodyFormat, "ignore"> = state.bodyFormat;
-    // no error here if bodyFormat is correctly typed
-    const test2: "ignore" = state.bodyFormat
-    // @ts-expect-error because it should be "string"
-    state.isBodyFormat("buffer");
-    // this should never be an error unless something is really messed up
-    state.isBodyFormat("ignore");
-  })
-
-  const test2post = test1.defineRoute({
-    useACL: {},
-    path: /^test/,
-    bodyFormat: "string",
-    method: ["POST"],
-    zod: z.string(),
-    // handler: ,
-  }, async (state) => {
-    // @ts-expect-error because we didn't include "string"
-    const test: Exclude<BodyFormat, "string"> = state.bodyFormat;
-    // no error here if bodyFormat is correctly typed
-    const test2: "string" = state.bodyFormat
-    // @ts-expect-error because it should be "string"
-    state.isBodyFormat("buffer");
-    // this should never be an error unless something is really messed up
-    state.isBodyFormat("string");
-  });
-
-  const test3post = test2post.defineRoute({
-    useACL: {},
-    path: /^test/,
-    method: ["POST"],
-    // // @ts-expect-error because it's already been defined by the parent
-    // bodyFormat: "buffer",
-    zod: z.string(),
-  }, async (state) => {
-    // @ts-expect-error because we didn't include "string"
-    const test: Exclude<BodyFormat, "string"> = state.bodyFormat;
-    // no error here if bodyFormat is correctly typed
-    const test2: "string" = state.bodyFormat
-    // @ts-expect-error because it should be "string"
-    state.isBodyFormat("buffer");
-    // this should never be an error unless something is really messed up
-    state.isBodyFormat("string");
-  })
 }

@@ -9,9 +9,10 @@ GET /bags/:bag_name
 \*/
 
 "use strict";
-
-/** @type {ServerRouteDefinition} */
-export const route = (root) => root.defineRoute({
+export const route = (
+	/** @type {rootRoute} */ root, 
+	/** @type {ZodAssert} */ zodAssert
+) => root.defineRoute({
 	method: ["GET"],
 	path: /^\/bags\/([^\/]+)(\/?)$/,
 	pathParams: ["bag_name", "trailing_slash"],
@@ -19,7 +20,7 @@ export const route = (root) => root.defineRoute({
 }, async state => {
 
 	zodAssert.pathParams(state, z => ({
-		bag_name: z.prismaField("bags", "bag_name", "string"),
+		bag_name: z.prismaField("Bags", "bag_name", "string"),
 		trailing_slash: z.string().optional()
 	}));
 
@@ -54,7 +55,7 @@ export const route = (root) => root.defineRoute({
 			}
 		});
 		state.write(html);
-		state.end();
+		return state.end();
 	}
 
 });

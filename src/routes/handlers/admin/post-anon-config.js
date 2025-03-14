@@ -7,8 +7,10 @@ POST /admin/post-anon-config
 
 \*/
 "use strict";
-/** @type {ServerRouteDefinition} */
-export const route = (root) => root.defineRoute({
+export const route = (
+	/** @type {rootRoute} */ root, 
+	/** @type {ZodAssert} */ zodAssert
+) => root.defineRoute({
   method: ["POST"],
   path: /^\/admin\/post-anon-config\/?$/,
   bodyFormat: "www-form-urlencoded",
@@ -23,12 +25,13 @@ export const route = (root) => root.defineRoute({
   }
 
   zodAssert.data(state, z => z.object({
-    allowReads: z.string().optional(),
-    allowWrites: z.string().optional()
+    allowReads: z.prismaField("config", "allowReads", "parse-boolean"),
+    allowWrites: z.prismaField("config", "allowWrites", "parse-boolean"),
   }));
+  
 
-  var allowReads = state.data.allowReads === "on";
-  var allowWrites = state.data.allowWrites === "on";
+  var allowReads = state.data.allowReads;
+  var allowWrites = state.data.allowWrites;
 
   // Update the configuration tiddlers
 
@@ -47,5 +50,5 @@ export const route = (root) => root.defineRoute({
   });
   // Redirect back to admin page
   state.writeHead(302, {"Location": "/"});
-  state.end();
+  return state.end();
 });

@@ -7,15 +7,17 @@ GET /wiki/:recipe_name
 
 \*/
 "use strict";
-/** @type {ServerRouteDefinition} */
-export const route = (root) => root.defineRoute({
+export const route = (
+	/** @type {rootRoute} */ root, 
+	/** @type {ZodAssert} */ zodAssert
+) => root.defineRoute({
 	method: ["GET"],
 	path: /^\/wiki\/([^\/]+)$/,
 	pathParams: ["recipe_name"],
 	useACL: {},
 }, async state => {
 	zodAssert.pathParams(state, z => ({
-		recipe_name: z.prismaField("recipes", "recipe_name", "string"),
+		recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
 	}));
 	await state.checkACL("recipe", state.pathParams.recipe_name, "READ");
 
@@ -29,7 +31,7 @@ export const route = (root) => root.defineRoute({
 		return [tiddler.title, tiddler];
 	})))).map(e => e[1]);
 
-	console.log("GET /wiki/:recipe_name", recipe_name, !!recipeTiddlers);
+	// console.log("GET /wiki/:recipe_name", recipe_name, !!recipeTiddlers);
 	// Check request is valid
 	if(!recipe_name || !recipeTiddlers) {
 		return state.sendEmpty(404);
@@ -104,7 +106,7 @@ export const route = (root) => root.defineRoute({
 	});
 	state.write(template.substring(markerPos + marker.length))
 	// Finish response
-	state.end();
+	return state.end();
 });
 
 

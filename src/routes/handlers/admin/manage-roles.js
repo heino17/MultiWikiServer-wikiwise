@@ -6,14 +6,17 @@ module-type: mws-route
 GET /admin/manage-roles
 
 \*/
+//@ts-nocheck
 "use strict";
-/** @type {ServerRouteDefinition} */
-export const route = (root) => root.defineRoute({
+export const route = (
+	/** @type {rootRoute} */ root, 
+	/** @type {ZodAssert} */ zodAssert
+) => root.defineRoute({
 	method: ["GET"],
 	path: /^\/admin\/manage-roles\/?$/,
 	useACL: {csrfDisable: true},
 }, async state => {
-
+	throw new Error("not implemented");
 	if(state.url.includes("*")) {
 		state.store.adminWiki.deleteTiddler("$:/temp/mws/post-role/error");
 		state.store.adminWiki.deleteTiddler("$:/temp/mws/post-role/success");

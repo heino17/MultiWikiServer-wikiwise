@@ -12,8 +12,10 @@ DELETE /bags/:bag_name/tiddler/:title
 /*global $tw: false */
 "use strict";
 
-/** @type {ServerRouteDefinition} */
-export const route = (root) => root.defineRoute({
+export const route = (
+	/** @type {rootRoute} */ root, 
+	/** @type {ZodAssert} */ zodAssert
+) => root.defineRoute({
 	method: ["DELETE"],
 	path: /^\/bags\/([^\/]+)\/tiddlers\/(.+)$/,
 	pathParams: ["bag_name", "title"],
@@ -22,8 +24,8 @@ export const route = (root) => root.defineRoute({
 }, async state => {
 
 	zodAssert.pathParams(state, z => ({
-		bag_name: z.prismaField("bags", "bag_name", "string"),
-		title: z.prismaField("tiddlers", "title", "string"),
+		bag_name: z.prismaField("Bags", "bag_name", "string"),
+		title: z.prismaField("Tiddlers", "title", "string"),
 	}));
 
 	const {bag_name, title} = state.pathParams;

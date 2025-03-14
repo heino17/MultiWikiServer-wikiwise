@@ -7,8 +7,10 @@ GET /recipes/:recipe_name/tiddlers.json?last_known_tiddler_id=:last_known_tiddle
 
 \*/
 "use strict";
-/** @type {ServerRouteDefinition} */
-export const route = (root) => root.defineRoute({
+export const route = (
+	/** @type {rootRoute} */ root, 
+	/** @type {ZodAssert} */ zodAssert
+) => root.defineRoute({
 	method: ["GET"],
 	path: /^\/recipes\/([^\/]+)\/tiddlers.json$/,
 	pathParams: ["recipe_name"],
@@ -17,11 +19,11 @@ export const route = (root) => root.defineRoute({
 }, async state => {
 
 	zodAssert.pathParams(state, z => ({
-		recipe_name: z.prismaField("recipes", "recipe_name", "string"),
+		recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
 	}));
 
 	zodAssert.queryParams(state, z => ({
-		last_known_tiddler_id: z.array(z.prismaField("tiddlers", "tiddler_id", "parse-number")).optional(),
+		last_known_tiddler_id: z.array(z.prismaField("Tiddlers", "tiddler_id", "parse-number")).optional(),
 		include_deleted: z.array(z.string()).optional(),
 	}));
 
@@ -45,6 +47,6 @@ export const route = (root) => root.defineRoute({
 			"Content-Type": "application/json"
 		}, JSON.stringify(recipeTiddlers), "utf8");
 	} else {
-		state.sendEmpty(404);
+		return state.sendEmpty(404);
 	}
 });

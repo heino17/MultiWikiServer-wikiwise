@@ -7,8 +7,10 @@ POST /admin/roles/:id
 
 \*/
 "use strict";
-/** @type {ServerRouteDefinition} */
-export const route = (root) => root.defineRoute({
+export const route = (
+	/** @type {rootRoute} */ root, 
+	/** @type {ZodAssert} */ zodAssert
+) => root.defineRoute({
   method: ["POST"],
   path: /^\/admin\/roles\/([^\/]+)\/?$/,
   pathParams: ["role_id"],
@@ -16,12 +18,12 @@ export const route = (root) => root.defineRoute({
   useACL: {csrfDisable: true},
 }, async state => {
   zodAssert.pathParams(state, z => ({
-    role_id: z.prismaField("roles", "role_id", "parse-number")
+    role_id: z.prismaField("Roles", "role_id", "parse-number")
   }));
 
   zodAssert.data(state, z => z.object({
-    role_name: z.prismaField("roles", "role_name", "string"),
-    role_description: z.prismaField("roles", "description", "string"),
+    role_name: z.prismaField("Roles", "role_name", "string"),
+    role_description: z.prismaField("Roles", "description", "string"),
   }));
 
 
@@ -54,7 +56,7 @@ export const route = (root) => root.defineRoute({
     );
 
     state.writeHead(302, {"Location": "/admin/roles"});
-    state.end();
+    return state.end();
   } catch(error) {
     console.error("Error updating role:", error);
     return state.sendEmpty(500);

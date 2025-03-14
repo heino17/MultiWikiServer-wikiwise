@@ -7,8 +7,10 @@ PUT /recipes/:recipe_name/tiddlers/:title
 
 \*/
 "use strict";
-/** @type {ServerRouteDefinition} */
-export const route = (root) => root.defineRoute({
+export const route = (
+	/** @type {rootRoute} */ root, 
+	/** @type {ZodAssert} */ zodAssert
+) => root.defineRoute({
 	method: ["PUT"],
 	path: /^\/recipes\/([^\/]+)\/tiddlers\/(.+)$/,
 	pathParams: ["recipe_name", "title"],
@@ -16,8 +18,8 @@ export const route = (root) => root.defineRoute({
 	useACL: {},
 }, async state => {
 	zodAssert.pathParams(state, z => ({
-		recipe_name: z.prismaField("recipes", "recipe_name", "string"),
-		title: z.prismaField("tiddlers", "title", "string"),
+		recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
+		title: z.prismaField("Tiddlers", "title", "string"),
 	}));
 
 	await state.checkACL("recipe", state.pathParams.recipe_name, "WRITE");
@@ -51,25 +53,6 @@ export const route = (root) => root.defineRoute({
 	} else {
 		state.writeHead(400);
 	}
-	state.end();
+	return state.end();
 
 });
-(function() {
-
-	/*jslint node: true, browser: true */
-	/*global $tw: false */
-	"use strict";
-
-	exports.method = "PUT";
-
-	exports.path = /^\/recipes\/([^\/]+)\/tiddlers\/(.+)$/;
-
-	exports.useACL = true;
-
-	exports.entityName = "recipe"
-	/** @type {ServerRouteHandler<2>} */
-	exports.handler = async function(request, response, state) {
-
-	};
-
-}());

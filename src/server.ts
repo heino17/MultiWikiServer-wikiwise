@@ -1,229 +1,29 @@
+import "./StateObject"; // <- load this first so it waits for streamer to be defined
+import "./streamer";
+import "./router";
 import "./global";
 import * as http2 from 'node:http2';
 import * as opaque from "@serenity-kit/opaque";
-import send from 'send';
-import { Readable } from 'stream';
-import { createServer, IncomingMessage, Server, ServerResponse, IncomingHttpHeaders as NodeIncomingHeaders, OutgoingHttpHeaders } from 'node:http';
-import { is } from './helpers';
-import { createReadStream, readFileSync } from 'node:fs';
-import { Writable } from 'node:stream';
-import { AllowedMethod, AllowedMethods, Router } from './router';
+import { createServer, IncomingMessage, Server, ServerResponse } from 'node:http';
+import { existsSync, readFileSync } from 'node:fs';
+import { Streamer } from "./streamer";
+import { Router } from './router';
+import * as sessions from "./routes/services/sessions";
+import * as attacher from "./routes/services/attachments";
+import { resolve } from "node:path";
 
+export * from "./routes/services/sessions";
 
-export interface IncomingHttpHeaders extends NodeIncomingHeaders {
-  "accept-encoding"?: string;
+declare module 'node:net' {
+  interface Socket {
+    // this comment gets prepended to the other comment for this property, thus the hanging sentance.
+    /** Not defined on net.Socket instances. 
+     * 
+     * On tls.Socket instances,  */
+    encrypted?: boolean;
+  }
 }
-interface ListenerOptions {
-  key?: Buffer
-  cert?: Buffer
-  port: number
-  hostname?: string
-}
 
-export const SYMBOL_IGNORE_ERROR: unique symbol = Symbol("IGNORE_ERROR");
-export const STREAM_ENDED: unique symbol = Symbol("STREAM_ENDED");
-
-
-export type StreamerChunk = { data: string, encoding: NodeJS.BufferEncoding } | NodeJS.ReadableStream | Readable | Buffer;
-
-/**
- * The HTTP2 shims used in the request handler are only used for HTTP2 requests. 
- * The NodeJS HTTP2 server actually calls the HTTP1 parser for all HTTP1 requests. 
- */
-export class Streamer {
-  host: string;
-  method: AllowedMethod;
-  urlInfo: URL;
-  url: string;
-  headers: IncomingHttpHeaders;
-  constructor(
-    private req: IncomingMessage | http2.Http2ServerRequest,
-    private res: ServerResponse | http2.Http2ServerResponse,
-    private router: Router
-  ) {
-
-    this.headers = req.headers;
-    this.url = req.url as string;
-    if (is<http2.Http2ServerRequest>(req, req.httpVersionMajor > 1)) {
-      this.req.headers.host = req.headers[":authority"];
-    }
-    if (!req.headers.host) throw new Error("This should never happen");
-    if (!req.method) throw new Error("This should never happen");
-    if (!req.url?.startsWith("/")) throw new Error("This should never happen");
-    //https://httpwg.org/specs/rfc9110.html#status.501
-    if (!is<AllowedMethod>(req.method, AllowedMethods.includes(req.method as any)))
-      throw this.sendString(501, {}, "Method not supported", "utf8");
-    this.host = req.headers.host;
-    this.method = req.method;
-    this.urlInfo = new URL(`https://${req.headers.host}${req.url}`);
-    req.complete
-  }
-
-  get reader(): Readable { return this.req; }
-  get writer(): Writable {
-    // don't overwrite it here if it's already set because this could just be for sending the body.
-    if (!this.headersSent && !this.headersSentBy)
-      this.headersSentBy = new Error("Possible culprit was given access to the response object here.");
-    return this.res;
-  }
-
-  throw(statusCode: number) {
-    this.sendEmpty(statusCode);
-    throw SYMBOL_IGNORE_ERROR;
-  }
-
-  catcher = (error: unknown) => {
-    if (error === SYMBOL_IGNORE_ERROR) return;
-    if (error === STREAM_ENDED) return;
-    const tag = this.urlInfo.href;
-    console.error(tag, error);
-  }
-
-  checkHeadersSentBy(setError: boolean) {
-    if (this.headersSent && this.headersSentBy) console.log(this.headersSentBy);
-    else if (this.res.headersSent) console.log("Headers were sent by an unknown source.");
-    // queue up the error in case there is a second attempt.
-    else this.headersSentBy = new Error("You are appear to be sending headers more than once. The first attempt was here. Does it need to throw or return?")
-  }
-
-
-
-  toHeadersMap(headers: { [x: string]: string | string[] | number | undefined }) {
-    return new Map(Object.entries(headers).map(([k, v]) =>
-      [k.toLowerCase(), Array.isArray(v) ? v : v === undefined ? [] : [v.toString()]]
-    ));
-  }
-
-  readBody = () => new Promise<Buffer>((resolve: (chunk: Buffer) => void) => {
-    const chunks: Buffer[] = [];
-
-    this.reader.on('data', chunk => chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk));
-    this.reader.on('end', () => resolve(Buffer.concat(chunks)));
-  });
-
-  sendEmpty(status: number, headers: OutgoingHttpHeaders = {}): typeof STREAM_ENDED {
-    this.checkHeadersSentBy(true);
-    this.res.writeHead(status, headers);
-    this.res.end();
-    return STREAM_ENDED;
-  }
-
-  sendString(status: number, headers: OutgoingHttpHeaders, data: string, encoding: NodeJS.BufferEncoding): typeof STREAM_ENDED {
-    this.checkHeadersSentBy(true);
-    headers['content-length'] = Buffer.byteLength(data, encoding);
-    this.res.writeHead(status, headers);
-    this.res.end(data, encoding);
-    return STREAM_ENDED;
-  }
-
-  sendBuffer(status: number, headers: OutgoingHttpHeaders, data: Buffer): typeof STREAM_ENDED {
-    this.checkHeadersSentBy(true);
-    headers['content-length'] = data.length;
-    this.res.writeHead(status, headers);
-    this.res.end(data);
-    return STREAM_ENDED;
-  }
-
-  sendStream(status: number, headers: OutgoingHttpHeaders, stream: Readable): typeof STREAM_ENDED {
-    this.checkHeadersSentBy(true);
-    this.res.writeHead(status, headers);
-    stream.pipe(this.res);
-    return STREAM_ENDED;
-  }
-  // I'm not sure if there's a use case for this
-  private sendFD(status: number, headers: OutgoingHttpHeaders, options: {
-    fd: number;
-    offset?: number;
-    length?: number;
-  }): typeof STREAM_ENDED {
-    this.checkHeadersSentBy(true);
-    this.res.writeHead(status, headers);
-    const { fd, offset, length } = options;
-    const stream = createReadStream("", {
-      fd,
-      start: offset,
-      end: length && length - 1,
-      autoClose: false,
-    });
-    stream.pipe(this.res);
-    return STREAM_ENDED;
-  }
-  /** 
-   * Sends a file with the appropriate cache headers, using the `send` npm module. 
-   * 
-   * Think of it like a static file server where you are serving files from a directory.
-   * 
-   * @param options.root The directory to serve files from.
-   * @param options.reqpath The path to the file relative to the `root` directory.
-   * @param options.offset The offset in bytes to start reading the file from.
-   * @param options.length The number of bytes to read from the file.
-   * @param options.index "index.html" by default, to disable this set false or 
-   * to supply a new index pass a string or an array in preferred order. 
-   * 
-   * If an index.html file is not found, `send` will NOT generate a directory listing.
-   * 
-   * The `send` method will automatically set the `Content-Type` header based on the file extension.
-   * 
-   * If the file is not found, the `send` method will automatically send a 404 response.
-   * 
-
-   * @returns STREAM_ENDED
-   */
-  sendFile(status: number, headers: OutgoingHttpHeaders, options: {
-    root: string;
-    reqpath: string;
-    offset?: number;
-    length?: number;
-    index?: string | boolean | string[] | undefined
-  }): typeof STREAM_ENDED {
-    // the headers and status have to be set on the response object before piping the stream
-    this.res.statusCode = status;
-    this.toHeadersMap(headers).forEach((v, k) => { this.res.appendHeader(k, v); });
-
-    const { root, reqpath, offset, length } = options;
-
-    const stream = send(this.req, reqpath, {
-      dotfiles: "ignore",
-      index: false,
-      root,
-      start: offset,
-      end: length && length - 1,
-    });
-
-    stream.on("error", err => {
-      if (err === 404) {
-        this.sendEmpty(404);
-      } else {
-        this.sendEmpty(500);
-      }
-    });
-
-    this.checkHeadersSentBy(true);
-    stream.pipe(this.res);
-    return STREAM_ENDED;
-  }
-  setHeader(name: string, value: string): void {
-    this.res.setHeader(name, value);
-  }
-  writeHead(status: number, headers: OutgoingHttpHeaders = {}): void {
-    this.checkHeadersSentBy(true);
-    this.res.writeHead(status, headers);
-  }
-  write(chunk: Buffer | string, encoding?: NodeJS.BufferEncoding): void {
-    // Between http1 and http2, the types are slightly different, but the runtime effect seems to be the same.
-    encoding ? (this.res as ServerResponse).write(chunk, encoding) : (this.res as ServerResponse).write(chunk)
-  }
-  end(): typeof STREAM_ENDED {
-    this.res.end();
-    return STREAM_ENDED;
-  }
-
-  get headersSent() {
-    return this.res.headersSent;
-  }
-
-  headersSentBy: Error | undefined;
-}
 
 class ListenerHTTPS {
   server: http2.Http2SecureServer;
@@ -233,6 +33,7 @@ class ListenerHTTPS {
       req: IncomingMessage | http2.Http2ServerRequest,
       res: ServerResponse | http2.Http2ServerResponse
     ) => {
+
       const streamer = new Streamer(req, res, router);
       router.handle(streamer).catch(streamer.catcher);
     });
@@ -291,16 +92,77 @@ function errorHandler(server: http2.Http2SecureServer | Server, port: any) {
   }
 }
 
-async function setupServers(useHTTPS: boolean, port: number) {
+export default async function startServer(config: MWSConfig) {
   // await lazy-loaded or async models
   await opaque.ready;
 
-  const { server } = useHTTPS
-    ? new ListenerHTTPS(await Router.makeRouter(), readFileSync("./localhost.key"), readFileSync("./localhost.crt"))
-    : new ListenerHTTP(await Router.makeRouter());
+  const router = await Router.makeRouter(
+    config.config,
+    config.passwordMasterKey
+      ? readFileSync(config.passwordMasterKey, "utf8").trim()
+      : opaque.server.createSetup(),
+    config.SessionManager || sessions.SessionManager,
+    config.AttachmentService || attacher.AttachmentService
+  ).catch(e => {
+    console.log(e.stack);
+    throw "Router failed to load";
+  });
+
+  if (!config.passwordMasterKey) {
+    console.log("No password master key provided. The key will be regenerated each time the server starts.");
+    console.log("Here is a key you can use. Save it to a file and provide the path to the server.");
+    console.log("You must restart the server after saving this key. It is not the key being used this time.");
+    console.log(opaque.server.createSetup());
+  }
+
+  const { host, port } = config;
+
+  const { server } = config.https
+    ? new ListenerHTTPS(router,
+      readFileSync(config.https.key),
+      readFileSync(config.https.cert)
+    ) : new ListenerHTTP(router);
   server.on('error', errorHandler(server, port));
   server.on('listening', listenHandler(server));
-  server.listen(port, "::");
+  server.listen(port, host);
+
 }
 
-setupServers(true, 5000);
+export interface MWSConfigConfig {
+  /** Path to the mws datafolder. */
+  readonly wikiPath: string
+  /** If true, allow users that aren't logged in to read. */
+  readonly allowAnonReads?: boolean
+  /** If true, allow users that aren't logged in to write. */
+  readonly allowAnonWrites?: boolean
+  /** If true, recipes will allow access to a user who does not have read access to all its bags. */
+  readonly allowUnreadableBags?: boolean
+  /** If true, files larger than `this * 1024` will be saved to disk alongside the database instead of in the database. */
+  readonly saveLargeTextToFileSystem?: number;
+
+
+}
+
+export interface MWSConfig {
+  https?: {
+    /** The key file for the HTTPS server */
+    key: string
+    /** The cert file for the HTTPS server */
+    cert: string
+  };
+  /** The port to listen on */
+  port: number
+  /** The hostname to listen on */
+  host?: string
+  /** The key file for the password encryption. If this key changes, passwords will need to be reset. */
+  passwordMasterKey?: string
+  config: MWSConfigConfig
+  /** 
+   * The session manager class registers the login handler routes and sets the auth user 
+   */
+  SessionManager?: typeof sessions.SessionManager;
+  /** 
+   * The attachment service class is used by routes to handle attachments
+   */
+  AttachmentService?: typeof attacher.AttachmentService;
+}

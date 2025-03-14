@@ -1,13 +1,7 @@
 {
 	"description": "Multiple wiki client-server edition",
-	"plugins": [
-		"tiddlywiki/tiddlyweb",
-		"tiddlywiki/filesystem"
-	],
-	"themes": [
-		"tiddlywiki/vanilla",
-		"tiddlywiki/snowwhite"
-	],
+	"plugins": [],
+	"themes": [],
 	"build": {
 		"load-mws-demo-data": [
 			"--mws-load-wiki-folder","./node_modules/tiddlywiki/editions/multiwikidocs","mws-docs", "MWS Documentation from https://mws.tiddlywiki.com","mws-docs","MWS Documentation from https://mws.tiddlywiki.com",
@@ -24,14 +18,7 @@
 			"--mws-save-tiddler-text","bag-alpha","$:/SiteTitle","bag-alpha",
 			"--mws-save-tiddler-text","bag-alpha","😀😃😄😁😆🥹😅😂","bag-alpha",
 			"--mws-save-tiddler-text","bag-beta","$:/SiteTitle","bag-beta",
-			"--mws-save-tiddler-text","bag-gamma","$:/SiteTitle","bag-gamma",
-			"--mws-add-permission", "READ", "Allows user to read recipes and bags",
-			"--mws-add-permission", "WRITE", "Gives the user the permission to edit and delete tiddlers",
-			"--mws-add-role", "ADMIN", "System Administrator",
-			"--mws-add-role", "USER", "Basic User",
-			"--mws-assign-role-permission", "ADMIN", "READ",
-			"--mws-assign-role-permission", "ADMIN", "WRITE",
-			"--mws-assign-role-permission", "USER", "READ"
+			"--mws-save-tiddler-text","bag-gamma","$:/SiteTitle","bag-gamma"
 			]
 	}
 }

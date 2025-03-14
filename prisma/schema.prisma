@@ -1,163 +1,159 @@
 datasource db {
   provider = "sqlite"
-  url      = "file:./editions/mws/store/database.sqlite"
+  url      = env("DATABASE_URL")
 }
+
 generator client {
-  provider = "prisma-client-js"
-  binaryTargets = ["native"]
+  provider        = "prisma-client-js"
+  binaryTargets   = ["native"]
+  previewFeatures = ["relationJoins", "driverAdapters"]
 }
 
-model acl {
-  acl_id        Int          @id @default(autoincrement())
-  entity_name   String
-  entity_type   String
-  role_id       Int
-  permission_id Int
-  permission   permissions? @relation(fields: [permission_id], references: [permission_id], onDelete: NoAction, onUpdate: NoAction)
-  role         roles?       @relation(fields: [role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction)
+// generator zod {
+//   provider                  = "zod-prisma-types"
+//   output                    = "./generated/zod-prisma"
+//   useMultipleFiles          = false
+//   createRelationValuesTypes = true
+// }
 
-  @@index([entity_name])
+enum Permission {
+  READ
+  WRITE
+  ADMIN
 }
 
-model bags {
-  bag_id        Int           @id @default(autoincrement())
-  bag_name      String        @unique()
-  accesscontrol String?
-  description   String
-  recipe_bags   recipe_bags[]
-  tiddlers      tiddlers[]
+model Recipes {
+  recipe_id   Int           @id @default(autoincrement())
+  recipe_name String        @unique
+  description String
+  owner_id    Int?
+  owner       Users?        @relation(fields: [owner_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  recipe_bags Recipe_bags[]
+  acl         RecipeAcl[]
+
+  @@map("recipes")
 }
 
-model group_roles {
-  group_id Int
-  role_id  Int
-  role    roles  @relation(fields: [role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction)
-  group   groups @relation(fields: [group_id], references: [group_id], onDelete: NoAction, onUpdate: NoAction)
+model RecipeAcl {
+  acl_id     Int        @id @default(autoincrement())
+  role_id    Int
+  role       Roles      @relation(fields: [role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction)
+  permission Permission
+  Recipes    Recipes?   @relation(fields: [recipe_id], references: [recipe_id], onDelete: Cascade)
+  recipe_id  Int?
 
-  @@id([group_id, role_id])
+  @@map("recipe_acl")
 }
 
-model groups {
-  group_id    Int           @id @default(autoincrement())
-  group_name  String        @unique()
-  description String?
-  group_roles group_roles[] 
-  user_groups user_groups[] 
-}
-
-model permissions {
-  permission_id    Int                @id @default(autoincrement())
-  permission_name  String             @unique()
-  description      String?
-  acl              acl[]
-  role_permissions role_permissions[] 
-}
-
-model recipe_bags {
+model Recipe_bags {
   recipe_id Int
   bag_id    Int
   position  Int
-  bag      bags    @relation(fields: [bag_id], references: [bag_id], onDelete: Cascade)
-  recipe   recipes @relation(fields: [recipe_id], references: [recipe_id], onDelete: Cascade)
+  with_acl  Boolean
+  bag       Bags    @relation(fields: [bag_id], references: [bag_id], onDelete: Cascade)
+  recipe    Recipes @relation(fields: [recipe_id], references: [recipe_id], onDelete: Cascade)
 
   @@unique([recipe_id, bag_id])
   @@index([recipe_id])
+  @@map("recipe_bags")
 }
 
-model recipes {
-  recipe_id   Int           @id @default(autoincrement())
-  recipe_name String        @unique()
+model Bags {
+  bag_id      Int           @id @default(autoincrement())
+  bag_name    String        @unique
   description String
-  recipe_bags recipe_bags[]
   owner_id    Int?
-  user       users?        @relation(fields: [owner_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  owner       Users?        @relation(fields: [owner_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  recipe_bags Recipe_bags[]
+  tiddlers    Tiddlers[]
+  acl         BagAcl[]
+
+  @@map("bags")
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
-model role_permissions {
-  role_id       Int
-  permission_id Int
-  permission   permissions @relation(fields: [permission_id], references: [permission_id], onDelete: NoAction, onUpdate: NoAction)
-  role         roles       @relation(fields: [role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction)
+model BagAcl {
+  acl_id     Int        @id @default(autoincrement())
+  bag_id     Int
+  bag        Bags       @relation(fields: [bag_id], references: [bag_id], onDelete: Cascade)
+  role_id    Int
+  role       Roles      @relation(fields: [role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction)
+  permission Permission
 
-  @@id([role_id, permission_id])
+  @@map("bag_acl")
 }
 
-model roles {
-  role_id          Int                @id @default(autoincrement())
-  role_name        String             @unique()
-  description      String?
-  acls             acl[]
-  group_roles      group_roles[]      
-  role_permissions role_permissions[] 
-  user_roles       user_roles[]       
+model Groups {
+  group_id    Int     @id @default(autoincrement())
+  group_name  String  @unique()
+  description String?
+  roles       Roles[]
+  users       Users[]
+
+  @@map("groups")
 }
 
-model sessions {
-  session_id    String @id
-  created_at    String
-  last_accessed String
-  session_login_state String?
-  user_id       Int
-  user          users  @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+model Roles {
+  role_id     Int         @id @default(autoincrement())
+  role_name   String      @unique()
+  description String?
+  acls        BagAcl[]
+  groups      Groups[]
+  users       Users[]
+  RecipeAcl   RecipeAcl[]
+
+  @@map("roles")
 }
 
-model tiddlers {
+model Tiddlers {
   tiddler_id      Int      @id @default(autoincrement())
   bag_id          Int
   title           String
   is_deleted      Boolean
   attachment_blob String?
-  fields          fields[] 
+  fields          Fields[]
   // Deleting a referenced record (bag_id) will trigger the deletion of referencing record (tiddler).
-  bag             bags     @relation(fields: [bag_id], references: [bag_id], onDelete: Cascade)
+  bag             Bags     @relation(fields: [bag_id], references: [bag_id], onDelete: Cascade)
 
   @@unique([bag_id, title])
   @@index([bag_id])
+  @@map("tiddlers")
 }
 
-model fields {
+model Fields {
   tiddler_id  Int
   field_name  String
   field_value String
   // Deleting a referenced record (tiddler_id) will trigger the deletion of referencing record (field).
-  tiddler    tiddlers @relation(fields: [tiddler_id], references: [tiddler_id], onDelete: Cascade)
+  tiddler     Tiddlers @relation(fields: [tiddler_id], references: [tiddler_id], onDelete: Cascade)
 
   @@id([tiddler_id, field_name])
   @@index([tiddler_id])
+  @@map("fields")
 }
 
-model user_groups {
-  user_id  Int
-  group_id Int
-  group    groups @relation(fields: [group_id], references: [group_id], onDelete: NoAction, onUpdate: NoAction)
-  user     users  @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+model Users {
+  user_id    Int        @id @default(autoincrement())
+  username   String     @unique
+  email      String     @unique
+  password   String
+  created_at DateTime   @default(now())
+  last_login DateTime?
+  recipes    Recipes[]
+  sessions   Sessions[]
+  groups     Groups[]
+  roles      Roles[]
+  bags       Bags[]
 
-  @@id([user_id, group_id])
-  
+  @@map("users")
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
-model user_roles {
-  user_id Int
-  role_id Int
-  role   roles @relation(fields: [role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction)
-  user   users @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+model Sessions {
+  session_id          String   @id
+  created_at          DateTime @default(now())
+  last_accessed       DateTime
+  session_key         String?
+  user_id             Int
+  user                Users    @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@id([user_id, role_id])
-  
+  @@map("sessions")
 }
-
-model users {
-  user_id     Int           @id @default(autoincrement())
-  username    String        @unique()
-  email       String        @unique()
-  password    String
-  created_at  String        @default("datetime('now')")
-  last_login  String?
-  recipes     recipes[]
-  sessions    sessions[]
-  user_groups user_groups[] 
-  user_roles  user_roles[]  
-}
-

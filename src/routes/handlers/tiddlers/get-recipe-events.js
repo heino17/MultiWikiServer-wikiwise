@@ -12,9 +12,10 @@ Last-Event-ID:
 \*/
 "use strict";
 const SSE_HEARTBEAT_INTERVAL_MS = 10 * 1000;
-
-/** @type {ServerRouteDefinition} */
-export const route = (root) => root.defineRoute({
+export const route = (
+	/** @type {rootRoute} */ root, 
+	/** @type {ZodAssert} */ zodAssert
+) => root.defineRoute({
 	method: ["GET"],
 	path: /^\/recipes\/([^\/]+)\/events$/,
 	pathParams: ["recipe_name"],
@@ -22,7 +23,11 @@ export const route = (root) => root.defineRoute({
 }, async state => {
 	// Get the  parameters
 	zodAssert.pathParams(state, z => ({
-		recipe_name: z.prismaField("recipes", "recipe_name", "string"),
+		recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
+	}));
+
+	zodAssert.queryParams(state, z => ({
+		last_known_tiddler_id: z.array(z.prismaField("Tiddlers", "tiddler_id", "parse-number")).optional()
 	}));
 
 	const recipe_name = state.pathParams.recipe_name;
@@ -31,12 +36,12 @@ export const route = (root) => root.defineRoute({
 	const first = (a) => Array.isArray(a) ? a[0] : a;
 
 	let last_known_tiddler_id = 0;
-	const lastEventID = first(state.headers["Last-Event-ID"]);
+	const lastEventID = +(first(state.headers["Last-Event-ID"]) ?? 0);
 	const lastTiddlerID = state.queryParams.last_known_tiddler_id?.[0];
 	if(lastEventID) {
-		last_known_tiddler_id = $tw.utils.parseNumber(lastEventID);
+		last_known_tiddler_id = lastEventID;
 	} else if(lastTiddlerID) {
-		last_known_tiddler_id = $tw.utils.parseNumber(lastTiddlerID);
+		last_known_tiddler_id = lastTiddlerID;
 	}
 
 	if(!recipe_name) return state.sendEmpty(404);
@@ -71,7 +76,9 @@ export const route = (root) => root.defineRoute({
 
 
 			for(let index = recipeTiddlers.length - 1; index >= 0; index--) {
+				// /** @type {any} */
 				const tiddlerInfo = recipeTiddlers[index];
+				ok(tiddlerInfo);
 				if(tiddlerInfo.tiddler_id > last_known_tiddler_id) {
 					last_known_tiddler_id = tiddlerInfo.tiddler_id;
 				}
@@ -79,7 +86,7 @@ export const route = (root) => root.defineRoute({
 				if(!tiddlerInfo.is_deleted) {
 					const tiddler = await state.store.getRecipeTiddler(tiddlerInfo.title, recipe_name);
 					if(tiddler) {
-						data = $tw.utils.extend({}, data, {tiddler: tiddler.tiddler})
+						data = Object.assign({}, data, {tiddler: tiddler.tiddler})
 					}
 				}
 				sse.emitEvent("change", data, `${tiddlerInfo.tiddler_id}`);

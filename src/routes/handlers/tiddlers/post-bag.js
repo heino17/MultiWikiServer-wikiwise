@@ -12,8 +12,10 @@ description
 
 \*/
 "use strict";
-/** @type {ServerRouteDefinition} */
-export const route = (root) => root.defineRoute({
+export const route = (
+	/** @type {rootRoute} */ root, 
+	/** @type {ZodAssert} */ zodAssert
+) => root.defineRoute({
 	method: ["POST"],
 	path: /^\/bags$/,
 	bodyFormat: "www-form-urlencoded",
@@ -21,8 +23,8 @@ export const route = (root) => root.defineRoute({
 }, async state => {
 
 	zodAssert.data(state, z => z.object({
-		bag_name: z.prismaField("bags", "bag_name", "string"),
-		description: z.prismaField("bags", "description", "string").default("")
+		bag_name: z.prismaField("Bags", "bag_name", "string"),
+		description: z.prismaField("Bags", "description", "string").default("")
 	}));
 
 	await state.checkACL("bag", state.data.bag_name, "WRITE");

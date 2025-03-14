@@ -7,22 +7,24 @@ POST /admin/post-role
 
 \*/
 "use strict";
-/** @type {ServerRouteDefinition} */
-export const route = (root) => root.defineRoute({
+export const route = (
+	/** @type {rootRoute} */ root, 
+	/** @type {ZodAssert} */ zodAssert
+) => root.defineRoute({
 	method: ["POST"],
 	path: /^\/admin\/post-role\/?$/,
 	bodyFormat: "www-form-urlencoded",
 	useACL: {csrfDisable: true},
 }, async state => {
 	zodAssert.data(state, z => z.object({
-		role_name: z.prismaField("roles", "role_name", "string"),
-		role_description: z.prismaField("roles", "description", "string"),
+		role_name: z.prismaField("Roles", "role_name", "string"),
+		role_description: z.prismaField("Roles", "description", "string"),
 	}));
 
 	const {role_name, role_description} = state.data;
 
 	if(!state.authenticatedUser || !state.authenticatedUser.isAdmin) {
-		state.store.adminWiki.addTiddler(new $tw.Tiddler({
+		state.store.adminWiki.addTiddler(new state.Tiddler({
 			title: "$:/temp/mws/post-role/error",
 			text: "Unauthorized access. Admin privileges required."
 		}));
@@ -30,7 +32,7 @@ export const route = (root) => root.defineRoute({
 	}
 
 	if(!role_name || !role_description) {
-		state.store.adminWiki.addTiddler(new $tw.Tiddler({
+		state.store.adminWiki.addTiddler(new state.Tiddler({
 			title: "$:/temp/mws/post-role/error",
 			text: "Role name and description are required"
 		}));
@@ -41,7 +43,7 @@ export const route = (root) => root.defineRoute({
 		// Check if role already exists
 		var existingRole = await state.store.sql.getRoleByName(role_name);
 		if(existingRole) {
-			state.store.adminWiki.addTiddler(new $tw.Tiddler({
+			state.store.adminWiki.addTiddler(new state.Tiddler({
 				title: "$:/temp/mws/post-role/error",
 				text: "Role already exists"
 			}));
@@ -50,7 +52,7 @@ export const route = (root) => root.defineRoute({
 
 		await state.store.sql.createRole(role_name, role_description);
 
-		state.store.adminWiki.addTiddler(new $tw.Tiddler({
+		state.store.adminWiki.addTiddler(new state.Tiddler({
 			title: "$:/temp/mws/post-role/success",
 			text: "Role created successfully"
 		}));
@@ -59,7 +61,7 @@ export const route = (root) => root.defineRoute({
 
 	} catch(error) {
 		console.error("Error creating role:", error);
-		state.store.adminWiki.addTiddler(new $tw.Tiddler({
+		state.store.adminWiki.addTiddler(new state.Tiddler({
 			title: "$:/temp/mws/post-role/error",
 			text: `Error creating role: ${error}`
 		}));

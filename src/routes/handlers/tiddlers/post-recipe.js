@@ -13,22 +13,24 @@ bag_names: space separated list of bags
 
 \*/
 "use strict";
-/** @type {ServerRouteDefinition} */
-export const route = (root) => root.defineRoute({
+export const route = (
+	/** @type {rootRoute} */ root, 
+	/** @type {ZodAssert} */ zodAssert
+) => root.defineRoute({
 	method: ["POST"],
 	path: /^\/recipes$/,
 	bodyFormat: "www-form-urlencoded",
 	useACL: {csrfDisable: true},
 }, async state => {
 	zodAssert.data(state, z => z.object({
-		recipe_name: z.prismaField("recipes", "recipe_name", "string"),
-		description: z.prismaField("recipes", "description", "string").default(""),
-		bag_names: z.prismaField("bags", "bag_name", "string").array()
+		recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
+		description: z.prismaField("Recipes", "description", "string").default(""),
+		bag_names: z.prismaField("Bags", "bag_name", "string").array()
 	}));
 	await state.checkACL("recipe", state.data.recipe_name, "WRITE");
 
 	if(state.data.recipe_name && state.data.bag_names) {
-		const result = await state.store.createRecipe(state.data.recipe_name, $tw.utils.parseStringArray(state.data.bag_names), state.data.description);
+		const result = await state.store.createRecipe(state.data.recipe_name, state.data.bag_names, state.data.description);
 		if(!result) {
 			if(state.authenticatedUser) {
 				await state.store.sql.assignRecipeToUser(state.data.recipe_name, state.authenticatedUser.user_id);

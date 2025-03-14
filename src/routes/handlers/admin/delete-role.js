@@ -10,8 +10,10 @@ POST /admin/delete-role
 /*jslint node: true, browser: true */
 /*global $tw: false */
 "use strict";
-/** @type {ServerRouteDefinition} */
-export const route = (root) => root.defineRoute({
+export const route = (
+	/** @type {rootRoute} */ root, 
+	/** @type {ZodAssert} */ zodAssert
+) => root.defineRoute({
 	method: ["POST"],
 	path: /^\/admin\/delete-role\/?$/,
 	bodyFormat: "www-form-urlencoded",
@@ -19,7 +21,7 @@ export const route = (root) => root.defineRoute({
 }, async state => {
 
 	zodAssert.data(state, z => z.object({
-		role_id: z.prismaField("roles", "role_id", "parse-number"),
+		role_id: z.prismaField("Roles", "role_id", "parse-number"),
 	}));
 
 	var role_id = state.data.role_id;

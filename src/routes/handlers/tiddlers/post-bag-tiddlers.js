@@ -7,8 +7,10 @@ POST /bags/:bag_name/tiddlers/
 
 \*/
 "use strict";
-/** @type {ServerRouteDefinition} */
-export const route = (root) => root.defineRoute({
+export const route = (
+	/** @type {rootRoute} */ root, 
+	/** @type {ZodAssert} */ zodAssert
+) => root.defineRoute({
 	method: ["POST"],
 	path: /^\/bags\/([^\/]+)\/tiddlers\/$/,
 	pathParams: ["bag_name"],
@@ -16,7 +18,7 @@ export const route = (root) => root.defineRoute({
 	useACL: {csrfDisable: true},
 }, async state => {
 	zodAssert.pathParams(state, z => ({
-		bag_name: z.prismaField("bags", "bag_name", "string"),
+		bag_name: z.prismaField("Bags", "bag_name", "string"),
 	}));
 
 	await state.checkACL("bag", state.pathParams.bag_name, "WRITE");
@@ -33,30 +35,30 @@ export const route = (root) => root.defineRoute({
 			"imported-tiddlers": results
 		}));
 	} else {
-		if(!state.headersSent) {
-			state.writeHead(200, {
-				"Content-Type": "text/html"
-			});
-			state.write(`
+
+		state.writeHead(200, {
+			"Content-Type": "text/html"
+		});
+		state.write(`
 						<!doctype html>
 						<head>
 							<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 						</head>
 						<body>
 					`);
-			// Render the html
-			var html = state.store.adminWiki.renderTiddler("text/html", "$:/plugins/tiddlywiki/multiwikiserver/templates/post-bag-tiddlers", {
-				variables: {
-					"bag-name": bag_name,
-					"imported-titles": JSON.stringify(results)
-				}
-			});
-			state.write(html);
-			state.write(`
+		// Render the html
+		var html = state.store.adminWiki.renderTiddler("text/html", "$:/plugins/tiddlywiki/multiwikiserver/templates/post-bag-tiddlers", {
+			variables: {
+				"bag-name": bag_name,
+				"imported-titles": JSON.stringify(results)
+			}
+		});
+		state.write(html);
+		state.write(`
 						</body>
 						</html>
 					`);
-			state.end();
-		}
+		return state.end();
+
 	}
 });
