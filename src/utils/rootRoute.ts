@@ -56,7 +56,7 @@ interface RouteOptBase<B extends BodyFormat, M extends AllowedMethod[], PA exten
   denyFinal?: boolean;
 }
 
-interface RouteDef<P extends ParentTuple, PA extends string[]> extends RouteOptBase<P[0] & {}, P[1], PA> {
+export interface RouteDef<P extends ParentTuple, PA extends string[]> extends RouteOptBase<P[0] & {}, P[1], PA> {
 
   /**
    * If this route's handler sends headers, the matched child route will not be called.

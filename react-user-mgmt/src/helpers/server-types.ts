@@ -1,8 +1,5 @@
 import { Prisma } from "@prisma/client";
 import { proxy } from "./prisma-proxy";
-import React from "react";
-import { ServerMapResponse } from "../../../src/routes/api/_index";
-
 
 type PrismaField<T extends Prisma.ModelName, K extends keyof PrismaPayloadScalars<T>> =
   // manually map foriegn keys to their corresponding primary key so comparisons work
@@ -47,23 +44,3 @@ const listRecipes = () => proxy.recipes.findMany({
 })));
 
 export type ListRecipesResult = Awaited<ReturnType<typeof listRecipes>>;
-
-export interface IndexJson {
-  "bag-list": ListBagsResult,
-  "recipe-list": ListRecipesResult,
-  username: string;
-  "user-is-admin": boolean | null;
-  "first-guest-user": boolean;
-  "show-anon-config": boolean;
-  "user-is-logged-in": boolean;
-  user: {
-    user_id: PrismaField<"Users", "user_id">;
-    recipe_owner_id: PrismaField<"Recipes", "owner_id"> & {};
-    isAdmin: boolean;
-    username: string;
-    sessionId: PrismaField<"Sessions", "session_id">;
-  } | null;
-  "has-profile-access": boolean;
-  allowReads: boolean;
-  allowWrites: boolean;
-};

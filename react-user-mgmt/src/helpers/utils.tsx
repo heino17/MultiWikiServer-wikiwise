@@ -3,9 +3,10 @@ import { useAsyncEffect } from "./useAsyncEffect";
 import React, { ReactNode, useCallback, useId, useState } from "react";
 import { FieldValues, useForm, UseFormRegisterReturn } from "react-hook-form";
 import { proxy } from "./prisma-proxy";
-import { ZodAction } from "../../../src/routes/BaseManager";
+import type { ZodAction } from "../../../src/routes/BaseManager";
 import { z } from "zod";
-import { RecipeManagerMap, UserManagerMap } from "../../../src/routes/managers";
+import type { RecipeManagerMap, UserManagerMap } from "../../../src/routes/managers";
+import { Button, ButtonProps } from "@mui/material";
 
 
 type MapLike = { entries: () => Iterable<[string, any]> };
@@ -87,6 +88,8 @@ export const IndexJsonContext = React.createContext<[Awaited<ReturnType<typeof g
 
 export function useIndexJson() { return React.useContext(IndexJsonContext); }
 
+export type IndexJson = Awaited<ReturnType<typeof getIndexJson>>;
+
 type PART<T extends (...args: any) => any> = Promise<Awaited<ReturnType<T>>>;
 
 type Handler<T extends Record<string, ZodAction<any, any>>, K extends keyof T> =
@@ -125,7 +128,13 @@ export const serverRequest: ManagerMap = {
 
   index_json: postManager("index_json"),
   recipe_create: postManager("recipe_create"),
+  recipe_update: postManager("recipe_update"),
+  recipe_upsert: postManager("recipe_upsert"),
+  recipe_delete: postManager("recipe_delete"),
   bag_create: postManager("bag_create"),
+  bag_update: postManager("bag_update"),
+  bag_upsert: postManager("bag_upsert"),
+  bag_delete: postManager("bag_delete"),
 
   prisma: proxy,
 }
@@ -147,7 +156,7 @@ export async function getIndexJson() {
     if (bag._count.acl) return true;
     return true;
   }
-
+  const getBag = (bagId: number) => bagMap.get(bagId as any);
   const getBagName = (bagId: number) => bagMap.get(bagId as any)?.bag_name;
   const getBagDesc = (bagId: number) => bagMap.get(bagId as any)?.description;
 
@@ -156,8 +165,10 @@ export async function getIndexJson() {
     bagMap,
     recipeMap,
     hasBagAclAccess,
+    getBag,
     getBagName,
     getBagDesc,
+    // getBagOwnerName,
     hasRecipeAclAccess,
   }
 }
@@ -256,3 +267,22 @@ export function FormFieldInput({ id, type, children, title, ...inputProps }: For
   //   </select>
   // </div>
 }
+
+export interface ButtonAwaitProps extends ButtonProps {
+  onClick: (event: Parameters<ButtonProps["onClick"] & {}>[0]) => Promise<void>
+}
+
+export function ButtonAwait({ onClick, loading: propsLoading, ...props }: ButtonAwaitProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  return <Button
+    loading={isLoading || propsLoading}
+    onClick={(event) => {
+      setIsLoading(true);
+      onClick?.(event).finally(() => {
+        setIsLoading(false);
+      });
+    }}
+    {...props}
+  />
+}
+

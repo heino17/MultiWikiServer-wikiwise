@@ -20,6 +20,9 @@ class ProxyPromise<T> implements Promise<T> {
   finally(onfinally?: (() => void) | undefined | null): Promise<T> {
     return this._await().finally(onfinally);
   }
+  try(){
+    return this._await().try();
+  }
   toJSON = () => ({
     action: this.action,
     table: this.table,

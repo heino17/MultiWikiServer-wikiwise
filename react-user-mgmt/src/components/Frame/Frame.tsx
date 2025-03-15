@@ -1,8 +1,8 @@
 
 import { ReactNode, useState } from 'react';
 import Header from './Header';
-import AnonConfigModal from './AnonConfigModal';
-import Dashboard from '../Dashboard/Dashboard';
+
+import { Dashboard } from '../Dashboard/Dashboard';
 import UserManagement from '../UserList/UserManagement';
 import ManageUser from '../UserEdit/ManageUser';
 import { DataLoader, useIndexJson } from '../../helpers/utils';
@@ -65,14 +65,6 @@ export const Frame = (props: {}) => {
             </div>
           </div>
         </div>
-      )}
-
-      {showAnonConfig && (
-        <AnonConfigModal
-          initialAllowReads={allowReads}
-          initialAllowWrites={allowWrites}
-          onClose={() => setShowAnonConfig(false)}
-        />
       )}
 
       {page ?? <div className="mws-error">Page not found</div>}

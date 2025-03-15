@@ -11,6 +11,7 @@ export async function setupDevServer() {
     platform: 'browser',
     jsx: 'automatic',
     outdir: 'react-user-mgmt/public',
+    minify: true,
   })
 
   const { port } = await ctx.serve({

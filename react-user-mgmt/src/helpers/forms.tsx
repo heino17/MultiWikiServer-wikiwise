@@ -5,7 +5,7 @@ import Form from '@rjsf/mui';
 import { IChangeEvent } from '@rjsf/core';
 import { JSONSchema7 } from "json-schema";
 import { Alert, Stack } from '@mui/material';
-import { useState } from 'react';
+import { ReactNode, useState } from 'react';
 
 
 interface JSONProps extends JSONSchema7, UiSchema {
@@ -27,6 +27,7 @@ export function JsonForm<T, S extends StrictRJSFSchema>(props: {
   onChange: (value: T) => void,
   onSubmit: (data: IChangeEvent<T, S, any>, event: React.FormEvent<any>) => Promise<string>,
   submitOptions?: UiSchema["ui:submitButtonOptions"],
+  children?: ReactNode
 }) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -58,6 +59,7 @@ export function JsonForm<T, S extends StrictRJSFSchema>(props: {
       }}
       formData={props.value}
       onChange={(data) => { props.onChange(data.formData); }}
+      children={props.children}
     />
     <Stack paddingBlock={2}>
       {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
@@ -73,6 +75,7 @@ export function JsonFormSimple<T extends Record<string, JSONProps>>({ required, 
   required: (string & keyof T)[],
   onSubmit: (data: IChangeEvent<any, RJSFSchema, any>, event: React.FormEvent<any>) => Promise<string>,
   submitOptions?: UiSchema["ui:submitButtonOptions"],
+  children?: ReactNode
 }) {
   return <JsonForm
     schema={{
@@ -88,6 +91,7 @@ export function JsonFormSimple<T extends Record<string, JSONProps>>({ required, 
     onChange={props.onChange}
     onSubmit={props.onSubmit as any}
     submitOptions={submitOptions}
+    children={props.children}
 
   />
 

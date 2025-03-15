@@ -6,9 +6,10 @@ import * as opaque from "@serenity-kit/opaque";
 // import Form from "@rjsf/fluentui-rc";
 // import validator from '@rjsf/validator-ajv8';
 import Card from '@mui/material/Card';
-import { Alert, CardContent, CardHeader, Container, Stack } from '@mui/material';
+import { Alert, Button, CardContent, CardHeader, Container, IconButton, Stack } from '@mui/material';
 import { JsonFormSimple } from '../helpers/forms';
-
+import Close from "@mui/icons-material/Close"
+import HomeIcon from '@mui/icons-material/Home';
 
 export function fetchPostJSON(url: string, formData: any) {
   return fetch(url, {
@@ -86,11 +87,15 @@ const Login: React.FC<{}> = () => {
       <Container maxWidth="sm" >
         <Card>
           <CardContent>
-            <div className="login-header">
-              <h1>Be our Guest</h1>
-              <a href="/">Explore as Guest</a>
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <IconButton href="/" size="small" color="primary">
+                <HomeIcon />
+              </IconButton>
               <h2>TiddlyWiki Login</h2>
-            </div>
+              <IconButton size="small" color="primary" sx={{ opacity: 0 }} disabled>
+                <Close />
+              </IconButton>
+            </Stack>
             <JsonFormSimple
               required={["username", "password"]}
               properties={{

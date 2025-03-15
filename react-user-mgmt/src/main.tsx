@@ -1,3 +1,5 @@
+// required by @angular/forms
+import "@angular/compiler";
 import { StrictMode } from 'react';
 import './styles/index.css';
 import './styles/login.css';
@@ -8,13 +10,13 @@ import { DataLoader, getIndexJson, IndexJsonContext } from './helpers/utils';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 const theme = createTheme({
-  palette:{
-    background:{
-      default:"#f0f0f0",
+  palette: {
+    background: {
+      default: "#f0f0f0",
       paper: "#fff"
     }
   },
-  
+
   colorSchemes: {
     dark: true,
 
@@ -50,3 +52,41 @@ export const App = DataLoader(async () => {
   createRoot(document.getElementById('root')!).render(<App />);
 })();
 
+
+class _Result<OK extends boolean, T> {
+  constructor(
+    public ok: OK,
+    public error: OK extends true ? undefined : unknown,
+    public value: OK extends true ? T : undefined
+  ) { }
+
+  get [Symbol.iterator]() { return [this.ok, this.error, this.value] }
+
+  static ok<T>(value: T) {
+    return new _Result(true, undefined, value)
+  }
+  static error(error: unknown) {
+    return new _Result(false, error, undefined)
+  }
+
+  /**
+   * @example
+   * // const result = try something();
+   * const result = Result.try_(() => {
+   *   something();
+   * });
+   */
+  static try_<T, This>(callback: (this: This) => T, thisarg: This) {
+    try {
+      return _Result.ok(callback.apply(thisarg));
+    } catch (e) {
+      return _Result.error(e);
+    }
+  }
+
+}
+
+(global as any).TryResult = _Result;
+Promise.prototype.try = function <T>(this: Promise<T>) {
+  return this.then(_Result.ok, _Result.error);
+}

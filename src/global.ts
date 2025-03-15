@@ -167,11 +167,7 @@ class _Result<OK extends boolean, T> {
     public error: OK extends true ? undefined : unknown,
     public value: OK extends true ? T : undefined
   ) { }
-  *[Symbol.iterator]() {
-    yield this.ok
-    yield this.error
-    yield this.value
-  }
+  get[Symbol.iterator]() { return [this.ok, this.error, this.value] }
   static ok<T>(value: T) {
     return new _Result(true, undefined, value)
   }
@@ -197,7 +193,7 @@ class _Result<OK extends boolean, T> {
 }
 //https://github.com/arthurfiorette/proposal-try-operator
 declare global {
-  const Result: typeof _Result;
+  const TryResult: typeof _Result;
   interface Promise<T> {
     try: () => Promise<_Result<true, T> | _Result<false, T>>;
   }

@@ -229,25 +229,28 @@ function makeZ2<T extends FieldTypeGroups>(input: "data" | "pathParams" | "query
 }
 
 
-function prismaField(table: any, field: any, fieldtype: ExtraFieldType): any {
-  switch (fieldtype) {
-    case "string":
-      return z.string()
-        .refine(x => x.length, { message: "String must have length" });
-    case "parse-number":
-      return z.string().min(1)
-        .pipe(z.bigint({ coerce: true }))
-        .pipe(z.number({ coerce: true }).finite())
-        .refine(x => !isNaN(x), { message: "Invalid number" });
-    case "parse-boolean":
-      return z.enum(["true", "false"]).transform(x => x === "true");
-    case "boolean":
-      return z.boolean();
-    case "number":
-      return z.number();
-    default:
-      throw new Error("Invalid field type");
-  }
+function prismaField(table: any, field: any, fieldtype: ExtraFieldType, nullable?: boolean): any {
+  const check = (() => {
+    switch (fieldtype) {
+      case "string":
+        return z.string()
+          .refine(x => x.length, { message: "String must have length" });
+      case "parse-number":
+        return z.string().min(1)
+          .pipe(z.bigint({ coerce: true }))
+          .pipe(z.number({ coerce: true }).finite())
+          .refine(x => !isNaN(x), { message: "Invalid number" });
+      case "parse-boolean":
+        return z.enum(["true", "false", "null"]).transform(x => x === "null" ? null : x === "true");
+      case "boolean":
+        return z.boolean();
+      case "number":
+        return z.number();
+      default:
+        throw new Error("Invalid field type");
+    }
+  })();
+  return nullable ? check.nullable() : check;
 
 }
 

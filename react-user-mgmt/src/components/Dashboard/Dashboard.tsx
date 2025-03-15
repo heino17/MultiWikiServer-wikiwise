@@ -1,12 +1,9 @@
-import React, { useState, PropsWithChildren } from 'react';
-import WikiCard from './WikiCard';
-import BagPill from './BagPill';
-import { useFormStatus } from 'react-dom';
-import { FormFieldInput, serverRequest, useFormFieldHandler, useIndexJson } from '../../helpers/utils';
-import { JsonForm, JsonFormSimple } from '../../helpers/forms';
-import { Avatar, Button, Card, CardActions, CardContent, CardHeader, Chip, Dialog, DialogContent, DialogTitle, IconButton, Link, List, ListItem, ListItemAvatar, ListItemButton, ListItemText, Stack } from "@mui/material";
+import React, { useState, Dispatch, SetStateAction, useId, PropsWithChildren } from 'react';
+import { ButtonAwait, IndexJson, serverRequest, useIndexJson } from '../../helpers/utils';
+import { Alert, Autocomplete, Avatar, Button, ButtonProps, Card, CardActions, CardContent, Checkbox, Dialog, DialogContent, DialogTitle, FormControl, FormControlLabel, IconButton, InputLabel, Link, List, ListItem, ListItemAvatar, ListItemButton, ListItemText, OutlinedInput, Select, SelectChangeEvent, Stack, TextField, useMediaQuery, useTheme } from "@mui/material";
 // import LockIcon from '@mui/icons-material/Lock';
 // import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
+import MenuItem from '@mui/material/MenuItem';
 import ACLIcon from '@mui/icons-material/AdminPanelSettings';
 import EditIcon from '@mui/icons-material/Edit';
 import ListSubheader from '@mui/material/ListSubheader';
@@ -20,8 +17,20 @@ import ExpandMore from '@mui/icons-material/ExpandMore';
 import StarBorder from '@mui/icons-material/StarBorder';
 import WithACL from '@mui/icons-material/GppGood';
 import WithoutACL from '@mui/icons-material/GppBadOutlined';
+import Add from '@mui/icons-material/Add';
+import Remove from '@mui/icons-material/Remove';
+import ArrowUpward from '@mui/icons-material/ArrowUpward';
+import ArrowDownward from '@mui/icons-material/ArrowDownward';
 
 import SvgIcon from '@mui/material/SvgIcon';
+
+import * as forms from "@angular/forms";
+import { useObservable } from '../../helpers';
+
+function ok(value: any): asserts value {
+  if (value === null || value === undefined) throw new Error("Value is null or undefined");
+  return value;
+}
 
 
 function MissingFavicon() {
@@ -32,17 +41,7 @@ function MissingFavicon() {
   </SvgIcon>
 }
 
-interface Recipe {
-  recipe_name: string;
-  description: string;
-  bag_names: string[];
-  has_acl_access: boolean;
-}
 
-interface Bag {
-  bag_name: string;
-  description: string;
-}
 
 interface DashboardProps {
   username: string;
@@ -56,9 +55,52 @@ interface DashboardProps {
   initialAllowWrites: boolean;
 }
 
-const Dashboard = () => {
+interface Recipe {
+  recipe_name: string;
+  description: string;
+  bag_names: { bag_name: string, with_acl: boolean }[];
+  owner_id?: number | null;
+}
 
-  const [{ getBagName, getBagDesc, hasBagAclAccess, hasRecipeAclAccess, ...indexJson }, refresh] = useIndexJson();
+interface Bag {
+  bag_name: string;
+  description: string;
+  owner_id?: number | null;
+}
+
+const RecipeForm = (value: Recipe, disableOwnerID: boolean) => {
+  const form = new forms.FormGroup({
+    recipe_name: new forms.FormControl(value.recipe_name, { nonNullable: true, validators: [forms.Validators.required] }),
+    description: new forms.FormControl(value.description, { nonNullable: true, validators: [forms.Validators.required] }),
+    owner_id: new forms.FormControl<number>(value.owner_id ?? 0),
+    bag_names: new forms.FormArray<ReturnType<typeof RecipeBagRow>>(value.bag_names.map(RecipeBagRow), {
+      validators: [forms.Validators.required]
+    }),
+  });
+  if (disableOwnerID) form.controls.owner_id.disable();
+  return form;
+}
+const RecipeBagRow = (value: Recipe["bag_names"][number]) => new forms.FormGroup({
+  bag_name: new forms.FormControl(value.bag_name, { nonNullable: true, validators: [forms.Validators.required] }),
+  with_acl: new forms.FormControl(value.with_acl, { nonNullable: true }),
+});
+
+const BagForm = (value: Bag, disableOwnerID: boolean) => {
+  const form = new forms.FormGroup({
+    bag_name: new forms.FormControl(value.bag_name, {
+      nonNullable: true, validators: [forms.Validators.required]
+    }),
+    description: new forms.FormControl(value.description, {
+      nonNullable: true, validators: [forms.Validators.required]
+    }),
+    owner_id: new forms.FormControl<number>(value.owner_id ?? 0),
+  });
+  if (disableOwnerID) form.controls.owner_id.disable();
+  return form;
+}
+export const Dashboard = () => {
+
+  const [{ getBag, getBagName, getBagDesc, hasBagAclAccess, hasRecipeAclAccess, ...indexJson }, refresh] = useIndexJson();
 
   const isAdmin = indexJson.isAdmin;
 
@@ -73,69 +115,34 @@ const Dashboard = () => {
     const newShowSystem = e.target.checked;
     setShowSystem(newShowSystem);
 
+  
     // Optionally persist the preference
-    try {
-      const url = new URL(window.location.href);
-      url.searchParams.set('show_system', newShowSystem ? 'on' : 'off');
-      window.history.replaceState({}, '', url.toString());
-    } catch (error) {
-      console.error('Error updating URL:', error);
-    }
+    // nothing is reading this right now so just disable it
+    // try {
+    //   const url = new URL(window.location.href);
+    //   url.searchParams.set('show_system', newShowSystem ? 'on' : 'off');
+    //   window.history.replaceState({}, '', url.toString());
+    // } catch (error) {
+    //   console.error('Error updating URL:', error);
+    // }
   };
 
-  interface RecipeCreateForm {
-    recipe_name: string;
-    description: string;
-    bag_names: { bag_name: string, with_acl: boolean }[];
-    with_acl: boolean;
-    owned: boolean;
-  }
-  const handleRecipeSubmit = async (formData: RecipeCreateForm) => {
-    console.log(formData);
-    if (!isAdmin) formData.owned = true;
-    const {
-      recipe_name,
-      bag_names,
-      description,
-      owned = false
-    } = formData;
 
-    await serverRequest.recipe_create({
-      recipe_name,
-      description,
-      bag_names,
-      owned,
-    });
-    return "Recipe created successfully.";
-  };
-
-  interface BagCreateForm {
-    bag_name: string;
-    description: string;
-    owned: boolean;
-  }
-  const handleBagSubmit = async (formData: BagCreateForm) => {
-    console.log(formData);
-    if (!isAdmin) formData.owned = true;
-    formData.owned = !!formData.owned;
-    await serverRequest.bag_create(formData);
-    return "Bag created successfully.";
-  }
 
   const [openRecipeItems, setOpenRecipeItems] = useState<string | null>(null);
   const [showRecipeDialog, setShowRecipeDialog] = useState(false);
+  const [recipeCreate, setRecipeCreate] = useState(false);
   const [recipeTitle, setRecipeTitle] = useState("");
-  const [valueRecipe, onChangeRecipe] = useState<RecipeCreateForm>({} as any);
+  const [recipeForm, setRecipeForm] = useState<ReturnType<typeof RecipeForm> | null>(null);
+  // this triggers a render whenever the valueChanges event emits a new value
+  // useObservable(recipeForm?.valueChanges);
+
   const [showBagDialog, setShowBagDialog] = useState(false);
+  const [bagCreate, setBagCreate] = useState(false);
+  const [bagForm, setBagForm] = useState<ReturnType<typeof BagForm> | null>(null);
   const [bagTitle, setBagTitle] = useState("");
-  const [valueBag, onChangeBag] = useState<{
-    bag_name?: any;
-    description?: any;
-    owned?: any;
-  }>({});
-
-  console.log(valueRecipe, valueBag);
-
+  // this triggers a render whenever the valueChanges event emits a new value
+  // useObservable(bagForm?.valueChanges);
 
   return (
     <CardContent>
@@ -156,7 +163,10 @@ const Dashboard = () => {
                   </ListItemAvatar>
 
                   <ListItemText
-                    primary={<Link href={`/wiki/${encodeURIComponent(recipe.recipe_name)}`}>{recipe.recipe_name}</Link>}
+                    primary={<>
+                      <Link href={`/wiki/${encodeURIComponent(recipe.recipe_name)}`}>{recipe.recipe_name}</Link>
+                      {recipe.owner && <span> (by {recipe.owner.username})</span>}
+                    </>}
                     secondary={recipe.description}
                   />
 
@@ -167,16 +177,16 @@ const Dashboard = () => {
                     onClick={(event) => {
                       setShowRecipeDialog(true);
                       setRecipeTitle("Edit recipe");
-                      onChangeRecipe({
+                      setRecipeCreate(false);
+                      setRecipeForm(RecipeForm({
                         recipe_name: recipe.recipe_name,
                         description: recipe.description,
-                        bag_names: recipe.recipe_bags.map((recipeBag) => ({
-                          bag_name: getBagName(recipeBag.bag_id)!,
-                          with_acl: recipeBag.with_acl
-                        })),
-                        with_acl: false,
-                        owned: false
-                      });
+                        owner_id: recipe.owner_id,
+                        bag_names: recipe.recipe_bags.map(bag => ({
+                          bag_name: getBagName(bag.bag_id) ?? "",
+                          with_acl: bag.with_acl
+                        }))
+                      }, !isAdmin));
                     }}
                   >
                     <EditIcon />
@@ -212,7 +222,10 @@ const Dashboard = () => {
                           {bag.with_acl ? <WithACL /> : <WithoutACL />}
                         </ListItemIcon>
                         <ListItemText
-                          primary={getBagName(bag.bag_id)}
+                          primary={<>
+                            {getBagName(bag.bag_id)}
+                            {getBag(bag.bag_id)?.owner && <span> (by {getBag(bag.bag_id)!.owner!.username})</span>}
+                          </>}
                           secondary={getBagDesc(bag.bag_id)} />
                       </ListItem>
                     ))}
@@ -222,67 +235,25 @@ const Dashboard = () => {
 
               </>))}
             </List>
-            <Dialog open={showRecipeDialog} onClose={() => { setShowRecipeDialog(false); }}>
+            <Dialog open={!!recipeForm} onClose={() => { setRecipeForm(null); }} maxWidth="md" fullWidth>
               <DialogTitle>{recipeTitle}</DialogTitle>
               <DialogContent>
-                <JsonForm
-                  schema={{
-                    type: "object",
-                    required: ["recipe_name", "description", "bag_names"],
-                    properties: {
-                      recipe_name: { type: "string", title: "Recipe name" },
-                      description: { type: "string", title: "Recipe description" },
-                      bag_names: {
-                        type: "array",
-                        title: "Bags",
-                        items: {
-                          type: "object",
-                          required: ["bag_name"],
-                          properties: {
-                            bag_name: {
-                              type: "string", title: "Bag Name", default: ""
-                            },
-                            with_acl: {
-                              type: "boolean",
-                              title: "With ACL",
-                              description: "Set this bag to inherit permissions from this recipe:",
-                              default: false
-                            },
-                          }
-                        }
-                      },
-                      owned: { type: "boolean", title: "Admin: Is this your personal recipe or a site-wide recipe?" },
-                    }
-                  }}
-                  uiSchema={{
-                    bag_names: {
-                      "ui:options": {
-
-                      }
-                    }
-                  }}
-                  value={valueRecipe}
-                  onChange={onChangeRecipe}
-                  onSubmit={async (data, event) => {
-                    console.log(data);
-                    if (!data.formData) throw "No data";
-                    return await handleRecipeSubmit(data.formData);
-                  }}
-                />
+                {recipeForm && <RecipeFormComponent recipeForm={recipeForm} isCreate={recipeCreate} />}
               </DialogContent>
             </Dialog>
+
           </CardContent>
           <CardActions>
             <Button onClick={() => {
               setShowRecipeDialog(true);
               setRecipeTitle("Create new recipe");
-              onChangeRecipe({
+              setRecipeCreate(true);
+              setRecipeForm(RecipeForm({
                 recipe_name: "",
                 description: "",
-                bag_names: [],
-                with_acl: false,
-                owned: false
-              });
+                owner_id: null,
+                bag_names: [{ bag_name: "", with_acl: false }]
+              }, !isAdmin));
             }}>Create new recipe</Button>
           </CardActions>
         </Card>
@@ -300,7 +271,10 @@ const Dashboard = () => {
                     </Avatar>
                   </ListItemAvatar>
                   <ListItemText
-                    primary={bag.bag_name}
+                    primary={<>
+                      {bag.bag_name}
+                      {bag.owner && <span> (by {bag.owner.username})</span>}
+                    </>}
                     secondary={bag.description} />
                   <IconButton
                     edge="end"
@@ -309,11 +283,12 @@ const Dashboard = () => {
                     onClick={(event) => {
                       setShowBagDialog(true);
                       setBagTitle("Edit bag");
-                      onChangeBag({
+                      setBagCreate(false);
+                      setBagForm(BagForm({
                         bag_name: bag.bag_name,
                         description: bag.description,
-                        owned: false
-                      });
+                        owner_id: bag.owner_id
+                      }, !isAdmin));
                     }}
                   >
                     <EditIcon />
@@ -321,22 +296,10 @@ const Dashboard = () => {
                 </ListItem>
               ))}
             </List>
-            <Dialog open={showBagDialog} onClose={() => { setShowBagDialog(false); }}>
+            <Dialog open={showBagDialog} onClose={() => { setShowBagDialog(false); }} maxWidth="md" fullWidth>
               <DialogTitle>{bagTitle}</DialogTitle>
               <DialogContent>
-                <JsonFormSimple
-                  required={["bag_name", "description"]}
-                  properties={{
-                    bag_name: { type: "string", title: "Bag name" },
-                    description: { type: "string", title: "Bag description" },
-                    owned: { type: "boolean", title: "Admin: Is this your personal recipe or a site-wide recipe?" },
-                  }}
-                  onSubmit={async (data, event) => {
-                    return await handleBagSubmit(data.formData);
-                  }}
-                  value={valueBag}
-                  onChange={onChangeBag}
-                />
+                {bagForm && <BagFormComponent bagForm={bagForm} isCreate={bagCreate} />}
               </DialogContent>
             </Dialog>
           </CardContent>
@@ -344,11 +307,12 @@ const Dashboard = () => {
             <Button onClick={() => {
               setShowBagDialog(true);
               setBagTitle("Create new bag");
-              onChangeBag({
+              setBagCreate(true);
+              setBagForm(BagForm({
                 bag_name: "",
                 description: "",
-                owned: false
-              });
+                owner_id: null
+              }, !isAdmin));
             }}>Create new bag</Button>
           </CardActions>
         </Card>
@@ -371,84 +335,248 @@ const Dashboard = () => {
   );
 };
 
-function renderBagItem(bag: { _count: { acl: number; }; } & { bag_id: number & { __prisma_table: "Bags"; __prisma_field: "bag_id"; }; bag_name: string & { __prisma_table: "Bags"; __prisma_field: "bag_name"; }; description: string & { __prisma_table: "Bags"; __prisma_field: "description"; }; owner_id: PrismaField<"Bags", "owner_id">; }, setShowBagDialog: React.Dispatch<React.SetStateAction<boolean>>, setBagTitle: React.Dispatch<React.SetStateAction<string>>, onChangeBag: React.Dispatch<React.SetStateAction<{ bag_name?: any; description?: any; owned?: any; }>>) {
-  return;
+function onChange<T>(formControl: forms.FormControl<T>) {
+  return (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<T>) =>
+    formControl.setValue(event.target.value as T);
+}
+function RecipeFormComponent({ recipeForm, isCreate }: { recipeForm: ReturnType<typeof RecipeForm>, isCreate: boolean }) {
+  const theme = useTheme();
+  const [indexJson, globalRefresh] = useIndexJson();
+  useObservable(recipeForm.valueChanges);
+
+  const handleRecipeSubmit = async () => {
+    const formData = recipeForm.value;
+    console.log(formData, isCreate);
+
+    if (!indexJson.isAdmin) formData.owner_id = undefined;
+    else if (formData.owner_id === 0) formData.owner_id = null;
+    if (formData.bag_names?.length === 0) throw "Recipe must have at least one bag.";
+    if (recipeForm.invalid) { console.log(recipeForm.errors); throw recipeForm.errors; }
+
+    ok(formData.recipe_name);
+    ok(formData.description);
+    ok(formData.bag_names);
+
+    await serverRequest.recipe_upsert({
+      recipe_name: formData.recipe_name,
+      description: formData.description,
+      owner_id: formData.owner_id,
+      bag_names: formData.bag_names.map(({ bag_name, with_acl = false }) =>
+        (ok(bag_name), { bag_name, with_acl })
+      ),
+      isCreate,
+    });
+    globalRefresh();
+    return `Recipe ${isCreate ? "created" : "updated"} successfully.`;
+  };
+  const owner_html_id = useId();
+  return <Stack direction="column" spacing={2} alignItems="stretch" width="100%" paddingBlock={2}>
+    <TextField
+      label="Recipe Name"
+      value={recipeForm.controls.recipe_name.value}
+      onChange={onChange(recipeForm.controls.recipe_name)}
+    />
+    <TextField
+      label="Description"
+      value={recipeForm.controls.description.value}
+      onChange={onChange(recipeForm.controls.description)}
+    />
+    <OwnerSelection isCreate={isCreate} control={recipeForm.controls.owner_id} />
+    <Stack direction="row" spacing={2} justifyContent="space-between">
+      <h2>Bags</h2>
+      <IconButton sx={{ color: theme.palette.primary.main }}
+        onClick={() => {
+          recipeForm.controls.bag_names.insert(0, RecipeBagRow({ bag_name: "", with_acl: false }));
+        }}
+      >
+        <Add />
+      </IconButton>
+    </Stack>
+    {recipeForm.controls.bag_names.controls.map((bagRow, index) => (
+      <RecipeBagRowComponent
+        key={JSON.stringify(bagRow.value.bag_name)}
+        bagRow={bagRow}
+        bag_names={indexJson.bagList.map(e => e.bag_name)}
+        onMoveUp={index > 0 ? () => {
+          recipeForm.controls.bag_names.removeAt(index);
+          recipeForm.controls.bag_names.insert(index - 1, bagRow);
+        } : undefined}
+        onMoveDown={index < recipeForm.controls.bag_names.length - 1 ? () => {
+          recipeForm.controls.bag_names.removeAt(index);
+          recipeForm.controls.bag_names.insert(index + 1, bagRow);
+        } : undefined}
+        onRemove={recipeForm.controls.bag_names.length > 1 ? () => {
+          recipeForm.controls.bag_names.removeAt(index);
+        } : undefined} />
+    ))}
+    <SubmitButton form={recipeForm} onSubmit={handleRecipeSubmit} />
+  </Stack >
 }
 
-function MwsFormChild({ title, submitText, children, }: PropsWithChildren<{ title: string, submitText: string }>) {
-  const status = useFormStatus();
+const sortBagNames = (a: string, b: string) =>
+  (+a.startsWith("$:/") - +b.startsWith("$:/"))
+  || a.localeCompare(b);
+
+export function RecipeBagRowComponent({ bag_names, bagRow, onMoveDown, onMoveUp, onRemove }: {
+  bag_names: string[],
+  bagRow: ReturnType<typeof RecipeBagRow>,
+  // value: Partial<{ bag_name: string | null, with_acl: boolean }>,
+  // setValue: Dispatch<SetStateAction<Partial<{ bag_name: string | null; with_acl: boolean }>>>,
+  onMoveUp: (() => void) | undefined,
+  onMoveDown: (() => void) | undefined
+  onRemove: (() => void) | undefined
+}) {
+  useObservable(bagRow.valueChanges);
+  const theme = useTheme();
+  const doubleRow = useMediaQuery(theme.breakpoints.down('sm'));
+  return <Stack direction={doubleRow ? "column" : "row"} spacing={0}>
+    <Autocomplete
+      sx={{ flexGrow: 1 }}
+      options={bag_names.sort(sortBagNames)}
+      renderInput={(params) => <TextField error={!bagRow.value.bag_name} required {...params} label="Bag Name" />}
+      value={bagRow.value.bag_name}
+      onChange={(event, bag_name) => {
+        bagRow.controls.bag_name.setValue(bag_name ?? "");
+      }}
+    />
+    <Stack direction="row" spacing={0}>
+      <Checkbox
+        disabled={bagRow.value.bag_name?.startsWith("$:/")}
+        checkedIcon={<WithACL />}
+        icon={<WithoutACL />}
+        defaultChecked={!bagRow.value.bag_name?.startsWith("$:/")}
+        color="primary"
+        title="With ACL"
+        value={bagRow.value.with_acl}
+        onChange={(event, with_acl) => {
+          console.log(with_acl);
+          bagRow.controls.with_acl.setValue(with_acl);
+        }}
+      />
+      <IconButton disabled={!onMoveUp} onClick={onMoveUp}>
+        <ArrowUpward />
+      </IconButton>
+      <IconButton disabled={!onMoveDown} onClick={onMoveDown}>
+        <ArrowDownward />
+      </IconButton>
+      <IconButton disabled={!onRemove} onClick={onRemove} sx={{ color: theme.palette.error.main }}>
+        <Remove />
+      </IconButton>
+    </Stack>
+  </Stack>
+}
+
+function BagFormComponent({ bagForm, isCreate }: { bagForm: ReturnType<typeof BagForm>, isCreate: boolean }) {
+  const [indexJson, globalRefresh] = useIndexJson();
+
+  const handleBagSubmit = async () => {
+    const formData = bagForm.value;
+    console.log(formData, isCreate);
+
+    if (!indexJson.isAdmin) formData.owner_id = undefined;
+    else if (formData.owner_id === 0) formData.owner_id = null;
+    if (bagForm.invalid) { console.log(bagForm.errors); throw bagForm.errors; }
+    ok(formData.bag_name);
+    ok(formData.description);
+
+    await serverRequest.bag_upsert({
+      bag_name: formData.bag_name,
+      description: formData.description,
+      owner_id: formData.owner_id,
+      isCreate,
+    });
+
+    globalRefresh();
+    return `Bag ${isCreate ? "created" : "updated"} successfully.`;
+
+  }
+  return <Stack direction="column" spacing={2}>
+    <TextField
+      label="Bag Name"
+      value={bagForm.controls.bag_name.value}
+      onChange={onChange(bagForm.controls.bag_name)}
+      disabled={bagForm.controls.bag_name.disabled}
+    />
+    <TextField
+      label="Description"
+      value={bagForm.controls.description.value}
+      onChange={onChange(bagForm.controls.description)}
+      disabled={bagForm.controls.description.disabled}
+    />
+    <OwnerSelection isCreate={isCreate} control={bagForm.controls.owner_id} />
+    <SubmitButton form={bagForm} onSubmit={handleBagSubmit} />
+  </Stack>
+}
+
+function OwnerSelection({ isCreate, control }: { isCreate: boolean; control: forms.FormControl<number | null>; }): React.ReactNode {
+  const [indexJson] = useIndexJson();
+  useObservable(control.valueChanges);
+  if (!indexJson.isAdmin || !indexJson.userList) return null;
+  if (isCreate) return (
+    <FormControlLabel
+      label="Admin option: Make yourself the owner."
+      control={<Checkbox
+        value={control.value}
+        onChange={(event) => control.setValue(event.target.checked ? indexJson.user_id! : null)}
+        disabled={control.disabled}
+      />}
+    />
+  );
+  return (
+    <SelectField title="Owner" control={control}>
+      <MenuItem value={0}>Site-wide</MenuItem>
+      {indexJson.userList.map(user => (
+        <MenuItem value={user.user_id}>{user.username}</MenuItem>
+      ))}
+    </SelectField>
+  );
+
+}
+
+function SubmitButton({ form, onSubmit }: {
+  /** 
+   * A function which returns a string for the success message, or throws an error.
+   * 
+   * Uses error directly if it is a string, or error.message if available, or `${error}`.
+   */
+  onSubmit: () => Promise<string>
+  /** Check this form for validity and disable the button if the form is not valid. */
+  form?: forms.AbstractControl
+}) {
+  useObservable(form?.statusChanges);
+  const [submitResult, setSubmitResult] = useState<{ ok: boolean, message: string } | null>(null);
   return <>
-    <div className="mws-form-heading">
-      {title}
-    </div>
-    <div className="mws-form-fields">
-      {children}
-    </div>
-    <div className="mws-form-buttons">
-      <button type="submit" disabled={status.pending}          >
-        {status.pending ? 'Processing...' : submitText}
-      </button>
-    </div>
+    <Stack direction="row" spacing={2}>
+      <ButtonAwait disabled={form?.invalid || form?.disabled} variant="contained" onClick={async () => {
+        setSubmitResult(null);
+        const submitResult = await onSubmit().then(
+          message => ({ ok: true, message }),
+          error => ({ ok: false, message: typeof error === "string" ? error : `${error?.message ?? error}` })
+        );
+        setSubmitResult(submitResult);
+      }}>Submit</ButtonAwait>
+    </Stack>
+    {submitResult && submitResult.ok === false && <Alert severity='error'>{submitResult.message}</Alert>}
+    {submitResult && submitResult.ok === true && <Alert severity='success'>{submitResult.message}</Alert>}
   </>
 }
 
-function FormField({ name, children }: PropsWithChildren<{ name: string }>) {
-  return <div className="mws-form-field" key={name}>
-    <label className="mws-form-field-description">{children}</label>
-    <input name={name} type="text" required />
-  </div>
-}
-
-export default Dashboard;
-
-
-export function NestedList() {
-  const [open, setOpen] = React.useState(true);
-
-  const handleClick = () => {
-    setOpen(!open);
-  };
-
-  return (
-    <List
-      sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}
-      component="nav"
-      aria-labelledby="nested-list-subheader"
-      subheader={
-        <ListSubheader component="div" id="nested-list-subheader">
-          Nested List Items
-        </ListSubheader>
-      }
+export function SelectField({ title, children, control }: PropsWithChildren<{
+  title: string,
+  control: forms.FormControl<number | null>
+}>) {
+  const html_id = useId();
+  useObservable(control.valueChanges);
+  return <FormControl>
+    <InputLabel id={html_id}>{title}</InputLabel>
+    <Select<number>
+      input={<OutlinedInput label={title} />}
+      labelId={html_id}
+      value={control.value ?? 0}
+      onChange={onChange(control)}
+      disabled={control.disabled}
     >
-      <ListItemButton>
-        <ListItemIcon>
-          <SendIcon />
-        </ListItemIcon>
-        <ListItemText primary="Sent mail" />
-      </ListItemButton>
-      <ListItemButton>
-        <ListItemIcon>
-          <DraftsIcon />
-        </ListItemIcon>
-        <ListItemText primary="Drafts" />
-      </ListItemButton>
-      <ListItemButton onClick={handleClick}>
-        <ListItemIcon>
-          <InboxIcon />
-        </ListItemIcon>
-        <ListItemText primary="Inbox" />
-        {open ? <ExpandLess /> : <ExpandMore />}
-      </ListItemButton>
-      <Collapse in={open} timeout="auto" unmountOnExit>
-        <List component="div" disablePadding>
-          <ListItemButton sx={{ pl: 4 }}>
-            <ListItemIcon>
-              <StarBorder />
-            </ListItemIcon>
-            <ListItemText primary="Starred" />
-          </ListItemButton>
-        </List>
-      </Collapse>
-    </List>
-  );
+      {children}
+    </Select>
+  </FormControl>
 }
