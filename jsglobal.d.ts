@@ -80,7 +80,7 @@ declare global {
 
   interface ServerResponse extends HTTPServerResponse { }
 
-  type PrismaTxnClient = Omit<Router["engine"], "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">
+  
   interface ServerRoute {
     path: RegExp;
     handler: ServerRouteHandler<number>;

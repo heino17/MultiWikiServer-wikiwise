@@ -1,6 +1,6 @@
 import * as opaque from "@serenity-kit/opaque";
 import { useAsyncEffect } from "./useAsyncEffect";
-import React, { ReactNode, useCallback, useId, useState } from "react";
+import React, { ReactNode, useCallback, useId, useMemo, useState } from "react";
 import { FieldValues, useForm, UseFormRegisterReturn } from "react-hook-form";
 import { proxy } from "./prisma-proxy";
 import type { ZodAction } from "../../../src/routes/BaseManager";
@@ -50,41 +50,53 @@ export async function changePassword(input: ChangePasswordForm) {
 
 export function DataLoader<T, P>(
   loader: (props: P) => Promise<T>,
-  useRender: (data: T, refresh: () => void, props: P) => ReactNode
+  useRender: (data: T, refresh: Refresher<T>, props: P) => ReactNode
 ) {
   return (props: P) => {
-    const [refreshData, setRefreshData] = useState({});
+
+    const [refreshData, setRefreshData] = useState(new PromiseSubject<T>());
     const [result, setResult] = useState<T | null>(null);
-    const refresh = useCallback(() => setRefreshData({}), []);
+
+    const refresh = useCallback(() => {
+      const promise = new PromiseSubject<T>();
+      setRefreshData(promise);
+      return promise.promise;
+    }, []);
 
     useAsyncEffect(async () => {
-      setResult(await loader(props));
+      const result = await loader(props);
+      setResult(result);
+      refreshData.resolve(result);
     }, undefined, undefined, [refreshData]);
 
     if (!result) return null;
 
     return <Render useRender={() => useRender(result, refresh, props)} />;
+
   }
 }
 
+export interface Refresher<T> {
+  (): Promise<T>;
+  // promise: Promise<T>;
+}
+
+export type DataLoaderContext<T> = [T, Refresher<T>];
+
+export class PromiseSubject<T> {
+  promise: Promise<T>;
+  resolve!: (value: T | PromiseLike<T>) => void;
+  reject!: (reason?: any) => void;
+  constructor() {
+    this.promise = new Promise((resolve, reject) => {
+      this.resolve = resolve;
+      this.reject = reject;
+    });
+  }
+}
 export function Render({ useRender }: { useRender: () => ReactNode }) { return useRender(); }
 
-// export async function serverRequest<T extends ServerMapKeys>(key: T, data: ServerMapRequest[T]) {
-
-//   const res = await fetch(`${location.origin}/api/${key}`, {
-//     method: "POST",
-//     headers: {
-//       'Content-Type': 'application/json',
-//       "X-Requested-With": "TiddlyWiki"
-//     },
-//     body: data !== undefined ? JSON.stringify(data) : undefined,
-//   });
-//   if (!res.ok) throw new Error(`Failed to fetch data for ${key}: ${await res.text()}`);
-//   return await res.json() as ServerMapResponse[T];
-// }
-// export const serverRequest = new ServerRequests();
-
-export const IndexJsonContext = React.createContext<[Awaited<ReturnType<typeof getIndexJson>>, () => void]>(null as any);
+export const IndexJsonContext = React.createContext<DataLoaderContext<Awaited<ReturnType<typeof getIndexJson>>>>(null as any);
 
 export function useIndexJson() { return React.useContext(IndexJsonContext); }
 
@@ -131,10 +143,13 @@ export const serverRequest: ManagerMap = {
   recipe_update: postManager("recipe_update"),
   recipe_upsert: postManager("recipe_upsert"),
   recipe_delete: postManager("recipe_delete"),
+  recipe_acl_update: postManager("recipe_acl_update"),
+
   bag_create: postManager("bag_create"),
   bag_update: postManager("bag_update"),
   bag_upsert: postManager("bag_upsert"),
   bag_delete: postManager("bag_delete"),
+  bag_acl_update: postManager("bag_acl_update"),
 
   prisma: proxy,
 }
@@ -286,3 +301,13 @@ export function ButtonAwait({ onClick, loading: propsLoading, ...props }: Button
   />
 }
 
+export function ok<T>(value: T | null | undefined | "" | 0 | false): asserts value is T {
+  if (!value) throw new Error(`AssertionError: ${value}`);
+}
+
+
+export function truthy<T>(
+  obj: T
+): obj is Exclude<T, false | null | undefined | 0 | '' | void> {
+  return !!obj;
+}

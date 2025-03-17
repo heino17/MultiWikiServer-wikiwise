@@ -12,6 +12,7 @@ export async function setupDevServer() {
     jsx: 'automatic',
     outdir: 'react-user-mgmt/public',
     minify: true,
+    sourcemap: true,
   })
 
   const { port } = await ctx.serve({

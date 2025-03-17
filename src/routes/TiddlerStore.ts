@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { RouterConfig } from "../router";
 import { AttachmentService, TiddlerFields } from "./services/attachments";
+import { ok } from "assert";
 
 /**
 

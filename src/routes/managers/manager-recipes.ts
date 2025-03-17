@@ -6,7 +6,6 @@ import { BaseKeyMap, BaseManager, BaseManagerMap, } from "../BaseManager";
 You must have admin permission on a bag to add it to a recipe because it is an implicit ACL operation. 
 https://crates.io/crates/indradb
 
-
 I'm also wondering if the system could be improved slightly by thinking of it more in terms of bag layers. 
 
 - Each layer could be writable or readonly. A tiddler from a readonly layer could not be overwritten unless there is a writable layer above it to put it in. 
@@ -16,31 +15,23 @@ I'm also wondering if the system could be improved slightly by thinking of it mo
 
 Nothing should be happening to tiddlers in a bag unless they're in a writable layer of the recipe you're accessing them through. 
 
-
-
 */
 
 
-function TestDecorator<This, T extends ZodTypeAny>(zod: T) {
-  return function (
-    target: (this: This, input: z.infer<T>) => void,
-    context: ClassMethodDecoratorContext<This, (input: z.infer<T>) => void>
-  ) {
-    console.log("TestDecorator", target, context);
-
-  }
-}
-
 export const RecipeKeyMap: BaseKeyMap<RecipeManager, true> = {
   index_json: true,
+
   bag_create: true,
   bag_update: true,
   bag_upsert: true,
   bag_delete: true,
+  bag_acl_update: true,
+
   recipe_create: true,
   recipe_update: true,
   recipe_upsert: true,
   recipe_delete: true,
+  recipe_acl_update: true,
 
 }
 
@@ -66,7 +57,8 @@ export class RecipeManager extends BaseManager {
             }
           }
         },
-        owner: { select: { username: true } }
+        owner: { select: { username: true } },
+        acl: true,
       },
       where: isAdmin ? {} : { OR }
     });
@@ -77,7 +69,8 @@ export class RecipeManager extends BaseManager {
         recipe_bags: {
           select: { bag_id: true, position: true, with_acl: true, },
           orderBy: { position: "asc" }
-        }
+        },
+        acl: true,
       },
       where: isAdmin ? {} : { recipe_bags: { every: { bag: { OR } } } }
     });
@@ -86,12 +79,15 @@ export class RecipeManager extends BaseManager {
       select: { user_id: true, username: true, email: true, roles: true, last_login: true, created_at: true }
     });
 
+    const roleList = await this.prisma.roles.findMany();
+
     return {
       bagList,
       recipeList,
       isAdmin,
       user_id,
       userList,
+      roleList,
       username,
       firstGuestUser: !!this.firstGuestUser,
       isLoggedIn: !!this.user,
@@ -128,7 +124,6 @@ export class RecipeManager extends BaseManager {
   }), async (input) => {
     return await this.recipeCreateOrUpdate(input);
   });
-
 
   bag_create = this.ZodRequest(z => z.object({
     bag_name: z.string(),
@@ -336,173 +331,88 @@ export class RecipeManager extends BaseManager {
     return null;
   });
 
-  // async acl_list() {
+  //   Partial<{
+  //     role_id: number | null;
+  //     permission: "READ" | "WRITE" | "ADMIN";
+  // }>[]
+  recipe_acl_update = this.ZodRequest(z => z.object({
+    recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
+    acl: z.array(z.object({
+      role_id: z.number().nullable(),
+      permission: z.enum(["READ", "WRITE", "ADMIN"]),
+    })),
+  }), async ({ recipe_name, acl }) => {
 
-  //   if (!this.authenticatedUser) throw "User not authenticated";
+    if (!this.user) throw "User not authenticated";
 
-  //   const recipe = await this.prisma.recipes.findUnique({
-  //     where: { recipe_name },
-  //     include: { recipe_bags: { include: { bag: { include: { acl: true } } } } },
-  //   });
+    const recipe = await this.prisma.recipes.findUnique({
+      where: { recipe_name }
+    });
 
-  //   if (!recipe) throw "Recipe not found";
+    if (!recipe) throw "Recipe not found";
 
-  //   const permissions = Object.keys(this.store.permissions);
+    const { isAdmin, user_id } = this.user;
 
-  //   const roles = await this.prisma.roles.findMany();
+    if (!isAdmin && recipe.owner_id !== user_id)
+      throw "User does not own the recipe and is not an admin";
 
-  //   return {
-  //     recipe,
-  //     permissions,
-  //     roles,
-  //   }
-  // }
+    const distinct = new Set(acl.map(acl => JSON.stringify([acl.role_id, acl.permission])));
 
-  // async acl_create() {
+    const { recipe_id } = recipe;
 
-  //   // This ensures that the user attempting to create the ACL has permission to do so
-  //   if (!this.authenticatedUser) throw "User not authenticated";
+    await this.prisma.recipeAcl.deleteMany({
+      where: { recipe_id }
+    });
 
-  //   const { isAdmin, user_id } = this.authenticatedUser;
+    await this.prisma.recipeAcl.createMany({
+      data: Array.from(distinct).map(e => {
+        const [role_id, permission] = JSON.parse(e);
+        return { recipe_id, role_id, permission };
+      })
+    });
 
-  //   const bag = await this.prisma.bags.findUnique({
-  //     where: { bag_name },
-  //     include: { acl: true, }
-  //   });
+    return null;
+  });
 
-  //   if (!bag) throw "Bag not found";
+  bag_acl_update = this.ZodRequest(z => z.object({
+    bag_name: z.prismaField("Bags", "bag_name", "string"),
+    acl: z.array(z.object({
+      role_id: z.number().nullable(),
+      permission: z.enum(["READ", "WRITE", "ADMIN"]),
+    })),
+  }), async ({ bag_name, acl }) => {
 
-  //   const isOwner = bag.owner_id === user_id;
+    if (!this.user) throw "User not authenticated";
 
-  //   if (!isOwner && !isAdmin) throw "User is not the bag owner or an admin";
+    const bag = await this.prisma.bags.findUnique({
+      where: { bag_name },
+      include: { acl: true }
+    });
 
-  //   const aclExists = bag.acl.some(acl => acl.role_id === role_id && acl.permission === permission);
+    if (!bag) throw "Bag not found";
 
-  //   if (aclExists) throw "ACL already exists";
+    const { isAdmin, user_id } = this.user;
 
-  //   await this.prisma.acl.create({
-  //     data: { bag_id: bag.bag_id, role_id, permission }
-  //   });
+    if (!isAdmin && bag.owner_id !== user_id)
+      throw "User does not own the bag and is not an admin";
 
-  //   return null;
-  // }
+    const distinct = new Set(acl.map(acl => JSON.stringify([acl.role_id, acl.permission])));
 
-  // async acl_delete() {
-  //   if (!this.authenticatedUser) throw "User not authenticated";
+    const { bag_id } = bag;
 
-  //   const acl = await this.prisma.acl.findUnique({ where: { acl_id }, include: { bag: true } });
+    await this.prisma.bagAcl.deleteMany({
+      where: { bag_id }
+    });
 
-  //   if (!acl) throw "ACL not found";
+    await this.prisma.bagAcl.createMany({
+      data: Array.from(distinct).map(e => {
+        const [role_id, permission] = JSON.parse(e);
+        return { bag_id, role_id, permission };
+      })
+    });
 
-  //   const { isAdmin, user_id } = this.authenticatedUser;
+    return null;
+  });
 
-  //   const isOwner = acl.bag.owner_id === user_id;
-
-  //   if (!isOwner && !isAdmin) throw "User is not the bag owner or an admin";
-
-  //   await this.prisma.acl.delete({ where: { acl_id } });
-
-  //   return null;
-
-  // }
-
-  // async bag_create() {
-
-  //   if (!this.authenticatedUser) throw "User not authenticated";
-
-  //   if (!this.authenticatedUser.isAdmin && !owned) throw "User is not an admin and cannot create a bag that is not owned";
-
-  //   const bag = await this.prisma.bags.create({
-  //     data: {
-  //       bag_name,
-  //       description,
-  //       owner_id: owned ? this.authenticatedUser.user_id : null
-  //     },
-  //   });
-
-  //   return bag;
-  // }
-  // async bag_delete() {
-  //   const bag = await authorizeBagOwner(this, bag_name);
-
-  //   const hasTiddlers = await this.prisma.tiddlers.count({
-  //     where: { bag_id: bag.bag_id }
-  //   });
-
-  //   if (hasTiddlers) throw "Bag is not empty";
-
-  //   await this.prisma.bags.delete({
-  //     where: { bag_id: bag.bag_id }
-  //   });
-
-  //   return null;
-  // }
-  // async bagList() {
-
-  //   const bags = await this.prisma.bags.findMany({
-  //     select: {
-  //       bag_id: true,
-  //       bag_name: true,
-  //       description: true,
-  //     }
-  //   });
-
-  //   return bags;
-  // }
-  // async bag_edit() {
-  //   const bag = await authorizeBagOwner(this, bag_name);
-
-  //   await this.prisma.bags.update({
-  //     where: { bag_id: bag.bag_id },
-  //     data: { description }
-  //   });
-
-  //   return null;
-  // }
-
-  // /** Authorizes owner-level access and returns the bag. */
-  // async authorizeBagOwner(bag_name: string) {
-  //   if (!this.authenticatedUser) throw "User not authenticated";
-
-  //   const bag = await this.prisma.bags.findUnique({
-  //     where: { bag_name },
-  //     select: {
-  //       bag_id: true,
-  //       owner_id: true,
-  //     }
-  //   });
-
-  //   if (!bag) throw "Bag not found";
-
-  //   const { isAdmin, user_id } = this.authenticatedUser;
-
-  //   const isOwner = bag.owner_id === user_id;
-
-  //   if (!isOwner && !isAdmin) throw "User is not the bag owner or an admin";
-  //   return bag;
-  // }
-
-  // async recipe_create() {
-
-  //   if (!this.authenticatedUser) throw "User not authenticated";
-
-  //   if (!this.authenticatedUser.isAdmin && !owned) throw "User is not an admin and cannot create a recipe that is not owned";
-
-  //   const bags = await this.prisma.bags.findMany({
-  //     where: { bag_name: { in: bag_names } },
-  //     include: { acl: true }
-  //   });
-
-  //   const recipe = await this.prisma.recipes.create({
-  //     data: {
-  //       recipe_name,
-  //       description,
-  //       recipe_bags: { create: bags.map((bag, position) => ({ bag_id: bag.bag_id, position })) },
-  //       owner_id: owned ? this.authenticatedUser.user_id : null
-  //     },
-  //   });
-
-  //   return recipe;
-  // }
 
 }

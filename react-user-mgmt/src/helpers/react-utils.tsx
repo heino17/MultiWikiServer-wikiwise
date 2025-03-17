@@ -1,6 +1,14 @@
 import { EventEmitter } from "@angular/core";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { from, NEVER, Observable, Observer, Subscription } from "rxjs";
+import * as forms from "@angular/forms";
+import { ButtonAwait } from "./utils";
+import { Alert, Autocomplete, Button, Dialog, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, MenuItemProps, OutlinedInput, Select, SelectChangeEvent, Stack, SvgIcon, SxProps, TextField, Theme } from "@mui/material";
+
+export { EventEmitter };
+export function useEventEmitter<T>() {
+  return useMemo(() => new EventEmitter<T>(), []);
+}
 
 /** Calls func.bind with the provided args, and stores the result in useMemo, refreshing whenever the func or args change */
 export function useBind<T, A extends any[], B extends any[], R>(
@@ -103,4 +111,192 @@ export function useSubscribeLayoutEffect<T>(subscribeEffect: () => { unsubscribe
     return () => sub.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
+}
+
+
+export function FormDialogSubmitButton<T extends forms.AbstractControl>({ submitLabel, onSubmit }: {
+  /** 
+   * A function which returns a string for the success message, or throws an error.
+   * 
+   * Uses error directly if it is a string, or error.message if available, or `${error}`.
+   */
+  onSubmit: () => Promise<string>;
+  submitLabel?: string;
+}) {
+  const { form, onClose, onRefresh } = useFormDialogForm();
+  useObservable(form.events);
+  const [submitResult, setSubmitResult] = useState<{ ok: boolean, message: string } | null>(null);
+  const onDiscard = useCallback(() => onRefresh(), [onRefresh]);
+  return <>
+    <Stack direction="row-reverse" spacing={2}>
+      {form.dirty && <ButtonAwait disabled={form.invalid || form.disabled || !form.dirty} variant="contained" onClick={async () => {
+        setSubmitResult(null);
+        const submitResult = await onSubmit().then(
+          message => ({ ok: true, message }),
+          error => {
+            console.error(error);
+            return {
+              ok: false,
+              message: typeof error === "string" ? error : `${error?.message ?? error}`
+            }
+          }
+        );
+        setSubmitResult(submitResult);
+      }}>{submitLabel || "Save"}</ButtonAwait>}
+      {form.dirty && <Button disabled={form.disabled} onClick={onDiscard}>Discard</Button>}
+      {!form.dirty && <Button onClick={onClose}>Close</Button>}
+    </Stack>
+    {submitResult && submitResult.ok === false && <Alert severity='error'>{submitResult.message}</Alert>}
+    {submitResult && submitResult.ok === true && <Alert severity='success'>{submitResult.message}</Alert>}
+  </>
+}
+/** Because MenuItem does not support a null input, null and undefined will be mapped to "" */
+export function SelectField<V>({
+  title, required, sx, control, options
+}: PropsWithChildren<{
+  title?: string,
+  required?: boolean
+  sx?: SxProps<Theme>
+  control: forms.FormControl<V | null>
+  options: { value: V, label: string }[]
+}>) {
+  const html_id = useId();
+  useObservable(control.events);
+  const valueMap = useMemo(() => new Map(options.map((e) => [e.value, e])), [options]);
+
+  return <Autocomplete
+    sx={sx}
+    options={options}
+    disableClearable={required}
+    renderInput={(params) => <TextField
+      error={control.touched && control.invalid}
+      required={required}
+      {...params}
+      label={title}
+    />}
+    onBlur={() => control.markAsTouched()}
+    value={control.value && valueMap.get(control.value)}
+    onChange={(event, value) => {
+      control.setValue(value === null ? value : value.value as any);
+      control.markAsDirty();
+    }}
+  />
+
+  // return <FormControl sx={sx}>
+  //   {title && <InputLabel id={html_id} required={required} error={control.touched && control.invalid}>{title}</InputLabel>}
+  //   <Select<T | null>
+  //     input={<OutlinedInput
+  //       // onBlur={() => { control.markAsTouched() }}
+  //       label={title}
+  //     // error={control.touched && control.invalid}
+  //     />}
+  //     labelId={title && html_id}
+  //     value={control.value}
+  //     disabled={control.disabled}
+  //     displayEmpty={displayEmpty}
+  //     error={control.touched && control.invalid}
+  //     onChange={(event: SelectChangeEvent<T | null>) => {
+  //       console.log(event.target.value);
+  //       control.setValue(event.target.value as any);
+  //       control.markAsDirty();
+  //     }}
+  //     onBlur={() => control.markAsTouched()}
+  //   >
+  //     {children}
+  //   </Select>
+  // </FormControl>
+}
+
+export interface SelectOptionProps extends MenuItemProps {
+  value: any;
+}
+
+export function SelectOption<T>({ value, children, ...rest }: SelectOptionProps) {
+  // value works without being passed to the MenuItem
+  return <MenuItem {...rest}>{children}</MenuItem>
+}
+
+
+export function MissingFavicon() {
+  return <SvgIcon>
+    <svg xmlns="http://www.w3.org/2000/svg" width="680" height="317pt" viewBox="34 107 510 317">
+      <path d="m204.10294 372.67294 2.81039.8291c3.53151-1.58007 10.63031.86197 14.3959 2.05591-6.934-7.68695-17.38058-18.97509-24.90698-26.09145-2.4704-8.61546-1.41632-17.2848-.88481-26.0799l.10661-.7276c-2.96672 7.0407-6.73159 13.8847-8.75512 21.29577-2.36798 9.99817 10.5243 20.78568 15.5234 26.96817Zm214.89999 42.28504c-19.34998-.54698-27.86099-.49994-37.71558-16.70502l-7.68051.22004c-8.93988-.397-5.2142-.21705-11.1784-.51399-9.9719-.38803-8.37448-9.86297-10.12879-14.86898-2.8063-16.99305 3.71359-34.07392 3.50791-51.07032-.07282-6.03332-8.61032-27.38909-11.6604-35.02423-9.56162 1.80024-19.17511 2.14347-28.8754 2.62683-22.35922-.05477-44.5668-2.79281-66.61382-6.26983-4.29641 17.74804-17.06701 42.58935-6.5111 60.62682 12.81291 18.65766 21.80439 23.82667 35.7414 24.95164 13.93686 1.12406 17.0839 16.85904 13.71207 22.47903-2.98447 3.88403-8.22986 4.58905-12.68646 5.53003l-8.9144.41898c-7.01489-.23599-13.28491-2.12998-19.53552-5.051-10.43848-5.82696-21.2195-17.94095-29.22959-26.63797 1.86481 3.47299 2.97712 10.25293 1.28571 13.40802-4.7359 6.70896-25.21872 6.66797-34.59912 2.49897-10.65598-4.73502-36.40497-37.98197-40.386-62.88245 10.591-20.02872 26.02-37.47495 33.826-59.28323-17.015-10.85694-26.128-28.53113-24.94499-48.55152l.427-2.3175c-16.74199 3.13418-8.05998 1.96809-26.069976 3.33049-57.356004-.17549-107.796005-39.06484-79.393997-99.505786 1.846985-3.57904 3.603989-6.833004 6.735001-5.278994 2.512985 1.24695 2.152008 6.24898.887985 11.79598-16.234985 72.21878 63.111997 72.77153 111.887997 59.40782 4.84098-1.3266 14.46898-10.2612 21.13848-13.22311 10.9019-4.84113 22.7348-6.8053 34.47801-8.22059 29.20767-3.32814 64.31171 12.05838 82.14798 12.56079 17.83648.50239 43.20953-4.27082 58.785-3.26582 11.30133.51708 22.39853 2.55699 33.30252 5.46282 7.05802-34.3909 7.55701-59.737904 24.289-65.6059 9.82001 1.550995 17.38696 14.93298 22.98801 22.08301l.02298-.00403c11.40697-.45001 22.26203 2.44403 33.05499 5.65599 19.54004-2.772964 35.93702-13.74597 53.193-22.28198-.05396.268995-.33594.35998-.50397.54098-16.98199 13.73401-19.35405 36.95803-17.35602 58.43425.74304 11.14415-2.406 23.24344-6.29895 34.65357-7.28503 18.5899-21.35406 38.18498-37.68304 37.17997-6.17298-.19526-9.75901-3.69059-14.34699-7.4223-.89001 7.55863-4.388 14.30321-7.76001 20.98812-7.78698 14.82183-28.13598 21.35339-46.97802 37.18005-18.84076 15.8269 6.02902 72.35141 12.05902 82.65039 6.02902 10.29996 22.85998 14.06796 16.32901 23.36392-1.99799 3.07004-5.05301 4.16806-8.31803 5.35904Z" />
+    </svg>
+  </SvgIcon>
+}
+
+
+
+const FormDialogFormContext = createContext<{
+  form: any,
+  value: any,
+  onClose: () => void,
+  onRefresh: (value?: any) => void
+}>(null as never);
+export function useFormDialogForm<T, F extends forms.AbstractControl>() {
+  return useContext(FormDialogFormContext) as {
+    form: F,
+    value: T | null,
+    onClose: () => void,
+    onRefresh: (value?: T | null | undefined) => void
+  };
+}
+export type FormDialogEvents<T> =
+  | { type: "close" }
+  | { type: "open", value: T | null }
+  | { type: "reset" }
+  ;
+
+export function FormDialog<T, F extends forms.AbstractControl>({
+  events,
+  createForm,
+  children,
+}: PropsWithChildren<{
+  events: EventEmitter<FormDialogEvents<T>>,
+  createForm: (value: T | null) => F
+}>) {
+
+  const [value, setValue] = useState<T | null | undefined>(undefined);
+  const [reset, setReset] = useState({});
+  const form = useMemo(() => value === undefined ? null : createForm(value), [value, reset]);
+
+  const onClose = useCallback(() => { if (!form?.dirty) setValue(undefined); }, [form]);
+  const onRefresh = useCallback((newValue?: T | null) => {
+    newValue !== undefined ? setValue(newValue) : setReset({});
+  }, []);
+
+  useObserver(events, event => {
+    console.log(event);
+    if (event.type === "open") onRefresh(event.value);
+    if (event.type === "close") onClose();
+    if (event.type === "reset") onRefresh();
+  });
+
+  useObservable(form?.events);
+
+  return (
+    <Dialog open={!!form} onClose={onClose} maxWidth="md" fullWidth>
+      <FormDialogFormContext.Provider value={{ form, value, onClose, onRefresh }}>
+        {form && children}
+      </FormDialogFormContext.Provider>
+    </Dialog>
+  );
+
+}
+
+export function useBeforeExit(dirty: boolean) {
+
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = 'Changes may not be saved.';
+    };
+
+    if (dirty) window.onbeforeunload = handler;
+
+    return () => {
+      if (window.onbeforeunload === handler)
+        window.onbeforeunload = null;
+    }
+  }, [dirty]);
 }

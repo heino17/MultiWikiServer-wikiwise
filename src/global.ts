@@ -1,16 +1,13 @@
-import { bigint, z, ZodEffects, ZodNumber, ZodString, ZodType, ZodTypeAny } from "zod";
-import { STREAM_ENDED } from "./streamer";
-import { StateObject } from "./StateObject";
-import { rootRoute as _rootRoute } from "./router";
+import type { rootRoute as _rootRoute, Router } from "./router";
 import * as path from "path";
 import * as fs from "fs";
 import * as assert from "assert";
 import "../jsglobal";
-import { Prisma } from "@prisma/client";
-import { ZodAssert } from "./utils";
+import type { Prisma } from "@prisma/client";
+import type { ZodAssert } from "./utils";
 
 declare global {
-
+  type PrismaTxnClient = Omit<Router["engine"], "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">
 
   /** 
    * If you assign values like `5 as PrismaField<"Bags", "bag_name">`, 
@@ -53,8 +50,8 @@ declare global {
 }
 
 
-declare global { const ok: typeof assert.ok; }
-(global as any).ok = assert.ok;
+// declare global { const ok: typeof assert.ok; }
+// (global as any).ok = assert.ok;
 
 // these are some $tw.utils functions that seemed important enough to just copy across
 declare global {

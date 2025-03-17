@@ -2,6 +2,7 @@
 import * as opaque from "@serenity-kit/opaque";
 import { TypedGenerator } from "./utils";
 import { randomBytes } from "node:crypto";
+import { ok } from "node:assert";
 
 export type PasswordService = Awaited<ReturnType<typeof createPasswordService>>;
 
