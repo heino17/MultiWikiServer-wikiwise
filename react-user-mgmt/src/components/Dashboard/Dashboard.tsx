@@ -165,7 +165,7 @@ export const Dashboard = () => {
             <h1>Bags</h1>
             <List>
               {filteredBags.map(bag => (
-                <ListItem key={bag.bag_name}>
+                <ListItemButton key={bag.bag_name} disableRipple>
                   <ListItemAvatar>
                     <Avatar src={`/bags/${encodeURIComponent(bag.bag_name)}/tiddlers/%24%3A%2Ffavicon.ico`} >
                       <MissingFavicon />
@@ -210,7 +210,7 @@ export const Dashboard = () => {
                       </IconButton>
                     )}
                   </Stack>
-                </ListItem>
+                </ListItemButton>
               ))}
             </List>
           </CardContent>
