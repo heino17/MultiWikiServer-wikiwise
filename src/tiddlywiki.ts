@@ -11,7 +11,7 @@ import { Router } from "./router";
 
 
 
-export async function bootTiddlyWiki(commands: boolean, wikiPath: string, router: Router) {
+export async function bootTiddlyWiki(initstore: boolean, wikiPath: string, router: Router) {
 
   const $tw = TiddlyWiki() as any;
 
@@ -73,13 +73,16 @@ export async function bootTiddlyWiki(commands: boolean, wikiPath: string, router
     "+themes/tiddlywiki/vanilla",
     wikiPath,
     "--mws-render-tiddler",
-    ...commands ? [
+    ...initstore ? [
+      "--mws-init-store",
       "--mws-load-plugin-bags",
-      "--mws-load-wiki-folder","./editions/multiwikidocs","mws-docs", "MWS Documentation from https://mws.tiddlywiki.com","mws-docs","MWS Documentation from https://mws.tiddlywiki.com",
-      "--mws-load-wiki-folder","./node_modules/tiddlywiki/editions/tw5.com","docs", "TiddlyWiki Documentation from https://tiddlywiki.com","docs","TiddlyWiki Documentation from https://tiddlywiki.com",
-      "--mws-load-wiki-folder","./node_modules/tiddlywiki/editions/dev","dev","TiddlyWiki Developer Documentation from https://tiddlywiki.com/dev","dev-docs", "TiddlyWiki Developer Documentation from https://tiddlywiki.com/dev",
-      "--mws-load-wiki-folder","./node_modules/tiddlywiki/editions/tour","tour","TiddlyWiki Interactive Tour from https://tiddlywiki.com","tour", "TiddlyWiki Interactive Tour from https://tiddlywiki.com",
-    ] : []
+      "--mws-load-wiki-folder", "./editions/multiwikidocs", "mws-docs", "MWS Documentation from https://mws.tiddlywiki.com", "mws-docs", "MWS Documentation from https://mws.tiddlywiki.com",
+      "--mws-load-wiki-folder", "./node_modules/tiddlywiki/editions/tw5.com", "docs", "TiddlyWiki Documentation from https://tiddlywiki.com", "docs", "TiddlyWiki Documentation from https://tiddlywiki.com",
+      "--mws-load-wiki-folder", "./node_modules/tiddlywiki/editions/dev", "dev", "TiddlyWiki Developer Documentation from https://tiddlywiki.com/dev", "dev-docs", "TiddlyWiki Developer Documentation from https://tiddlywiki.com/dev",
+      "--mws-load-wiki-folder", "./node_modules/tiddlywiki/editions/tour", "tour", "TiddlyWiki Interactive Tour from https://tiddlywiki.com", "tour", "TiddlyWiki Interactive Tour from https://tiddlywiki.com",
+    ] : [],
+    "--mws-save-archive", "./editions/mws/export",
+    // ...initstore ? ["--mws-load-archive", "./editions/mws/export"] : [],
   ];
 
   await $tw.boot.boot();

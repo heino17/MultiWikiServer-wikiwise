@@ -271,6 +271,33 @@ export class SyncCheck {
 export function createStrictAwaitProxy<T extends object>(instance: T): T {
   let outstandingPromiseError: Error | null = null;
 
+  function wrappedFunction(value: Function) {
+    return function (this: any, ...args: any[]) {
+      // Protect against calling any methods while an outstanding promise exists.
+
+      // Call the original function preserving the correct "this" context.
+      const result = Reflect.apply(value, this, args);
+      // If the result is a promise, wrap it to clear the outstanding lock on await.
+      if (result instanceof Promise) {
+        return new Proxy(result, {
+          get(promiseTarget, promiseProp, promiseReceiver) {
+            // When the promise's then property is accessed (i.e. when it's awaited),
+            // clear the outstanding promise so that subsequent method calls are allowed.
+            if (promiseProp === "then") {
+              outstandingPromiseError = null;
+            }
+            const inner = Reflect.get(promiseTarget, promiseProp, promiseReceiver).bind(promiseTarget);
+            if (promiseProp === "catch") {
+              return wrappedFunction(inner);
+            }
+            return inner;
+          }
+        });
+      }
+      return result;
+    }
+  }
+
   return new Proxy(instance, {
     get(target, prop, receiver) {
       // throw an error if an outstanding promise exists.
@@ -282,29 +309,7 @@ export function createStrictAwaitProxy<T extends object>(instance: T): T {
 
       // If the property is a function, return a wrapped function.
       if (typeof value === "function") {
-        return function (this: any, ...args: any[]) {
-          // Protect against calling any methods while an outstanding promise exists.
-
-          // Call the original function preserving the correct "this" context.
-          const result = Reflect.apply(value, this, args);
-          // If the result is a promise, wrap it to clear the outstanding lock on await.
-          if (result instanceof Promise) {
-            outstandingPromiseError = new Error(
-              `Guarded promise returned by '${String(prop)}' was not awaited.`
-            );
-            return new Proxy(result, {
-              get(promiseTarget, promiseProp, promiseReceiver) {
-                // When the promise's then property is accessed (i.e. when it's awaited),
-                // clear the outstanding promise so that subsequent method calls are allowed.
-                if (promiseProp === "then") {
-                  outstandingPromiseError = null;
-                }
-                return Reflect.get(promiseTarget, promiseProp, promiseReceiver).bind(promiseTarget);
-              }
-            });
-          }
-          return result;
-        };
+        return wrappedFunction(value);
       }
       // For non-function properties, just return the value.
       return value;

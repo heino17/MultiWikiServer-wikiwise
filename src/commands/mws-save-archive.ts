@@ -1,0 +1,103 @@
+/*\
+title: $:/plugins/tiddlywiki/multiwikiserver/commands/mws-save-archive.js
+type: application/javascript
+module-type: command
+
+Command to load an archive of recipes, bags and tiddlers to a directory
+
+\*/
+
+import { writeFileSync } from "fs";
+import { Commander, CommandInfo } from ".";
+import { TiddlerStore } from "../routes/TiddlerStore";
+import { resolve } from "path";
+import * as _fsp from "fs/promises";
+import { createStrictAwaitProxy } from "../utils";
+const fsp = createStrictAwaitProxy(_fsp);
+
+export const info: CommandInfo = {
+	name: "mws-save-archive",
+	synchronous: true
+};
+export class Command {
+	get $tw() { return this.commander.$tw as { utils: any }; }
+	get archivePath() { return this.params[0] as string; }
+	store?: TiddlerStore;
+	constructor(
+		public params: string[],
+		public commander: Commander,
+		public callback: (err?: any) => void
+	) {
+
+	}
+	async execute() {
+		// Check parameters
+		if (this.params.length < 1) throw "Missing pathname";
+		await this.commander.router.engine.$transaction(async (prisma) => {
+			this.store = new TiddlerStore(this.commander.router.config, prisma as any);
+			await this.saveArchive();
+			this.store = undefined;
+		});
+		return null;
+	}
+
+	async getRecipes() {
+		return await this.store!.prisma.recipes.findMany({
+			include: { recipe_bags: true, acl: true },
+		});
+	}
+	async getBags() {
+		const bags = await this.store!.prisma.bags.findMany({
+			include: { tiddlers: { include: { fields: true } }, acl: true }
+		});
+		return bags.map(e => ({
+			...e,
+			tiddlers: e.tiddlers.map(t => ({
+				...t,
+				fields: Object.fromEntries(t.fields.map(f => [f.field_name, f.field_value]))
+			}))
+		}));
+	}
+	async getUsers() {
+		return await this.store!.prisma.users.findMany({ include: { roles: true, sessions: true, groups: true } });
+	}
+	async getGroups() {
+		return await this.store!.prisma.groups.findMany({ include: { roles: true } });
+	}
+	async getRoles() {
+		return await this.store!.prisma.roles.findMany({});
+	}
+
+	async saveArchive() {
+		if (!this.store) throw new Error("Store not initialized");
+		const uriC = encodeURIComponent;
+		await fsp.mkdir(resolve(this.archivePath, "recipes"), { recursive: true });
+		const recipes = await this.getRecipes();
+		for (const recipeInfo of recipes) {
+			console.log(`Recipe ${recipeInfo.recipe_name}`);
+			const recipeFile = `recipes/${uriC(recipeInfo.recipe_name)}.json`;
+			await fsp.writeFile(resolve(this.archivePath, recipeFile), JSON.stringify(recipeInfo, null, "\t"));
+		}
+		await fsp.mkdir(resolve(this.archivePath, "bags"), { recursive: true });
+		const bags = await this.getBags();
+		await Promise.all(bags.map(async bagInfo => {
+			const tiddlersFolder = `bags/${uriC(bagInfo.bag_name)}/tiddlers`;
+			await fsp.mkdir(resolve(this.archivePath, tiddlersFolder), { recursive: true });
+			console.log(`Bag ${bagInfo.bag_name}`);
+			const bagFile = `bags/${uriC(bagInfo.bag_name)}/meta.json`;
+			await fsp.writeFile(resolve(this.archivePath, bagFile), JSON.stringify({ ...bagInfo, tiddlers: undefined, }, null, "\t"));
+			for (const tiddler of bagInfo.tiddlers) {
+				console.log(bagInfo.bag_name, tiddler.title, tiddler.tiddler_id);
+				const tiddlerFile = `bags/${uriC(bagInfo.bag_name)}/tiddlers/${tiddler.tiddler_id}.json`;
+				await fsp.writeFile(resolve(this.archivePath, tiddlerFile), JSON.stringify(tiddler, null, "\t"));
+			}
+		}));
+		const users = await this.getUsers();
+		await fsp.writeFile(resolve(this.archivePath, "users.json"), JSON.stringify(users, null, "\t"));
+		const groups = await this.getGroups();
+		await fsp.writeFile(resolve(this.archivePath, "groups.json"), JSON.stringify(groups, null, "\t"));
+		const roles = await this.getRoles();
+		await fsp.writeFile(resolve(this.archivePath, "roles.json"), JSON.stringify(roles, null, "\t"));
+	}
+
+}

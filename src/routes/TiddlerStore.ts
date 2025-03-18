@@ -36,7 +36,7 @@ export class TiddlerStore {
   storePath: string;
   constructor(
     protected config: RouterConfig,
-    protected prisma: PrismaTxnClient
+    public prisma: PrismaTxnClient
   ) {
     this.attachService = new AttachmentService(config, prisma);
     this.storePath = config.storePath;
@@ -144,9 +144,7 @@ export class TiddlerStore {
    * You probably want to call this inside a transaction.
    *
   ```js
-  var tiddlersFromPath = $tw.loadTiddlersFromPath(path.resolve(
-    $tw.boot.corePath, $tw.config.editionsPath, tiddler_files_path
-  ));
+  const tiddlersFromPath = $tw.loadTiddlersFromPath(tiddlerPath);
   ```
    */
   async saveTiddlersFromPath(

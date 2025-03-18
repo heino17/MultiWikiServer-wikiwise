@@ -2,12 +2,12 @@
 import { IModules, Wiki } from "tiddlywiki"
 import { Router } from "../router";
 
-
-import * as mwsloadpluginbags from "./mws-load-plugin-bags";
-import * as mwsrendertiddler from "./mws-render-tiddler";
-import * as mwsloadwikifolder from "./mws-load-wiki-folder";
-
-
+import * as mws_load_plugin_bags from "./mws-load-plugin-bags";
+import * as mws_render_tiddler from "./mws-render-tiddler";
+import * as mws_load_wiki_folder from "./mws-load-wiki-folder";
+import * as mws_save_archive from "./mws-save-archive";
+import * as mws_load_archive from "./mws-load-archive";
+import * as mws_init_store from "./mws-init-store";
 
 export interface CommandInfo {
   name: string;
@@ -32,9 +32,12 @@ export abstract class Commander {
   verbose
 
   commands: Record<string, { info: CommandInfo, Command: any }> = {
-    [mwsloadpluginbags.info.name]: mwsloadpluginbags,
-    [mwsrendertiddler.info.name]: mwsrendertiddler,
-    [mwsloadwikifolder.info.name]: mwsloadwikifolder,
+    [mws_load_plugin_bags.info.name]: mws_load_plugin_bags,
+    [mws_render_tiddler.info.name]: mws_render_tiddler,
+    [mws_load_wiki_folder.info.name]: mws_load_wiki_folder,
+    [mws_save_archive.info.name]: mws_save_archive,
+    [mws_load_archive.info.name]: mws_load_archive,
+    [mws_init_store.info.name]: mws_init_store,
   };
 
   abstract get $tw(): any;
@@ -60,19 +63,6 @@ export abstract class Commander {
 
   }
 
-  // Commander.initCommands = function(moduleType) {
-  // 	moduleType = moduleType || "command";
-  // 	$tw.commands = {};
-  // 	$tw.modules.forEachModuleOfType(moduleType,function(title,module) {
-  // 		var c = $tw.commands[module.info.name] = {};
-  // 		// Add the methods defined by the module
-  // 		for(var f in module) {
-  // 			if($tw.utils.hop(module,f)) {
-  // 				c[f] = module[f];
-  // 			}
-  // 		}
-  // 	});
-  // };
   static initCommands(moduleType?: string) {
     if (moduleType) throw new Error("moduleType is not implemented");
   }
