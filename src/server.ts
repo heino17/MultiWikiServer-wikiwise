@@ -79,7 +79,7 @@ export class ListenerHTTPS extends ListenerBase {
   constructor(router: Router, config: MWSConfig["listeners"][number]) {
     const { port, host } = config;
     if (port && typeof port !== "number") throw new Error("If specified, port must be a number");
-    const bindInfo = host ? `${host}:${port}` : `${port}`;
+    const bindInfo = host ? `HTTPS ${host} ${port}` : `HTTPS ${port}`;
     ok(config.key && existsSync(config.key), "Key file not found");
     ok(config.cert && existsSync(config.cert), "Cert file not found");
     const key = readFileSync(config.key);
@@ -95,7 +95,7 @@ export class ListenerHTTP extends ListenerBase {
   constructor(router: Router, config: MWSConfig["listeners"][number]) {
     const { port, host } = config;
     if (port && typeof port !== "number") throw new Error("If specified, port must be a number");
-    const bindInfo = host ? `${host}:${port}` : `${port}`;
+    const bindInfo = host ? `HTTP ${host} ${port}` : `HTTP ${port}`;
     super(createServer(), router, bindInfo);
     if (port) this.server.listen(port, host);
   }

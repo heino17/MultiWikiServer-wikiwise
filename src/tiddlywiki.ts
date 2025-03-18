@@ -81,7 +81,7 @@ export async function bootTiddlyWiki(initstore: boolean, wikiPath: string, route
       "--mws-load-wiki-folder", "./node_modules/tiddlywiki/editions/dev", "dev", "TiddlyWiki Developer Documentation from https://tiddlywiki.com/dev", "dev-docs", "TiddlyWiki Developer Documentation from https://tiddlywiki.com/dev",
       "--mws-load-wiki-folder", "./node_modules/tiddlywiki/editions/tour", "tour", "TiddlyWiki Interactive Tour from https://tiddlywiki.com", "tour", "TiddlyWiki Interactive Tour from https://tiddlywiki.com",
     ] : [],
-    "--mws-save-archive", "./editions/mws/export",
+    // "--mws-save-archive", "./editions/mws/export",
     // ...initstore ? ["--mws-load-archive", "./editions/mws/export"] : [],
   ];
 
