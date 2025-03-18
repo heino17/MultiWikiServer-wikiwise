@@ -37,3 +37,4 @@ The server runs on port 5000, wildcard host. The entry point is at the end of `s
 - Compiling filters to SQL to optimize memory on both the client and server.
 - Support for other database and storage systems. Most likely MariaDB and Postgres.
 - Additional recipe strategies with features like prefixed bags and namespaces.
+- Server rendering of pages, for a more wikipedia-like experience. 
