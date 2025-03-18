@@ -1,6 +1,6 @@
 # MultiWikiServer
 
-MultiWikiServer for TiddlyWiki. 
+MultiWikiServer for TiddlyWiki.
 
 ### How to run
 
@@ -10,32 +10,30 @@ MultiWikiServer for TiddlyWiki.
 
 The server runs on port 5000, wildcard host. The entry point is at the end of `src/server.ts`.
 
-## The current project
+### The Server
 
-At the moment, we're in the process of converting the code in the TiddlyWiki5:multi-wiki-support branch. It's close to complete. 
+- Supports HTTP and HTTPS listeners. All requests are funneled into one stack.
+- Uses abstractions and state objects to make the server as flexible as possible.
+- Supports overriding classes to implement custom handling of various features.
+- All of the features from the old MWS branch have been converted to the new system.
 
-- Converting to TypeScript
-- Converting to Prisma
-- Converting to async concurrency.
-- Bug fixes and deduplication.
+### The Store
 
-The `react-user-mgmt` folder is getting all the UI code for now so we can work on the server API. It's possible that we could add a view engine back in later, but it's more likely we'll move it all to a TiddlyWiki based client at some point. 
+- Written using Prisma and entirely promise-based.
+- Swapping to a different database engine should be a breeze. For sqlite it uses the libsql adapter, which also allows connections to libsql servers.
+- The tiddler text attachment system, which stores some tiddler bodies on the file system, is promise-based and can be modified to store files in the cloud.
 
+### The Features
 
-### Status Update
+- Bag & Recipe system for storing tiddlers.
+- User and Role management with ACL.
+- Attachment system for storing binary tiddlers on the file system.
+- Various import and export commands (currently still in development).
+- Customization of these features should be quite easy as they are fairly self-contained. The TypeScript code is fully typed and easy to navigate.
 
-#### The Admin UI
+### Planned (hopefully) for the future
 
-I work with React in most of my projects so it's something I'm familiar with and can easily keep in sync with the server as I make changes. The MUI component library abstracts away the details of HTML and CSS making it easy to declaritively make UI changes. There is a form library which makes simple forms quite intuitive. The data goes between server and client using standardized POST requests and TypeScript interfaces to keep everything typed correctly. The server uses zod to validate incoming data and the routing system is flexible and hopefully intuitive.
-
-I don't have the ACL management page implemented yet.
-
-#### The wiki API
-
-The wiki routes follow a similar pattern, but the existing tiddlyweb API is still being used for now. Zod is used to validate all the path and query parameters. POST bodies can be parsed from multiple different formats. 
-
-The tiddler store functions which handle a lot of the heavy lifting have been rewritten to use Prisma. I don't really understand what exactly those functions are all trying to do yet, but I tried to preserve the existing behavior, such as deleting and creating tiddlers so there's a new tiddler_id. The attachment functions have also been preserved, even though I don't entirely understand them yet either. 
-
-#### What's next
-
-What's next is probably going to be several different attempts at improving or replacing the current syncer setup. The tiddler store in the browser is actually part of a synchronous rendering engine. The async components which keep that store updated with outside changes could be completely replaced. All that's required is that a consistent view of the store is available at any given moment for the rendering engine (the widget tree) to use. 
+- AuthJS or a similar integration that supports third-party OAuth (you can already write your own).
+- Compiling filters to SQL to optimize memory on both the client and server.
+- Support for other database and storage systems. Most likely MariaDB and Postgres.
+- Additional recipe strategies with features like prefixed bags and namespaces.
