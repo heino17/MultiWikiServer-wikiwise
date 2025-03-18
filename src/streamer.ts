@@ -228,7 +228,9 @@ export class Streamer {
     reqpath: string;
     offset?: number;
     length?: number;
-    index?: string | boolean | string[] | undefined
+    index?: string | boolean | string[] | undefined,
+    on404?: () => Promise<typeof STREAM_ENDED>;
+    onDir?: () => Promise<typeof STREAM_ENDED>;
   }) {
     // the headers and status have to be set on the response object before piping the stream
     this.res.statusCode = status;
@@ -244,18 +246,20 @@ export class Streamer {
       end: length && length - 1,
     });
     return new Promise<typeof STREAM_ENDED>((resolve, reject) => {
-      stream.on("error", err => {
-        if (err === 404) {
-          resolve(this.sendEmpty(404));
-        } else {
-          this.sendEmpty(500);
-          reject(err);
-        }
-      });
 
-      stream.on("directory", () => {
-        resolve(this.sendEmpty(404));
-      });
+      stream.on("error", (err) => Promise.resolve().then(async (): Promise<typeof STREAM_ENDED> => {
+        if (err === 404 || err?.statusCode === 404) {
+          return (await options.on404?.()) ?? this.sendEmpty(404);
+        } else {
+          console.log(err);
+          throw this.sendEmpty(500);
+        }
+      }).then(resolve, reject));
+
+      stream.on("directory", () => Promise.resolve().then(async (): Promise<typeof STREAM_ENDED> => {
+        return (await options.onDir?.())
+          ?? this.sendEmpty(404, { "x-reason": "Directory listing not allowed" })
+      }).then(resolve, reject));
 
       stream.on("end", () => {
         resolve(STREAM_ENDED);

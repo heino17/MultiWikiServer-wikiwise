@@ -1,10 +1,9 @@
 import type { rootRoute as _rootRoute, Router } from "./router";
 import * as path from "path";
 import * as fs from "fs";
-import * as assert from "assert";
-import "../jsglobal";
 import type { Prisma } from "@prisma/client";
 import type { ZodAssert } from "./utils";
+import { Tiddler, Wiki } from "tiddlywiki";
 
 declare global {
   type PrismaTxnClient = Omit<Router["engine"], "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">
@@ -164,7 +163,7 @@ class _Result<OK extends boolean, T> {
     public error: OK extends true ? undefined : unknown,
     public value: OK extends true ? T : undefined
   ) { }
-  get[Symbol.iterator]() { return [this.ok, this.error, this.value] }
+  get [Symbol.iterator]() { return [this.ok, this.error, this.value] }
   static ok<T>(value: T) {
     return new _Result(true, undefined, value)
   }
@@ -198,4 +197,48 @@ declare global {
 (global as any).Result = _Result;
 Promise.prototype.try = function <T>(this: Promise<T>) {
   return this.then(_Result.ok, _Result.error);
+}
+
+interface $TW {
+  loadTiddlersFromPath: any;
+  loadPluginFolder: any;
+  getLibraryItemSearchPaths: any;
+  wiki: never;
+  utils: {
+    // [x: string]: any;
+    /** Use Object.assign instead */
+    extend: never
+    /** Use Array.isArray instead */
+    isArray: never
+    /** use prismaField with a parse- option or z.uriComponent if possible */
+    decodeURIComponentSafe: never;
+    /**
+     * 
+    ```js
+    $tw.utils.stringifyDate = function(value) {
+      return value.getUTCFullYear() +
+          $tw.utils.pad(value.getUTCMonth() + 1) +
+          $tw.utils.pad(value.getUTCDate()) +
+          $tw.utils.pad(value.getUTCHours()) +
+          $tw.utils.pad(value.getUTCMinutes()) +
+          $tw.utils.pad(value.getUTCSeconds()) +
+          $tw.utils.pad(value.getUTCMilliseconds(),3);
+    };
+    ```
+     */
+    stringifyDate: never;
+    // parseJSONSafe(str: string, defaultJSON?: any): any;
+    // /** `return parseFloat(str) || 0;` */
+    // parseNumber(string: string): number;
+    // /** `return parseFloat(str) || 0;` */
+    // parseNumber(string: string | null): number;
+  };
+  boot: any;
+  config: any;
+  node: any;
+  hooks: any;
+  sjcl: any;
+  Wiki: { new(): Wiki };
+  Tiddler: { new(fields: Record<string, any>): Tiddler };
+
 }

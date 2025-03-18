@@ -245,7 +245,7 @@ function prismaField(table: any, field: any, fieldtype: ExtraFieldType, nullable
       case "boolean":
         return z.boolean();
       case "number":
-        return z.number();
+        return z.number().finite().int();
       default:
         throw new Error("Invalid field type");
     }

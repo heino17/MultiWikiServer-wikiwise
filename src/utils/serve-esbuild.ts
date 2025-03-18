@@ -2,8 +2,24 @@ import { request } from "http";
 import * as esbuild from "esbuild"
 import { StateObject } from "../StateObject";
 import { Router } from "../router";
+import { existsSync } from "fs";
 
-export async function setupDevServer() {
+const servedir = 'react-user-mgmt/public';
+const fallback = 'react-user-mgmt/public/index.html';
+
+async function sendProdServer(this: Router, state: StateObject) {
+  // use sendFile directly instead of having the dev server send it
+  return state.sendFile(200, {}, {
+    reqpath: state.url === "/" ? "/index.html" : state.url,
+    root: servedir,
+    on404: () => state.sendFile(200, {}, { reqpath: "/index.html", root: servedir, })
+  });
+
+}
+export async function setupDevServer(enableDevServer: boolean) {
+
+  if (!enableDevServer) return sendProdServer;
+
   let ctx = await esbuild.context({
     entryPoints: ['react-user-mgmt/src/main.tsx'],
     bundle: true,
@@ -45,7 +61,7 @@ export async function setupDevServer() {
     } else {
       return state.sendStream(statusCode as number, headers, proxyRes);
     }
-    
+
   }
 }
 

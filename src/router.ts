@@ -71,6 +71,7 @@ export class Router {
   static async makeRouter(
     config: MWSConfig["config"],
     passwordKey: string,
+    enableDevServer: boolean,
     SessionManager: typeof sessions.SessionManager,
     AttachmentService: typeof attacher.AttachmentService,
   ) {
@@ -104,7 +105,7 @@ export class Router {
       storePath: storePath,
     };
 
-    const sendDevServer = await setupDevServer();
+    const sendDevServer = await setupDevServer(enableDevServer);
 
     const PasswordService = await createPasswordService(passwordKey);
 
@@ -119,57 +120,10 @@ export class Router {
 
     (global as any).$tw = await bootTiddlyWiki(createTables, wikiPath, router);
 
-
-
-    await this.initDatabase(router);
-
     return router;
   }
 
-  static async initDatabase(router: Router) {
-    // await router.engine.sessions.deleteMany();
-    // delete these during dev stuff
-    // const users = await router.engine.users.findMany();
-    // for (const user of users) {
-    //   await router.engine.users.update({
-    //     data: { roles: { set: [] } },
-    //     where: { user_id: user.user_id }
-    //   })
-    // }
-    // await router.engine.acl.deleteMany();
-    // await router.engine.users.deleteMany();
-    // await router.engine.groups.deleteMany();
-    // await router.engine.roles.deleteMany();
-    // await router.engine.permissions.deleteMany();
-
-
-    const userCount = await router.engine.users.count();
-
-    if (!userCount) {
-
-      await router.engine.roles.createMany({
-        data: [
-          { role_id: 1, role_name: "ADMIN", description: "System Administrator" },
-          { role_id: 2, role_name: "USER", description: "Basic User" },
-        ]
-      });
-
-      const user = await router.engine.users.create({
-        data: { username: "admin", email: "", password: "", roles: { connect: { role_id: 1 } } },
-        select: { user_id: true }
-      });
-
-      const password = await router.PasswordService.PasswordCreation(user.user_id.toString(), "1234");
-
-      await router.engine.users.update({
-        where: { user_id: user.user_id },
-        data: { password: password }
-      });
-
-    }
-
-  }
-
+ 
   pathPrefix: string = "";
   enableBrowserCache: boolean = true;
   enableGzip: boolean = false;
@@ -243,7 +197,7 @@ export class Router {
     type statetype = { [K in BodyFormat]: StateObject<K> }[BodyFormat]
 
     const state = createStrictAwaitProxy(
-      new StateObject(streamer, routePath, bodyFormat, authUser.isLoggedIn ? authUser : null, this) as statetype
+      new StateObject(streamer, routePath, bodyFormat, authUser, this) as statetype
     );
 
     routePath.forEach(match => {

@@ -6,6 +6,7 @@ src/oldroutes
 oldtwserver
 editions/mws/store
 editions/mws/tiddlers
+editions/mws/export
 /tiddlywiki5.html
-
+/mws.run.ts
 
