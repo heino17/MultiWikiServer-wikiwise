@@ -151,6 +151,10 @@ export const serverRequest: ManagerMap = {
   bag_delete: postManager("bag_delete"),
   bag_acl_update: postManager("bag_acl_update"),
 
+  role_create: postManager("role_create"),
+  role_update: postManager("role_update"),
+  // role_delete: postManager("role_delete"),
+
   prisma: proxy,
 }
 

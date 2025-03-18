@@ -43,7 +43,7 @@ export class SessionManager extends BaseManager {
     });
   }
 
-  static async parseIncomingRequest(streamer: Streamer, router: Router): Promise<AuthUser> {
+  static async parseIncomingRequest(streamer: Streamer, router: Router): Promise<AuthUser | null> {
 
     const sessionId = streamer.cookies.session as PrismaField<"Sessions", "session_id"> | undefined;
     const session = sessionId && await router.engine.sessions.findUnique({
@@ -58,13 +58,7 @@ export class SessionManager extends BaseManager {
       sessionId,
       isLoggedIn: true,
     };
-    else return {
-      isLoggedIn: false,
-      user_id: 0 as PrismaField<"Users", "user_id">,
-      username: "(anon)" as PrismaField<"Users", "username">,
-      isAdmin: false,
-      sessionId: "" as PrismaField<"Sessions", "session_id">,
-    };
+    else return null;
   }
 
   constructor(protected state: StateObject, prisma: PrismaTxnClient){

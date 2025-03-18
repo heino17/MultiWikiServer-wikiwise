@@ -132,7 +132,8 @@ const ManageUser = DataLoader(async (props: { userID: string }) => {
       username: formData.username,
       email: formData.email,
       role_id: +formData.role,
-    }).then(() => {
+    }).then(async () => {
+      await refreshUser();
       return "User updated successfully.";
     }).catch(e => {
       throw `${e}`;

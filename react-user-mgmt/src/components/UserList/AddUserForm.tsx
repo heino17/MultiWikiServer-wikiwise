@@ -31,6 +31,7 @@ const AddUserForm: React.FC<{ refreshPage: () => void }> = (props) => {
 
   const [value, onChange] = useState({});
 
+
   return (
     <Card sx={{ width: "20rem" }}>
       <CardHeader title="Add New User" />
@@ -46,7 +47,9 @@ const AddUserForm: React.FC<{ refreshPage: () => void }> = (props) => {
           value={value}
           onChange={onChange}
           onSubmit={async (data, event) => {
-            return await addNewUser(data.formData);
+            const result = await addNewUser(data.formData);
+            props.refreshPage();
+            return result;
           }}
         />
 
@@ -55,31 +58,6 @@ const AddUserForm: React.FC<{ refreshPage: () => void }> = (props) => {
   )
 
 
-  // return (
-  //   <div>
-  //     <h1></h1>
-  //     <form onSubmit={handler(addNewUser)}>
-  //       <FormFieldInput
-  //         {...register("username", { required: true })}
-  //         type="text" autoComplete="new-password" id title="Username"
-  //       />
-  //       <FormFieldInput
-  //         {...register("email", { required: true })}
-  //         type="email" autoComplete="new-password" id title="Email"
-  //       />
-  //       <FormFieldInput
-  //         {...register("password", { required: true })}
-  //         type="password" autoComplete="new-password" id title="Password"
-  //       />
-  //       <FormFieldInput
-  //         {...register("confirmPassword", { required: true })}
-  //         type="password" autoComplete="new-password" id title="Confirm Password"
-  //       />
-
-  //       {footer("Add User")}
-  //     </form>
-  //   </div>
-  // );
 
 };
 

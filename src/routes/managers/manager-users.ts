@@ -1,4 +1,4 @@
-import { BaseKeyMap, BaseManager, BaseManagerMap,  } from "../BaseManager";
+import { BaseKeyMap, BaseManager, BaseManagerMap, } from "../BaseManager";
 
 export const UserKeyMap: BaseKeyMap<UserManager, true> = {
   user_create: true,
@@ -6,7 +6,9 @@ export const UserKeyMap: BaseKeyMap<UserManager, true> = {
   user_list: true,
   user_update: true,
   user_update_password: true,
-} 
+  role_create: true,
+  role_update: true,
+}
 
 export type UserManagerMap = BaseManagerMap<UserManager>;
 
@@ -124,6 +126,42 @@ export class UserManager extends BaseManager {
     }
 
     return null;
+  });
+
+  role_create = this.ZodRequest(z => z.object({
+    role_name: z.string(),
+    description: z.string(),
+  }), async ({ role_name, description }) => {
+
+    if (!this.user) throw "User not authenticated";
+
+    if (!this.user.isAdmin) throw "User is not an admin";
+
+    return await this.prisma.roles.create({
+      data: { role_name, description }
+    });
+
+  });
+
+  role_update = this.ZodRequest(z => z.object({
+    role_id: z.prismaField("Roles", "role_id", "number"),
+    role_name: z.prismaField("Roles", "role_name", "string"),
+    description: z.prismaField("Roles", "description", "string"),
+  }), async ({ role_id, role_name, description }) => {
+
+    if (!this.user) throw "User not authenticated";
+
+    if (!this.user.isAdmin) throw "User is not an admin";
+
+    if (role_id < 1) throw "Invalid role id";
+    if (role_id === 1) throw "Cannot update the admin role";
+    if (role_id === 2) throw "Cannot update the user role";
+
+    return await this.prisma.roles.update({
+      where: { role_id },
+      data: { role_name, description }
+    });
+
   });
 
 }

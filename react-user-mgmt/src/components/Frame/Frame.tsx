@@ -8,6 +8,8 @@ import ManageUser from '../UserEdit/ManageUser';
 import { DataLoader, useIndexJson } from '../../helpers/utils';
 import ManageAcl from '../ACL/ManageAcl';
 import { Alert, CardContent, CardHeader, Container, Stack } from '@mui/material';
+import { UsersScreen } from '../Users';
+
 
 export const Frame = (props: {}) => {
 
@@ -34,7 +36,7 @@ export const Frame = (props: {}) => {
       />,
       "ACL Management"
     ],
-
+    [/^\/admin\/roles$/, () => <UsersScreen />, "Roles"],
   ];
 
   const matches = pages.map(([re]) => re.exec(location.pathname));

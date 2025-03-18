@@ -151,18 +151,24 @@ export function FormDialogSubmitButton<T extends forms.AbstractControl>({ submit
   </>
 }
 /** Because MenuItem does not support a null input, null and undefined will be mapped to "" */
-export function SelectField<V>({
-  title, required, sx, control, options
+export function SelectField<V, M extends boolean, R extends boolean>({
+  title, required, multiple, sx, control, options
 }: PropsWithChildren<{
   title?: string,
-  required?: boolean
+  required?: R
+  multiple?: M
   sx?: SxProps<Theme>
-  control: forms.FormControl<V | null>
+  control: forms.AbstractControl<M extends true ? V[] : R extends true ? V : (V | null)>,
   options: { value: V, label: string }[]
 }>) {
   const html_id = useId();
   useObservable(control.events);
   const valueMap = useMemo(() => new Map(options.map((e) => [e.value, e])), [options]);
+
+  const valueInner = useMemo(() =>
+    multiple ? (control.value as V[]).map(e => valueMap.get(e))
+      : (control.value && valueMap.get(control.value as any))
+    , [control.value, multiple, valueMap]);
 
   return <Autocomplete
     sx={sx}
@@ -174,10 +180,14 @@ export function SelectField<V>({
       {...params}
       label={title}
     />}
+    multiple={multiple}
     onBlur={() => control.markAsTouched()}
-    value={control.value && valueMap.get(control.value)}
+    value={valueInner as any}
     onChange={(event, value) => {
-      control.setValue(value === null ? value : value.value as any);
+      if (multiple)
+        control.setValue((value as { value: V, label: string }[]).map(e => e.value) as any);
+      else
+        control.setValue(value && value.value);
       control.markAsDirty();
     }}
   />
