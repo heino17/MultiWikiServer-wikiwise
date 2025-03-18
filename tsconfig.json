@@ -30,7 +30,8 @@
     "src/**/*.js",
     "src/**/*.tsx",
     "src/**/*.jsx",
-    "src/**/*.d.ts"
+    "src/**/*.d.ts",
+    "./mws.*.ts",
   ],
   "exclude": [
     "src/oldroutes/**/*",

@@ -1,12 +1,17 @@
 node_modules
 scratch
-localhost.*
-*.key
 src/oldroutes
 oldtwserver
+# This is the development edition folder, so ignore it
 editions/mws/store
 editions/mws/tiddlers
 editions/mws/export
+# This file gets built on every startup, so ignore it
 /tiddlywiki5.html
+# Ignore this file so we can put our own start server command in it
 /mws.run.ts
-
+# Ignore this folder so we can put runtime config stuff in it
+/runtime-config
+# ignore for backward compatibility for now
+localhost.*
+*.key

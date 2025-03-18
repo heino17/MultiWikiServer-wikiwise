@@ -8,7 +8,7 @@ MultiWikiServer for TiddlyWiki.
 - `npm install`
 - `npm start`
 
-The server runs on port 5000, wildcard host. The entry point is at the end of `src/server.ts`.
+By default, the server runs on http://localhost:5000. You can customize this by copying the else block into `mws.run.ts`. This will allow you to `git pull` updates while still preserving your configuration.
 
 ### The Server
 
