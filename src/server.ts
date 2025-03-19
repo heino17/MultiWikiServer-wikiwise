@@ -36,8 +36,6 @@ export class ListenerBase {
       req: IncomingMessage | http2.Http2ServerRequest,
       res: ServerResponse | http2.Http2ServerResponse
     ) => {
-      // I'm not sure if this is necessary or not
-      if (!req.socket.encrypted) req.socket.destroy();
       this.handleRequest(req, res);
     });
     this.server.on('error', (error: NodeJS.ErrnoException) => {
@@ -62,7 +60,8 @@ export class ListenerBase {
 
     });
     this.server.on('listening', () => {
-      console.log('Server listening on ' + bindInfo + ' 🚀');
+      const address = this.server.address();
+      console.log(`Listening on`, address);
     });
   }
 
