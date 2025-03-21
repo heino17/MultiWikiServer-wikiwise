@@ -85,7 +85,8 @@ async function runGenAsync(
   return res.value;
 }
 
-// these are the main type definitions for the generator function
+// these are the main type definitions for the generator function. 
+// Modify these if you use a typed sql framework.
 type YieldInput = { sql: string; params: any };
 type YieldOutput<Input extends YieldInput> = Input extends { sql: infer S } ? { result: S } : never;
 // this is the generator type
@@ -98,9 +99,9 @@ type MapInputToOutput<T extends YieldInput[]> = T extends [
   ...infer Rest extends YieldInput[]
 ] ? [YieldOutput<First>, ...MapInputToOutput<Rest>] : [];
 
-/** This just types the yield input and output */
+/** This just types the yield output according to the input. Make sure you call it with `yield*` */
 function* yielder<const I extends YieldInput[]>(...input: I)
-  : Generator<any, MapInputToOutput<I>, any> { return yield input; }
+  : FilterGenerator<MapInputToOutput<I>> { return (yield input) as MapInputToOutput<I>; }
 
 // this section is an example usage of the above functions
 
@@ -116,7 +117,7 @@ function* compiledFilter(): FilterGenerator<{ titles: string[] }> {
 
   const { list, test } = yield* innerFilter(); // this is a nested FilterGenerator
 
-  console.log(result1, list); // should print { result: string }
+  console.log(result1, list, test); // should print { result: string }
 
   const [result2, result3] = yield* yielder({
     sql: 'SELECT * FROM table2', params: []
