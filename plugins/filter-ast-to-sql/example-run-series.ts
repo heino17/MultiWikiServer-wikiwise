@@ -52,3 +52,67 @@ function runSeriesSync({ series: arr, state, result }: { series: any[]; state: a
   // this never returns result as the last function in any series should return the final result, not a sql query.
   return state;
 }
+
+function runnerSync(
+  gen: FilterGenerator
+) {
+  const dball = (sql: string, params: any) => {
+    console.log("sync", sql, params);
+    return `sync result for ${sql} ${JSON.stringify(params, null, 2)}`;
+  };
+  let res = gen.next();
+  while (!res.done) {
+    res = gen.next(res.value.map(e => ({ result: dball(e.sql, e.params) })));
+  }
+}
+
+async function runnerAsync(
+  gen: FilterGenerator
+) {
+  const dball = async (sql: string, params: any) => {
+    console.log("async", sql, params);
+    return `async result for ${sql} ${JSON.stringify(params, null, 2)}`;
+  };
+  let res = gen.next();
+  while (!res.done) {
+    res = gen.next(await Promise.all(res.value.map(async e => ({ result: await dball(e.sql, e.params) }))));
+  }
+}
+
+type MapInputToOutput<T extends any[]> = T extends [infer First, ...infer Rest]
+  ? [First extends { sql: infer S } ? { result: S } : never, ...MapInputToOutput<Rest>] : [];
+
+/** This just types the yield input and output */
+function* yielder<const I extends { sql: string; params: any }[]>(...input: I)
+  : Generator<any, MapInputToOutput<I>, any> { return yield input; }
+
+type FilterOutput = { titles: string[] };
+
+type FilterGenerator = Generator<{ sql: string, params: any }[], FilterOutput, { result: any }[]>;
+
+function* compiledFilter(): FilterGenerator {
+  // yield* is essentially a spread operator for generators 
+  // yielder yeilds one value then returns the result.
+  // this just gives us a way to type the output of a yield according to the input
+  // so if we give it a typed sql query input, it can return a typed result
+
+  const [result1] = yield* yielder({
+    sql: 'SELECT * FROM table1', params: []
+  });
+
+  console.log(result1);
+
+  const [result2, result3] = yield* yielder({
+    sql: 'SELECT * FROM table2', params: []
+  }, {
+    sql: 'SELECT * FROM table3', params: []
+  });
+
+  console.log(result2, result3);
+
+  return { titles: [] };
+
+}
+
+runnerSync(compiledFilter());
+runnerAsync(compiledFilter());
