@@ -168,7 +168,7 @@ export class Router {
     // and also gives us more control over connections. 
 
     this.libsql = createClient({ url: "file:" + this.databasePath });
-    this.libsql.execute("pragma synchronous=off");
+    // this.libsql.execute("pragma synchronous=off");
     const adapter = new PrismaLibSQL(this.libsql);
     this.engine = new PrismaClient({
       log: ["error", "info", "warn"],
