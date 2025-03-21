@@ -53,44 +53,58 @@ function runSeriesSync({ series: arr, state, result }: { series: any[]; state: a
   return state;
 }
 
-function runnerSync(
-  gen: FilterGenerator
+function runGenSync(
+  gen: FilterGenerator<FilterResult>
 ) {
-  const dball = (sql: string, params: any) => {
+  function dball(sql: string, params: any) {
     console.log("sync", sql, params);
-    return `sync result for ${sql} ${JSON.stringify(params, null, 2)}`;
-  };
+    return `sync result for ${sql}`;
+  }
   let res = gen.next();
   while (!res.done) {
-    res = gen.next(res.value.map(e => ({ result: dball(e.sql, e.params) })));
+    res = gen.next(res.value.map(e => ({
+      result: dball(e.sql, e.params)
+    })));
   }
+  return res.value;
 }
 
-async function runnerAsync(
-  gen: FilterGenerator
+async function runGenAsync(
+  gen: FilterGenerator<FilterResult>
 ) {
-  const dball = async (sql: string, params: any) => {
+  async function dball(sql: string, params: any) {
     console.log("async", sql, params);
-    return `async result for ${sql} ${JSON.stringify(params, null, 2)}`;
-  };
+    return `async result for ${sql}`;
+  }
   let res = gen.next();
   while (!res.done) {
-    res = gen.next(await Promise.all(res.value.map(async e => ({ result: await dball(e.sql, e.params) }))));
+    res = gen.next(await Promise.all(res.value.map(async e => ({
+      result: await dball(e.sql, e.params)
+    }))));
   }
+  return res.value;
 }
 
-type MapInputToOutput<T extends any[]> = T extends [infer First, ...infer Rest]
-  ? [First extends { sql: infer S } ? { result: S } : never, ...MapInputToOutput<Rest>] : [];
+// these are the main type definitions for the generator function
+type YieldInput = { sql: string; params: any };
+type YieldOutput<Input extends YieldInput> = Input extends { sql: infer S } ? { result: S } : never;
+// this is the generator type
+type FilterGenerator<T> = Generator<YieldInput[], T, YieldOutput<YieldInput>[]>;
+// the root generator function must return the filter result
+type FilterResult = { titles: string[] };
+
+type MapInputToOutput<T extends YieldInput[]> = T extends [
+  infer First extends YieldInput,
+  ...infer Rest extends YieldInput[]
+] ? [YieldOutput<First>, ...MapInputToOutput<Rest>] : [];
 
 /** This just types the yield input and output */
-function* yielder<const I extends { sql: string; params: any }[]>(...input: I)
+function* yielder<const I extends YieldInput[]>(...input: I)
   : Generator<any, MapInputToOutput<I>, any> { return yield input; }
 
-type FilterOutput = { titles: string[] };
+// this section is an example usage of the above functions
 
-type FilterGenerator = Generator<{ sql: string, params: any }[], FilterOutput, { result: any }[]>;
-
-function* compiledFilter(): FilterGenerator {
+function* compiledFilter(): FilterGenerator<{ titles: string[] }> {
   // yield* is essentially a spread operator for generators 
   // yielder yeilds one value then returns the result.
   // this just gives us a way to type the output of a yield according to the input
@@ -100,7 +114,9 @@ function* compiledFilter(): FilterGenerator {
     sql: 'SELECT * FROM table1', params: []
   });
 
-  console.log(result1);
+  const { list, test } = yield* innerFilter(); // this is a nested FilterGenerator
+
+  console.log(result1, list); // should print { result: string }
 
   const [result2, result3] = yield* yielder({
     sql: 'SELECT * FROM table2', params: []
@@ -108,11 +124,22 @@ function* compiledFilter(): FilterGenerator {
     sql: 'SELECT * FROM table3', params: []
   });
 
-  console.log(result2, result3);
+  console.log(result2, result3); // should print { result: string } { result: string }
 
   return { titles: [] };
 
 }
 
-runnerSync(compiledFilter());
-runnerAsync(compiledFilter());
+function* innerFilter(): FilterGenerator<{ list: string[], test: any }> {
+
+  const [result1] = yield* yielder({
+    sql: 'SELECT * FROM inner1', params: []
+  });
+  // do something with result1
+  return { list: ["hello", "world"], test: result1 };
+}
+
+runGenSync(compiledFilter());
+runGenAsync(compiledFilter());
+
+// tsx ./plugins/filter-ast-to-sql/example-run-series.ts
