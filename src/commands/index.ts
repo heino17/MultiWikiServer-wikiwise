@@ -130,7 +130,8 @@ export class Commander {
 
   create_mws_listen;
 
-  rundbsetup: boolean;
+  /** Signals that database setup is required. May be set to false by any qualified setup command. */
+  setupRequired: boolean = true;
 
   constructor(
     public config: MWSConfig,
@@ -154,8 +155,10 @@ export class Commander {
     this.databasePath = path.resolve(this.storePath, "database.sqlite");
     this.outputPath = path.resolve($tw.boot.wikiPath, $tw.config.wikiOutputSubDir);
 
-    this.rundbsetup = !existsSync(this.storePath);
-    if (this.rundbsetup) mkdirSync(this.storePath, { recursive: true });
+    if (!existsSync(this.storePath)) {
+      mkdirSync(this.storePath, { recursive: true });
+      this.setupRequired = true;
+    }
 
     // using the libsql adapter because for some reason prisma was 
     // freezing when loading the system bag favicons.
@@ -163,9 +166,10 @@ export class Commander {
     // and also gives us more control over connections. 
 
     this.libsql = createClient({ url: "file:" + this.databasePath });
+
     // this.libsql.execute("pragma synchronous=off");
     this.engine = new PrismaClient({
-      log: ["error", "info", "warn"],
+      log: ["info", "warn"],
       adapter: new PrismaLibSQL(this.libsql)
     });
 
@@ -181,8 +185,22 @@ export class Commander {
     this.SessionManager = config.SessionManager || sessions.SessionManager;
     this.AttachmentService = config.AttachmentService || attacher.AttachmentService;
 
+  }
 
+  async init() {
+    this.setupRequired = false;
 
+    const tables = await this.libsql.batch([{
+      sql: `SELECT count(*) as count FROM sqlite_master WHERE type='table'`,
+      args: [],
+    }]).then(e => e[0]?.rows[0]?.count);
+
+    if (tables === 0) {
+      await this.libsql.executeMultiple(readFileSync("./prisma/schema.prisma.sql", "utf8"));
+    }
+
+    const users = await this.engine.users.count();
+    if (!users) { this.setupRequired = true; }
   }
 
   static initCommands(moduleType?: string) {
@@ -192,6 +210,7 @@ export class Commander {
   Add a string of tokens to the command queue
   */
   addCommandTokens(params: string[]) {
+    if (this.verbose) console.log("Commander addCommandTokens", params);
     this.commandTokens.splice(this.nextToken, 0, ...params);
   }
   /*

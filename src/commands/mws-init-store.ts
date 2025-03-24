@@ -22,7 +22,7 @@ export class Command {
 	}
 	async execute() {
 
-		await this.commander.libsql.executeMultiple(readFileSync("./prisma/schema.prisma.sql", "utf8"));
+		if (!this.commander.setupRequired) return;
 
 		await this.commander.$transaction(async (prisma) => {
 			const userCount = await prisma.users.count();
@@ -51,6 +51,24 @@ export class Command {
 			}
 
 		});
+
+		this.commander.addCommandTokens([
+			"--mws-load-plugin-bags",
+			"--mws-load-wiki-folder", "./editions/multiwikidocs",
+			"mws-docs", "MWS Documentation from https://mws.tiddlywiki.com",
+			"mws-docs", "MWS Documentation from https://mws.tiddlywiki.com",
+			"--mws-load-wiki-folder", "./node_modules/tiddlywiki/editions/tw5.com",
+			"docs", "TiddlyWiki Documentation from https://tiddlywiki.com",
+			"docs", "TiddlyWiki Documentation from https://tiddlywiki.com",
+			"--mws-load-wiki-folder", "./node_modules/tiddlywiki/editions/dev",
+			"dev", "TiddlyWiki Developer Documentation from https://tiddlywiki.com/dev",
+			"dev-docs", "TiddlyWiki Developer Documentation from https://tiddlywiki.com/dev",
+			"--mws-load-wiki-folder", "./node_modules/tiddlywiki/editions/tour",
+			"tour", "TiddlyWiki Interactive Tour from https://tiddlywiki.com",
+			"tour", "TiddlyWiki Interactive Tour from https://tiddlywiki.com",
+		]);
+
+		this.commander.setupRequired = false;
 	}
 }
 

@@ -61,6 +61,7 @@ export class Command {
 				throw e;
 			}
 		});
+		this.commander.setupRequired = false;
 	}
 
 	async loadArchive(archivePath: string) {

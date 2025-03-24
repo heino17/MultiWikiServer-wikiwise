@@ -111,26 +111,20 @@ export default async function startServer(config: MWSConfig) {
     )
   );
 
-  // mws-noop prevents params after it from being applied to the command before it.
+  await commander.init();
+
+  // mws-command-separator prevents params after it from being applied to the command before it.
   // it throws an error if it ends up with any params.
   await commander.execute([
-    ...commander.rundbsetup ? [
-      "--mws-init-store",
-      "--mws-load-plugin-bags",
-      "--mws-load-wiki-folder", "./editions/multiwikidocs", "mws-docs", "MWS Documentation from https://mws.tiddlywiki.com", "mws-docs", "MWS Documentation from https://mws.tiddlywiki.com",
-      "--mws-load-wiki-folder", "./node_modules/tiddlywiki/editions/tw5.com", "docs", "TiddlyWiki Documentation from https://tiddlywiki.com", "docs", "TiddlyWiki Documentation from https://tiddlywiki.com",
-      "--mws-load-wiki-folder", "./node_modules/tiddlywiki/editions/dev", "dev", "TiddlyWiki Developer Documentation from https://tiddlywiki.com/dev", "dev-docs", "TiddlyWiki Developer Documentation from https://tiddlywiki.com/dev",
-      "--mws-load-wiki-folder", "./node_modules/tiddlywiki/editions/tour", "tour", "TiddlyWiki Interactive Tour from https://tiddlywiki.com", "tour", "TiddlyWiki Interactive Tour from https://tiddlywiki.com",
-    ] : [],
     "--mws-render-tiddlywiki5",
     "--mws-command-separator",
     ...config.args ?? [],
-    "--mws-command-separator",
-    ...process.argv.slice(2),
-    "--mws-command-separator",
-    // "--mws-save-archive", "./editions/mws/export",
-    // ...initstore ? ["--mws-load-archive", "./editions/mws/export"] : [],
   ]);
+
+  if (commander.setupRequired) {
+    console.log("MWS setup required. Please run either --mws-init-store or --mws-load-archive");
+    process.exit(1);
+  }
 
 }
 

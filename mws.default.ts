@@ -7,8 +7,11 @@ if (existsSync("./mws.run.ts")) {
 } else {
   // if you want to customize the server, you can copy this block into mws.run.ts
   // all paths here are resolved relative to the current working directory
-  
+
   if (!existsSync("runtime-config")) mkdirSync("runtime-config");
+
+  const cli = process.argv.slice(2);
+
   startServer({
     // enableDevServer: true, // set to true to enable the dev server for the react ui
     passwordMasterKey: "./runtime-config/localpass.key",
@@ -23,7 +26,7 @@ if (existsSync("./mws.run.ts")) {
       allowAnonWrites: false,
       allowUnreadableBags: false,
     },
-    args: ["--mws-listen"],
+    args: cli.length ? cli : ["--mws-init-store", "--mws-listen"],
   }).catch(console.log);
 }
 
