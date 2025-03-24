@@ -15,3 +15,5 @@ editions/mws/export
 # ignore for backward compatibility for now
 localhost.*
 *.key
+
+TiddlyWiki5
