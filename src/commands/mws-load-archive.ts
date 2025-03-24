@@ -113,7 +113,7 @@ export class Command {
 				bag_id: bagInfo.bag_id,
 				title: tiddler.title,
 				is_deleted: tiddler.is_deleted,
-				attachment_blob: tiddler.attachment_blob,
+				attachment_hash: tiddler.attachment_hash,
 				tiddler_id: tiddler.tiddler_id,
 			}))
 		});

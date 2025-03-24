@@ -109,9 +109,9 @@ model Tiddlers {
   bag_id          Int
   title           String
   is_deleted      Boolean
-  attachment_blob String?
+  attachment_hash String?
   fields          Fields[]
-  // Deleting a referenced record (bag_id) will trigger the deletion of referencing record (tiddler).
+  // Deleting a referenced record (bag) will trigger the deletion of referencing record (tiddler).
   bag             Bags     @relation(fields: [bag_id], references: [bag_id], onDelete: Cascade)
 
   @@unique([bag_id, title])
@@ -123,7 +123,7 @@ model Fields {
   tiddler_id  Int
   field_name  String
   field_value String
-  // Deleting a referenced record (tiddler_id) will trigger the deletion of referencing record (field).
+  // Deleting a referenced record (tiddler) will trigger the deletion of referencing record (field).
   tiddler     Tiddlers @relation(fields: [tiddler_id], references: [tiddler_id], onDelete: Cascade)
 
   @@id([tiddler_id, field_name])

@@ -52,13 +52,13 @@ export class AttachmentService {
   - Apply the tiddler_id as the revision field
   - Apply the bag_name as the bag field
   */
-  async processOutgoingTiddler({ tiddler, tiddler_id, bag_name, attachment_blob }: {
+  async processOutgoingTiddler({ tiddler, tiddler_id, bag_name, attachment_hash }: {
     tiddler: TiddlerFields;
     tiddler_id: any;
     bag_name: PrismaField<"Bags", "bag_name">;
-    attachment_blob: PrismaField<"Tiddlers", "attachment_blob">;
+    attachment_hash: PrismaField<"Tiddlers", "attachment_hash">;
   }) {
-    if (attachment_blob !== null) {
+    if (attachment_hash !== null) {
       return Object.assign(
         {},
         tiddler,
@@ -76,10 +76,10 @@ export class AttachmentService {
   /*
   */
   async processIncomingTiddler({
-    tiddlerFields, existing_attachment_blob, existing_canonical_uri
+    tiddlerFields, existing_attachment_hash, existing_canonical_uri
   }: {
     tiddlerFields: TiddlerFields;
-    existing_attachment_blob: PrismaField<"Tiddlers", "attachment_blob">;
+    existing_attachment_hash: PrismaField<"Tiddlers", "attachment_hash">;
     existing_canonical_uri: any;
   }) {
     const { attachmentSizeLimit, attachmentsEnabled, } = this.config;
@@ -88,10 +88,10 @@ export class AttachmentService {
 
     let shouldProcessAttachment = tiddlerFields.text && tiddlerFields.text.length > attachmentSizeLimit;
 
-    if (existing_attachment_blob) {
-      const fileSize = await this.getAttachmentFileSize(existing_attachment_blob);
+    if (existing_attachment_hash) {
+      const fileSize = await this.getAttachmentFileSize(existing_attachment_hash);
       if (fileSize && fileSize <= attachmentSizeLimit) {
-        const existingAttachmentMeta = await this.getAttachmentMetadata(existing_attachment_blob);
+        const existingAttachmentMeta = await this.getAttachmentMetadata(existing_attachment_hash);
         const hasCanonicalField = !!tiddlerFields._canonical_uri;
         const skipAttachment = hasCanonicalField && (tiddlerFields._canonical_uri === (existingAttachmentMeta ? existingAttachmentMeta._canonical_uri : existing_canonical_uri));
         shouldProcessAttachment = !skipAttachment;
@@ -101,7 +101,7 @@ export class AttachmentService {
     }
 
     if (attachmentsEnabled && isBinary && shouldProcessAttachment) {
-      const attachment_blob = existing_attachment_blob || await this.saveAttachment({
+      const attachment_hash = existing_attachment_hash || await this.saveAttachment({
         text: tiddlerFields.text,
         type: tiddlerFields.type,
         reference: tiddlerFields.title,
@@ -114,12 +114,12 @@ export class AttachmentService {
 
       return {
         tiddlerFields: Object.assign({}, tiddlerFields, { text: undefined }),
-        attachment_blob: attachment_blob
+        attachment_hash: attachment_hash
       };
     } else {
       return {
         tiddlerFields: tiddlerFields,
-        attachment_blob: existing_attachment_blob
+        attachment_hash: existing_attachment_hash
       };
     }
   }
@@ -158,7 +158,7 @@ export class AttachmentService {
     fs.writeFileSync(path.resolve(attachmentPath, dataFilename), options.text, contentTypeInfo.encoding);
     // Save the meta.json file
     this.writeMetaFile(fs, path, attachmentPath, options, contentHash, dataFilename);
-    return contentHash as PrismaField<"Tiddlers", "attachment_blob">;
+    return contentHash as PrismaField<"Tiddlers", "attachment_hash">;
   }
   private writeMetaFile(fs: any, path: any, attachmentPath: any, options: { text: string; type: string; reference: string; _canonical_uri: string; }, contentHash: any, dataFilename: string) {
     fs.writeFileSync(path.resolve(attachmentPath, "meta.json"), JSON.stringify({
@@ -234,7 +234,7 @@ export class AttachmentService {
   Get the size of an attachment file given the contentHash.
   Returns the size in bytes, or null if the file doesn't exist.
   */
-  async getAttachmentFileSize(content_hash: PrismaField<"Tiddlers", "attachment_blob"> & {}) {
+  async getAttachmentFileSize(content_hash: PrismaField<"Tiddlers", "attachment_hash"> & {}) {
     // Construct the path to the attachment directory
     const attachmentPath = path.resolve(this.config.storePath, "files", content_hash);
     // Read the meta.json file
@@ -248,7 +248,7 @@ export class AttachmentService {
     return fs.statSync(dataFilepath).size;
   }
 
-  async getAttachmentMetadata(content_hash: PrismaField<"Tiddlers", "attachment_blob"> & {}) {
+  async getAttachmentMetadata(content_hash: PrismaField<"Tiddlers", "attachment_hash"> & {}) {
     const attachmentPath = path.resolve(this.config.storePath, "files", content_hash);
     const metaJsonPath = path.resolve(attachmentPath, "meta.json");
     if (!fs.existsSync(metaJsonPath)) return null;

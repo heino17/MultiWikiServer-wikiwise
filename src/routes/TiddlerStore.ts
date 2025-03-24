@@ -175,17 +175,17 @@ export class TiddlerStore {
   ) {
     const { title } = incomingTiddlerFields;
 
-    const existing_attachment_blob = await this.prisma.tiddlers.findFirst({
+    const existing_attachment_hash = await this.prisma.tiddlers.findFirst({
       where: { title, bag: { bag_name } },
-      select: { attachment_blob: true }
-    }).then(e => e?.attachment_blob ?? null);
+      select: { attachment_hash: true }
+    }).then(e => e?.attachment_hash ?? null);
 
-    const { tiddlerFields, attachment_blob } = await this.attachService.processIncomingTiddler({
+    const { tiddlerFields, attachment_hash } = await this.attachService.processIncomingTiddler({
       tiddlerFields: incomingTiddlerFields,
-      existing_attachment_blob,
-      existing_canonical_uri: existing_attachment_blob && this.attachService.makeCanonicalUri(bag_name, incomingTiddlerFields.title)
+      existing_attachment_hash,
+      existing_canonical_uri: existing_attachment_hash && this.attachService.makeCanonicalUri(bag_name, incomingTiddlerFields.title)
     });
-    return this.saveBagTiddlerFields(tiddlerFields, bag_name, attachment_blob);
+    return this.saveBagTiddlerFields(tiddlerFields, bag_name, attachment_hash);
 
   }
   /*
@@ -208,15 +208,15 @@ export class TiddlerStore {
       _canonical_uri: string;
     }
   ) {
-    const attachment_blob = await this.attachService.adoptAttachment({
+    const attachment_hash = await this.attachService.adoptAttachment({
       // options.filepath, options.type, options.hash, options._canonical_uri
       incomingFilepath: options.filepath,
       type: options.type,
       hash: options.hash,
       _canonical_uri: options._canonical_uri
     });
-    if (attachment_blob) {
-      return this.saveBagTiddlerFields(incomingTiddlerFields, bag_name, attachment_blob);
+    if (attachment_hash) {
+      return this.saveBagTiddlerFields(incomingTiddlerFields, bag_name, attachment_hash);
     } else {
       return null;
     }
@@ -232,17 +232,17 @@ export class TiddlerStore {
   ) {
     const { title } = incomingTiddlerFields;
     const currentBag = await this.getRecipeBagWithTiddler({ recipe_name, title });
-    const existing_attachment_blob = currentBag && await this.prisma.tiddlers.findFirst({
+    const existing_attachment_hash = currentBag && await this.prisma.tiddlers.findFirst({
       where: { title, bag: { bag_name: currentBag.bag.bag_name } },
-      select: { attachment_blob: true }
-    }).then(e => e?.attachment_blob ?? null);
+      select: { attachment_hash: true }
+    }).then(e => e?.attachment_hash ?? null);
 
-    const { tiddlerFields, attachment_blob } = await this.attachService.processIncomingTiddler({
-      existing_attachment_blob,
+    const { tiddlerFields, attachment_hash } = await this.attachService.processIncomingTiddler({
+      existing_attachment_hash,
       existing_canonical_uri: incomingTiddlerFields._canonical_uri,
       tiddlerFields: incomingTiddlerFields
     });
-    return this.saveRecipeTiddlerFields(tiddlerFields, recipe_name, attachment_blob);
+    return this.saveRecipeTiddlerFields(tiddlerFields, recipe_name, attachment_hash);
   }
 
   /*
@@ -315,7 +315,7 @@ export class TiddlerStore {
     return {
       bag_name: tiddler.bag.bag_name,
       tiddler_id: tiddler.tiddler_id,
-      attachment_blob: tiddler.attachment_blob,
+      attachment_hash: tiddler.attachment_hash,
       tiddler: Object.fromEntries([
         ...tiddler.fields.map(e => [e.field_name, e.field_value] as const),
         ["title", tiddler.title]
@@ -336,9 +336,9 @@ export class TiddlerStore {
     const tiddlerInfo = await this.getBagTiddler({ title, bag_name });
     if (!tiddlerInfo) return null;
 
-    if (tiddlerInfo.attachment_blob) {
+    if (tiddlerInfo.attachment_hash) {
       return {
-        ...await this.attachService.getAttachmentStream(tiddlerInfo.attachment_blob) ?? {},
+        ...await this.attachService.getAttachmentStream(tiddlerInfo.attachment_hash) ?? {},
         tiddler_id: tiddlerInfo.tiddler_id,
         bag_name: bag_name
       };
@@ -368,7 +368,7 @@ export class TiddlerStore {
   async saveRecipeTiddlerFields(
     tiddlerFields: TiddlerFields,
     recipe_name: PrismaField<"Recipes", "recipe_name">,
-    attachment_blob: PrismaField<"Tiddlers", "attachment_blob">
+    attachment_hash: PrismaField<"Tiddlers", "attachment_hash">
   ) {
 
     const recipe = await this.prisma.recipes.findUnique({
@@ -389,7 +389,7 @@ export class TiddlerStore {
     if (!bag_name) throw new Error("Recipe has no bag at position 0");
 
     // Save the tiddler to the specified bag
-    var { tiddler_id } = await this.saveBagTiddlerFields(tiddlerFields, bag_name, attachment_blob);
+    var { tiddler_id } = await this.saveBagTiddlerFields(tiddlerFields, bag_name, attachment_hash);
 
     return { tiddler_id, bag_name };
     // 	// Find the topmost bag in the recipe
@@ -415,7 +415,7 @@ export class TiddlerStore {
     // 		return null;
     // 	}
     // 	// Save the tiddler to the topmost bag
-    // 	var info = this.saveBagTiddler(tiddlerFields, row.bag_name, attachment_blob);
+    // 	var info = this.saveBagTiddler(tiddlerFields, row.bag_name, attachment_hash);
     // 	return {
     // 		tiddler_id: info.tiddler_id,
     // 		bag_name: row.bag_name
@@ -427,7 +427,7 @@ export class TiddlerStore {
   async saveBagTiddlerFields(
     tiddlerFields: TiddlerFields,
     bag_name: PrismaField<"Bags", "bag_name">,
-    attachment_blob: PrismaField<"Tiddlers", "attachment_blob">
+    attachment_hash: PrismaField<"Tiddlers", "attachment_hash">
   ) {
 
     const { title } = tiddlerFields;
@@ -453,7 +453,7 @@ export class TiddlerStore {
         bag: { connect: { bag_name } },
         title,
         is_deleted: false,
-        attachment_blob: attachment_blob || null,
+        attachment_hash: attachment_hash || null,
         fields: {
           create: Object.entries(tiddlerFields)
             .map(encodeTiddlerFields)
@@ -465,19 +465,19 @@ export class TiddlerStore {
       }
     });
 
-    // 	attachment_blob = attachment_blob || null;
+    // 	attachment_hash = attachment_hash || null;
     // 	// Update the tiddlers table
     // 	var info = this.engine.runStatement(`
-    // 	INSERT OR REPLACE INTO tiddlers (bag_id, title, is_deleted, attachment_blob)
+    // 	INSERT OR REPLACE INTO tiddlers (bag_id, title, is_deleted, attachment_hash)
     // 	VALUES (
     // 		(SELECT bag_id FROM bags WHERE bag_name = $bag_name),
     // 		$title,
     // 		FALSE,
-    // 		$attachment_blob
+    // 		$attachment_hash
     // 	)
     // `, {
     // 		$title: tiddlerFields.title,
-    // 		$attachment_blob: attachment_blob,
+    // 		$attachment_hash: attachment_hash,
     // 		$bag_name: bag_name
     // 	});
     // 	// Update the fields table
@@ -522,7 +522,7 @@ export class TiddlerStore {
         title,
         bag: { connect: { bag_name } },
         is_deleted: true,
-        attachment_blob: null,
+        attachment_hash: null,
       },
       select: {
         tiddler_id: true
@@ -546,7 +546,7 @@ export class TiddlerStore {
     // 	});
     // 	// Mark the tiddler itself as deleted
     // 	const rowDeleteMarker = this.engine.runStatement(`
-    // 	INSERT OR REPLACE INTO tiddlers (bag_id, title, is_deleted, attachment_blob)
+    // 	INSERT OR REPLACE INTO tiddlers (bag_id, title, is_deleted, attachment_hash)
     // 	VALUES (
     // 		(SELECT bag_id FROM bags WHERE bag_name = $bag_name),
     // 		$title,
