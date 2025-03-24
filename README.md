@@ -10,6 +10,14 @@ MultiWikiServer for TiddlyWiki.
 
 By default, the server runs on http://localhost:5000. You can customize this by copying the else block into `mws.run.ts`. This will allow you to `git pull` updates while still preserving your configuration.
 
+### Updates
+
+Before running git pull, here's how to prepare to test updated code while hopefully keeping your current content. 
+
+Run the command mws-save-archive by modifying the args array in tiddlywiki.ts to export the database. Then carefully move your precious database file to a safe location outside the repo. Then git pull. Then look at the same commands, which have now moved to server.ts, and comment out the ones you don't want (probably the entire rundbsetup section) then run mws-load-archive from the same folder. 
+
+I definitely need to make this process easier. 
+
 ### The Server
 
 - Supports HTTP and HTTPS listeners. All requests are funneled into one stack.
@@ -38,3 +46,4 @@ By default, the server runs on http://localhost:5000. You can customize this by 
 - Support for other database and storage systems. Most likely MariaDB and Postgres.
 - Additional recipe strategies with features like prefixed bags and namespaces.
 - Server rendering of pages, for a more wikipedia-like experience. 
+

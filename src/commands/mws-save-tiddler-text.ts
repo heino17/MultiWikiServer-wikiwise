@@ -23,8 +23,8 @@ export class Command {
 			tiddlerTitle = this.params[1] as PrismaField<"Tiddlers", "title">,
 			tiddlerText = this.params[2] as string;
 
-		await this.commander.router.engine.$transaction(async (prisma) => {
-			const store = new TiddlerStore(this.commander.router.config, prisma as any);
+		await this.commander.$transaction(async (prisma) => {
+			const store = new TiddlerStore(this.commander, prisma);
 			await store.saveBagTiddler({ title: tiddlerTitle, text: tiddlerText }, bagName);
 		});
 

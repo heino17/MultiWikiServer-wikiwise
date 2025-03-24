@@ -1,5 +1,4 @@
 import { StateObject } from "../StateObject";
-import { adminWiki } from "../router";
 import { TiddlerStore } from "./TiddlerStore";
 import { resolve } from "path";
 import { createWriteStream, readFileSync } from "fs";
@@ -222,10 +221,11 @@ export class TiddlerServer extends TiddlerStore {
         filename: z.prismaField("Tiddlers", "title", "string"),
       }));
 
+
       // Get the  parameters
       const filename = state.pathParams.filename,
         title = SYSTEM_FILE_TITLE_PREFIX + filename,
-        tiddler = adminWiki().getTiddler(title),
+        tiddler = state.commander.$tw.wiki.getTiddler(title),
         isSystemFile = tiddler && tiddler.hasTag("$:/tags/MWS/SystemFile"),
         isSystemFileWikified = tiddler && tiddler.hasTag("$:/tags/MWS/SystemFileWikified");
 
@@ -235,7 +235,7 @@ export class TiddlerServer extends TiddlerStore {
         const type = typeof sysFileType === "string" && sysFileType || tiddler.fields.type || "text/plain",
           encoding = (state.config.contentTypeInfo[type] || { encoding: "utf8" }).encoding;
         if (isSystemFileWikified) {
-          text = adminWiki().renderTiddler("text/plain", title);
+          text = state.commander.$tw.wiki.renderTiddler("text/plain", title);
         }
         return state.sendResponse(200, {
           "content-type": type
@@ -269,7 +269,7 @@ export class TiddlerServer extends TiddlerStore {
     protected state: StateObject,
     prisma: PrismaTxnClient
   ) {
-    super(state.config, prisma);
+    super(state.commander, prisma);
   }
   /** If neither bag_name nor bag_id are specified, the fallback will be sent. */
   async sendBagTiddler({ state, bag_name, bag_id, title }: {

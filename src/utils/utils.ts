@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 import * as zlib from "node:zlib";
 import { ok } from "node:assert";
 import { promisify } from "node:util";
-import { Router } from "../router";
+import { Router, SiteConfig } from "../routes/router";
 import { mkdirSync } from "node:fs";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -139,9 +139,9 @@ headers: response headers (they will be augmented with an `Etag` header)
 data: the data to send (passed to the end method of the response instance)
 encoding: the encoding of the data to send (passed to the end method of the response instance)
 */
-export async function sendResponse(this: Router, state: StateObject<any, any>, statusCode: number, headers: OutgoingHttpHeaders, data: string | Buffer, encoding?: NodeJS.BufferEncoding) {
+export async function sendResponse(config: SiteConfig, state: StateObject<any, any>, statusCode: number, headers: OutgoingHttpHeaders, data: string | Buffer, encoding?: NodeJS.BufferEncoding) {
   // console.log("sendResponse");
-  if (this.enableBrowserCache && (statusCode == 200)) {
+  if (config.enableBrowserCache && (statusCode == 200)) {
     // console.log("enableBrowserCache");
     var hash = createHash('md5');
     // Put everything into the hash that could change and invalidate the data that
@@ -175,7 +175,7 @@ export async function sendResponse(this: Router, state: StateObject<any, any>, s
   compress our response if the raw data is bigger than 2k. Compressing less
   data is inefficient.
   */
-  if (this.enableGzip && (data.length > 2048)) {
+  if (config.enableGzip && (data.length > 2048)) {
     var acceptEncoding = state.headers["accept-encoding"] || "";
     if (/\bdeflate\b/.test(acceptEncoding)) {
       headers["Content-Encoding"] = "deflate";

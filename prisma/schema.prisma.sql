@@ -32,6 +32,7 @@ CREATE TABLE "bags" (
     "bag_id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "bag_name" TEXT NOT NULL,
     "description" TEXT NOT NULL,
+    "is_plugin" BOOLEAN NOT NULL,
     "owner_id" INTEGER,
     CONSTRAINT "bags_owner_id_fkey" FOREIGN KEY ("owner_id") REFERENCES "users" ("user_id") ON DELETE NO ACTION ON UPDATE NO ACTION
 );
@@ -66,7 +67,7 @@ CREATE TABLE "tiddlers" (
     "bag_id" INTEGER NOT NULL,
     "title" TEXT NOT NULL,
     "is_deleted" BOOLEAN NOT NULL,
-    "attachment_blob" TEXT,
+    "attachment_hash" TEXT,
     CONSTRAINT "tiddlers_bag_id_fkey" FOREIGN KEY ("bag_id") REFERENCES "bags" ("bag_id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 

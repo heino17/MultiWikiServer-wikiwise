@@ -1,5 +1,5 @@
 import { readdirSync, statSync } from "fs";
-import { rootRoute } from "../router";
+import { rootRoute } from "./router";
 import { ZodAssert } from "../utils";
 import { TiddlerServer } from "./bag-file-server";
 

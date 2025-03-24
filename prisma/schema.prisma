@@ -62,6 +62,7 @@ model Bags {
   bag_id      Int           @id @default(autoincrement())
   bag_name    String        @unique
   description String
+  is_plugin   Boolean
   owner_id    Int?
   owner       Users?        @relation(fields: [owner_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
   recipe_bags Recipe_bags[]

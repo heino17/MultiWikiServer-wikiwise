@@ -1,26 +1,12 @@
-import { Streamer } from "./streamer";
-import { StateObject } from "./StateObject";
-import RootRoute from "./routes";
+import { Streamer } from "../streamer";
+import { StateObject } from "../StateObject";
+import RootRoute from ".";
 import * as z from "zod";
-import { createStrictAwaitProxy } from "./utils";
-import { existsSync, mkdirSync, readFileSync } from "fs";
-// import { AttachmentStore } from "./routes/attachments";
-import { resolve } from "path";
-import { Prisma, PrismaClient } from "@prisma/client";
-import { bootTiddlyWiki } from "./tiddlywiki";
-import {
-  Route,
-  rootRoute,
-  RouteOptAny,
-  RouteMatch,
-} from "./utils";
-import { setupDevServer } from "./utils";
-import { createPasswordService, PasswordService } from "./Authenticator";
-import { MWSConfig, MWSConfigConfig } from "./server";
-import * as sessions from "./routes/services/sessions";
-import * as attacher from "./routes/services/attachments";
-import { PrismaLibSQL } from "@prisma/adapter-libsql";
-import { createClient } from "@libsql/client";
+import { createStrictAwaitProxy } from "../utils";
+import { Route, rootRoute, RouteOptAny, RouteMatch, } from "../utils";
+import { MWSConfigConfig } from "../server";
+import { setupDevServer } from "../commands/mws-listen";
+import { Commander } from "../commands";
 
 export { RouteMatch, Route, rootRoute };
 
@@ -31,10 +17,6 @@ export const BodyFormats = ["stream", "string", "json", "buffer", "www-form-urle
 export type BodyFormat = typeof BodyFormats[number];
 
 export const PermissionName = []
-
-export function adminWiki() {
-  return (global as any).$tw.wiki;
-}
 
 const zodTransformJSON = (arg: string, ctx: z.RefinementCtx) => {
   try {
@@ -57,7 +39,7 @@ const zodTransformJSON = (arg: string, ctx: z.RefinementCtx) => {
   }
 };
 
-export interface RouterConfig extends MWSConfigConfig {
+export interface SiteConfig extends MWSConfigConfig {
   attachmentSizeLimit: number;
   attachmentsEnabled: boolean;
   contentTypeInfo: Record<string, any>;
@@ -67,63 +49,32 @@ export interface RouterConfig extends MWSConfigConfig {
 
 export class Router {
 
-
   static async makeRouter(
-    config: MWSConfig["config"],
-    passwordKey: string,
+    commander: Commander,
     enableDevServer: boolean,
-    SessionManager: typeof sessions.SessionManager,
-    AttachmentService: typeof attacher.AttachmentService,
   ) {
-    const { wikiPath } = config;
+
+    const sendDevServer = await setupDevServer(enableDevServer);
 
     const rootRoute = defineRoute(ROOT_ROUTE, {
       useACL: { csrfDisable: true },
       method: AllowedMethods,
       path: /^/,
       denyFinal: true,
-    }, async (state: any) => state);
+    }, async (state: StateObject) => {
+      state.sendDevServer = sendDevServer.bind(undefined, state);
+    });
 
-    await SessionManager.defineRoutes(rootRoute);
+    await commander.SessionManager.defineRoutes(rootRoute);
 
     await RootRoute(rootRoute);
 
-    const storePath = resolve(wikiPath, "store");
-
-    const createTables = !existsSync(resolve(storePath, "database.sqlite"));
-
-    mkdirSync(storePath, { recursive: true });
-
-
-
-    const routerConfig: RouterConfig = {
-      ...config,
-      attachmentsEnabled: !!config.saveLargeTextToFileSystem,
-      attachmentSizeLimit: config.saveLargeTextToFileSystem ?? 0,
-      contentTypeInfo: {},
-      saveLargeTextToFileSystem: undefined as never,
-      storePath: storePath,
-    };
-
-    const sendDevServer = await setupDevServer(enableDevServer);
-
-    const PasswordService = await createPasswordService(passwordKey);
-
-    const router = new Router(rootRoute, routerConfig,
-      sendDevServer,
-      PasswordService,
-      SessionManager,
-      AttachmentService,
-    );
-
-    if (createTables) await router.libsql.executeMultiple(readFileSync("./prisma/schema.prisma.sql", "utf8"));
-
-    (global as any).$tw = await bootTiddlyWiki(createTables, wikiPath, router);
+    const router = new Router(rootRoute, commander);
 
     return router;
   }
 
- 
+
   pathPrefix: string = "";
   enableBrowserCache: boolean = true;
   enableGzip: boolean = false;
@@ -133,48 +84,15 @@ export class Router {
   get(name: string): string {
     return this.variables.get(name) || "";
   }
+  public engine: Commander["engine"];
+  private SessionManager: Commander["SessionManager"];
 
-  libsql;
-  engine: PrismaClient<Prisma.PrismaClientOptions, never, {
-    result: {
-      // this types every output field with PrismaField
-      [T in Uncapitalize<Prisma.ModelName>]: {
-        [K in keyof PrismaPayloadScalars<Capitalize<T>>]: () => {
-          compute: () => PrismaField<Capitalize<T>, K>
-        }
-      }
-    },
-    client: {},
-    model: {},
-    query: {},
-  }>;
-  // devuser: number = 0;
-  storePath: string;
-  databasePath: string;
   constructor(
     private rootRoute: rootRoute,
-    public config: RouterConfig,
-    // public attachmentStore: AttachmentStore,
-    public sendDevServer: (this: Router, state: StateObject) => Promise<symbol>,
-    public PasswordService: PasswordService,
-    public SessionManager: typeof sessions.SessionManager,
-    public AttachmentService: typeof attacher.AttachmentService,
+    private commander: Commander,
   ) {
-    this.storePath = resolve(config.wikiPath, "store");
-    this.databasePath = resolve(this.storePath, "database.sqlite");
-
-    // for some reason prisma was freezing when loading the system bag favicons.
-    // the libsql adapter has an additional advantage of letting us specify pragma 
-    // and also gives us more control over connections. 
-
-    this.libsql = createClient({ url: "file:" + this.databasePath });
-    // this.libsql.execute("pragma synchronous=off");
-    const adapter = new PrismaLibSQL(this.libsql);
-    this.engine = new PrismaClient({
-      log: ["error", "info", "warn"],
-      // datasourceUrl: "file:" + this.databasePath,
-      adapter,
-    });
+    this.engine = commander.engine;
+    this.SessionManager = commander.SessionManager;
   }
 
   async handle(streamer: Streamer) {
@@ -188,16 +106,19 @@ export class Router {
 
     // Optionally output debug info
     console.log(streamer.method, streamer.url);
-    // const matchedRoute = routePath[routePath.length - 1];
-    // console.log("Matched route:", matchedRoute?.route.method, matchedRoute?.route.path.source)
-
     // if no bodyFormat is specified, we default to "buffer" since we do still need to recieve the body
     const bodyFormat = routePath.find(e => e.route.bodyFormat)?.route.bodyFormat || "buffer";
 
     type statetype = { [K in BodyFormat]: StateObject<K> }[BodyFormat]
 
     const state = createStrictAwaitProxy(
-      new StateObject(streamer, routePath, bodyFormat, authUser, this) as statetype
+      new StateObject(
+        streamer,
+        routePath,
+        bodyFormat,
+        authUser,
+        this.commander,
+      ) as statetype
     );
 
     routePath.forEach(match => {
@@ -206,9 +127,8 @@ export class Router {
         && ["POST", "PUT", "DELETE"].includes(streamer.method)
         && state.headers["x-requested-with"] !== "TiddlyWiki"
       )
-        throw streamer.sendString(403, {
-          "x-reason": "x-requested-with missing"
-        }, `'X-Requested-With' header required to login to '${this.servername}'`, "utf8");
+        throw streamer.sendString(403, { "x-reason": "x-requested-with missing" },
+          `'X-Requested-With' header required to login to '${this.servername}'`, "utf8");
     })
 
 

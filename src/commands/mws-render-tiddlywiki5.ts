@@ -15,7 +15,7 @@ import { Commander, CommandInfo } from ".";
 const { writeFileSync } = require("fs");
 
 export const info: CommandInfo = {
-  name: "mws-render-tiddler",
+  name: "mws-render-tiddlywiki5",
   synchronous: true
 };
 
@@ -30,7 +30,7 @@ export class Command {
   }
   async execute() {
 
-    const result = this.commander.wiki.renderTiddler("text/plain", "$:/core/templates/tiddlywiki5.html", {
+    const result = this.commander.$tw.wiki.renderTiddler("text/plain", "$:/core/templates/tiddlywiki5.html", {
       variables: {
         saveTiddlerFilter: `
           $:/boot/boot.css

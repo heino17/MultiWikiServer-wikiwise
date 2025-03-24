@@ -2,12 +2,15 @@ import { Readable } from 'stream';
 import { filterAsync, mapAsync, readMultipartData, sendResponse } from './utils';
 import { STREAM_ENDED, Streamer, StreamerState } from './streamer';
 import { PassThrough } from 'node:stream';
-import { AllowedMethod, BodyFormat, RouteMatch, Router } from './router';
+import { AllowedMethod, BodyFormat, RouteMatch, Router, SiteConfig } from './routes/router';
 import * as z from 'zod';
 import { AuthUser } from './routes/services/sessions';
-import { Prisma } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { Types } from '@prisma/client/runtime/library';
 import { DataChecks } from './utils';
+import { setupDevServer } from './commands/mws-listen';
+import { Commander } from './commands';
+import { PasswordService } from './routes/services/PasswordService';
 
 export interface AuthStateRouteACL {
   /** Every level in the route path must have this disabled for it to be disabled */
@@ -44,16 +47,11 @@ export class StateObject<
 
   STREAM_ENDED: typeof STREAM_ENDED = STREAM_ENDED;
 
-
-  get enableBrowserCache() { return this.router.enableBrowserCache; }
-  get enableGzip() { return this.router.enableGzip; }
-  get pathPrefix() { return this.router.pathPrefix; }
-  get config() { return this.router.config; }
   get method(): M { return super.method as M; }
   readMultipartData
-  // processIncomingStream
   sendResponse
-  sendDevServer
+  /** This is set in makeRouter */
+  sendDevServer!: () => ReturnType<Awaited<ReturnType<typeof setupDevServer>>>;
 
   data!:
     B extends "string" ? string :
@@ -77,25 +75,13 @@ export class StateObject<
    */
   queryParams: Record<string, string[] | undefined>;
 
+  // get PasswordService() { return this.router.PasswordService; }
 
-  allowAnonReads: boolean = false;
-  allowAnonWrites: boolean = false;
-  // This isn't necessary on the route state. Something this temporary needs to be more self-contained.
-  // however it is used in client state as well, so I have to leave it here for now.
-  firstGuestUser: boolean = false;
-  databasePath
-  // attachmentStore
-
-  // auth: Authenticator;
-  // store!: SqlTiddlerStore;
-  // adminWiki
-  // Tiddler
-  // sjcl
-  // config
-
-  PasswordService;
   authenticatedUser;
 
+  private engine: Commander["engine"];
+  public config: SiteConfig;
+  public PasswordService: PasswordService;
 
   constructor(
     streamer: Streamer,
@@ -104,16 +90,17 @@ export class StateObject<
     /** The bodyformat that ended up taking precedence. This should be correctly typed. */
     public bodyFormat: B,
     public user: AuthUser | null,
-    private router: Router
+    public commander: Commander,
   ) {
     super(streamer);
     this.authenticatedUser = user;
 
-    this.databasePath = this.router.databasePath;
+    this.engine = commander.engine;
+    this.config = commander.siteConfig;
+    this.PasswordService = commander.PasswordService;
 
     this.readMultipartData = readMultipartData.bind(this);
-    this.sendResponse = sendResponse.bind(this.router, this);
-    this.sendDevServer = this.router.sendDevServer.bind(this.router, this);
+    this.sendResponse = sendResponse.bind(undefined, this.config, this);
 
     this.pathParams = Object.fromEntries<string | undefined>(routePath.map(r =>
       r.route.pathParams
@@ -133,11 +120,6 @@ export class StateObject<
     if (!queryParamsZodCheck.success) console.log("BUG: Query params zod error", queryParamsZodCheck.error, this.queryParams);
     else this.queryParams = queryParamsZodCheck.data;
 
-
-    this.allowAnonReads = this.router.config.allowAnonReads ?? false;
-    this.allowAnonWrites = this.router.config.allowAnonWrites ?? false;
-
-    this.PasswordService = router.PasswordService;
   }
 
   // createStore(engine: PrismaTxnClient) {
@@ -146,14 +128,11 @@ export class StateObject<
   // }
 
   $transaction = async <T>(fn: (prisma: PrismaTxnClient) => Promise<T>): Promise<T> => {
-    return await this.router.engine.$transaction(async prisma => {
-      // return await fn(this.createStore(prisma as PrismaTxnClient))
-      return await fn(prisma as PrismaTxnClient);
-    });
+    return await this.engine.$transaction(prisma => fn(prisma as PrismaTxnClient));
   }
 
-  $transactionTuple<P extends Prisma.PrismaPromise<any>[]>(arg: (prisma: Router["engine"]) => [...P], options?: { isolationLevel?: Prisma.TransactionIsolationLevel }): Promise<Types.Utils.UnwrapTuple<P>> {
-    return this.router.engine.$transaction(arg(this.router.engine), options);
+  $transactionTuple<P extends Prisma.PrismaPromise<any>[]>(arg: (prisma: Commander["engine"]) => [...P], options?: { isolationLevel?: Prisma.TransactionIsolationLevel }): Promise<Types.Utils.UnwrapTuple<P>> {
+    return this.engine.$transaction(arg(this.engine), options);
   }
 
   makeTiddlerEtag(options: { bag_name: string; tiddler_id: string | number; }) {
@@ -251,14 +230,14 @@ export class StateObject<
     console.error("checkACL is not implemented");
     throw this.sendEmpty(500);
   }
-  
+
   async assertRecipeACL(
     recipe_name: PrismaField<"Recipes", "recipe_name">,
     needWrite: boolean
   ) {
     const user_id = this.user?.user_id;
     const isAdmin = this.user?.isAdmin;
-    const prisma = this.router.engine;
+    const prisma = this.engine;
     const read = new DataChecks(this.config).getBagWhereACL({ permission: "READ", user_id });
     const write = new DataChecks(this.config).getBagWhereACL({ permission: "WRITE", user_id });
 
@@ -293,7 +272,7 @@ export class StateObject<
   ) {
     const user_id = this.user?.user_id;
     const isAdmin = this.user?.isAdmin;
-    const prisma = this.router.engine;
+    const prisma = this.engine;
     const read = new DataChecks(this.config).getBagWhereACL({ permission: "READ", user_id });
     const write = new DataChecks(this.config).getBagWhereACL({ permission: "WRITE", user_id });
     const [recipe, canRead, canWrite] = await prisma.$transaction([

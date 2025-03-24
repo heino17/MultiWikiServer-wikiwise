@@ -7,6 +7,15 @@ import { is } from './utils';
 import { createReadStream } from 'node:fs';
 import { Writable } from 'node:stream';
 
+declare module 'node:net' {
+  interface Socket {
+    // this comment gets prepended to the other comment for this property, thus the hanging sentance.
+    /** Not defined on net.Socket instances. 
+     * 
+     * On tls.Socket instances,  */
+    encrypted?: boolean;
+  }
+}
 
 
 export interface IncomingHttpHeaders extends NodeIncomingHeaders {
@@ -396,5 +405,5 @@ export class StreamerState {
 }
 
 
-import { AllowedMethod, AllowedMethods, Router } from './router';
+import { AllowedMethod, AllowedMethods, Router } from './routes/router';
 

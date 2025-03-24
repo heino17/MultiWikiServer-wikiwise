@@ -33,11 +33,12 @@ export class Command {
 	async execute() {
 		// Check parameters
 		if (this.params.length < 1) throw "Missing pathname";
-		await this.commander.router.engine.$transaction(async (prisma) => {
-			this.store = new TiddlerStore(this.commander.router.config, prisma as any);
+		await this.commander.$transaction(async (prisma) => {
+			this.store = new TiddlerStore(this.commander, prisma);
 			await this.saveArchive();
 			this.store = undefined;
 		});
+		console.log(info.name, "complete:", this.params[0])
 		return null;
 	}
 
@@ -74,7 +75,7 @@ export class Command {
 		await fsp.mkdir(resolve(this.archivePath, "recipes"), { recursive: true });
 		const recipes = await this.getRecipes();
 		for (const recipeInfo of recipes) {
-			console.log(`Recipe ${recipeInfo.recipe_name}`);
+			// console.log(`Recipe ${recipeInfo.recipe_name}`);
 			const recipeFile = `recipes/${uriC(recipeInfo.recipe_name)}.json`;
 			await fsp.writeFile(resolve(this.archivePath, recipeFile), JSON.stringify(recipeInfo, null, "\t"));
 		}
@@ -83,11 +84,11 @@ export class Command {
 		await Promise.all(bags.map(async bagInfo => {
 			const tiddlersFolder = `bags/${uriC(bagInfo.bag_name)}/tiddlers`;
 			await fsp.mkdir(resolve(this.archivePath, tiddlersFolder), { recursive: true });
-			console.log(`Bag ${bagInfo.bag_name}`);
+			// console.log(`Bag ${bagInfo.bag_name}`);
 			const bagFile = `bags/${uriC(bagInfo.bag_name)}/meta.json`;
 			await fsp.writeFile(resolve(this.archivePath, bagFile), JSON.stringify({ ...bagInfo, tiddlers: undefined, }, null, "\t"));
 			for (const tiddler of bagInfo.tiddlers) {
-				console.log(bagInfo.bag_name, tiddler.title, tiddler.tiddler_id);
+				// console.log(bagInfo.bag_name, tiddler.title, tiddler.tiddler_id);
 				const tiddlerFile = `bags/${uriC(bagInfo.bag_name)}/tiddlers/${tiddler.tiddler_id}.json`;
 				await fsp.writeFile(resolve(this.archivePath, tiddlerFile), JSON.stringify(tiddler, null, "\t"));
 			}

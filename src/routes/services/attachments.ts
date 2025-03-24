@@ -1,7 +1,7 @@
 import { tryParseJSON } from "../../utils";
 import * as path from "path";
 import * as fs from "fs";
-import { Router, RouterConfig } from "../../router";
+import { SiteConfig } from "../router";
 import sjcl from "sjcl";
 export interface TiddlerFields extends Record<string, any> {
   title: PrismaField<"Tiddlers", "title">;
@@ -38,7 +38,7 @@ store/
 export class AttachmentService {
 
   constructor(
-    protected config: RouterConfig,
+    protected config: SiteConfig,
     protected prisma: PrismaTxnClient,
   ) { 
 

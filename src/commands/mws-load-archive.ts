@@ -27,8 +27,7 @@ export class Command {
 	async execute() {
 		if (this.params.length < 1) throw "Missing pathname";
 		const archivePath = this.params[0] as string;
-		await this.commander.router.engine.$transaction(async (_p) => {
-			const prisma = _p as PrismaTxnClient;
+		await this.commander.$transaction(async (prisma) => {
 			// load roles from roles/roles.json
 			const roles = JSON.parse(await fsp.readFile(resolve(archivePath, "roles", "roles.json"), "utf8"));
 			await prisma.roles.createMany({ data: roles });
@@ -98,6 +97,7 @@ export class Command {
 				bag_name: bagInfo.bag_name,
 				description: bagInfo.description,
 				owner_id: bagInfo.owner_id,
+				is_plugin: bagInfo.is_plugin ?? false, // not optional, the feature was added later
 				acl: { createMany: { data: bagInfo.acl } },
 			}
 		});
@@ -126,4 +126,6 @@ export class Command {
 		});
 	}
 }
+
+
 

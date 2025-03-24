@@ -1,20 +1,20 @@
-import type { rootRoute as _rootRoute, Router } from "./router";
+import type { rootRoute as _rootRoute, Router } from "./routes/router";
 import * as path from "path";
 import * as fs from "fs";
 import type { Prisma } from "@prisma/client";
 import type { ZodAssert } from "./utils";
 import { Tiddler, Wiki } from "tiddlywiki";
+import { Commander } from "./commands";
 
 declare global {
-  type PrismaTxnClient = Omit<Router["engine"], "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">
+  type PrismaTxnClient = Omit<Commander["engine"], "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">
 
   /** 
-   * If you assign values like `5 as PrismaField<"Bags", "bag_name">`, 
-   * this will result in a type error on the as keyword, 
-   * allowing you to catch incorrect types quickly.
-   * 
-   * It also makes sure that arguments are used correctly 
+   * This primarily makes sure that positional arguments are used correctly
    * (so you can't switch a title and bag_name around).
+   * 
+   * If you assign the wrong value (like `5 as PrismaField<"Bags", "bag_name">`), 
+   * this will result in a type error on the as keyword, allowing you to catch incorrect types quickly.
   */
   type PrismaField<T extends Prisma.ModelName, K extends keyof PrismaPayloadScalars<T>> =
     // manually map foriegn keys to their corresponding primary key so comparisons work

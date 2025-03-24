@@ -2,7 +2,7 @@
 import { Streamer } from "../../streamer";
 import { BaseKeyMap, BaseManager, BaseManagerMap } from "../BaseManager";
 import { randomBytes } from "node:crypto";
-import { Router } from "../../router";
+import { Router } from "../router";
 import { StateObject } from "../../StateObject";
 
 export interface AuthUser {
@@ -61,8 +61,8 @@ export class SessionManager extends BaseManager {
     else return null;
   }
 
-  constructor(protected state: StateObject, prisma: PrismaTxnClient){
-    super(state.config, prisma, state.authenticatedUser, state.firstGuestUser, state.PasswordService);
+  constructor(protected state: StateObject, prisma: PrismaTxnClient) {
+    super(state.config, prisma, state.authenticatedUser, false, state.PasswordService);
   }
 
   login1 = this.ZodRequest(z => z.object({

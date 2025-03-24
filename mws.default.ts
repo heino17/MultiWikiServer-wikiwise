@@ -23,7 +23,8 @@ if (existsSync("./mws.run.ts")) {
       allowAnonWrites: false,
       allowUnreadableBags: false,
     },
-  });
+    args: ["--mws-listen"],
+  }).catch(console.log);
 }
 
 

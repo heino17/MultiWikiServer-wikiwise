@@ -1,106 +1,22 @@
 import "./StateObject"; // <- load this first so it waits for streamer to be defined
 import "./streamer";
-import "./router";
+import "./routes/router";
 import "./global";
-import * as http2 from 'node:http2';
-import * as net from "node:net";
 import * as opaque from "@serenity-kit/opaque";
-import { createServer, IncomingMessage, Server, ServerResponse } from 'node:http';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { Streamer } from "./streamer";
-import { Router } from './router';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import * as sessions from "./routes/services/sessions";
 import * as attacher from "./routes/services/attachments";
-import { resolve } from "node:path";
-import { ok } from "node:assert";
+import { bootTiddlyWiki } from "./tiddlywiki";
+import { Commander } from "./commands";
+import { ListenerBase } from "./commands/mws-listen";
+import { createPasswordService } from "./routes/services/PasswordService";
 
 export * from "./routes/services/sessions";
 
-declare module 'node:net' {
-  interface Socket {
-    // this comment gets prepended to the other comment for this property, thus the hanging sentance.
-    /** Not defined on net.Socket instances. 
-     * 
-     * On tls.Socket instances,  */
-    encrypted?: boolean;
-  }
-}
-
-export class ListenerBase {
-  constructor(
-    public server: http2.Http2SecureServer | Server,
-    public router: Router,
-    public bindInfo: string,
-  ) {
-    this.server.on("request", (
-      req: IncomingMessage | http2.Http2ServerRequest,
-      res: ServerResponse | http2.Http2ServerResponse
-    ) => {
-      this.handleRequest(req, res);
-    });
-    this.server.on('error', (error: NodeJS.ErrnoException) => {
-
-      if (error.syscall !== 'listen') {
-        throw error;
-      }
-
-      // handle specific listen errors with friendly messages
-      switch (error.code) {
-        case 'EACCES':
-          console.error(bindInfo + ' requires elevated privileges');
-          process.exit();
-          break;
-        case 'EADDRINUSE':
-          console.error(bindInfo + ' is already in use');
-          process.exit();
-          break;
-        default:
-          throw error;
-      }
-
-    });
-    this.server.on('listening', () => {
-      const address = this.server.address();
-      console.log(`Listening on`, address);
-    });
-  }
-
-  handleRequest(
-    req: IncomingMessage | http2.Http2ServerRequest,
-    res: ServerResponse | http2.Http2ServerResponse
-  ) {
-    const streamer = new Streamer(req, res, this.router);
-    this.router.handle(streamer).catch(streamer.catcher);
-  }
-}
-
-export class ListenerHTTPS extends ListenerBase {
-  constructor(router: Router, config: MWSConfig["listeners"][number]) {
-    const { port, host } = config;
-    if (port && typeof port !== "number") throw new Error("If specified, port must be a number");
-    const bindInfo = host ? `HTTPS ${host} ${port}` : `HTTPS ${port}`;
-    ok(config.key && existsSync(config.key), "Key file not found");
-    ok(config.cert && existsSync(config.cert), "Cert file not found");
-    const key = readFileSync(config.key);
-    const cert = readFileSync(config.cert);
-    super(http2.createSecureServer({ key, cert, allowHTTP1: true, }), router, bindInfo);
-    if (port) this.server.listen(port, host);
-  }
-
-}
-
-export class ListenerHTTP extends ListenerBase {
-  /** Create an http1 server */
-  constructor(router: Router, config: MWSConfig["listeners"][number]) {
-    const { port, host } = config;
-    if (port && typeof port !== "number") throw new Error("If specified, port must be a number");
-    const bindInfo = host ? `HTTP ${host} ${port}` : `HTTP ${port}`;
-    super(createServer(), router, bindInfo);
-    if (port) this.server.listen(port, host);
-  }
-}
-
 export interface MWSConfig {
+  /** Command line args which will be processed before process.argv */
+  args?: string[];
+  /** Listener config for the mws-listen command. */
   listeners: {
     /** The key file for the HTTPS server. If either key or cert are set, both are required, and HTTPS is enforced. */
     key?: string
@@ -111,9 +27,13 @@ export interface MWSConfig {
     /** The hostname to listen on. If this is specified, then port is required. */
     host?: string
   }[]
+  /** Called and awaited by the mws-listen command. */
+  onListenersCreated?: (listeners: ListenerBase[]) => Promise<void>
+  /** If true, enable the dev server for the react client, otherwise it will just serve the files that are already built. */
   enableDevServer?: boolean
   /** The key file for the password encryption. If this key changes, all passwords will be invalid and need to be changed. */
   passwordMasterKey: string
+  /** MWS site configuration */
   config: MWSConfigConfig
   /** 
    * The session manager class registers the login handler routes and sets the auth user 
@@ -124,10 +44,30 @@ export interface MWSConfig {
    */
   AttachmentService?: typeof attacher.AttachmentService;
 
-  onListenersCreated?: (listeners: ListenerBase[]) => void
 }
 
+
+export interface MWSConfigConfig {
+  /** Path to the mws datafolder. */
+  readonly wikiPath: string
+  /** If true, allow users that aren't logged in to read. */
+  readonly allowAnonReads?: boolean
+  /** If true, allow users that aren't logged in to write. */
+  readonly allowAnonWrites?: boolean
+  /** If true, recipes will allow access to a user who does not have read access to all its bags. */
+  readonly allowUnreadableBags?: boolean
+  /** If true, files larger than `this * 1024` will be saved to disk alongside the database instead of in the database. */
+  readonly saveLargeTextToFileSystem?: number;
+  readonly enableGzip?: boolean
+  readonly enableBrowserCache?: boolean
+}
+
+
+
 /**
+ * 
+ * The promise returned will resolve once the commander has completed.
+ * It will reject if the commander or anything else throws an error.
  * 
 ```
 import startServer from "./src/server.ts";
@@ -163,45 +103,34 @@ export default async function startServer(config: MWSConfig) {
     console.log("Password master key created at", config.passwordMasterKey);
   }
 
-  const router = await Router.makeRouter(
-    config.config,
-    readFileSync(config.passwordMasterKey, "utf8").trim(),
-    config.enableDevServer ?? false,
-    config.SessionManager || sessions.SessionManager,
-    config.AttachmentService || attacher.AttachmentService
-  ).catch(e => {
-    console.log(e.stack);
-    throw "Router failed to load";
-  });
+  const commander = new Commander(
+    config,
+    await bootTiddlyWiki(config.config.wikiPath),
+    await createPasswordService(
+      readFileSync(config.passwordMasterKey, "utf8").trim()
+    )
+  );
 
-
-  const listeners = config.listeners.map(e => {
-    if (!e.key !== !e.cert) {
-      throw new Error("Both key and cert are required for HTTPS");
-    }
-
-    const listener = e.key && e.cert
-      ? new ListenerHTTPS(router, e)
-      : new ListenerHTTP(router, e);
-
-    return listener;
-  });
-
-  config.onListenersCreated?.(listeners);
-
-}
-
-export interface MWSConfigConfig {
-  /** Path to the mws datafolder. */
-  readonly wikiPath: string
-  /** If true, allow users that aren't logged in to read. */
-  readonly allowAnonReads?: boolean
-  /** If true, allow users that aren't logged in to write. */
-  readonly allowAnonWrites?: boolean
-  /** If true, recipes will allow access to a user who does not have read access to all its bags. */
-  readonly allowUnreadableBags?: boolean
-  /** If true, files larger than `this * 1024` will be saved to disk alongside the database instead of in the database. */
-  readonly saveLargeTextToFileSystem?: number;
-
+  // mws-noop prevents params after it from being applied to the command before it.
+  // it throws an error if it ends up with any params.
+  await commander.execute([
+    ...commander.rundbsetup ? [
+      "--mws-init-store",
+      "--mws-load-plugin-bags",
+      "--mws-load-wiki-folder", "./editions/multiwikidocs", "mws-docs", "MWS Documentation from https://mws.tiddlywiki.com", "mws-docs", "MWS Documentation from https://mws.tiddlywiki.com",
+      "--mws-load-wiki-folder", "./node_modules/tiddlywiki/editions/tw5.com", "docs", "TiddlyWiki Documentation from https://tiddlywiki.com", "docs", "TiddlyWiki Documentation from https://tiddlywiki.com",
+      "--mws-load-wiki-folder", "./node_modules/tiddlywiki/editions/dev", "dev", "TiddlyWiki Developer Documentation from https://tiddlywiki.com/dev", "dev-docs", "TiddlyWiki Developer Documentation from https://tiddlywiki.com/dev",
+      "--mws-load-wiki-folder", "./node_modules/tiddlywiki/editions/tour", "tour", "TiddlyWiki Interactive Tour from https://tiddlywiki.com", "tour", "TiddlyWiki Interactive Tour from https://tiddlywiki.com",
+    ] : [],
+    "--mws-render-tiddlywiki5",
+    "--mws-command-separator",
+    ...config.args ?? [],
+    "--mws-command-separator",
+    ...process.argv.slice(2),
+    "--mws-command-separator",
+    // "--mws-save-archive", "./editions/mws/export",
+    // ...initstore ? ["--mws-load-archive", "./editions/mws/export"] : [],
+  ]);
 
 }
+

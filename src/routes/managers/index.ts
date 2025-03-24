@@ -44,7 +44,7 @@ export const ManagerRoutes = (root: rootRoute) => root.defineRoute({
     // the transaction will rollback if this throws an error.
     // the key maps are defined in the manager classes based on the zodRequest handlers.
     const action = new Handler(
-      state.config, prisma, state.user, state.firstGuestUser, state.PasswordService
+      state.config, prisma, state.user, false, state.PasswordService
     )[state.pathParams.action as string] as ZodAction<any, any>;
     return await action(state);
   })

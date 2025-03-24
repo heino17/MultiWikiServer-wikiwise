@@ -1,6 +1,6 @@
 
 import * as opaque from "@serenity-kit/opaque";
-import { TypedGenerator } from "./utils";
+import { TypedGenerator } from "../../utils";
 import { randomBytes } from "node:crypto";
 import { ok } from "node:assert";
 
@@ -8,16 +8,17 @@ export type PasswordService = Awaited<ReturnType<typeof createPasswordService>>;
 
 export async function createPasswordService(serverSetup: string) {
   await opaque.ready;
+
   const serverState = new Map<string, TypedGenerator<LoginGeneratorStates>>();
 
   const LoginGenerator = TypedGenerator.wrapper<LoginGeneratorStates>()(async function* ({
     user_id,
     startLoginRequest,
-    registrationRecord
+    registrationRecord,
   }: {
-    user_id: PrismaField<"Users", "user_id">,
-    startLoginRequest: string,
-    registrationRecord: string
+    user_id: PrismaField<"Users", "user_id">;
+    startLoginRequest: string;
+    registrationRecord: string;
   }): any {
 
     const { asV, asY } = TypedGenerator.checker<LoginGeneratorStates>();

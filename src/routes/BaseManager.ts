@@ -3,9 +3,9 @@ import { StateObject } from "../StateObject";
 import { Z2 } from "../utils";
 import { DataChecks } from "../utils";
 import { STREAM_ENDED } from "../streamer";
-import { RouterConfig } from "../router";
+import { SiteConfig } from "./router";
 import { AuthUser } from "../server";
-import { PasswordService } from "../Authenticator";
+import { PasswordService } from "./services/PasswordService";
 
 /*
 You must have admin permission on a bag to add it to a recipe because it is an implicit ACL operation.
@@ -50,7 +50,7 @@ export type BaseKeyMap<T, V> = {
 export class BaseManager {
   checks;
   constructor(
-    protected config: RouterConfig,
+    protected config: SiteConfig,
     protected prisma: PrismaTxnClient,
     protected user: AuthUser | null,
     protected firstGuestUser: boolean,

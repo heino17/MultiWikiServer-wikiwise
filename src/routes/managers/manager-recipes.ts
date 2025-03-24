@@ -1,4 +1,3 @@
-import { z, ZodTypeAny } from "zod";
 import { BaseKeyMap, BaseManager, BaseManagerMap, } from "../BaseManager";
 
 
@@ -128,6 +127,7 @@ export class RecipeManager extends BaseManager {
   bag_create = this.ZodRequest(z => z.object({
     bag_name: z.string(),
     description: z.string(),
+    is_plugin: z.boolean(),
     owner_id: z.prismaField("Bags", "owner_id", "number", true).optional(),
     isCreate: z.literal(true).default(true),
   }), async (input) => {
@@ -137,6 +137,7 @@ export class RecipeManager extends BaseManager {
   bag_update = this.ZodRequest(z => z.object({
     bag_name: z.string(),
     description: z.string(),
+    is_plugin: z.boolean(),
     owner_id: z.prismaField("Bags", "owner_id", "number", true).optional(),
     isCreate: z.literal(false).default(false),
   }), async (input) => {
@@ -146,6 +147,7 @@ export class RecipeManager extends BaseManager {
   bag_upsert = this.ZodRequest(z => z.object({
     bag_name: z.string(),
     description: z.string(),
+    is_plugin: z.boolean(),
     owner_id: z.prismaField("Bags", "owner_id", "number", true).optional(),
     isCreate: z.boolean(),
   }), async (input) => {
@@ -223,9 +225,10 @@ export class RecipeManager extends BaseManager {
     }
   }
 
-  async bagCreateOrUpdate({ bag_name, description, owner_id, isCreate }: {
+  async bagCreateOrUpdate({ bag_name, description, is_plugin, owner_id, isCreate }: {
     bag_name: string,
     description: string,
+    is_plugin: boolean,
     owner_id?: number | null,
     isCreate: boolean,
   }) {
@@ -242,11 +245,13 @@ export class RecipeManager extends BaseManager {
       where: { bag_name },
       update: {
         description,
+        is_plugin,
         owner_id: isAdmin ? owner_id : undefined //undefined leaves the value as-is
       },
       create: {
         bag_name,
         description,
+        is_plugin,
         owner_id: isAdmin ? owner_id : user_id
       },
     });

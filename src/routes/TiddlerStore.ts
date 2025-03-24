@@ -1,8 +1,9 @@
 import * as fs from "fs";
 import * as path from "path";
-import { RouterConfig } from "../router";
+import { SiteConfig } from "./router";
 import { AttachmentService, TiddlerFields } from "./services/attachments";
 import { ok } from "assert";
+import { Commander } from "../commands";
 
 /**
 
@@ -34,12 +35,14 @@ store/
 export class TiddlerStore {
   attachService: AttachmentService;
   storePath: string;
+  config;
   constructor(
-    protected config: RouterConfig,
+    commander: Commander,
     public prisma: PrismaTxnClient
   ) {
-    this.attachService = new AttachmentService(config, prisma);
-    this.storePath = config.storePath;
+    this.attachService = new commander.AttachmentService(commander.siteConfig, prisma);
+    this.storePath = commander.siteConfig.storePath;
+    this.config = commander.siteConfig;
   }
 
   /*
@@ -84,8 +87,18 @@ export class TiddlerStore {
       return errors.join("\n");
     }
   }
-
   async upsertRecipe(
+    recipe_name: PrismaField<"Recipes", "recipe_name">,
+    description: PrismaField<"Recipes", "description">,
+    bags: { bag_name: PrismaField<"Bags", "bag_name">, with_acl: PrismaField<"Recipe_bags", "with_acl"> }[],
+    { allowPrivilegedCharacters = false }: { allowPrivilegedCharacters?: boolean; } = {}
+  ) {
+    const [recipe_, recipe_bags_] = this.upsertRecipe_PrismaArray(recipe_name, description, bags, { allowPrivilegedCharacters });
+    const recipe = await recipe_;
+    await recipe_bags_;
+    return recipe;
+  }
+  upsertRecipe_PrismaArray(
     recipe_name: PrismaField<"Recipes", "recipe_name">,
     description: PrismaField<"Recipes", "description">,
     bags: { bag_name: PrismaField<"Bags", "bag_name">, with_acl: PrismaField<"Recipe_bags", "with_acl"> }[],
@@ -96,46 +109,52 @@ export class TiddlerStore {
     if (validationRecipeName) throw validationRecipeName;
     if (bags.length === 0) throw "Recipes must contain at least one bag";
 
-    const recipe = await this.prisma.recipes.upsert({
-      where: { recipe_name },
-      update: { description },
-      create: { recipe_name, description },
-      select: { recipe_id: true }
-    });
-
-    await this.prisma.recipe_bags.deleteMany({
-      where: { recipe_id: recipe.recipe_id }
-    });
-
-    await this.prisma.recipes.update({
-      where: { recipe_name },
-      data: {
-        recipe_bags: {
-          create: bags.map(({ bag_name, with_acl }, position) => ({
-            bag: { connect: { bag_name } },
-            position,
-            with_acl
-          }))
+    return [
+      this.prisma.recipes.upsert({
+        where: { recipe_name },
+        update: { description, recipe_bags: { deleteMany: {} } },
+        create: { recipe_name, description },
+        select: { recipe_id: true }
+      }),
+      this.prisma.recipes.update({
+        where: { recipe_name },
+        data: {
+          recipe_bags: {
+            create: bags.map(({ bag_name, with_acl }, position) => ({
+              bag: { connect: { bag_name } },
+              position,
+              with_acl
+            }))
+          }
         }
-      }
-    });
-
-    return recipe;
+      })
+    ];
 
   }
   async upsertBag(
     bag_name: PrismaField<"Bags", "bag_name">,
     description: PrismaField<"Bags", "description">,
+    is_plugin: PrismaField<"Bags", "is_plugin">,
+    { allowPrivilegedCharacters = false }: { allowPrivilegedCharacters?: boolean; } = {}
+  ) {
+    return await this.upsertBag_PrismaPromise(bag_name, description, is_plugin, {
+      allowPrivilegedCharacters
+    });
+  }
+  upsertBag_PrismaPromise(
+    bag_name: PrismaField<"Bags", "bag_name">,
+    description: PrismaField<"Bags", "description">,
+    is_plugin: PrismaField<"Bags", "is_plugin">,
     { allowPrivilegedCharacters = false }: { allowPrivilegedCharacters?: boolean; } = {}
   ) {
 
     const validationBagName = this.validateItemName(bag_name, allowPrivilegedCharacters);
     if (validationBagName) throw validationBagName;
 
-    return await this.prisma.bags.upsert({
+    return this.prisma.bags.upsert({
       where: { bag_name },
-      update: { description },
-      create: { bag_name, description },
+      update: { description, is_plugin },
+      create: { bag_name, description, is_plugin },
       select: { bag_id: true }
     });
 
@@ -152,16 +171,21 @@ export class TiddlerStore {
     bag_name: PrismaField<"Bags", "bag_name">
   ) {
 
-    // Clear out the bag
-    await this.prisma.tiddlers.deleteMany({
-      where: { bag: { bag_name } }
-    });
-    // Save the tiddlers
-    for (const tiddlersFromFile of tiddlersFromPath) {
-      for (const tiddler of tiddlersFromFile.tiddlers) {
-        await this.saveBagTiddlerFields(tiddler, bag_name, null);
-      }
-    }
+  }
+  saveTiddlersFromPath_PrismaArray(
+    tiddlersFromPath: { tiddlers: TiddlerFields[] }[],
+    bag_name: PrismaField<"Bags", "bag_name">
+  ) {
+    return [
+      this.prisma.tiddlers.deleteMany({
+        where: { bag: { bag_name } }
+      }),
+      ...tiddlersFromPath.flatMap(({ tiddlers }) =>
+        tiddlers.flatMap(tiddler =>
+          this.saveBagTiddlerFields_PrismaArray(tiddler, bag_name, null)
+        )
+      )
+    ]
 
   }
 
@@ -421,26 +445,31 @@ export class TiddlerStore {
     // 		bag_name: row.bag_name
     // 	};
   }
-  /**
-  Returns {tiddler_id:}
-  */
+
   async saveBagTiddlerFields(
+    tiddlerFields: TiddlerFields,
+    bag_name: PrismaField<"Bags", "bag_name">,
+    attachment_hash: PrismaField<"Tiddlers", "attachment_hash">
+  ) {
+    const [deletion, creation] = this.saveBagTiddlerFields_PrismaArray(tiddlerFields, bag_name, attachment_hash);
+    await deletion;
+    return await creation;
+  }
+  saveBagTiddlerFields_PrismaArray(
     tiddlerFields: TiddlerFields,
     bag_name: PrismaField<"Bags", "bag_name">,
     attachment_hash: PrismaField<"Tiddlers", "attachment_hash">
   ) {
 
     const { title } = tiddlerFields;
+    if (!title) {
+      console.error(tiddlerFields);
+      throw new Error("Tiddler must have a title");
+    }
 
-    const oldTiddler = await this.prisma.tiddlers.findFirst({
+    const deletion = this.prisma.tiddlers.deleteMany({
       where: { bag: { bag_name }, title }
     });
-
-    if (oldTiddler?.tiddler_id) {
-      await this.prisma.tiddlers.delete({
-        where: { tiddler_id: oldTiddler.tiddler_id, }
-      });
-    }
 
     const encodeTiddlerFields = ([field_name, field_value]: [string, any]) => {
       if (typeof field_value === "number") field_value = field_value.toString();
@@ -448,7 +477,7 @@ export class TiddlerStore {
       return [field_name, field_value];
     };
 
-    return await this.prisma.tiddlers.create({
+    const creation = this.prisma.tiddlers.create({
       data: {
         bag: { connect: { bag_name } },
         title,
@@ -464,6 +493,8 @@ export class TiddlerStore {
         tiddler_id: true
       }
     });
+
+    return [deletion, creation] as const;
 
     // 	attachment_hash = attachment_hash || null;
     // 	// Update the tiddlers table

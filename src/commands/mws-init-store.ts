@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 
 import { Commander, CommandInfo } from ".";
 import { TiddlerStore } from "../routes/TiddlerStore";
+import { readFileSync } from "node:fs";
 
 export const info: CommandInfo = {
 	name: "mws-init-store",
@@ -20,7 +21,10 @@ export class Command {
 
 	}
 	async execute() {
-		await this.commander.router.engine.$transaction(async (prisma) => {
+
+		await this.commander.libsql.executeMultiple(readFileSync("./prisma/schema.prisma.sql", "utf8"));
+
+		await this.commander.$transaction(async (prisma) => {
 			const userCount = await prisma.users.count();
 
 			if (!userCount) {
@@ -37,7 +41,7 @@ export class Command {
 					select: { user_id: true }
 				});
 
-				const password = await this.commander.router.PasswordService.PasswordCreation(user.user_id.toString(), "1234");
+				const password = await this.commander.PasswordService.PasswordCreation(user.user_id.toString(), "1234");
 
 				await prisma.users.update({
 					where: { user_id: user.user_id },
