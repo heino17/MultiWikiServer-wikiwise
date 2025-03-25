@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { IndexJson, MissingFavicon, useIndexJson } from '../../helpers';
+import { EventEmitter, IndexJson, MissingFavicon, useIndexJson } from '../../helpers';
 import {
   Avatar, Button, Card, CardActions, CardContent, IconButton, Link, List, ListItem, ListItemAvatar, ListItemButton,
   ListItemText, Stack
@@ -26,9 +26,8 @@ export const Dashboard = () => {
   const [showSystem, setShowSystem] = useState(false);
 
   // Filter system bags based on showSystem state
-  const filteredBags = showSystem
-    ? indexJson.bagList
-    : indexJson.bagList.filter(bag => !bag.bag_name.startsWith("$:/"));
+  const normalBags = indexJson.bagList.filter(bag => !bag.is_plugin);
+  const pluginBags = indexJson.bagList.filter(bag => bag.is_plugin);
 
   const handleShowSystemChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newShowSystem = e.target.checked;
@@ -160,82 +159,92 @@ export const Dashboard = () => {
         </Card>
 
 
-        <Card variant='outlined'>
-          <CardContent>
-            <h1>Bags</h1>
-            <List>
-              {filteredBags.map(bag => (
-                <ListItemButton key={bag.bag_name} disableRipple>
-                  <ListItemAvatar>
-                    <Avatar src={`/bags/${encodeURIComponent(bag.bag_name)}/tiddlers/%24%3A%2Ffavicon.ico`} >
-                      <MissingFavicon />
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={<>
-                      {bag.bag_name}
-                      {bag.owner && <span> (by {bag.owner.username})</span>}
-                    </>}
-                    secondary={bag.description} />
-                  <Stack direction="row" spacing={1}>
-                    <IconButton
-                      edge="end"
-                      aria-label="delete"
-                      href=""
-                      onClick={(event) => {
-                        bagEditEvents.emit({ type: "open", value: bag });
-                      }}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    {hasBagAclAccess(bag) && (
-                      <IconButton
-                        edge="end"
-                        aria-label="open acl"
-                        onClick={() => {
-                          aclEditEvents.emit({
-                            type: "open",
-                            value: {
-                              type: "bag",
-                              id: bag.bag_id,
-                              name: bag.bag_name,
-                              description: bag.description,
-                              owner: bag.owner,
-                              acl: bag.acl
-                            }
-                          });
-                        }}
-                      >
-                        <ACLIcon />
-                      </IconButton>
-                    )}
-                  </Stack>
-                </ListItemButton>
-              ))}
-            </List>
-          </CardContent>
-          <CardActions>
-            <Button onClick={() => {
-              bagEditEvents.emit({ type: "open", value: null });
-            }}>Create new bag</Button>
-          </CardActions>
-        </Card>
+        {renderBags({
+          title: "Bags",
+          filteredBags: normalBags,
+          bagEditEvents,
+          hasBagAclAccess,
+          aclEditEvents
+        })}
 
-        <h1>Advanced</h1>
+        {renderBags({
+          title: "Plugins",
+          filteredBags: pluginBags,
+          bagEditEvents,
+          aclEditEvents
+        })}
 
-        <div id="checkboxForm">
-          <input
-            type="checkbox"
-            id="chkShowSystem"
-            name="show_system"
-            value="on"
-            checked={showSystem}
-            onChange={handleShowSystemChange}
-          />
-          <label htmlFor="chkShowSystem">Show system bags</label>
-        </div>
       </Stack>
     </CardContent >
   );
 };
+
+function renderBags({ title, filteredBags, bagEditEvents, hasBagAclAccess, aclEditEvents }: {
+  filteredBags: IndexJson["bagList"][number][];
+  bagEditEvents: EventEmitter<BagEditEvents>;
+  hasBagAclAccess?: (bag: IndexJson["bagList"][number]) => boolean;
+  aclEditEvents: EventEmitter<EntityACLEditEvents>;
+  title: string;
+}) {
+  return <Card variant='outlined'>
+    <CardContent>
+      <h1>{title}</h1>
+      <List>
+        {filteredBags.map(bag => (
+          <ListItemButton key={bag.bag_name} disableRipple>
+            <ListItemAvatar>
+              <Avatar src={`/bags/${encodeURIComponent(bag.bag_name)}/tiddlers/%24%3A%2Ffavicon.ico`}>
+                <MissingFavicon />
+              </Avatar>
+            </ListItemAvatar>
+            <ListItemText
+              primary={<>
+                {bag.bag_name}
+                {bag.owner && <span> (by {bag.owner.username})</span>}
+              </>}
+              secondary={bag.description} />
+            <Stack direction="row" spacing={1}>
+              <IconButton
+                edge="end"
+                aria-label="edit"
+                href=""
+                onClick={(event) => {
+                  bagEditEvents.emit({ type: "open", value: bag });
+                }}
+              >
+                <EditIcon />
+              </IconButton>
+              {hasBagAclAccess?.(bag) && (
+                <IconButton
+                  edge="end"
+                  aria-label="open acl"
+                  onClick={() => {
+                    aclEditEvents.emit({
+                      type: "open",
+                      value: {
+                        type: "bag",
+                        id: bag.bag_id,
+                        name: bag.bag_name,
+                        description: bag.description,
+                        owner: bag.owner,
+                        acl: bag.acl
+                      }
+                    });
+                  }}
+                >
+                  <ACLIcon />
+                </IconButton>
+              )}
+            </Stack>
+          </ListItemButton>
+        ))}
+      </List>
+    </CardContent>
+    <CardActions>
+      <Button onClick={() => {
+        bagEditEvents.emit({ type: "open", value: null });
+      }}>Create new bag</Button>
+    </CardActions>
+  </Card>;
+}
 

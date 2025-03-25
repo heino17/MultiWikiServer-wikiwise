@@ -1,15 +1,16 @@
 import { PropsWithChildren, useCallback } from 'react';
-import { DialogContent, DialogTitle, Stack, TextField } from "@mui/material";
+import { Checkbox, DialogContent, DialogTitle, FormControlLabel, Stack, TextField } from "@mui/material";
 import * as forms from "@angular/forms";
 import {
   EventEmitter, FormDialog, FormDialogEvents, FormDialogSubmitButton, useFormDialogForm,
   IndexJson, serverRequest, useIndexJson, ok,
   Refresher
 } from '../../helpers';
-import { onChange, OwnerSelection } from './Shared';
+import { onChange, onChecked, OwnerSelection } from './Shared';
 
 
 export const BagForm = (value: IndexJson["bagList"][number] | null, disableOwnerID: boolean) => {
+  console.log(value);
   const form = new forms.FormGroup({
     bag_name: new forms.FormControl(value?.bag_name ?? "", {
       nonNullable: true, validators: [forms.Validators.required]
@@ -17,6 +18,7 @@ export const BagForm = (value: IndexJson["bagList"][number] | null, disableOwner
     description: new forms.FormControl(value?.description ?? "", {
       nonNullable: true, validators: [forms.Validators.required]
     }),
+    is_plugin: new forms.FormControl<boolean>(value?.is_plugin ?? false),
     owner_id: new forms.FormControl<number | null>(value?.owner_id ?? null),
   });
   if (disableOwnerID) form.controls.owner_id.disable();
@@ -52,7 +54,7 @@ export function BagFormComponent({ }: {}) {
   const { isAdmin = false } = indexJson;
   const { value, form: bagForm, onRefresh } = useBagEditContext();
   const isCreate = value === null;
-
+  console.log(bagForm);
   return <>
     <DialogTitle>
       {isCreate ? "Create new bag" : "Update bag"}
@@ -71,6 +73,14 @@ export function BagFormComponent({ }: {}) {
           value={bagForm.controls.description.value}
           onChange={onChange(bagForm.controls.description)}
           disabled={bagForm.controls.description.disabled}
+        />
+        <FormControlLabel
+          label="Plugin Bag: This bag should be rendered as a plugin."
+          control={<Checkbox
+            checked={bagForm.controls.is_plugin.value ?? false}
+            onChange={onChecked(bagForm.controls.is_plugin)}
+            disabled={bagForm.controls.is_plugin.disabled}
+          />}
         />
         <OwnerSelection isCreate={isCreate} control={bagForm.controls.owner_id} />
         <FormDialogSubmitButton
@@ -92,6 +102,7 @@ export function BagFormComponent({ }: {}) {
               bag_name,
               description: formData.description,
               owner_id: formData.owner_id,
+              is_plugin: formData.is_plugin ?? false,
               isCreate,
             });
 

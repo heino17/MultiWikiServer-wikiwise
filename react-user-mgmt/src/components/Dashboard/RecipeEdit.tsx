@@ -98,8 +98,9 @@ export function RecipeEdit({ events }: PropsWithChildren<{
   const [indexJson] = useIndexJson();
   const { isAdmin = false } = indexJson;
 
-  const createForm = useCallback((value: IndexJson["recipeList"][number] | null) =>
-    RecipeForm(value, indexJson, !isAdmin),
+  const createForm = useCallback(
+    (value: IndexJson["recipeList"][number] | null) =>
+      RecipeForm(value, indexJson, !isAdmin),
     [indexJson, isAdmin]);
 
   return <FormDialog

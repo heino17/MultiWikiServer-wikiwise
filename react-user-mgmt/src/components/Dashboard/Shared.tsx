@@ -52,3 +52,9 @@ export function onChange<T>(formControl: forms.FormControl<T>) {
   }
 }
 
+export function onChecked(formControl: forms.FormControl<boolean | null>) {
+  return (event: any, checked: boolean) => {
+    formControl.setValue(checked);
+    formControl.markAsDirty();
+  }
+}

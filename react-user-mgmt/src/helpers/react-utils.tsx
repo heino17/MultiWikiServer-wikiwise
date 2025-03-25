@@ -1,5 +1,5 @@
 import { EventEmitter } from "@angular/core";
-import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { createContext, PropsWithChildren, ReactNode, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { from, NEVER, Observable, Observer, Subscription } from "rxjs";
 import * as forms from "@angular/forms";
 import { ButtonAwait } from "./utils";
@@ -150,15 +150,45 @@ export function FormDialogSubmitButton<T extends forms.AbstractControl>({ submit
     {submitResult && submitResult.ok === true && <Alert severity='success'>{submitResult.message}</Alert>}
   </>
 }
-/** Because MenuItem does not support a null input, null and undefined will be mapped to "" */
-export function SelectField<V, M extends boolean, R extends boolean>({
+
+export function SelectField<V>({
   title, required, multiple, sx, control, options
 }: PropsWithChildren<{
   title?: string,
-  required?: R
-  multiple?: M
+  required?: boolean,
+  multiple: true,
   sx?: SxProps<Theme>
-  control: forms.AbstractControl<M extends true ? V[] : R extends true ? V : (V | null)>,
+  control: forms.AbstractControl<V[]>,
+  options: { value: V, label: string }[]
+}>): ReactNode;
+export function SelectField<V>({
+  title, required, multiple, sx, control, options
+}: PropsWithChildren<{
+  title?: string,
+  required: true,
+  multiple?: false,
+  sx?: SxProps<Theme>
+  control: forms.AbstractControl<V>,
+  options: { value: V, label: string }[]
+}>): ReactNode;
+export function SelectField<V>({
+  title, required, multiple, sx, control, options
+}: PropsWithChildren<{
+  title?: string,
+  required?: false,
+  multiple?: false,
+  sx?: SxProps<Theme>
+  control: forms.AbstractControl<V | null>,
+  options: { value: V, label: string }[]
+}>): ReactNode;
+export function SelectField<V>({
+  title, required, multiple, sx, control, options
+}: PropsWithChildren<{
+  title?: string,
+  required?: boolean
+  multiple?: boolean
+  sx?: SxProps<Theme>
+  control: forms.AbstractControl<any>,
   options: { value: V, label: string }[]
 }>) {
   const html_id = useId();

@@ -49,7 +49,7 @@ export function EntityACLEdit({ events }: PropsWithChildren<{
   />;
 }
 
-const PermissionOptions = ["READ", "WRITE", "ADMIN"].map(e => ({ value: e, label: e }));
+const PermissionOptions = (["READ", "WRITE", "ADMIN"] as const).map(e => ({ value: e, label: e }));
 
 
 function EntityACLInner() {
