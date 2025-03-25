@@ -16,6 +16,7 @@ Before running git pull, here's how to prepare to test updated code while hopefu
 
 - Run `npm start -- --mws-save-archive archive-folder` to export your content from the old database. 
 - Move your `store` folder out of the data folder to a safe backup folder.
+- Pull the latest commits from Github.
 - Run `npm start -- --mws-load-archive archive-folder` to import your content into the new database. 
 - Copy the `files` folder from your old `store` folder into your new `store` folder.
 
