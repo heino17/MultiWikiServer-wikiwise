@@ -99,6 +99,13 @@ export class Command {
 		await fsp.writeFile(resolve(this.archivePath, "groups.json"), JSON.stringify(groups, null, "\t"));
 		const roles = await this.getRoles();
 		await fsp.writeFile(resolve(this.archivePath, "roles.json"), JSON.stringify(roles, null, "\t"));
+
+		await fsp.writeFile(resolve(this.archivePath, "index.json"), JSON.stringify({
+			version: 2,
+			comment: "The version is an internal identifier for the archive format. It is not the same as the version of TiddlyWiki or MWS.",
+		}, null, "\t"));
+		// Version 1: 
+		//   is_plugin did not exist. A bag_name starting with $:/ was a plugin.
 	}
 
 }
