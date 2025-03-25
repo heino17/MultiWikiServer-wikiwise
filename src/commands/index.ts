@@ -1,5 +1,5 @@
 
-import { IModules, Wiki } from "tiddlywiki"
+import { IModules, Tiddler, Wiki } from "tiddlywiki"
 import { Router, SiteConfig } from "../routes/router";
 import * as path from "node:path";
 import * as mws_load_plugin_bags from "./mws-load-plugin-bags";
@@ -20,7 +20,21 @@ import { createPasswordService, PasswordService } from "../routes/services/Passw
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { ITXClientDenyList } from "@prisma/client/runtime/library";
 
-export interface $TW { utils: any, wiki: any, config: any, boot: any; loadTiddlersFromPath: any; }
+export interface $TW {
+  utils: any;
+  wiki: any;
+  config: any;
+  boot: any;
+  loadTiddlersFromPath: any;
+  Tiddler: {
+    // TW5-typed for some reason just types this as a record of modules, which is incorrect
+    fieldModules: Record<string, {
+      name: string;
+      parse?: (value: any) => any;
+      stringify?: (value: any) => string;
+    }>;
+  }
+}
 
 export interface CommandInfo {
   name: string;

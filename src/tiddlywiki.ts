@@ -61,6 +61,7 @@ export async function bootTiddlyWiki(wikiPath: string) {
   $tw.boot.argv = [
     "++plugins/client",
     "+themes/tiddlywiki/vanilla",
+    "+themes/tiddlywiki/snowwhite",
     wikiPath,
   ];
 

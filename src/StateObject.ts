@@ -275,9 +275,9 @@ export class StateObject<
     const prisma = this.engine;
     const read = new DataChecks(this.config).getBagWhereACL({ permission: "READ", user_id });
     const write = new DataChecks(this.config).getBagWhereACL({ permission: "WRITE", user_id });
-    const [recipe, canRead, canWrite] = await prisma.$transaction([
+    const [bag, canRead, canWrite] = await prisma.$transaction([
       prisma.bags.findUnique({
-        select: { bag_id: true },
+        select: { bag_id: true, is_plugin: true, owner_id: true },
         where: { bag_name }
       }),
       isAdmin ? prisma.$queryRaw`SELECT 1` : prisma.bags.findUnique({
@@ -290,12 +290,14 @@ export class StateObject<
       }) : prisma.$queryRaw`SELECT 1`,
     ]);
 
-    if (!recipe)
+    if (!bag)
       throw this.sendEmpty(404, { "x-reason": "recipe not found" });
     if (!canRead)
       throw this.sendEmpty(403, { "x-reason": "no read permission" });
     if (!canWrite)
       throw this.sendEmpty(403, { "x-reason": "no write permission" });
+
+    return bag;
 
   }
 

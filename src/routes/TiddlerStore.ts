@@ -36,10 +36,12 @@ export class TiddlerStore {
   attachService: AttachmentService;
   storePath: string;
   config;
+  fieldModules;
   constructor(
-    commander: Commander,
+    private commander: Commander,
     public prisma: PrismaTxnClient
   ) {
+    this.fieldModules = this.commander.$tw.Tiddler.fieldModules;
     this.attachService = new commander.AttachmentService(commander.siteConfig, prisma);
     this.storePath = commander.siteConfig.storePath;
     this.config = commander.siteConfig;
@@ -280,16 +282,23 @@ export class TiddlerStore {
     const { title, bag_name, bag_id } = options;
     ok(bag_name || bag_id, "bag_name or bag_id must be provided");
 
-    const tiddler_id = await this.prisma.tiddlers.findFirst({
+    const tiddler = await this.prisma.tiddlers.findFirst({
       where: bag_name
         ? { title, bag: { bag_name }, is_deleted: false }
         : { title, bag_id, is_deleted: false },
       select: { tiddler_id: true }
-    }).then(e => e?.tiddler_id);
-    if (!tiddler_id) return null;
+    });
+    if (!tiddler) return null;
 
-    var tiddlerInfo = await this.getTiddlerInfo(tiddler_id);
+    var tiddlerInfo = await this.getTiddlerInfo(tiddler.tiddler_id);
     if (!tiddlerInfo) return null;
+
+    if (tiddlerInfo.is_plugin) {
+      const pluginBag = await this.prisma.bags.findUnique({
+        where: { bag_name: tiddlerInfo.bag_name },
+        include: { tiddlers: { include: { fields: true } } }
+      });
+    }
 
     return {
       ...tiddlerInfo,
@@ -336,8 +345,12 @@ export class TiddlerStore {
 
     if (!tiddler) return null;
 
+    if (tiddler.bag.is_plugin && tiddler.title as string !== tiddler.bag.bag_name as string)
+      throw new Error("Can only get tiddler info for a plugin bag itself");
+
     return {
       bag_name: tiddler.bag.bag_name,
+      is_plugin: tiddler.bag.is_plugin,
       tiddler_id: tiddler.tiddler_id,
       attachment_hash: tiddler.attachment_hash,
       tiddler: Object.fromEntries([
@@ -472,7 +485,11 @@ export class TiddlerStore {
     });
 
     const encodeTiddlerFields = ([field_name, field_value]: [string, any]) => {
+      const fieldModule = this.fieldModules[field_name];
+      if (typeof field_value === "string") return [field_name, field_value];
+      if (fieldModule && fieldModule.stringify) field_value = fieldModule.stringify(field_value);
       if (typeof field_value === "number") field_value = field_value.toString();
+      if (typeof field_value === "boolean") field_value = field_value ? "true" : "false";
       if (typeof field_value === "undefined" || field_value === null) field_value = "";
       return [field_name, field_value];
     };

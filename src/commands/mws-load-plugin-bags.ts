@@ -43,7 +43,7 @@ async function loadPluginBags($tw: any, store: TiddlerStore, engine: PrismaClien
 	}
 	function savePlugin(
 		pluginFields: TiddlerFields,
-		tiddlers: Record<string, TiddlerFields>,
+		// tiddlers: Record<string, TiddlerFields>,
 		type: string,
 		publisher: string | undefined,
 		name: string
@@ -52,11 +52,11 @@ async function loadPluginBags($tw: any, store: TiddlerStore, engine: PrismaClien
 		const bagName = makePluginBagName(type, publisher, name) as PrismaField<"Bags", "bag_name">;
 		const description = (pluginFields.description ?? "(no description)") as PrismaField<"Bags", "description">;
 		const is_plugin = true as PrismaField<"Bags", "is_plugin">;
-
+		// await store.saveBagTiddler(pluginFields, bagName);
 		return [
 			store.upsertBag_PrismaPromise(bagName, description, is_plugin, { allowPrivilegedCharacters: true }),
 			...store.saveBagTiddlerFields_PrismaArray(pluginFields, bagName, null),
-			...Object.values(tiddlers).flatMap((fields) => store.saveBagTiddlerFields_PrismaArray(fields, bagName, null))
+			// ...Object.values(tiddlers).flatMap((fields) => store.saveBagTiddlerFields_PrismaArray(fields, bagName, null))
 		].filter(truthy);
 
 	}
@@ -70,12 +70,12 @@ async function loadPluginBags($tw: any, store: TiddlerStore, engine: PrismaClien
 			const pluginFields: TiddlerFields = $tw.loadPluginFolder(resolve(folder, pluginFolderName));
 			if (!pluginFields?.title) continue;
 
-			const { tiddlers = {} } = tryParseJSON<{
-				tiddlers: Record<string, TiddlerFields>
-			}>(pluginFields.text) ?? {};
-			delete pluginFields.text;
+			// const { tiddlers = {} } = tryParseJSON<{
+			// 	tiddlers: Record<string, TiddlerFields>
+			// }>(pluginFields.text) ?? {};
+			// delete pluginFields.text;
 
-			prismaPromiseArray.push(...savePlugin(pluginFields, tiddlers, type, publisher, pluginFolderName));
+			prismaPromiseArray.push(...savePlugin(pluginFields, type, publisher, pluginFolderName));
 
 			// console.log(`Import plugin ${pluginFields.title}`);
 		}
