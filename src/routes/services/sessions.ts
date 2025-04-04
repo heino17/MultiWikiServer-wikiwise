@@ -10,7 +10,7 @@ export interface AuthUser {
   username: PrismaField<"Users", "username">;
   sessionId: PrismaField<"Sessions", "session_id">;
   isAdmin: boolean;
-  isLoggedIn: boolean;
+  // isLoggedIn: boolean;
 }
 
 export const SessionKeyMap: BaseKeyMap<SessionManager, true> = {
@@ -56,7 +56,6 @@ export class SessionManager extends BaseManager {
       username: session.user.username,
       isAdmin: session.user.roles.some(e => e.role_id === 1),
       sessionId,
-      isLoggedIn: true,
     };
     else return null;
   }

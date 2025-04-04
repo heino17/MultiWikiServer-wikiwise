@@ -2,6 +2,7 @@
   "name": "tiddlywiki-multiwiki-server",
   "version": "0.1.0",
   "main": "index.js",
+  "bin": "mws.default.ts",
   "engines": {
     "node": ">14"
   },
@@ -31,7 +32,7 @@
     "@types/node": "^22.13.1",
     "@types/send": "^0.17.4",
     "@types/sjcl": "^1.0.34",
-    "@types/tiddlywiki": "npm:tw5-typed@^0.5.14",
+    "@types/tiddlywiki": "./tiddlywiki-types",
     "better-sqlite3": "^11.8.1",
     "mime-types": "^2.1.35",
     "node-sqlite3-wasm": "^0.8.35",

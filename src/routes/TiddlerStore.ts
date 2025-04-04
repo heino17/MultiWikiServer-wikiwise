@@ -4,6 +4,7 @@ import { SiteConfig } from "./router";
 import { AttachmentService, TiddlerFields } from "./services/attachments";
 import { ok } from "assert";
 import { Commander } from "../commands";
+import { FileInfoTiddlers } from "tiddlywiki";
 
 /**
 
@@ -293,12 +294,12 @@ export class TiddlerStore {
     var tiddlerInfo = await this.getTiddlerInfo(tiddler.tiddler_id);
     if (!tiddlerInfo) return null;
 
-    if (tiddlerInfo.is_plugin) {
-      const pluginBag = await this.prisma.bags.findUnique({
-        where: { bag_name: tiddlerInfo.bag_name },
-        include: { tiddlers: { include: { fields: true } } }
-      });
-    }
+    // if (tiddlerInfo.is_plugin) {
+    //   const pluginBag = await this.prisma.bags.findUnique({
+    //     where: { bag_name: tiddlerInfo.bag_name },
+    //     include: { tiddlers: { include: { fields: true } } }
+    //   });
+    // }
 
     return {
       ...tiddlerInfo,
@@ -356,7 +357,7 @@ export class TiddlerStore {
       tiddler: Object.fromEntries([
         ...tiddler.fields.map(e => [e.field_name, e.field_value] as const),
         ["title", tiddler.title]
-      ])
+      ]) as TiddlerFields
     };
   }
   /*
@@ -627,6 +628,7 @@ export class TiddlerStore {
         bag: {
           select: {
             bag_name: true,
+            is_plugin: true,
             tiddlers: {
               select: {
                 title: true,
@@ -646,6 +648,7 @@ export class TiddlerStore {
 
     return bags.map(e => ({
       bag_name: e.bag.bag_name,
+      is_plugin: e.bag.is_plugin,
       position: e.position,
       tiddlers: e.bag.tiddlers
     }));

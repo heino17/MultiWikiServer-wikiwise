@@ -1,13 +1,23 @@
-import { TiddlyWiki } from "tiddlywiki";
+import { TiddlyWiki, TWBoot } from "tiddlywiki";
+import { } from "tiddlywiki/boot/bootprefix";
 import { $TW } from "./commands";
+
+declare module "tiddlywiki" {
+  interface TWUtils {
+    eachAsync: (array: any[], callback: (item: any, index: number) => Promise<void>) => Promise<void>;
+  }
+  interface TWBoot {
+
+  }
+}
 
 export async function bootTiddlyWiki(wikiPath: string) {
 
-  const $tw = TiddlyWiki() as any;
+  const $tw = TiddlyWiki()
 
   $tw.utils.eachAsync = eachAsync;
 
-  $tw.boot.boot = async () => {
+  $tw.boot.boot = async (callback) => {
     // Initialise crypto object
     $tw.crypto = new $tw.utils.Crypto();
     // Initialise password prompter
@@ -15,15 +25,19 @@ export async function bootTiddlyWiki(wikiPath: string) {
       $tw.passwordPrompt = new $tw.utils.PasswordPrompt();
     }
     // Preload any encrypted tiddlers
-    await new Promise(resolve => $tw.boot.decryptEncryptedTiddlers(resolve));
+    await new Promise<void>(resolve =>
+      $tw.boot.decryptEncryptedTiddlers(resolve)
+    );
 
     // $tw.boot.startup();
-    await new Promise(callback => {
+    await new Promise<void>(callback => {
       const options = { callback };
       $tw.boot.initStartup(options);
       $tw.boot.loadStartup(options);
       $tw.boot.execStartup(options);
     });
+
+    callback?.();
 
   };
 
@@ -42,7 +56,7 @@ export async function bootTiddlyWiki(wikiPath: string) {
     platforms: ["node"],
     after: ["story"],
     synchronous: true,
-    startup: () => {},
+    startup: () => { },
   });
 
 
@@ -54,21 +68,23 @@ export async function bootTiddlyWiki(wikiPath: string) {
     after: ["load-modules"],
     before: ["story", "commands"],
     synchronous: true,
-    startup: () => {},
+    startup: () => { },
   });
 
   // tiddlywiki [+<pluginname> | ++<pluginpath>] [<wikipath>] ...[--command ...args]
   $tw.boot.argv = [
     "++plugins/client",
+    "+plugins/tiddlywiki/tiddlyweb",
     "+themes/tiddlywiki/vanilla",
     "+themes/tiddlywiki/snowwhite",
     wikiPath,
   ];
 
-  await $tw.boot.boot();
+  // use callback to match the type signature
+  await new Promise<void>(resolve => $tw.boot.boot(resolve));
 
   console.log("booted");
 
-  return $tw as $TW;
+  return $tw;
 
 }

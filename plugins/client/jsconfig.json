@@ -1,5 +1,9 @@
 {
   "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": false,
+    "target": "es5",
+    "checkJs": true,
     "types": [
       "tw5-typed"
     ]

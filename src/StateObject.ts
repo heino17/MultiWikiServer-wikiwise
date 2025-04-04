@@ -137,12 +137,9 @@ export class StateObject<
 
   makeTiddlerEtag(options: { bag_name: string; tiddler_id: string | number; }) {
     // why do we need tiddler_id AND bag_name? tiddler_id is unique across all tiddlers
-    if (options.bag_name || options.tiddler_id) {
+    if (options.bag_name && options.tiddler_id) {
       return `"tiddler:${options.bag_name}/${options.tiddler_id}"`;
     } else {
-      // TODO: WAIT!! This is a bug.
-      // This should say "and" not "or", or else the above should be "&&" not "||".
-      // They logically can't BOTH be OR.
       throw "Missing bag_name or tiddler_id";
     }
   }
@@ -231,7 +228,8 @@ export class StateObject<
     throw this.sendEmpty(500);
   }
 
-  async assertRecipeACL(
+
+  async getRecipeACL(
     recipe_name: PrismaField<"Recipes", "recipe_name">,
     needWrite: boolean
   ) {
@@ -256,17 +254,23 @@ export class StateObject<
       }) : prisma.$queryRaw`SELECT 1`,
     ]);
 
-    if (!recipe)
-      throw this.sendEmpty(404, { "x-reason": "recipe not found" });
-    if (!canRead)
-      throw this.sendEmpty(403, { "x-reason": "no read permission" });
-    if (!canWrite)
-      throw this.sendEmpty(403, { "x-reason": "no write permission" });
+    return { recipe, canRead, canWrite };
+
+  }
+  async assertRecipeACL(
+    recipe_name: PrismaField<"Recipes", "recipe_name">,
+    needWrite: boolean
+  ) {
+
+    const { recipe, canRead, canWrite } = await this.getRecipeACL(recipe_name, needWrite);
+
+    if (!recipe) throw this.sendEmpty(404, { "x-reason": "recipe not found" });
+    if (!canRead) throw this.sendEmpty(403, { "x-reason": "no read permission" });
+    if (!canWrite) throw this.sendEmpty(403, { "x-reason": "no write permission" });
 
   }
 
-
-  async assertBagACL(
+  async getBagACL(
     bag_name: PrismaField<"Bags", "bag_name">,
     needWrite: boolean
   ) {
@@ -289,13 +293,18 @@ export class StateObject<
         where: { bag_name, OR: write }
       }) : prisma.$queryRaw`SELECT 1`,
     ]);
+    return { bag, canRead, canWrite };
+  }
 
-    if (!bag)
-      throw this.sendEmpty(404, { "x-reason": "recipe not found" });
-    if (!canRead)
-      throw this.sendEmpty(403, { "x-reason": "no read permission" });
-    if (!canWrite)
-      throw this.sendEmpty(403, { "x-reason": "no write permission" });
+  async assertBagACL(
+    bag_name: PrismaField<"Bags", "bag_name">,
+    needWrite: boolean
+  ) {
+    const { bag, canRead, canWrite } = await this.getBagACL(bag_name, needWrite);
+
+    if (!bag) throw this.sendEmpty(404, { "x-reason": "recipe not found" });
+    if (!canRead) throw this.sendEmpty(403, { "x-reason": "no read permission" });
+    if (!canWrite) throw this.sendEmpty(403, { "x-reason": "no write permission" });
 
     return bag;
 

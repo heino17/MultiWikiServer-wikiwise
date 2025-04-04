@@ -38,6 +38,7 @@ export class Command {
           $:/boot/bootprefix.js
           $:/core
           $:/library/sjcl.js
+          $:/plugins/tiddlywiki/tiddlyweb
           $:/plugins/tiddlywiki/multiwikiclient
           $:/themes/tiddlywiki/snowwhite
           $:/themes/tiddlywiki/vanilla

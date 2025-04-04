@@ -1,6 +1,5 @@
 
-import { IModules, Tiddler, Wiki } from "tiddlywiki"
-import { Router, SiteConfig } from "../routes/router";
+import { SiteConfig } from "../routes/router";
 import * as path from "node:path";
 import * as mws_load_plugin_bags from "./mws-load-plugin-bags";
 import * as mws_render_tiddler from "./mws-render-tiddlywiki5";
@@ -16,9 +15,10 @@ import { createClient } from "@libsql/client";
 import { PrismaLibSQL } from "@prisma/adapter-libsql";
 import * as sessions from "../routes/services/sessions";
 import * as attacher from "../routes/services/attachments";
-import { createPasswordService, PasswordService } from "../routes/services/PasswordService";
+import { PasswordService } from "../routes/services/PasswordService";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { ITXClientDenyList } from "@prisma/client/runtime/library";
+import { TW } from "tiddlywiki";
 
 export interface $TW {
   utils: any;
@@ -149,7 +149,7 @@ export class Commander {
 
   constructor(
     public config: MWSConfig,
-    public $tw: $TW,
+    public $tw: TW,
     public PasswordService: PasswordService,
   ) {
     this.nextToken = 0;

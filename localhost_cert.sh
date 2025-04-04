@@ -1,4 +1,3 @@
-cd assets
 
 cat > localhost.cnf <<EOF
 [ req ]
