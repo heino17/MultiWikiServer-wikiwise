@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "types": [
+      "tw5-typed"
+    ]
+  },
+  "include": [
+    "tiddlers/*.js",
+    "js.d.ts",
+  ]
+}

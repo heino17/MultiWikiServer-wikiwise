@@ -1,5 +1,5 @@
 /*\
-title: $:/plugins/tiddlywiki/multiwikiclient/multiwikiclientadaptor.js
+title: $:/plugins/tiddlywiki/tiddlyweb/tiddlywebadaptor.js
 type: application/javascript
 module-type: syncadaptor
 
@@ -104,17 +104,79 @@ class MultiWikiClientAdaptor {
 		this.wiki.setText(REVISION_STATE_TIDDLER, null, title, undefined, { suppressTimestamp: true });
 	}
 	/*
+	Make an HTTP request. Options are:
+		url: URL to retrieve
+		headers: hashmap of headers to send
+		type: GET, PUT, POST etc
+		callback: function invoked with (err,data,xhr)
+		progress: optional function invoked with (lengthComputable,loaded,total)
+		returnProp: string name of the property to return as first argument of callback
+		responseType: "text" or "arraybuffer"
+	*/
+	/**
+	 * 
+	 * @param {object} options 
+	 * @param {string} options.url url to retrieve (must not contain `?` if GET or HEAD)
+	 * @param {object} [options.headers] hashmap of headers to send
+	 * @param {string} [options.type] request method: GET, PUT, POST etc
+	 * @param {function} [options.progress] optional function invoked with (lengthComputable,loaded,total)
+	 * @param {string} [options.returnProp] name of the property to return as first argument of callback
+	 * @param {string} [options.responseType] "text" or "arraybuffer"
+	 * @param {boolean} [options.useDefaultHeaders]
+	 * @param {object | string} [options.data] urlencoded string or hashmap of data to send. If type is GET or HEAD, this is appended to the URL as a query string
+	 */
+	httpRequest(options) {
+
+		return /** @type {Promise<string>} */(new Promise((resolve, reject) => {
+			$tw.utils.httpRequest({
+				...options,
+				callback: (err, data) => err ? reject(err) : resolve(data),
+			});
+		}))
+	}
+	/*
 	Get the current status of the server connection
 	*/
-	getStatus(callback) {
-		// Invoke the callback if present
+	async getStatus(callback) {
+		/** 
+		 * @typedef UserAuthStatus
+		 * @property {boolean} isAdmin
+		 * @property {number} user_id
+		 * @property {string} username
+		 * @property {boolean} isLoggedIn
+		 * @property {boolean} isReadOnly
+		 * @property {boolean} allowAnonReads
+		 * @property {boolean} allowAnonWrites
+		*/
+		/** @type {[false, any, null] | [true, null, Partial<UserAuthStatus>]} */
+		const [ok, error, status] = await this.httpRequest({
+			url: this.host + "recipes/" + this.recipe + "/status",
+			type: "GET",
+			headers: {
+				'Content-Type': 'application/json',
+				"X-Requested-With": "TiddlyWiki"
+			},
+		}).then(
+			e => [true, null, $tw.utils.parseJSONSafe(e)],
+			e => [false, e, null]
+		);
+		if(!ok) {
+			this.logger.log("Error getting status", error);
+			if(callback) callback(error);
+			return;
+		}
 		if(callback) {
 			callback(
-				null, // Error
-				true, // Is logged in
-				this.username, // Username
-				false, // Is read only
-				true // Is anonymous
+				// Error
+				null,
+				// Is logged in
+				status.isLoggedIn ?? false,
+				// Username
+				status.username ?? "(anon)",
+				// Is read only
+				status.isReadOnly ?? true,
+				// Is anonymous
+				!status.isLoggedIn,
 			);
 		}
 	}
@@ -184,6 +246,9 @@ class MultiWikiClientAdaptor {
 			}
 		};
 		eventSource.addEventListener("change", function(event) {
+			/**
+			 * @type {{ title: string; tiddler_id: number; is_deleted: boolean; bag_name: string; }} tiddlerInfo 
+			 */
 			const data = $tw.utils.parseJSONSafe(event.data);
 			if(data) {
 				console.log("SSE data", data);
@@ -236,16 +301,20 @@ class MultiWikiClientAdaptor {
 				}
 				var modifications = [], deletions = [];
 				var tiddlerInfoArray = $tw.utils.parseJSONSafe(data);
-				$tw.utils.each(tiddlerInfoArray, function(tiddlerInfo) {
-					if(tiddlerInfo.tiddler_id > self.last_known_tiddler_id) {
-						self.last_known_tiddler_id = tiddlerInfo.tiddler_id;
-					}
-					if(tiddlerInfo.is_deleted) {
-						deletions.push(tiddlerInfo.title);
-					} else {
-						modifications.push(tiddlerInfo.title);
-					}
-				});
+				$tw.utils.each(tiddlerInfoArray,
+					/**
+					 * @param {{ title: string; tiddler_id: number; is_deleted: boolean; bag_name: string; }} tiddlerInfo 
+					 */
+					function(tiddlerInfo) {
+						if(tiddlerInfo.tiddler_id > self.last_known_tiddler_id) {
+							self.last_known_tiddler_id = tiddlerInfo.tiddler_id;
+						}
+						if(tiddlerInfo.is_deleted) {
+							deletions.push(tiddlerInfo.title);
+						} else {
+							modifications.push(tiddlerInfo.title);
+						}
+					});
 				// Invoke the callback with the results
 				options.callback(null, {
 					modifications: modifications,
@@ -264,14 +333,19 @@ class MultiWikiClientAdaptor {
 	checkLastRecordedUpdate(title, revision) {
 		var lru = this.lastRecordedUpdate[title];
 		if(lru) {
-			var numRevision = $tw.utils.getInt(revision);
+			var numRevision = $tw.utils.getInt(revision, undefined);
+			if(!numRevision) {
+				this.logger.log("Error: revision is not a number", revision);
+				return;
+			}
 			console.log(`Checking for updates to ${title} since ${JSON.stringify(revision)} comparing to ${numRevision}`);
 			if(lru.tiddler_id > numRevision) {
 				this.syncer.enqueueLoadTiddler(title);
 			}
 		}
 	}
-	get syncer(){
+	get syncer() {
+		//@ts-expect-error
 		if($tw.syncadaptor === this) return $tw.syncer;
 	}
 	/*

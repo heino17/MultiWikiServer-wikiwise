@@ -1,0 +1,7 @@
+{
+  "title": "$:/plugins/tiddlywiki/multiwikiclient",
+  "version": "1.0.0",
+  "devDependencies": {
+    "tw5-typed": "*"
+  }
+}
