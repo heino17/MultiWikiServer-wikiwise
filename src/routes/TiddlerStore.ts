@@ -5,6 +5,7 @@ import { AttachmentService, TiddlerFields } from "./services/attachments";
 import { ok } from "assert";
 import { Commander } from "../commands";
 import { FileInfoTiddlers } from "tiddlywiki";
+import { UserError } from "../utils";
 
 /**
 
@@ -110,7 +111,7 @@ export class TiddlerStore {
 
     const validationRecipeName = this.validateItemName(recipe_name, allowPrivilegedCharacters);
     if (validationRecipeName) throw validationRecipeName;
-    if (bags.length === 0) throw "Recipes must contain at least one bag";
+    if (bags.length === 0) throw new UserError("Recipes must contain at least one bag");
 
     return [
       this.prisma.recipes.upsert({
@@ -334,6 +335,17 @@ export class TiddlerStore {
     });
   }
 
+  async getRecipeWritableBag(
+    recipe_name: PrismaField<"Recipes", "recipe_name">
+  ) {
+    const recipe_bag = await this.prisma.recipe_bags.findFirst({
+      select: { bag: true },
+      where: { recipe: { recipe_name }, position: 0 }
+    });
+    if (!recipe_bag) return null;
+    return recipe_bag.bag;
+  }
+
 
   async getTiddlerInfo(
     tiddler_id: PrismaField<"Tiddlers", "tiddler_id">
@@ -347,11 +359,11 @@ export class TiddlerStore {
     if (!tiddler) return null;
 
     if (tiddler.bag.is_plugin && tiddler.title as string !== tiddler.bag.bag_name as string)
-      throw new Error("Can only get tiddler info for a plugin bag itself");
+      throw new UserError("Can only get tiddler info for a plugin bag itself");
 
     return {
       bag_name: tiddler.bag.bag_name,
-      is_plugin: tiddler.bag.is_plugin,
+      is_plugin_bag: tiddler.bag.is_plugin,
       tiddler_id: tiddler.tiddler_id,
       attachment_hash: tiddler.attachment_hash,
       tiddler: Object.fromEntries([
@@ -420,11 +432,11 @@ export class TiddlerStore {
       }
     });
 
-    if (!recipe) throw new Error("Recipe not found");
+    if (!recipe) throw new UserError("Recipe not found");
 
     const bag_name = recipe.recipe_bags[0]?.bag.bag_name;
 
-    if (!bag_name) throw new Error("Recipe has no bag at position 0");
+    if (!bag_name) throw new UserError("Recipe has no bag at position 0");
 
     // Save the tiddler to the specified bag
     var { tiddler_id } = await this.saveBagTiddlerFields(tiddlerFields, bag_name, attachment_hash);
@@ -555,11 +567,25 @@ export class TiddlerStore {
     // 		tiddler_id: info.lastInsertRowid
     // 	};
   }
+  /*
+  Returns {tiddler_id:,bag_name:}
+  */
+  async deleteRecipeTiddler(
+    recipe_name: PrismaField<"Recipes", "recipe_name">,
+    title: PrismaField<"Tiddlers", "title">
+  ) {
 
+    const currentBag = await this.getRecipeBagWithTiddler({ recipe_name, title });
+    if (!currentBag)
+      throw new UserError("Tiddler not found in recipe");
+    if (currentBag.position !== 0)
+      throw new UserError("Cannot delete tiddler from non-top bag");
+    return await this.deleteBagTiddler(title, currentBag.bag.bag_name);
+  }
   /**
     Returns {tiddler_id:} of the delete marker
     */
-  async deleteTiddler(
+  async deleteBagTiddler(
     title: PrismaField<"Tiddlers", "title">,
     bag_name: PrismaField<"Bags", "bag_name">
   ) {

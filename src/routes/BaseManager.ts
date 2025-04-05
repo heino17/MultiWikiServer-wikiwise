@@ -32,7 +32,7 @@ export declare type JsonValue = string | number | boolean | JsonObject | JsonArr
 export interface ZodAction<T extends ZodTypeAny, R extends JsonValue> {
   (state: StateObject): Promise<typeof STREAM_ENDED>;
   zodRequest: (z: Z2<"JSON">) => T;
-  zodResponse: (z: Z2<"JSON">) => ZodType<R>;
+  zodResponse?: (z: Z2<"JSON">) => ZodType<R>;
   inner: (route: z.output<T>) => Promise<R>,
 }
 

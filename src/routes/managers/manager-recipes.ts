@@ -1,20 +1,6 @@
 import { BaseKeyMap, BaseManager, BaseManagerMap, } from "../BaseManager";
 
-
-/*
-You must have admin permission on a bag to add it to a recipe because it is an implicit ACL operation. 
-https://crates.io/crates/indradb
-
-I'm also wondering if the system could be improved slightly by thinking of it more in terms of bag layers. 
-
-- Each layer could be writable or readonly. A tiddler from a readonly layer could not be overwritten unless there is a writable layer above it to put it in. 
-- Different layers could be given a more complicated set of permissions. Maybe admins can edit the template or system namespace, users can only edit their own pages in the user namespace, etc. 
-- Our current system is multiple readonly bag layers, with a single writable bag layer at the top. 
-- The simplest recipe is one writable bag layer. 
-
-Nothing should be happening to tiddlers in a bag unless they're in a writable layer of the recipe you're accessing them through. 
-
-*/
+// https://crates.io/crates/indradb
 
 
 export const RecipeKeyMap: BaseKeyMap<RecipeManager, true> = {

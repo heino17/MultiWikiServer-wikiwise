@@ -1,6 +1,6 @@
 // required by @angular/forms
 import "@angular/compiler";
-import { StrictMode } from 'react';
+import { StrictMode, useEffect } from 'react';
 import './styles/index.css';
 import './styles/login.css';
 import { createRoot } from 'react-dom/client';
@@ -27,10 +27,11 @@ const theme = createTheme({
 export const App = DataLoader(async () => {
   return await getIndexJson();
 }, (indexJson, refresh, props) => {
+  useEffect(() => { window.document.documentElement.classList.add("loaded"); }, []);
 
   return (
     <StrictMode>
-      <ThemeProvider theme={theme}>
+      <ThemeProvider theme={theme} defaultMode="system" noSsr>
         <CssBaseline enableColorScheme />
         <IndexJsonContext.Provider value={[indexJson, refresh]}>
           {location.pathname === "/login" ? <Login /> : <Frame />}

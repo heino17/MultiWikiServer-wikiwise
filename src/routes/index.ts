@@ -1,15 +1,15 @@
 import { readdirSync, statSync } from "fs";
 import { rootRoute } from "./router";
 import { ZodAssert } from "../utils";
-import { TiddlerServer } from "./bag-file-server";
-
 import { Prisma, PrismaClient } from "@prisma/client";
 import { ManagerRoutes } from "./managers";
+import { TiddlerRouter } from "./managers/manager-tiddlers";
 
 
 
 export default async function RootRoute(root: rootRoute) {
-  TiddlerServer.defineRoutes(root);
+  // TiddlerServer.defineRoutes(root);
+  TiddlerRouter.defineRoutes(root);
   ManagerRoutes(root);
   console.log;
   root.defineRoute({

@@ -376,3 +376,11 @@ export function truthy<T>(
 ): obj is Exclude<T, false | null | undefined | 0 | '' | void> {
   return !!obj;
 }
+
+
+export class UserError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "UserError";
+  }
+}

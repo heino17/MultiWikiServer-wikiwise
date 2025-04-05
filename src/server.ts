@@ -1,6 +1,6 @@
-import "./StateObject"; // <- load this first so it waits for streamer to be defined
-import "./streamer";
 import "./routes/router";
+import "./StateObject"; 
+import "./streamer";
 import "./global";
 import * as opaque from "@serenity-kit/opaque";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
