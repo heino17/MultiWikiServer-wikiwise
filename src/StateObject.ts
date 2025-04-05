@@ -8,7 +8,7 @@ import { AuthUser } from './routes/services/sessions';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { Types } from '@prisma/client/runtime/library';
 import { DataChecks } from './utils';
-import { setupDevServer } from './commands/mws-listen';
+import { setupDevServer } from "./setupDevServer";
 import { Commander } from './commands';
 import { PasswordService } from './routes/services/PasswordService';
 

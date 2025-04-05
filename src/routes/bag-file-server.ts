@@ -224,7 +224,7 @@ export class TiddlerServer extends TiddlerStore {
     if (!recipe_name || !recipeTiddlers) {
       return state.sendEmpty(404);
     }
-    const template = readFileSync("tiddlywiki5.html", "utf8");
+    const template = readFileSync(resolve(this.state.config.wikiPath, "tiddlywiki5.html"), "utf8");
     const hash = createHash('md5');
     // Put everything into the hash that could change and invalidate the data that
     // the browser already stored. The headers the data and the encoding.

@@ -1,5 +1,5 @@
 import "./routes/router";
-import "./StateObject"; 
+import "./StateObject";
 import "./streamer";
 import "./global";
 import * as opaque from "@serenity-kit/opaque";
@@ -10,6 +10,7 @@ import { bootTiddlyWiki } from "./tiddlywiki";
 import { Commander } from "./commands";
 import { ListenerBase } from "./commands/mws-listen";
 import { createPasswordService } from "./routes/services/PasswordService";
+import { resolve } from "node:path";
 
 export * from "./routes/services/sessions";
 
@@ -29,10 +30,14 @@ export interface MWSConfig {
   }[]
   /** Called and awaited by the mws-listen command. */
   onListenersCreated?: (listeners: ListenerBase[]) => Promise<void>
-  /** If true, enable the dev server for the react client, otherwise it will just serve the files that are already built. */
-  enableDevServer?: boolean
+  /** 
+   * Enables the dev configuration of the server.
+   * The string is the absolute path to the dev repo. 
+   * This somewhat clunky solution allows us to run the dev configuration using basically the same setup.
+   */
+  enableDevServer?: string
   /** The key file for the password encryption. If this key changes, all passwords will be invalid and need to be changed. */
-  passwordMasterKey: string
+  passwordMasterKeyFile: string
   /** MWS site configuration */
   config: MWSConfigConfig
   /** 
@@ -94,21 +99,21 @@ export default async function startServer(config: MWSConfig) {
   // await lazy-loaded or async models
   await opaque.ready;
 
-  if (!config.passwordMasterKey) {
+  if (!config.passwordMasterKeyFile) {
     throw new Error("passwordMasterKey is required");
   }
 
-  if (config.passwordMasterKey && !existsSync(config.passwordMasterKey)) {
-    writeFileSync(config.passwordMasterKey, opaque.server.createSetup());
-    console.log("Password master key created at", config.passwordMasterKey);
+  if (config.passwordMasterKeyFile && !existsSync(config.passwordMasterKeyFile)) {
+    writeFileSync(config.passwordMasterKeyFile, opaque.server.createSetup());
+    console.log("Password master key created at", config.passwordMasterKeyFile);
   }
+
+  const passwordMasterKey = readFileSync(config.passwordMasterKeyFile, "utf8").trim();
 
   const commander = new Commander(
     config,
     await bootTiddlyWiki(config.config.wikiPath),
-    await createPasswordService(
-      readFileSync(config.passwordMasterKey, "utf8").trim()
-    )
+    await createPasswordService(passwordMasterKey)
   );
 
   await commander.init();

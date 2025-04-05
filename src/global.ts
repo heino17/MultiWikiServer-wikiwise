@@ -5,6 +5,9 @@ import type { Prisma } from "@prisma/client";
 import type { ZodAssert } from "./utils";
 import { Tiddler, Wiki } from "tiddlywiki";
 import { Commander } from "./commands";
+import { createRequire } from "node:module";
+import { dirname, resolve } from "node:path";
+
 
 declare global {
   type PrismaTxnClient = Omit<Commander["engine"], "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">

@@ -19,6 +19,7 @@ import { PasswordService } from "../routes/services/PasswordService";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { ITXClientDenyList } from "@prisma/client/runtime/library";
 import { TW } from "tiddlywiki";
+import { dist_resolve } from "../utils";
 
 export interface $TW {
   utils: any;
@@ -210,7 +211,7 @@ export class Commander {
     }]).then(e => e[0]?.rows[0]?.count);
 
     if (tables === 0) {
-      await this.libsql.executeMultiple(readFileSync("./prisma/schema.prisma.sql", "utf8"));
+      await this.libsql.executeMultiple(readFileSync(dist_resolve("../prisma/schema.prisma.sql"), "utf8"));
     }
 
     const users = await this.engine.users.count();

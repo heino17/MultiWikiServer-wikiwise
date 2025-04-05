@@ -2,6 +2,7 @@ import { resolve } from "path";
 import { CommandInfo, Commander } from ".";
 import { TiddlerStore } from "../routes/TiddlerStore";
 import { SiteConfig } from "../routes/router";
+import { TiddlerFields } from "../routes/services/attachments";
 
 export const info: CommandInfo = {
 	name: "mws-load-tiddlers",
@@ -27,6 +28,7 @@ export class Command {
 		await this.commander.$transaction(async (prisma) => {
 			const store = new TiddlerStore(this.commander, prisma);
 			var tiddlersFromPath = this.$tw.loadTiddlersFromPath(this.tiddlersPath);
+			//@ts-ignore
 			await store.saveTiddlersFromPath(tiddlersFromPath, this.bagName);
 		});
 		return null;

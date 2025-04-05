@@ -10,6 +10,7 @@ Command to create and load a bag for the specified core editions
 \*/
 
 
+import { resolve } from "node:path";
 import { Commander, CommandInfo } from ".";
 
 const { writeFileSync } = require("fs");
@@ -46,8 +47,9 @@ export class Command {
       }
     });
 
-    writeFileSync("tiddlywiki5.html", result);
+    const filepath = resolve(this.commander.wikiPath, "tiddlywiki5.html")
+
+    writeFileSync(filepath, result);
   }
 };
 
-exports.Command = Command;

@@ -5,11 +5,9 @@ import { createHash } from "node:crypto";
 import * as zlib from "node:zlib";
 import { ok } from "node:assert";
 import { promisify } from "node:util";
-import { Router, SiteConfig } from "../routes/router";
-import { mkdirSync } from "node:fs";
-import * as fs from "node:fs";
+import { SiteConfig } from "../routes/router";
 import * as path from "node:path";
-import sjcl from "sjcl";
+import { createRequire } from "node:module";
 /**
 Options include:
 - `cbPartStart(headers,name,filename)` - invoked when a file starts being received
@@ -383,4 +381,17 @@ export class UserError extends Error {
     super(message);
     this.name = "UserError";
   }
+}
+/** 
+ * This returns the resolved path relative to the executing code file, 
+ * however it uses path.resolve, not require.resolve. 
+ */
+
+export function dist_resolve(filepath: string) {
+  const filename = typeof module === "undefined" ? new URL(import.meta.url).pathname : module.filename;
+  return path.resolve(path.dirname(filename), filepath);
+}
+export function dist_require_resolve(filepath: string) {
+  const filename = typeof module === "undefined" ? new URL(import.meta.url).pathname : module.filename;
+  return createRequire(filename).resolve(filepath);
 }

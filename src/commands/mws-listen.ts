@@ -7,71 +7,7 @@ import * as http2 from "node:http2";
 import { Router } from "../routes/router";
 import { MWSConfig } from "../server";
 import { Streamer } from "../streamer";
-import { request } from "http";
-import * as esbuild from "esbuild"
-import { StateObject } from "../StateObject";
-
-const servedir = 'react-user-mgmt/public';
-const fallback = 'react-user-mgmt/public/index.html';
-
-
-export async function setupDevServer<T extends StateObject>(enableDevServer: boolean) {
-
-  if (!enableDevServer) return async function sendProdServer(state: T) {
-    // use sendFile directly instead of having the dev server send it
-    return state.sendFile(200, {}, {
-      root: servedir,
-      reqpath: state.url === "/" ? "/index.html" : state.url,
-      on404: () => state.sendFile(200, {}, { reqpath: "/index.html", root: servedir, })
-    });
-
-  };
-
-  let ctx = await esbuild.context({
-    entryPoints: ['react-user-mgmt/src/main.tsx'],
-    bundle: true,
-    target: 'es2020',
-    platform: 'browser',
-    jsx: 'automatic',
-    outdir: 'react-user-mgmt/public',
-    minify: true,
-    sourcemap: true,
-  })
-
-  const { port } = await ctx.serve({
-    servedir: 'react-user-mgmt/public',
-    fallback: 'react-user-mgmt/public/index.html',
-  });
-
-  return async function sendDevServer(state: T) {
-    const proxyRes = await new Promise<import("http").IncomingMessage>((resolve, reject) => {
-      const headers = { ...state.headers };
-      delete headers[":method"];
-      delete headers[":path"];
-      delete headers[":authority"];
-      delete headers[":scheme"];
-      headers.host = "localhost";
-      const proxyReq = request({
-        hostname: "localhost",
-        port: port,
-        path: state.url,
-        method: state.method,
-        headers,
-      }, resolve);
-      state.reader.pipe(proxyReq, { end: true });
-    });
-
-    const { statusCode, headers } = proxyRes;
-    if (statusCode === 404 || !statusCode) {
-      proxyRes.resume();
-      return state.sendEmpty(404, { 'Content-Type': 'text/html' });
-    } else {
-      return state.sendStream(statusCode as number, headers, proxyRes);
-    }
-
-  }
-}
-
+import { createRequire } from 'node:module';
 
 
 export class ListenerBase {
@@ -169,7 +105,7 @@ export class Command {
 
       const router = await Router.makeRouter(
         this.commander,
-        this.commander.config.enableDevServer ?? false
+        this.commander.config.enableDevServer
       ).catch(e => {
         console.log(e.stack);
         throw "Router failed to load";

@@ -5,7 +5,7 @@ import * as z from "zod";
 import { createStrictAwaitProxy } from "../utils";
 import { Route, rootRoute, RouteOptAny, RouteMatch, } from "../utils";
 import { MWSConfigConfig } from "../server";
-import { setupDevServer } from "../commands/mws-listen";
+import { setupDevServer } from "../setupDevServer";
 import { Commander } from "../commands";
 
 export { RouteMatch, Route, rootRoute };
@@ -51,7 +51,7 @@ export class Router {
 
   static async makeRouter(
     commander: Commander,
-    enableDevServer: boolean,
+    enableDevServer: string | undefined,
   ) {
 
     const sendDevServer = await setupDevServer(enableDevServer);

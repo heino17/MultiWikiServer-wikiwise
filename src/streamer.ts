@@ -154,6 +154,9 @@ export class Streamer {
   });
 
   sendEmpty(status: number, headers: OutgoingHttpHeaders = {}): typeof STREAM_ENDED {
+    if (process.env.DEBUG?.split(",").includes("send")) {
+      console.error("sendEmpty", status, headers);
+    }
     this.checkHeadersSentBy(true);
     this.res.writeHead(status, headers);
     this.res.end();
@@ -161,6 +164,9 @@ export class Streamer {
   }
 
   sendString(status: number, headers: OutgoingHttpHeaders, data: string, encoding: NodeJS.BufferEncoding): typeof STREAM_ENDED {
+    if (process.env.DEBUG?.split(",").includes("send")) {
+      console.error("sendString", status, headers);
+    }
     this.checkHeadersSentBy(true);
     headers['content-length'] = Buffer.byteLength(data, encoding);
     this.res.writeHead(status, headers);
@@ -174,6 +180,9 @@ export class Streamer {
   }
 
   sendBuffer(status: number, headers: OutgoingHttpHeaders, data: Buffer): typeof STREAM_ENDED {
+    if (process.env.DEBUG?.split(",").includes("send")) {
+      console.error("sendBuffer", status, headers);
+    }
     this.checkHeadersSentBy(true);
     headers['content-length'] = data.length;
     this.res.writeHead(status, headers);
@@ -185,6 +194,9 @@ export class Streamer {
   }
   /** If this is a HEAD request, the stream will be ignored AND LEFT OPEN. */
   sendStream(status: number, headers: OutgoingHttpHeaders, stream: Readable): typeof STREAM_ENDED {
+    if (process.env.DEBUG?.split(",").includes("send")) {
+      console.error("sendStream", status, headers);
+    }
     this.checkHeadersSentBy(true);
     this.res.writeHead(status, headers);
     if (this.method === "HEAD")
@@ -241,11 +253,16 @@ export class Streamer {
     on404?: () => Promise<typeof STREAM_ENDED>;
     onDir?: () => Promise<typeof STREAM_ENDED>;
   }) {
+
     // the headers and status have to be set on the response object before piping the stream
     this.res.statusCode = status;
     this.toHeadersMap(headers).forEach((v, k) => { this.res.appendHeader(k, v); });
 
     const { root, reqpath, offset, length } = options;
+
+    if (process.env.DEBUG?.split(",").includes("send")) {
+      console.error("sendFile", root, reqpath, status, headers);
+    }
 
     const stream = send(this.req, reqpath, {
       dotfiles: "ignore",
@@ -314,6 +331,9 @@ export class Streamer {
     this.res.setHeader(name, value);
   }
   writeHead(status: number, headers: OutgoingHttpHeaders = {}): void {
+    if (process.env.DEBUG?.split(",").includes("send")) {
+      console.error("writeHead", status, headers);
+    }
     this.checkHeadersSentBy(true);
     this.res.writeHead(status, headers);
   }
