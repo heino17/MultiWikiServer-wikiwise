@@ -12,14 +12,13 @@ class TiddlerRouter {
   constructor(root: rootRoute) {
     this.routes.forEach(({ route, handler }) => { root.defineRoute(route, handler) });
   }
-  defineRoute(route: {}, handler: (state: StateObject) => Promise<any>) {
+  defineRoute: rootRoute["defineRoute"] = (route, handler): any => {
     this.routes.push({ route, handler });
   };
   handleGetRecipeStatus = this.defineRoute({
     method: ["GET"],
     path: /^\/recipes\/([^\/]+)\/status$/,
     pathParams: ["recipe_name"],
-    useACL: {},
   }, async state => {
     zodAssert.pathParams(state, z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
@@ -49,7 +48,6 @@ class TiddlerRouter {
     method: ["GET"],
     path: /^\/recipes\/([^\/]+)\/tiddlers\/(.+)$/,
     pathParams: ["recipe_name", "title"],
-    useACL: {},
   }, async state => {
     zodAssert.pathParams(state, z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
@@ -75,7 +73,6 @@ class TiddlerRouter {
     method: ["GET"],
     path: /^\/recipes\/([^\/]+)\/tiddlers.json$/,
     pathParams: ["recipe_name"],
-    useACL: {},
   }, async state => {
 
     zodAssert.pathParams(state, z => ({
@@ -107,7 +104,6 @@ class TiddlerRouter {
     path: /^\/recipes\/([^\/]+)\/tiddlers\/(.+)$/,
     pathParams: ["recipe_name", "title"],
     bodyFormat: "json",
-    useACL: {},
   }, async state => {
 
     zodAssert.pathParams(state, z => ({
@@ -136,12 +132,11 @@ class TiddlerRouter {
 
   })
 
-  handleDeleteRecipeTiddler = this.defineRoute({
+  handleDeleteBagTiddler = this.defineRoute({
     method: ["DELETE"],
     path: /^\/bags\/([^\/]+)\/tiddlers\/(.+)$/,
     pathParams: ["bag_name", "title"],
     bodyFormat: "ignore",
-    useACL: {},
   }, async state => {
 
     zodAssert.pathParams(state, z => ({
@@ -172,7 +167,6 @@ class TiddlerRouter {
     method: ["GET"],
     path: /^\/bags\/([^\/]+)\/tiddlers\/(.+)$/,
     pathParams: ["bag_name", "title"],
-    useACL: {},
   }, async state => {
     zodAssert.pathParams(state, z => ({
       bag_name: z.prismaField("Bags", "bag_name", "string"),
@@ -196,7 +190,6 @@ class TiddlerRouter {
     path: /^\/bags\/([^\/]+)\/tiddlers\/$/,
     pathParams: ["bag_name"],
     bodyFormat: "stream",
-    useACL: { csrfDisable: true },
   }, async state => {
     zodAssert.pathParams(state, z => ({
       bag_name: z.prismaField("Bags", "bag_name", "string"),
@@ -221,7 +214,6 @@ class TiddlerRouter {
     method: ["GET"],
     path: /^\/bags\/([^\/]+)\/tiddlers\/([^\/]+)\/blob$/,
     pathParams: ["bag_name", "title"],
-    useACL: {},
   }, async state => {
     zodAssert.pathParams(state, z => ({
       bag_name: z.prismaField("Bags", "bag_name", "string"),
@@ -247,47 +239,10 @@ class TiddlerRouter {
   });
 
 
-  SYSTEM_FILE_TITLE_PREFIX = "$:/plugins/tiddlywiki/multiwikiserver/system-files/";
-  // the system wiki will hopefully be replaced by a bag in the database
-  handleGetSystemTiddler = this.defineRoute({
-    method: ["GET"],
-    path: /^\/\.system\/(.+)$/,
-    pathParams: ["filename"],
-    useACL: {},
-  }, async state => {
-    zodAssert.pathParams(state, z => ({
-      filename: z.prismaField("Tiddlers", "title", "string"),
-    }));
-
-
-    // Get the  parameters
-    const filename = state.pathParams.filename,
-      title = this.SYSTEM_FILE_TITLE_PREFIX + filename,
-      tiddler = state.commander.$tw.wiki.getTiddler(title),
-      isSystemFile = tiddler && tiddler.hasTag("$:/tags/MWS/SystemFile"),
-      isSystemFileWikified = tiddler && tiddler.hasTag("$:/tags/MWS/SystemFileWikified");
-
-    if (tiddler && (isSystemFile || isSystemFileWikified)) {
-      let text = tiddler.fields.text || "";
-      const sysFileType = tiddler.fields["system-file-type"];
-      const type = typeof sysFileType === "string" && sysFileType || tiddler.fields.type || "text/plain",
-        encoding = (state.config.contentTypeInfo[type] || { encoding: "utf8" }).encoding;
-      if (isSystemFileWikified) {
-        text = state.commander.$tw.wiki.renderTiddler("text/plain", title);
-      }
-      return state.sendResponse(200, {
-        "content-type": type
-      }, text, encoding);
-    } else {
-      return state.sendEmpty(404);
-    }
-  });
-
   handleGetWikiIndex = this.defineRoute({
     method: ["GET", "HEAD"],
     path: /^\/wiki\/([^\/]+)$/,
     pathParams: ["recipe_name"],
-    useACL: {},
   }, async state => {
     zodAssert.pathParams(state, z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),

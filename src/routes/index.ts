@@ -16,7 +16,6 @@ export default async function RootRoute(root: rootRoute) {
     method: ["POST"],
     path: /^\/prisma$/,
     bodyFormat: "json",
-    useACL: {},
   }, async state => {
     ZodAssert.data(state, z => z.object({
       table: z.string(),
@@ -64,7 +63,6 @@ async function importEsbuild(root: rootRoute) {
     path: /^\/(.*)/,
     pathParams: ['reqpath'],
     bodyFormat: "stream",
-    useACL: {},
   }, async state => {
     await state.sendDevServer();
   });

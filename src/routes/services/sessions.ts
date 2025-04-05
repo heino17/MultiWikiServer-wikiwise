@@ -29,7 +29,6 @@ export class SessionManager extends BaseManager {
       path: /^\/(login\/1|login\/2|logout)$/,
       pathParams: ["login"],
       bodyFormat: "json",
-      useACL: {},
     }, async state => {
       return await state.$transaction(async prisma => {
         const session = new SessionManager(state, prisma);

@@ -12,7 +12,6 @@ function isKeyOf<T extends Record<string, any>>(obj: T, key: string | number | s
 
 
 export const ManagerRoutes = (root: rootRoute) => root.defineRoute({
-  useACL: {},
   method: ["POST", "OPTIONS"],
   path: /^\/manager\/(.*)/,
   pathParams: ["action"],

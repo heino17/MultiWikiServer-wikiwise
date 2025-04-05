@@ -13,8 +13,7 @@ import { Commander } from './commands';
 import { PasswordService } from './routes/services/PasswordService';
 
 export interface AuthStateRouteACL {
-  /** Every level in the route path must have this disabled for it to be disabled */
-  csrfDisable?: boolean;
+
 }
 
 

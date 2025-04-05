@@ -6,7 +6,6 @@ import { Tiddler, TiddlyWiki, TW } from "tiddlywiki";
 export function TWRoutes(parent: rootRoute) {
   const wikiRouter = new TWRouter();
   parent.defineRoute({
-    useACL: {},
     method: ["OPTIONS", "GET", "HEAD", "POST", "PUT"],
     bodyFormat: "stream",
     path: /^\/mws(\/|$)/,

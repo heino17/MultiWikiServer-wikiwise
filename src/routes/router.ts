@@ -57,7 +57,6 @@ export class Router {
     const sendDevServer = await setupDevServer(enableDevServer);
 
     const rootRoute = defineRoute(ROOT_ROUTE, {
-      useACL: { csrfDisable: true },
       method: AllowedMethods,
       path: /^/,
       denyFinal: true,
@@ -97,6 +96,13 @@ export class Router {
 
   async handle(streamer: Streamer) {
 
+    if (!this.csrfDisable
+      && ["POST", "PUT", "DELETE"].includes(streamer.method)
+      && streamer.headers["x-requested-with"] !== "TiddlyWiki"
+    )
+      throw streamer.sendString(403, { "x-reason": "x-requested-with missing" },
+        `'X-Requested-With' header required to login to '${this.servername}'`, "utf8");
+
     const authUser = await this.SessionManager.parseIncomingRequest(streamer, this);
 
     /** This should always have a length of at least 1 because of the root route. */
@@ -120,16 +126,6 @@ export class Router {
         this.commander,
       ) as statetype
     );
-
-    routePath.forEach(match => {
-      if (!this.csrfDisable
-        && !match.route.useACL.csrfDisable
-        && ["POST", "PUT", "DELETE"].includes(streamer.method)
-        && state.headers["x-requested-with"] !== "TiddlyWiki"
-      )
-        throw streamer.sendString(403, { "x-reason": "x-requested-with missing" },
-          `'X-Requested-With' header required to login to '${this.servername}'`, "utf8");
-    })
 
 
     const method = streamer.method;

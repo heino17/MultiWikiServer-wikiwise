@@ -35,8 +35,7 @@ type DetermineRouteOptions<
 type ParentTuple = [BodyFormat | undefined, AllowedMethod[], any, string[][]];
 
 interface RouteOptBase<B extends BodyFormat, M extends AllowedMethod[], PA extends string[]> {
-  /** The ACL options for this route. It is required to simplify updates, but could be empty by default */
-  useACL: AuthStateRouteACL;
+
   /** 
    * Regex to test the pathname on. It must start with `^`. If this is a child route, 
    * it will be tested against the remaining portion of the parent route.  
@@ -82,7 +81,7 @@ export interface RouteDef<P extends ParentTuple, PA extends string[]> extends Ro
    */
   defineRoute: <R, PA extends string[],
     // T extends DetermineRouteOptions<P, [...PA]>
-    T extends P extends [BodyFormat, AllowedMethod[], any, any]
+    T extends (P extends [BodyFormat, AllowedMethod[], any, any]
     ?
     RouteOptBase<P[0], P[1], [...PA]> & { bodyFormat?: undefined; }
     :
@@ -90,8 +89,8 @@ export interface RouteDef<P extends ParentTuple, PA extends string[]> extends Ro
     ?
     | { [K in BodyFormat]: RouteOptBase<K, P[1], [...PA]> & { bodyFormat: K; }; }[BodyFormat]
     | RouteOptBase<BodyFormat, P[1], [...PA]> & { bodyFormat?: undefined; }
-    : never
-  >(
+    : never) 
+  > (
     route: T,
     handler: (
       /** 
@@ -150,7 +149,6 @@ type t2 = z.infer<t1>;
 function testroute(root: rootRoute) {
 
   const test1 = root.defineRoute({
-    useACL: {},
     path: /^test/,
     method: ["GET", "POST"],
     bodyFormat: undefined,
@@ -159,7 +157,6 @@ function testroute(root: rootRoute) {
   });
 
   const test2_2 = test1.defineRoute({
-    useACL: {},
     path: /^test/,
     bodyFormat: "www-form-urlencoded",
     method: ["POST"],
@@ -170,7 +167,6 @@ function testroute(root: rootRoute) {
   });
 
   const test2 = test1.defineRoute({
-    useACL: {},
     path: /^test/,
     bodyFormat: "string",
     method: ["GET"],
@@ -188,7 +184,6 @@ function testroute(root: rootRoute) {
   });
 
   const test3 = test2.defineRoute({
-    useACL: {},
     path: /^test/,
     method: ["GET"],
     // // @ts-expect-error because it's already been defined by the parent
@@ -206,7 +201,6 @@ function testroute(root: rootRoute) {
   })
 
   const test2post = test1.defineRoute({
-    useACL: {},
     path: /^test/,
     bodyFormat: "string",
     method: ["POST"],
@@ -224,7 +218,6 @@ function testroute(root: rootRoute) {
   });
 
   const test3post = test2post.defineRoute({
-    useACL: {},
     path: /^test/,
     method: ["POST"],
     // // @ts-expect-error because it's already been defined by the parent
