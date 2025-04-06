@@ -5,36 +5,36 @@ import { Prisma, PrismaClient } from "@prisma/client";
 import { ManagerRoutes } from "./managers";
 import { TiddlerRouter } from "./managers/manager-tiddlers";
 
-
+declare global { const ENABLE_UNSAFE_PRISMA_ROUTE: any; }
 
 export default async function RootRoute(root: rootRoute) {
   // TiddlerServer.defineRoutes(root);
   TiddlerRouter.defineRoutes(root);
   ManagerRoutes(root);
-  console.log;
-  root.defineRoute({
-    method: ["POST"],
-    path: /^\/prisma$/,
-    bodyFormat: "json",
-  }, async state => {
-    ZodAssert.data(state, z => z.object({
-      table: z.string(),
-      action: z.string(),
-      arg: z.any(),
-    }));
-    return await state.$transaction(async prisma => {
-      // DEV: this just lets the client directly call the database. 
-      // TODO: it's just for dev purposes and will be removed later. 
-      // DANGER: it circumvents all security and can totally rewrite the ACL.
-      const p: any = prisma;
-      const table = p[state.data.table];
-      if (!table) throw new Error(`No such table`);
-      const fn = table[state.data.action];
-      if (!fn) throw new Error(`No such table or action`);
-      console.log(state.data.arg);
-      return state.sendJSON(200, await fn.call(table, state.data.arg));
+  if (typeof ENABLE_UNSAFE_PRISMA_ROUTE !== "undefined")
+    root.defineRoute({
+      method: ["POST"],
+      path: /^\/prisma$/,
+      bodyFormat: "json",
+    }, async state => {
+      ZodAssert.data(state, z => z.object({
+        table: z.string(),
+        action: z.string(),
+        arg: z.any(),
+      }));
+      return await state.$transaction(async prisma => {
+        // DEV: this just lets the client directly call the database. 
+        // TODO: it's just for dev purposes and will be removed later. 
+        // DANGER: it circumvents all security and can totally rewrite the ACL.
+        const p: any = prisma;
+        const table = p[state.data.table];
+        if (!table) throw new Error(`No such table`);
+        const fn = table[state.data.action];
+        if (!fn) throw new Error(`No such table or action`);
+        console.log(state.data.arg);
+        return state.sendJSON(200, await fn.call(table, state.data.arg));
+      });
     });
-  });
 
 
   await importEsbuild(root);

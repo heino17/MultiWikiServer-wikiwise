@@ -1,18 +1,26 @@
 {
-  "name": "tiddlywiki-multiwiki-server",
-  "version": "0.1.0",
-  "main": "index.js",
-  "bin": "mws.default.ts",
+  "name": "@tiddlywiki/mws",
+  "version": "0.0.2",
+  "type": "module",
+  "bin": "mws.bin.cjs",
+  "exports": {
+    "types": "./src/server.ts",
+    "require": "./dist/server.cjs",
+    "import": "./dist/server.js"
+  },
+  "files": [
+    "dist",
+    "src",
+    "prisma",
+    "react-user-mgmt",
+    "tiddlywiki-types",
+    "editions/mws-docs",
+    "plugins/client"
+  ],
   "engines": {
     "node": ">14"
   },
   "scripts": {
-    "start": "npx tsx mws.default.ts",
-    "start-mws": "exit 1 && tiddlywiki ./editions/multiwikiserver --mws-load-plugin-bags --build load-mws-demo-data --mws-listen",
-    "build:test-edition": "exit 1 && tiddlywiki ./editions/test --verbose --version --build index",
-    "test:multiwikiserver-edition": "exit 1 && tiddlywiki ./editions/multiwikiserver/ --build load-mws-demo-data --mws-listen --mws-test-server http://127.0.0.1:8080/ --quit",
-    "mws-add-user": "exit 1 && tiddlywiki ./editions/multiwikiserver --build load-mws-demo-data --mws-listen --build mws-add-user --quit",
-    "test": "exit 1 && npm run build:test-edition && npm run test:multiwikiserver-edition",
     "lint:fix": "exit 1 && eslint . --fix",
     "lint": "exit 1 && eslint .",
     "jsc": "tsc -p jsconfig.json --noEmit",
@@ -20,33 +28,36 @@
     "gen:sql": "prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script > prisma/schema.prisma.sql",
     "gen:client": "prisma generate",
     "prisma": "npm run gen:client && npm run gen:sql",
-    "prisma:studio": "DATABASE_URL=file:../editions/mws/store/database.sqlite prisma studio"
+    "prisma:studio": "DATABASE_URL=file:../editions/mws/store/database.sqlite prisma studio",
+    "start": "(npm run build && cd runtime-config && npm start)",
+    "build": "npm run tsc && tsup && npm pack",
+    "install": "prisma generate",
+    "setup": "(npm install && cd runtime-config && npm install)",
+    "test": "node test.cjs; node test.mjs;"
   },
   "dependencies": {
     "@libsql/client": "^0.8.1",
     "@prisma/adapter-libsql": "^6.4.1",
     "@prisma/client": "^6.4.0",
     "@serenity-kit/opaque": "^0.8.4",
-    "@types/better-sqlite3": "^7.6.12",
     "@types/mime-types": "^2.1.4",
     "@types/node": "^22.13.1",
     "@types/send": "^0.17.4",
     "@types/sjcl": "^1.0.34",
-    "@types/tiddlywiki": "./tiddlywiki-types",
-    "better-sqlite3": "^11.8.1",
-    "mime-types": "^2.1.35",
-    "node-sqlite3-wasm": "^0.8.35",
     "prisma": "^6.4.0",
-    "send": "^1.1.0",
-    "sjcl": "^1.0.8",
-    "tiddlywiki": "^5.3.6",
-    "ts-zod-decorators": "^1.7.1",
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.3",
-    "zod": "^3.24.2",
-    "zod-prisma-types": "^3.2.4"
+    "zod": "^3.24.2"
   },
   "devDependencies": {
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.25.0",
+    "mime-types": "^2.1.35",
+    "send": "^1.1.0",
+    "sjcl": "^1.0.8",
+    "tiddlywiki": "^5.1.22",
+    "tsup": "^8.4.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  },
+  "peerDependencies": {
+    "tiddlywiki": "^5.1.22"
   }
 }

@@ -8,10 +8,10 @@ editions/mws/**
 /tiddlywiki5.html
 # Ignore this file so we can put our own start server command in it
 /mws.run.ts
-# Ignore this folder so we can put runtime config stuff in it
-/runtime-config
 # ignore for backward compatibility for now
 localhost.*
 *.key
-
+/dist
 TiddlyWiki5
+test5213tw
+*.tgz

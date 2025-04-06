@@ -1,9 +1,8 @@
-import * as esbuild from "esbuild";
+
 import { request } from "http";
 import { resolve } from "path/posix";
 import { StateObject } from "./StateObject";
 import { dist_resolve } from "./utils";
-// import { servedir } from "./commands/mws-listen";
 
 
 
@@ -23,6 +22,8 @@ export async function setupDevServer<T extends StateObject>(enableDevServer: str
   };
 
   {
+    const esbuild = await import("esbuild");
+
     const rootdir = resolve(enableDevServer, 'react-user-mgmt');
 
     let ctx = await esbuild.context({

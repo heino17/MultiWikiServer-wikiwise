@@ -4,21 +4,28 @@ MultiWikiServer for TiddlyWiki.
 
 ### How to run
 
-- Clone the repo
-- `npm install`
+The directory name isn't important, but you run init inside it.
+
+- `mkdir mws && cd mws`
+- `npm init @tiddlywiki/mws@latest`
 - `npm start`
 
-By default, the server runs on http://localhost:5000. You can customize this by copying the else block into `mws.run.ts`. This will allow you to `git pull` updates while still preserving your configuration.
+You can customize the defaults by modifying `mws.run.mjs`.
+
+- the server runs on http://localhost:5000. It does not use HTTPS by default, but you can enable it by specifying a key and cert. 
+- A `localpass.key` file is created to hold the password keyfile. If this file changes, all passwords will need to be reset. 
+- The data folder is set at `config.wikiPath` to `wiki` by default. 
+- The first user that gets created has the username `admin` and password `1234`. You should change this. 
 
 ### Updates
 
-Before running git pull, here's how to prepare to test updated code while hopefully keeping your current content. 
+This is the process for updating to a new version of MWS.
 
-- Run `npm start -- --mws-save-archive archive-folder` to export your content from the old database. 
+- Run `npm start -- --mws-save-archive archive-folder` to export your content from the old database.
 - Move your `store` folder out of the data folder to a safe backup folder.
-- Pull the latest commits from Github.
-- Run `npm start -- --mws-load-archive archive-folder` to import your content into the new database. 
-- Copy the `files` folder from your old `store` folder into your new `store` folder.
+- `npm install @tiddlywiki/mws@latest`
+- Run `npm start -- --mws-load-archive archive-folder` to import your content into the new database.
+- Copy the `files` folder from your old `wiki/store` folder into your new `wiki/store` folder.
 
 ### The Server
 
@@ -47,5 +54,4 @@ Before running git pull, here's how to prepare to test updated code while hopefu
 - Compiling filters to SQL to optimize memory on both the client and server.
 - Support for other database and storage systems. Most likely MariaDB and Postgres.
 - Additional recipe strategies with features like prefixed bags and namespaces.
-- Server rendering of pages, for a more wikipedia-like experience. 
-
+- Server rendering of pages, for a more wikipedia-like experience.

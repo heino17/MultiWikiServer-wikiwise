@@ -1,0 +1,5 @@
+{
+  "name": "@tiddlywiki/create-mws",
+  "version": "0.0.4",
+  "bin": "create.js"
+}

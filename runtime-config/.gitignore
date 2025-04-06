@@ -1,0 +1,5 @@
+*
+!mws.default.mjs
+!package.json
+!.gitignore
+!localhost_cert.sh

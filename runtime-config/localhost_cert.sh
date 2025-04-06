@@ -17,5 +17,4 @@ DNS.2               = *.desktop
 EOF
 
 openssl req -new -nodes -out localhost.csr -config localhost.cnf
-
 openssl x509 -req -in localhost.csr -days 365 -out localhost.crt -signkey localhost.key -extensions req_ext -extfile localhost.cnf

@@ -1,0 +1,10 @@
+{
+  "name": "runtime-config",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node --enable-source-maps mws.default.mjs"
+  },
+  "dependencies": {
+    "@tiddlywiki/mws": "file:.."
+  }
+}

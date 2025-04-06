@@ -4,8 +4,8 @@ datasource db {
 }
 
 generator client {
+  // prisma 7 will remove the need for native node files, everything will be js and wasm
   provider        = "prisma-client-js"
-  binaryTargets   = ["native"]
   previewFeatures = ["relationJoins", "driverAdapters"]
 }
 
@@ -149,12 +149,12 @@ model Users {
 }
 
 model Sessions {
-  session_id          String   @id
-  created_at          DateTime @default(now())
-  last_accessed       DateTime
-  session_key         String?
-  user_id             Int
-  user                Users    @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  session_id    String   @id
+  created_at    DateTime @default(now())
+  last_accessed DateTime
+  session_key   String?
+  user_id       Int
+  user          Users    @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("sessions")
 }
