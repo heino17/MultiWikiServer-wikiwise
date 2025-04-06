@@ -8,6 +8,7 @@ import { promisify } from "node:util";
 import { SiteConfig } from "../routes/router";
 import * as path from "node:path";
 import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 /**
 Options include:
 - `cbPartStart(headers,name,filename)` - invoked when a file starts being received
@@ -388,10 +389,10 @@ export class UserError extends Error {
  */
 
 export function dist_resolve(filepath: string) {
-  const filename = typeof module === "undefined" ? new URL(import.meta.url).pathname : module.filename;
+  const filename = typeof module === "undefined" ? fileURLToPath(import.meta.url) : module.filename;
   return path.resolve(path.dirname(filename), filepath);
 }
 export function dist_require_resolve(filepath: string) {
-  const filename = typeof module === "undefined" ? new URL(import.meta.url).pathname : module.filename;
+  const filename = typeof module === "undefined" ? fileURLToPath(import.meta.url) : module.filename;
   return createRequire(filename).resolve(filepath);
 }
