@@ -179,15 +179,21 @@ class Archiver2 extends Archiver {
 
 	async loadArchive(archivePath: string) {
 		await this.commander.$transaction(async (prisma) => {
-			// load roles from roles/roles.json
-			const roles = JSON.parse(await fsp.readFile(resolve(archivePath, "roles", "roles.json"), "utf8"));
+			const roles = JSON.parse(await fsp.readFile(resolve(archivePath, "roles.json"), "utf8"));
 			await prisma.roles.createMany({ data: roles });
-			// load users from users/{user_id}.json
-			const userFiles = await fsp.readdir(resolve(archivePath, "users"));
-			const users = await Promise.all(userFiles.map(async (userFile) => {
-				return JSON.parse(await fsp.readFile(resolve(archivePath, "users", userFile), "utf8"));
-			}));
-			await prisma.users.createMany({ data: users });
+			const users: Awaited<ReturnType<SaveArchiveCommand["getUsers"]>> = JSON.parse(await fsp.readFile(resolve(archivePath, "users.json"), "utf8"));
+			await Promise.all(users.map(e => prisma.users.create({
+				data: ({
+					user_id: e.user_id,
+					email: e.email,
+					password: e.password,
+					username: e.username,
+					created_at: e.created_at,
+					last_login: e.last_login,
+					roles: ({ connect: e.roles.map(e => ({ role_id: e.role_id })) }),
+				} satisfies Prisma.UsersUncheckedCreateInput)
+			})));
+
 			// Iterate the bags
 			const bagNames = await fsp.readdir(resolve(archivePath, "bags"));
 			for (const bagFilename of bagNames) {
