@@ -437,12 +437,12 @@ class MultiWikiClientAdaptor {
 		var self = this;
 		if(this.isReadOnly) { return callback(null); }
 		// If we don't have a bag it means that the tiddler hasn't been seen by the server, so we don't need to delete it
-		var bag = this.getTiddlerBag(title);
-		if(!bag) { return callback(null, options.tiddlerInfo.adaptorInfo); }
+		// var bag = this.getTiddlerBag(title);
+		// if(!bag) { return callback(null, options.tiddlerInfo.adaptorInfo); }
 		self.outstandingRequests[title] = { type: "DELETE" };
 		// Issue HTTP request to delete the tiddler
 		const [ok, err, result] = await this.httpRequest({
-			url: this.host + "bags/" + encodeURIComponent(bag) + "/tiddlers/" + encodeURIComponent(title),
+			url: this.host + "recipes/" + encodeURIComponent(this.recipe) + "/tiddlers/" + encodeURIComponent(title),
 			type: "DELETE",
 		});
 		delete self.outstandingRequests[title];
