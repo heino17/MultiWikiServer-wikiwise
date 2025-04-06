@@ -4,10 +4,8 @@ MultiWikiServer for TiddlyWiki.
 
 ### How to run
 
-The directory name isn't important, but you run init inside it.
-
-- `mkdir mws && cd mws`
-- `npm init @tiddlywiki/mws@latest`
+- `npm init @tiddlywiki/mws@latest mws`
+- `cd mws`
 - `npm start`
 
 You can customize the defaults by modifying `mws.run.mjs`.

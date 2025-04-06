@@ -1,7 +1,26 @@
 #!/usr/bin/env node
+//@ts-check
 const fs = require("fs");
 const { execSync } = require("child_process");
-if(fs.existsSync("package.json")) fs.writeFileSync("package.json", `
+const path = require("path");
+if(!process.argv[2]) {
+  console.error("Please provide a folder name.");
+  console.error("Usage: npm init @tiddlywiki/mws[@latest] <folder-name>");
+  process.exit(1);
+}
+const folder = path.resolve(process.cwd(), process.argv[2]);
+
+if(fs.existsSync(folder)) {
+  console.error(`Folder ${folder} already exists. Please choose a different name.`);
+  process.exit(1);
+}
+
+console.log(`${folder}`);
+fs.mkdirSync(folder, { recursive: true });
+
+
+
+printFile("package.json", `
 {
   "name": "mws-wiki-instance",
   "version": "1.0.0",
@@ -11,7 +30,7 @@ if(fs.existsSync("package.json")) fs.writeFileSync("package.json", `
   }
 }
 `.trimStart());
-if(!fs.existsSync("mws.run.mjs")) fs.writeFileSync("mws.run.mjs", `
+printFile("mws.run.mjs", `
 //@ts-check
 import startServer from "@tiddlywiki/mws";
 import { resolve } from "node:path";
@@ -37,7 +56,7 @@ startServer({
 }).catch(console.log);
 `);
 
-if(!fs.existsSync("localhost_certs.sh")) fs.writeFileSync("localhost_certs.sh", `
+printFile("localhost_certs.sh", `
 
 cat > localhost.cnf <<EOF
 [ req ]
@@ -60,5 +79,16 @@ openssl req -new -nodes -out localhost.csr -config localhost.cnf
 openssl x509 -req -in localhost.csr -days 365 -out localhost.crt -signkey localhost.key -extensions req_ext -extfile localhost.cnf
 
 `);
-console.log("Running npm install...")
-execSync("npm install tiddlywiki@latest @tiddlywiki/mws@latest");
+console.log("└─ Running npm install...")
+execSync("npm install --save-exact tiddlywiki@latest @tiddlywiki/mws@latest", { cwd: folder, stdio: "inherit" });
+
+function printFile(file, text) {
+  const abspath = path.resolve(folder, file);
+  if(fs.existsSync(abspath)) {
+    console.log(`File ${file} already exists. Skipping...`);
+    return;
+  }
+
+  console.log(`├─ ${file}`);
+  fs.writeFileSync(abspath, text);
+}
