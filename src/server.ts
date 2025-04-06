@@ -100,6 +100,8 @@ startServer({
  */
 export default async function startServer(config: MWSConfig) {
 
+  await opaque.ready;
+
   if (!["string", "number"].includes(typeof config.passwordMasterKeyFile)) {
     throw new Error("passwordMasterKeyFile must be a string or number");
   }
@@ -115,8 +117,6 @@ export default async function startServer(config: MWSConfig) {
   const passwordMasterKey = readFileSync(config.passwordMasterKeyFile, "utf8").trim();
 
   config.onPasswordKeyFileRead?.();
-
-  await opaque.ready;
 
   config.wikiPath = resolve(config.wikiPath);
 
