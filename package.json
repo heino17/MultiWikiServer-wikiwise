@@ -1,6 +1,6 @@
 {
   "name": "@tiddlywiki/mws",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "type": "module",
   "exports": {
     "types": "./src/server.ts",
@@ -30,7 +30,7 @@
     "prisma:studio": "DATABASE_URL=file:../editions/mws/store/database.sqlite prisma studio",
     "certs": "(cd runtime-config && bash localhost_certs.sh)",
     "start": "npm run build && node mws.dev.mjs",
-    "build": "npm run tsc && tsup && npm pack",
+    "build": "npm run tsc && tsup",
     "install": "prisma generate"
   },
   "dependencies": {

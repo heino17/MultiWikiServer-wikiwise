@@ -383,10 +383,11 @@ class MultiWikiClientAdaptor {
 				"Content-type": "application/json"
 			},
 			data: JSON.stringify(tiddler.getFieldStrings()),
+			responseType: "json",
 		});
 		delete self.outstandingRequests[title];
 		if(!ok) return callback(err);
-		const { headers } = result;
+		const { headers, data } = result;
 
 		//If Browser-Storage plugin is present, remove tiddler from local storage after successful sync to the server
 		if($tw.browserStorage && $tw.browserStorage.isEnabled()) {
@@ -394,7 +395,7 @@ class MultiWikiClientAdaptor {
 		}
 
 		// Save the details of the new revision of the tiddler
-		const revision = headers["x-revision-number"], bag_name = headers["x-bag-name"];
+		const revision = data.tiddler_id, bag_name = data.bag_name;
 		console.log(`Saved ${title} with revision ${revision} and bag ${bag_name}`);
 		// If there has been a more recent update from the server then enqueue a load of this tiddler
 		self.checkLastRecordedUpdate(title, revision);
@@ -447,8 +448,8 @@ class MultiWikiClientAdaptor {
 		});
 		delete self.outstandingRequests[title];
 		if(!ok) { return callback(err); }
-		const { headers } = result;
-		const revision = headers["x-revision-number"];
+		const { data } = result;
+		const revision = data.tiddler_id, bag_name = data.bag_name;
 		// If there has been a more recent update from the server then enqueue a load of this tiddler
 		self.checkLastRecordedUpdate(title, revision);
 		self.removeTiddlerInfo(title);

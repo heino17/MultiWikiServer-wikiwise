@@ -9,7 +9,7 @@ import { TiddlerServer } from "../bag-file-server";
 
 export const TiddlerKeyMap: BaseKeyMap<TiddlerRouter, true> = {
   handleCreateRecipeTiddler: true,
-  handleDeleteBagTiddler: true,
+  handleDeleteRecipeTiddler: true,
   handleGetBagTiddler: true,
   handleGetBagTiddlerBlob: true,
   handleGetRecipeStatus: true,
@@ -222,7 +222,7 @@ export class TiddlerRouter {
     });
 
 
-  handleDeleteBagTiddler = this.ZodRoute(
+  handleDeleteRecipeTiddler = this.ZodRoute(
     ["DELETE"],
     "/recipes/:recipe_name/tiddlers/:title",
     z => ({
