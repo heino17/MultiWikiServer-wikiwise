@@ -103,6 +103,11 @@ export class Command {
 
     this.execute = async () => {
 
+      this.commander.addCommandTokens([
+        "--mws-render-tiddlywiki5",
+        "--mws-command-separator",
+      ]);
+
       const router = await Router.makeRouter(
         this.commander,
         this.commander.config.enableDevServer

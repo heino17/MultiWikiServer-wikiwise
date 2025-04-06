@@ -164,9 +164,9 @@ export class Commander {
     this.create_mws_listen = (params: string[]) => {
       return new mws_listen.Command(params, this, listeners);
     }
-
-    this.wikiPath = path.resolve(config.config.wikiPath);
-    this.storePath = path.resolve(config.config.wikiPath, "store");
+    // this is already resolved to the cwd.
+    this.wikiPath = config.wikiPath;
+    this.storePath = path.resolve(this.wikiPath, "store");
     this.databasePath = path.resolve(this.storePath, "database.sqlite");
     this.outputPath = path.resolve($tw.boot.wikiPath, $tw.config.wikiOutputSubDir);
 
@@ -189,12 +189,17 @@ export class Commander {
     });
 
     this.siteConfig = {
-      ...config.config,
-      attachmentsEnabled: !!config.config.saveLargeTextToFileSystem,
-      attachmentSizeLimit: config.config.saveLargeTextToFileSystem ?? 0,
+      wikiPath: this.wikiPath,
+      allowAnonReads: !!config.config?.allowAnonReads,
+      allowAnonWrites: !!config.config?.allowAnonWrites,
+      allowUnreadableBags: !!config.config?.allowUnreadableBags,
+      attachmentsEnabled: !!config.config?.saveLargeTextToFileSystem,
+      attachmentSizeLimit: config.config?.saveLargeTextToFileSystem ?? 0,
+      enableBrowserCache: !!config.config?.enableBrowserCache,
+      enableGzip: !!config.config?.enableGzip,
       contentTypeInfo: $tw.config.contentTypeInfo,
-      saveLargeTextToFileSystem: undefined as never,
       storePath: this.storePath,
+      saveLargeTextToFileSystem: undefined as never
     };
 
     this.SessionManager = config.SessionManager || sessions.SessionManager;

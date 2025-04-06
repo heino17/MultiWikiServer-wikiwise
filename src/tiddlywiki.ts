@@ -79,7 +79,7 @@ export async function bootTiddlyWiki(wikiPath: string) {
     "+plugins/tiddlywiki/tiddlyweb",
     "+themes/tiddlywiki/vanilla",
     "+themes/tiddlywiki/snowwhite",
-    resolve(wikiPath),
+    wikiPath,
   ];
 
   // use callback to match the type signature

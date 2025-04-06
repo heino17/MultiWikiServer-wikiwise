@@ -92,7 +92,7 @@ export class SessionManager extends BaseManager {
 
     const loginSession = await this.PasswordService.startLoginSession(stater);
 
-    this.state.setCookie("loginsession", loginSession, { httpOnly: true, path: "/" });
+    this.state.setCookie("loginsession", loginSession, { httpOnly: true, path: "/",  secure: this.state.isSecure, sameSite: "Strict" });
 
     return { loginResponse: loginResponse.value };
 
@@ -114,7 +114,7 @@ export class SessionManager extends BaseManager {
 
     const session_id = await this.createSession(value.user_id, value.session.sessionKey);
 
-    this.state.setCookie("session", session_id, { httpOnly: true, path: "/", secure: this.state.isSecure });
+    this.state.setCookie("session", session_id, { httpOnly: true, path: "/", secure: this.state.isSecure, sameSite: "Strict" });
 
     return null;
 

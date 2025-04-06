@@ -68,6 +68,7 @@ export class Command {
 			"--mws-load-wiki-folder", resolve(tweditions, "tour"),
 			"tour", "TiddlyWiki Interactive Tour from https://tiddlywiki.com",
 			"tour", "TiddlyWiki Interactive Tour from https://tiddlywiki.com",
+			"--mws-command-separator",
 		]);
 
 		this.commander.setupRequired = false;

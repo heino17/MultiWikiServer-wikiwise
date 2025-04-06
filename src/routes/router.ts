@@ -40,6 +40,7 @@ const zodTransformJSON = (arg: string, ctx: z.RefinementCtx) => {
 };
 
 export interface SiteConfig extends MWSConfigConfig {
+  wikiPath: string;
   attachmentSizeLimit: number;
   attachmentsEnabled: boolean;
   contentTypeInfo: Record<string, any>;

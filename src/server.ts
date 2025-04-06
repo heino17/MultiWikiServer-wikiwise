@@ -3,7 +3,7 @@ import "./StateObject";
 import "./streamer";
 import "./global";
 import * as opaque from "@serenity-kit/opaque";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, PathOrFileDescriptor, readFileSync, writeFileSync } from 'node:fs';
 import * as sessions from "./routes/services/sessions";
 import * as attacher from "./routes/services/attachments";
 import { bootTiddlyWiki } from "./tiddlywiki";
@@ -15,8 +15,6 @@ import { resolve } from "node:path";
 export * from "./routes/services/sessions";
 
 export interface MWSConfig {
-  /** Command line args which will be processed before process.argv */
-  args?: string[];
   /** Listener config for the mws-listen command. */
   listeners: {
     /** The key file for the HTTPS server. If either key or cert are set, both are required, and HTTPS is enforced. */
@@ -29,17 +27,24 @@ export interface MWSConfig {
     host?: string
   }[]
   /** Called and awaited by the mws-listen command. */
-  onListenersCreated?: (listeners: ListenerBase[]) => Promise<void>
+  onListenersCreated?: (listeners: ListenerBase[]) => Promise<void>;
+
   /** 
    * Enables the dev configuration of the server.
    * The string is the absolute path to the dev repo. 
    * This somewhat clunky solution allows us to run the dev configuration using basically the same setup.
    */
   enableDevServer?: string
-  /** The key file for the password encryption. If this key changes, all passwords will be invalid and need to be changed. */
-  passwordMasterKeyFile: string
+  /** 
+   * Path or file descriptor to the password master key.
+   * If this key changes, all passwords will be invalid and need to be changed.
+   */
+  passwordMasterKeyFile: string | number
+  onPasswordKeyFileRead?: () => void;
+  /** Path to the datafolder. */
+  wikiPath: string
   /** MWS site configuration */
-  config: MWSConfigConfig
+  config?: MWSConfigConfig
   /** 
    * The session manager class registers the login handler routes and sets the auth user 
    */
@@ -53,8 +58,6 @@ export interface MWSConfig {
 
 
 export interface MWSConfigConfig {
-  /** Path to the mws datafolder. */
-  readonly wikiPath: string
   /** If true, allow users that aren't logged in to read. */
   readonly allowAnonReads?: boolean
   /** If true, allow users that aren't logged in to write. */
@@ -96,34 +99,42 @@ startServer({
 ```
  */
 export default async function startServer(config: MWSConfig) {
-  // await lazy-loaded or async models
-  await opaque.ready;
 
-  if (!config.passwordMasterKeyFile) {
-    throw new Error("passwordMasterKey is required");
+  if (!["string", "number"].includes(typeof config.passwordMasterKeyFile)) {
+    throw new Error("passwordMasterKeyFile must be a string or number");
   }
 
-  if (config.passwordMasterKeyFile && !existsSync(config.passwordMasterKeyFile)) {
+  if (typeof config.passwordMasterKeyFile === "string"
+    && config.passwordMasterKeyFile
+    && !existsSync(config.passwordMasterKeyFile)
+  ) {
     writeFileSync(config.passwordMasterKeyFile, opaque.server.createSetup());
     console.log("Password master key created at", config.passwordMasterKeyFile);
   }
 
   const passwordMasterKey = readFileSync(config.passwordMasterKeyFile, "utf8").trim();
 
+  config.onPasswordKeyFileRead?.();
+
+  await opaque.ready;
+
+  config.wikiPath = resolve(config.wikiPath);
+
   const commander = new Commander(
     config,
-    await bootTiddlyWiki(config.config.wikiPath),
+    await bootTiddlyWiki(config.wikiPath),
     await createPasswordService(passwordMasterKey)
   );
 
   await commander.init();
-
+  const cli = process.argv.slice(2);
   // mws-command-separator prevents params after it from being applied to the command before it.
   // it throws an error if it ends up with any params.
   await commander.execute([
-    "--mws-render-tiddlywiki5",
-    "--mws-command-separator",
-    ...config.args ?? [],
+    ...cli.length ? cli : [
+      "--mws-init-store",
+      "--mws-listen"
+    ],
   ]);
 
   if (commander.setupRequired) {
