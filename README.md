@@ -10,20 +10,30 @@ MultiWikiServer for TiddlyWiki.
 
 You can customize the defaults by modifying `mws.run.mjs`.
 
-- the server runs on http://localhost:5000. It does not use HTTPS by default, but you can enable it by specifying a key and cert. 
+- the server runs on port 5000. It does not use HTTPS by default, but you can enable it by specifying a key and cert. 
 - A `localpass.key` file is created to hold the password keyfile. If this file changes, all passwords will need to be reset. 
-- The data folder is set at `config.wikiPath` to `wiki` by default. 
-- The first user that gets created has the username `admin` and password `1234`. You should change this. 
+- The data folder (`wikiPath`) is `wiki` by default.
+
+The initial user created on first run has the username `admin` and password `1234`.
 
 ### Updates
 
 This is the process for updating to a new version of MWS.
 
-- Run `npm start -- --mws-save-archive archive-folder` to export your content from the old database.
+- Run `npx mws --mws-save-archive archive-folder` to export your content from the old database.
 - Move your `store` folder out of the data folder to a safe backup folder.
 - `npm install @tiddlywiki/mws@latest`
-- Run `npm start -- --mws-load-archive archive-folder` to import your content into the new database.
+- Run `npx mws --mws-load-archive archive-folder` to import your content into the new database.
 - Copy the `files` folder from your old `wiki/store` folder into your new `wiki/store` folder.
+
+You can also use `npm start --` instead of `npx mws`.
+
+### Development
+
+- `git clone`
+- `npm install`
+- `npm run certs`
+- `npm start`
 
 ### The Server
 

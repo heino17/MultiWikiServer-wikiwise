@@ -20,8 +20,8 @@ export default defineConfig({
   splitting: false,    // Enable or disable code splitting
 
   banner: (ctx) => ctx.format === "esm" ? {
-    js: `import {createRequire as __createRequire} from 'module'; const require=__createRequire(import.meta.url);`,
+    js: `import {createRequire as __createRequire} from 'module'; const require=__createRequire(import.meta.url);import 'source-map-support/register.js';`,
   } : {
-
+    js: `require('source-map-support/register');`,
   },
 });

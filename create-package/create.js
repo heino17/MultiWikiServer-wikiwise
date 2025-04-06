@@ -25,36 +25,29 @@ printFile("package.json", `
   "name": "mws-wiki-instance",
   "version": "1.0.0",
   "private": true,
+  "bin": {
+    "mws": "./mws.run.mjs"
+  },
   "scripts": {
     "start": "node --enable-source-maps mws.run.mjs"
   }
 }
 `.trimStart());
 printFile("mws.run.mjs", `
+#!/usr/bin/env node
 //@ts-check
 import startServer from "@tiddlywiki/mws";
-import { resolve } from "node:path";
-const cli = process.argv.slice(2);
 startServer({
   passwordMasterKeyFile: "./localpass.key",
+  wikiPath: "./wiki",
   listeners: [{
     // key: "./localhost.key",
     // cert: "./localhost.crt",
     // host: "::",
     port: 5000,
   }],
-  config: {
-    wikiPath: "./wiki",
-    allowAnonReads: false,
-    allowAnonWrites: false,
-    allowUnreadableBags: false,
-  },
-  args: cli.length ? cli : [
-    "--mws-init-store",
-    "--mws-listen"
-  ],
 }).catch(console.log);
-`);
+`.trimStart());
 
 printFile("localhost_certs.sh", `
 

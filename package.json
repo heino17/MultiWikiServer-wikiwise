@@ -1,8 +1,7 @@
 {
   "name": "@tiddlywiki/mws",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "type": "module",
-  "bin": "mws.bin.cjs",
   "exports": {
     "types": "./src/server.ts",
     "require": "./dist/server.cjs",
@@ -29,11 +28,10 @@
     "gen:client": "prisma generate",
     "prisma": "npm run gen:client && npm run gen:sql",
     "prisma:studio": "DATABASE_URL=file:../editions/mws/store/database.sqlite prisma studio",
-    "start": "(npm run build && cd runtime-config && npm start)",
+    "certs": "(cd runtime-config && bash localhost_certs.sh)",
+    "start": "npm run build && node mws.dev.mjs",
     "build": "npm run tsc && tsup && npm pack",
-    "install": "prisma generate",
-    "setup": "(npm install && cd runtime-config && npm install)",
-    "test": "node test.cjs; node test.mjs;"
+    "install": "prisma generate"
   },
   "dependencies": {
     "@libsql/client": "^0.8.1",
@@ -45,6 +43,7 @@
     "@types/send": "^0.17.4",
     "@types/sjcl": "^1.0.34",
     "prisma": "^6.4.0",
+    "source-map-support": "^0.5.21",
     "zod": "^3.24.2"
   },
   "devDependencies": {

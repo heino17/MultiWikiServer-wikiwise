@@ -8,6 +8,7 @@ editions/mws/**
 /tiddlywiki5.html
 # Ignore this file so we can put our own start server command in it
 /mws.run.ts
+/mws.run.mjs
 # ignore for backward compatibility for now
 localhost.*
 *.key
