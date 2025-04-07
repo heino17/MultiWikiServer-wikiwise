@@ -8,20 +8,18 @@ import { dist_resolve } from "./utils";
 
 export async function setupDevServer<T extends StateObject>(enableDevServer: string | undefined) {
 
+  if (!enableDevServer) {
+    return async function sendProdServer(state: T) {
 
-
-  if (!enableDevServer) return async function sendProdServer(state: T) {
-
-    const rootdir = dist_resolve('../react-user-mgmt/public');
-    // use sendFile directly instead of having the dev server send it
-    return state.sendFile(200, {}, {
-      root: rootdir,
-      reqpath: state.url === "/" ? "/index.html" : state.url,
-      on404: () => state.sendFile(200, {}, { reqpath: "/index.html", root: rootdir, })
-    });
-  };
-
-  {
+      const rootdir = dist_resolve('../react-user-mgmt/public');
+      // use sendFile directly instead of having the dev server send it
+      return state.sendFile(200, {}, {
+        root: rootdir,
+        reqpath: state.url === "/" ? "/index.html" : state.url,
+        on404: () => state.sendFile(200, {}, { reqpath: "/index.html", root: rootdir, })
+      });
+    };
+  } else {
     const esbuild = await import("esbuild");
 
     const rootdir = resolve(enableDevServer, 'react-user-mgmt');

@@ -46,22 +46,18 @@ export type BaseManagerMap<T> = {
 export type BaseKeyMap<T, V> = {
   [K in keyof T as T[K] extends ZodAction<any, any> ? K : never]: V;
 }
-
+export interface AuthUserOrAnon extends AuthUser {
+  sessionId: PrismaField<"Sessions", "session_id"> | undefined;
+}
 export class BaseManager {
   checks;
   constructor(
     protected config: SiteConfig,
     protected prisma: PrismaTxnClient,
-    protected user: AuthUser | null,
+    protected user: AuthUser,
     protected firstGuestUser: boolean,
     protected PasswordService: PasswordService,
   ) {
-    // const isLoggedIn = !!this.state.authenticatedUser;
-
-    // const { isAdmin, user_id, username } = this.state.authenticatedUser ?? {
-    //   isAdmin: false, user_id: 0, username: "(anon)"
-    //   // isAdmin: true, user_id: 1, username: "admin"
-    // };
 
     this.checks = new DataChecks({
       allowAnonReads: config.allowAnonReads,

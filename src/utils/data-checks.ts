@@ -73,15 +73,16 @@ export class DataChecks {
 
   entityTypes: { [K in EntityType]: K } = { recipe: "recipe", bag: "bag" };
 
-
-  getBagWhereACL({ recipe_id, permission, user_id = 0 }: {
+  /** If the user isn't logged in, user_id is 0. */
+  getBagWhereACL({ recipe_id, permission, user_id, role_ids }: {
     /** Recipe ID can be provided as an extra restriction */
     recipe_id?: number,
     permission: ACLPermissionName,
-    user_id?: number,
+    user_id: number,
+    role_ids: number[],
   }) {
 
-    const OR = this.getWhereACL({ permission, user_id });
+    const OR = this.getWhereACL({ permission, user_id, role_ids });
 
     return ([
       // all system bags are allowed to be read by any user
@@ -93,7 +94,7 @@ export class DataChecks {
           some: {
             // check if we're in position 0 (for write) or any position (for read)
             position: permission === "WRITE" ? 0 : undefined,
-            // of a recipe that the user has permission to read or write
+            // of a recipe that the user has this permission on
             recipe: { OR },
             // if the connection was created with admin permissions
             with_acl: true,
@@ -105,9 +106,10 @@ export class DataChecks {
     ] satisfies (Prisma.BagsWhereInput | undefined | null | false)[]).filter(truthy)
 
   }
-  getWhereACL({ permission, user_id }: {
+  getWhereACL({ permission, user_id, role_ids }: {
     permission: ACLPermissionName,
     user_id?: number,
+    role_ids?: number[],
   }) {
     const { allowAnonReads, allowAnonWrites } = this;
     const anonRead = allowAnonReads && permission === "READ";
@@ -124,19 +126,19 @@ export class DataChecks {
       // allow owner for user 
       user_id && { owner_id: user_id },
       // allow acl for user 
-      user_id && {
+      user_id && role_ids?.length && {
         acl: {
           some: {
             permission: { in: checkPerms },
-            role: { users: { some: { user_id } } }
+            role_id: { in: role_ids },
           }
         }
       },
-      user_id && {
+      user_id && role_ids?.length && {
         acl: {
           some: {
             permission: { in: checkPerms },
-            role: { users: { some: { user_id } } }
+            role_id: { in: role_ids },
           }
         }
       },

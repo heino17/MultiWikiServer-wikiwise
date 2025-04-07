@@ -26,23 +26,22 @@ export class RecipeManager extends BaseManager {
 
   index_json = this.ZodRequest(z => z.undefined(), async () => {
 
-    const { isAdmin, user_id, username } = this.user ?? {};
+    const { isAdmin, user_id, username, role_ids } = this.user;
 
-    const OR = this.checks.getBagWhereACL({ permission: "READ", user_id, });
+    const OR = this.checks.getBagWhereACL({ permission: "READ", user_id, role_ids });
 
     const bagList = await this.prisma.bags.findMany({
       include: {
-        _count: {
+        _count: isAdmin ? {} : {
           select: {
             acl: {
               where: {
                 permission: "ADMIN",
-                role: { users: { some: { user_id } } }
+                role_id: { in: role_ids }
               }
             }
           }
         },
-        owner: { select: { username: true } },
         acl: true,
       },
       where: isAdmin ? {} : { OR }
@@ -50,12 +49,21 @@ export class RecipeManager extends BaseManager {
 
     const recipeList = await this.prisma.recipes.findMany({
       include: {
-        owner: { select: { username: true } },
         recipe_bags: {
           select: { bag_id: true, position: true, with_acl: true, },
           orderBy: { position: "asc" }
         },
         acl: true,
+        _count: isAdmin ? {} : {
+          select: {
+            acl: {
+              where: {
+                permission: "ADMIN",
+                role_id: { in: role_ids }
+              }
+            }
+          }
+        },
       },
       where: isAdmin ? {} : { recipe_bags: { every: { bag: { OR } } } }
     });
@@ -75,7 +83,7 @@ export class RecipeManager extends BaseManager {
       roleList,
       username,
       firstGuestUser: !!this.firstGuestUser,
-      isLoggedIn: !!this.user,
+      isLoggedIn: this.user.isLoggedIn,
       allowAnonReads: this.config.allowAnonReads,
       allowAnonWrites: this.config.allowAnonWrites,
     }
@@ -254,7 +262,8 @@ export class RecipeManager extends BaseManager {
     type: "recipe" | "bag"
   }): asserts this is { user: { isAdmin: boolean, user_id: number } } {
     // check user_id just to be safe because we depend on it for an additional check here and elsewhere
-    if (!this.user || !this.user.user_id)
+    // user_id 0 is also not a valid user_id and only used for anonymous users
+    if (!this.user.isLoggedIn || !this.user.user_id)
       throw "User not authenticated";
 
     const { isAdmin, user_id } = this.user;

@@ -73,13 +73,13 @@ export class TiddlerRouter {
       if (!recipe) throw state.sendEmpty(404, { "x-reason": "recipe not found" });
       if (!canRead) throw state.sendEmpty(403, { "x-reason": "read access denied" });
 
-      const { isAdmin, user_id, username } = state.user ?? { isAdmin: false, user_id: undefined, username: undefined };
+      const { isAdmin, user_id, username } = state.user;
 
       return {
         isAdmin,
         user_id,
         username,
-        isLoggedIn: !!state.user,
+        isLoggedIn: state.user.isLoggedIn,
         isReadOnly: !canWrite,
         allowAnonReads: state.config.allowAnonReads,
         allowAnonWrites: state.config.allowAnonWrites,

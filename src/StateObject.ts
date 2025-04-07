@@ -74,9 +74,6 @@ export class StateObject<
    */
   queryParams: Record<string, string[] | undefined>;
 
-  // get PasswordService() { return this.router.PasswordService; }
-
-  authenticatedUser;
 
   private engine: Commander["engine"];
   public config: SiteConfig;
@@ -88,11 +85,10 @@ export class StateObject<
     private routePath: RouteMatch[],
     /** The bodyformat that ended up taking precedence. This should be correctly typed. */
     public bodyFormat: B,
-    public user: AuthUser | null,
+    public user: AuthUser,
     public commander: Commander,
   ) {
     super(streamer);
-    this.authenticatedUser = user;
 
     this.engine = commander.engine;
     this.config = commander.siteConfig;
@@ -232,11 +228,11 @@ export class StateObject<
     recipe_name: PrismaField<"Recipes", "recipe_name">,
     needWrite: boolean
   ) {
-    const user_id = this.user?.user_id;
-    const isAdmin = this.user?.isAdmin;
+    const { user_id, isAdmin, role_ids } = this.user;
+
     const prisma = this.engine;
-    const read = new DataChecks(this.config).getBagWhereACL({ permission: "READ", user_id });
-    const write = new DataChecks(this.config).getBagWhereACL({ permission: "WRITE", user_id });
+    const read = new DataChecks(this.config).getBagWhereACL({ permission: "READ", user_id, role_ids });
+    const write = new DataChecks(this.config).getBagWhereACL({ permission: "WRITE", user_id, role_ids });
 
     const [recipe, canRead, canWrite] = await prisma.$transaction([
       prisma.recipes.findUnique({
@@ -273,11 +269,10 @@ export class StateObject<
     bag_name: PrismaField<"Bags", "bag_name">,
     needWrite: boolean
   ) {
-    const user_id = this.user?.user_id;
-    const isAdmin = this.user?.isAdmin;
+    const { user_id, isAdmin, role_ids } = this.user;
     const prisma = this.engine;
-    const read = new DataChecks(this.config).getBagWhereACL({ permission: "READ", user_id });
-    const write = new DataChecks(this.config).getBagWhereACL({ permission: "WRITE", user_id });
+    const read = new DataChecks(this.config).getBagWhereACL({ permission: "READ", user_id, role_ids });
+    const write = new DataChecks(this.config).getBagWhereACL({ permission: "WRITE", user_id, role_ids });
     const [bag, canRead, canWrite] = await prisma.$transaction([
       prisma.bags.findUnique({
         select: { bag_id: true, is_plugin: true, owner_id: true },

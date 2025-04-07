@@ -6,11 +6,18 @@ import { Router } from "../router";
 import { StateObject } from "../../StateObject";
 
 export interface AuthUser {
+  /** User ID. 0 if the user is not logged in. */
   user_id: PrismaField<"Users", "user_id">;
+  /** User role_ids. This may have length even if the user isn't logged in, to allow ACL for anon. */
+  role_ids: PrismaField<"Roles", "role_id">[];
+  /** Username passed to the client */
   username: PrismaField<"Users", "username">;
-  sessionId: PrismaField<"Sessions", "session_id">;
+  /** A session_id isn't guarenteed. There may be a session even if the user isn't logged in, and may not be even if they are, depending on the the situation. */
+  sessionId: PrismaField<"Sessions", "session_id"> | undefined;
+  /** Is this user considered a site-admin. This is determined by the auth service, not MWS. */
   isAdmin: boolean;
-  // isLoggedIn: boolean;
+  /** Is the user logged in? This also means that user_id should be 0. role_ids may still be effective. */
+  isLoggedIn: boolean;
 }
 
 export const SessionKeyMap: BaseKeyMap<SessionManager, true> = {
@@ -42,7 +49,7 @@ export class SessionManager extends BaseManager {
     });
   }
 
-  static async parseIncomingRequest(streamer: Streamer, router: Router): Promise<AuthUser | null> {
+  static async parseIncomingRequest(streamer: Streamer, router: Router): Promise<AuthUser> {
 
     const sessionId = streamer.cookies.session as PrismaField<"Sessions", "session_id"> | undefined;
     const session = sessionId && await router.engine.sessions.findUnique({
@@ -54,13 +61,22 @@ export class SessionManager extends BaseManager {
       user_id: session.user.user_id,
       username: session.user.username,
       isAdmin: session.user.roles.some(e => e.role_id === 1),
+      role_ids: session.user.roles.map(e => e.role_id),
       sessionId,
+      isLoggedIn: true,
     };
-    else return null;
+    else return {
+      user_id: 0 as PrismaField<"Users", "user_id">,
+      username: "(anon)" as PrismaField<"Users", "username">,
+      isAdmin: false,
+      role_ids: [] as PrismaField<"Roles", "role_id">[],
+      sessionId: undefined as PrismaField<"Sessions", "session_id"> | undefined,
+      isLoggedIn: false,
+    };
   }
 
   constructor(protected state: StateObject, prisma: PrismaTxnClient) {
-    super(state.config, prisma, state.authenticatedUser, false, state.PasswordService);
+    super(state.config, prisma, state.user, false, state.PasswordService);
   }
 
   login1 = this.ZodRequest(z => z.object({
@@ -92,7 +108,7 @@ export class SessionManager extends BaseManager {
 
     const loginSession = await this.PasswordService.startLoginSession(stater);
 
-    this.state.setCookie("loginsession", loginSession, { httpOnly: true, path: "/",  secure: this.state.isSecure, sameSite: "Strict" });
+    this.state.setCookie("loginsession", loginSession, { httpOnly: true, path: "/", secure: this.state.isSecure, sameSite: "Strict" });
 
     return { loginResponse: loginResponse.value };
 
@@ -122,8 +138,8 @@ export class SessionManager extends BaseManager {
 
   logout = this.ZodRequest(z => z.undefined(), async () => {
     const state = this.state;
-    if (state.authenticatedUser) {
-      await this.prisma.sessions.delete({ where: { session_id: state.authenticatedUser.sessionId } });
+    if (state.user.isLoggedIn) {
+      await this.prisma.sessions.delete({ where: { session_id: state.user.sessionId } });
     }
     var cookies = state.headers.cookie ? state.headers.cookie.split(";") : [];
     for (var i = 0; i < cookies.length; i++) {
