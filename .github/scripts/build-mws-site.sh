@@ -89,14 +89,12 @@ rm $MWSTWCOM_BUILD_OUTPUT/build.tid || exit 1
 # Exit script immediately if any command fails
 set -e
 
-export GITHUB_TOKEN=$GH_TOKEN
-
 pushd $MWSTWCOM_BUILD_OUTPUT
 git config --global user.email "actions@github.com"
 git config --global user.name "GitHub Actions"
 git add -A .
 git commit --message "GitHub build: $GITHUB_RUN_NUMBER of $TW5_BUILD_BRANCH ($(date +'%F %T %Z'))"
 git show -q
-git remote add deploy "https://github.com/TiddlyWiki/mws.tiddlywiki.com-gh-pages.git"
+git remote add deploy "https://$GH_TOKEN@github.com/TiddlyWiki/mws.tiddlywiki.com-gh-pages"
 git push deploy main
 popd
