@@ -85,8 +85,6 @@ export async function bootTiddlyWiki(wikiPath: string) {
   // use callback to match the type signature
   await new Promise<void>(resolve => $tw.boot.boot(resolve));
 
-  console.log("booted");
-
   return $tw;
 
 }

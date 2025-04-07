@@ -1,5 +1,5 @@
 import { defineConfig } from 'tsup';
-
+import "@serenity-kit/opaque"
 export default defineConfig({
   entry: ['src/server.ts'],
   format: ['esm', 'cjs'],
@@ -10,6 +10,7 @@ export default defineConfig({
     "@prisma/client",
     "@prisma/adapter-libsql",
     "@libsql/client",
+    "@serenity-kit/opaque",
   ],
   tsconfig: "tsconfig.json",
   keepNames: true,

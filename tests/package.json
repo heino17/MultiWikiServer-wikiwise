@@ -2,15 +2,16 @@
   "name": "mws-wiki-instance",
   "version": "1.0.0",
   "private": true,
-  "scripts":{
-    "old": "node --enable-source-maps mws.old.mjs --mws-command-separator",
-    "new": "node --enable-source-maps mws.run.mjs --tests-complete",
-    "test": "npm run test:prisma_migrate",
-    "test:prisma_migrate":"node scripts/rmdb.js && (npm run old; npm run new)"
+  "scripts": {
+    "old_migrate": "node --enable-source-maps mws.old.mjs --mws-command-separator",
+    "new_migrate": "node --enable-source-maps mws.run.mjs --tests-complete",
+    "new_setup": "node --enable-source-maps mws.run.mjs --mws-init-store --tests-complete",
+    "test": "npm run test:prisma_migrate && npm run test:new_setup",
+    "test:prisma_migrate": "node scripts/rmdb.js && (npm run old_migrate; npm run new_migrate)",
+    "test:new_setup": "node scripts/rmdb.js && npm run new_setup"
   },
   "dependencies": {
     "@tiddlywiki/mws-old": "npm:@tiddlywiki/mws@0.0.6",
-    "@tiddlywiki/mws": "..",
     "tiddlywiki": "latest"
   }
 }

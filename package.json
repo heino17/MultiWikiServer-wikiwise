@@ -30,9 +30,12 @@
     "prisma:studio": "DATABASE_URL=file:../editions/mws/store/database.sqlite prisma studio",
     "certs": "(cd runtime-config && bash localhost_certs.sh)",
     "start": "npm run build && node mws.dev.mjs",
-    "build": "npm run tsc && tsup",
+    "build": "npm run tsc && tsup && npm test",
     "install": "prisma generate",
-    "test": "(git clean -dfx tests && cd tests && npm install && npm test)"
+    "env": "env",
+    "test:pack": "(git clean -dfx tests && npm pack --pack-destination tests && cd tests && npm install && npm install ./tiddlywiki-mws-$npm_package_version.tgz --no-save && npm test)",
+    "test": "(git clean -dfx tests && cd tests && npm install .. --no-save && npm test)",
+    "fulltest": "mv node_modules node_modules_old; npm run test:pack; mv node_modules_old node_modules"
   },
   "dependencies": {
     "@libsql/client": "^0.8.1",
