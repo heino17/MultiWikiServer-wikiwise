@@ -72,7 +72,7 @@ echo -e -n "title: $:/build\ncommit: $MWSTWCOM_BUILD_COMMIT\n\n$MWSTWCOM_BUILD_D
 # /static/static.css	Static stylesheet
 # /static/favicon.ico	Favicon for static pages
 node $MWSTWCOM_BUILD_TIDDLYWIKI \
-	editions/multiwikidocs \
+	./editions/mws-docs \
 	--verbose \
 	--version \
 	--load $MWSTWCOM_BUILD_OUTPUT/build.tid \
