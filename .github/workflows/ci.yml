@@ -1,0 +1,18 @@
+on:
+  push:
+    branches:
+      - main
+env:
+  NODE_VERSION: "23"
+jobs:
+  build-mws-tiddlywiki-com:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: "${{ env.NODE_VERSION }}"
+      - run: "./.github/scripts/build-mws-site.sh"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUBPUSHTOKEN }}
