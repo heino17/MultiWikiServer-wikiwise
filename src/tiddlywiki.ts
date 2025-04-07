@@ -1,6 +1,6 @@
 import { TiddlyWiki, TWBoot } from "tiddlywiki";
 import { } from "tiddlywiki/boot/bootprefix";
-import { $TW } from "./commands";
+import { $TW } from "./commander";
 import { resolve } from "node:path";
 import { dist_resolve } from "./utils";
 

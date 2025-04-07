@@ -4,7 +4,7 @@ import * as fs from "fs";
 import type { Prisma } from "@prisma/client";
 import type { ZodAssert } from "./utils";
 import { Tiddler, Wiki } from "tiddlywiki";
-import { Commander } from "./commands";
+import { Commander } from "./commander";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 

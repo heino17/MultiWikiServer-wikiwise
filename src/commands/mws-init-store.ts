@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 
-import { Commander, CommandInfo } from ".";
+import { Commander, CommandInfo } from "../commander";
 import { TiddlerStore } from "../routes/TiddlerStore";
 import { readFileSync } from "node:fs";
 import { dist_require_resolve, dist_resolve } from "../utils";
@@ -68,7 +68,7 @@ export class Command {
 			"--mws-load-wiki-folder", resolve(tweditions, "tour"),
 			"tour", "TiddlyWiki Interactive Tour from https://tiddlywiki.com",
 			"tour", "TiddlyWiki Interactive Tour from https://tiddlywiki.com",
-			"--mws-command-separator",
+			"--divider",
 		]);
 
 		this.commander.setupRequired = false;

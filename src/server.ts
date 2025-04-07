@@ -7,7 +7,7 @@ import { existsSync, mkdirSync, PathOrFileDescriptor, readFileSync, writeFileSyn
 import * as sessions from "./routes/services/sessions";
 import * as attacher from "./routes/services/attachments";
 import { bootTiddlyWiki } from "./tiddlywiki";
-import { Commander } from "./commands";
+import { Commander } from "./commander";
 import { ListenerBase } from "./commands/mws-listen";
 import { createPasswordService } from "./routes/services/PasswordService";
 import { resolve } from "node:path";

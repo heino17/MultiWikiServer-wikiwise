@@ -1,25 +1,22 @@
 
-import { SiteConfig } from "../routes/router";
+import { SiteConfig } from "./routes/router";
 import * as path from "node:path";
-import * as mws_load_plugin_bags from "./mws-load-plugin-bags";
-import * as mws_render_tiddler from "./mws-render-tiddlywiki5";
-import * as mws_load_wiki_folder from "./mws-load-wiki-folder";
-import * as mws_save_archive from "./mws-save-archive";
-import * as mws_load_archive from "./mws-load-archive";
-import * as mws_init_store from "./mws-init-store";
-import * as mws_listen from "./mws-listen";
-import * as mws_command_separator from "./mws-command-separator";
-import { MWSConfig } from "../server";
+
+import { MWSConfig } from "./server";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { createClient } from "@libsql/client";
 import { PrismaLibSQL } from "@prisma/adapter-libsql";
-import * as sessions from "../routes/services/sessions";
-import * as attacher from "../routes/services/attachments";
-import { PasswordService } from "../routes/services/PasswordService";
+import * as sessions from "./routes/services/sessions";
+import * as attacher from "./routes/services/attachments";
+import { PasswordService } from "./routes/services/PasswordService";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { ITXClientDenyList } from "@prisma/client/runtime/library";
 import { TW } from "tiddlywiki";
-import { dist_resolve } from "../utils";
+import { dist_resolve } from "./utils";
+import { readdir, readFile } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+
+import { commands, mws_listen, divider } from "./commands";
 
 export interface $TW {
   utils: any;
@@ -69,101 +66,17 @@ export interface CommandInfo {
   namedParameterMode?: boolean;
   mandatoryParameters?: string[];
 }
-/**
-Parse a sequence of commands
-  commandTokens: an array of command string tokens
-  wiki: reference to the wiki store object
-  streams: {output:, error:}, each of which has a write(string) method
-  callback: a callback invoked as callback(err) where err is null if there was no error
-*/
-export class Commander {
 
-  commands: Record<string, { info: CommandInfo, Command: any }> = {
-    [mws_load_plugin_bags.info.name]: mws_load_plugin_bags,
-    [mws_render_tiddler.info.name]: mws_render_tiddler,
-    [mws_load_wiki_folder.info.name]: mws_load_wiki_folder,
-    [mws_save_archive.info.name]: mws_save_archive,
-    [mws_load_archive.info.name]: mws_load_archive,
-    [mws_init_store.info.name]: mws_init_store,
-    [mws_listen.info.name]: mws_listen,
-    [mws_command_separator.info.name]: mws_command_separator,
-  };
-
-  commandTokens!: string[];
-  nextToken
-  verbose
-  outputPath: string;
-
-
-  wikiPath: string;
-  storePath: string;
-  databasePath: string;
-  libsql;
-  engine: PrismaClient<Prisma.PrismaClientOptions, never, {
-    result: {
-      // this types every output field with PrismaField
-      [T in Uncapitalize<Prisma.ModelName>]: {
-        [K in keyof PrismaPayloadScalars<Capitalize<T>>]: () => {
-          compute: () => PrismaField<Capitalize<T>, K>
-        }
-      }
-    },
-    client: {},
-    model: {},
-    query: {},
-  }>;
-
-  $transaction<R>(
-    fn: (prisma: Omit<Commander["engine"], ITXClientDenyList>) => Promise<R>,
-    options?: {
-      maxWait?: number,
-      timeout?: number,
-      isolationLevel?: Prisma.TransactionIsolationLevel
-    }
-  ): Promise<R> {
-    // $transaction doesn't have the client extensions types,
-    // but should have them available (were they not just types).
-    return this.engine.$transaction(fn as (prisma: any) => Promise<any>, options);
-  }
-
-
-  siteConfig: SiteConfig;
-
-  /** 
-   * The promise of the current execution. 
-   * It is created and returned by execute, 
-   * but also accessible here. 
-   * 
-   * After the promise is resolved, it will 
-   * be available until execute is called again. 
-   */
-  promise!: Promise<void>;
-  private callback!: (err?: any) => void;
-
-  SessionManager: typeof sessions.SessionManager;
-  AttachmentService: typeof attacher.AttachmentService;
-
-  create_mws_listen;
-
-  /** Signals that database setup is required. May be set to false by any qualified setup command. */
-  setupRequired: boolean = true;
+// move the startup logic into a separate class
+class StartupCommander {
 
   constructor(
     public config: MWSConfig,
     public $tw: TW,
     public PasswordService: PasswordService,
   ) {
-    this.nextToken = 0;
-    this.verbose = false;
 
-    const listeners = config.listeners;
-    config.listeners = [];
-    // there's nothing that can't be hacked in a Node process,
-    // but this just makes it a little bit harder for the listeners to be read.
-    // this can be replaced, but it only recieves the listeners via closure.
-    this.create_mws_listen = (params: string[]) => {
-      return new mws_listen.Command(params, this, listeners);
-    }
+
     // this is already resolved to the cwd.
     this.wikiPath = config.wikiPath;
     this.storePath = path.resolve(this.wikiPath, "store");
@@ -210,18 +123,172 @@ export class Commander {
   async init() {
     this.setupRequired = false;
 
-    const tables = await this.libsql.batch([{
-      sql: `SELECT count(*) as count FROM sqlite_master WHERE type='table'`,
-      args: [],
-    }]).then(e => e[0]?.rows[0]?.count);
-
-    if (tables === 0) {
-      await this.libsql.executeMultiple(readFileSync(dist_resolve("../prisma/schema.prisma.sql"), "utf8"));
+    if (process.env.RUN_OLD_MWS_DB_SETUP_FOR_TESTING) {
+      await this.libsql.executeMultiple(readFileSync(dist_resolve("../prisma/migrations/20250406213424_init/migration.sql"), "utf8"));
     }
+
+    const tables = await this.libsql.batch([{
+      sql: `SELECT tbl_name FROM sqlite_master WHERE type='table'`, args: [],
+    }]).then(e => e[0]?.rows as { tbl_name: string }[] | undefined);
+
+    const hasExisting = !!tables?.length;
+
+
+    const hasMigrationsTable = !!tables?.length && !!tables?.some((e) => e.tbl_name === "_prisma_migrations");
+    if (!hasMigrationsTable) await this.createMigrationsTable();
+    await this.checkMigrationsTable(hasExisting && !hasMigrationsTable);
+
 
     const users = await this.engine.users.count();
     if (!users) { this.setupRequired = true; }
   }
+  async createMigrationsTable() {
+    await this.libsql.execute({
+      sql:
+        'CREATE TABLE "_prisma_migrations" (\n' +
+        '    "id"                    TEXT PRIMARY KEY NOT NULL,\n' +
+        '    "checksum"              TEXT NOT NULL,\n' +
+        '    "finished_at"           DATETIME,\n' +
+        '    "migration_name"        TEXT NOT NULL,\n' +
+        '    "logs"                  TEXT,\n' +
+        '    "rolled_back_at"        DATETIME,\n' +
+        '    "started_at"            DATETIME NOT NULL DEFAULT current_timestamp,\n' +
+        '    "applied_steps_count"   INTEGER UNSIGNED NOT NULL DEFAULT 0\n' +
+        ')',
+      args: [],
+    })
+  }
+  async checkMigrationsTable(migrateExisting: boolean) {
+
+    const applied_migrations = new Set(
+      await this.libsql.batch([{
+        sql: `Select migration_name from _prisma_migrations`, args: []
+      }]).then(e => e[0]?.rows.map(e => e.migration_name))
+    );
+
+    const migrations = await readdir(dist_resolve("../prisma/migrations"));
+    migrations.sort();
+
+    const new_migrations = migrations.filter(m => !applied_migrations.has(m) && m !== "migration_lock.toml");
+    if (!new_migrations.length) return;
+
+    function generateChecksum(fileContent: string) {
+      return createHash('sha256').update(fileContent).digest('hex');
+    }
+
+    console.log("New migrations found", new_migrations);
+
+    for (const migration of new_migrations) {
+      const migration_path = dist_resolve(`../prisma/migrations/${migration}/migration.sql`);
+      if (!existsSync(migration_path)) continue;
+
+      const fileContent = await readFile(migration_path, 'utf-8');
+      // this is the hard-coded name of the first migration.
+      if (migrateExisting && migration === "20250406213424_init") {
+        console.log("Existing migration", migration, "is already applied");
+      } else {
+        console.log("Applying migration", migration);
+        await this.libsql.executeMultiple(fileContent);
+      }
+      await this.libsql.execute({
+        sql: 'INSERT INTO _prisma_migrations (' +
+          'id, migration_name, checksum, finished_at, logs, rolled_back_at, started_at, applied_steps_count' +
+          ') VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        args: [randomUUID(), migration, generateChecksum(fileContent), Date.now(), null, null, Date.now(), 1]
+      });
+
+    }
+    console.log("Migrations applied", new_migrations);
+
+  }
+  wikiPath: string;
+  storePath: string;
+  databasePath: string;
+  libsql;
+  engine: PrismaClient<Prisma.PrismaClientOptions, never, {
+    result: {
+      // this types every output field with PrismaField
+      [T in Uncapitalize<Prisma.ModelName>]: {
+        [K in keyof PrismaPayloadScalars<Capitalize<T>>]: () => {
+          compute: () => PrismaField<Capitalize<T>, K>
+        }
+      }
+    },
+    client: {},
+    model: {},
+    query: {},
+  }>;
+
+  $transaction<R>(
+    fn: (prisma: Omit<Commander["engine"], ITXClientDenyList>) => Promise<R>,
+    options?: {
+      maxWait?: number,
+      timeout?: number,
+      isolationLevel?: Prisma.TransactionIsolationLevel
+    }
+  ): Promise<R> {
+    // $transaction doesn't have the client extensions types,
+    // but should have them available (were they not just types).
+    return this.engine.$transaction(fn as (prisma: any) => Promise<any>, options);
+  }
+
+
+  siteConfig: SiteConfig;
+
+
+  SessionManager: typeof sessions.SessionManager;
+  AttachmentService: typeof attacher.AttachmentService;
+
+
+
+  /** Signals that database setup is required. May be set to false by any qualified setup command. */
+  setupRequired: boolean = true;
+  outputPath: string;
+}
+/**
+Parse a sequence of commands
+  commandTokens: an array of command string tokens
+  wiki: reference to the wiki store object
+  streams: {output:, error:}, each of which has a write(string) method
+  callback: a callback invoked as callback(err) where err is null if there was no error
+*/
+export class Commander extends StartupCommander {
+
+  constructor(
+    config: MWSConfig,
+    $tw: TW,
+    PasswordService: PasswordService,
+  ) {
+    super(config, $tw, PasswordService);
+    this.nextToken = 0;
+    this.verbose = false;
+
+    const listeners = config.listeners;
+    config.listeners = [];
+    // there's nothing that can't be hacked in a Node process,
+    // but this just makes it a little bit harder for the listeners to be read.
+    // this can be replaced, but it only recieves the listeners via closure.
+    this.create_mws_listen = (params: string[]) => {
+      return new mws_listen.Command(params, this, listeners);
+    }
+  }
+
+  create_mws_listen;
+  /** 
+   * The promise of the current execution. 
+   * It is created and returned by execute, 
+   * but also accessible here. 
+   * 
+   * After the promise is resolved, it will 
+   * be available until execute is called again. 
+   */
+  promise!: Promise<void>;
+  private callback!: (err?: any) => void;
+
+
+  commandTokens!: string[];
+  nextToken
+  verbose
 
   static initCommands(moduleType?: string) {
     if (moduleType) throw new Error("moduleType is not implemented");
@@ -270,7 +337,7 @@ export class Commander {
     commandName = commandName.slice(2); // Trim off the --
 
     // Get the command info
-    var command = this.commands[commandName], c, err;
+    var command = commands[commandName], c, err;
     if (!command) {
       this.callback("Unknown command: " + commandName);
       return;
@@ -281,7 +348,7 @@ export class Commander {
     const params = this.commandTokens.slice(this.nextToken, nextCommand === -1 ? undefined : nextCommand);
     this.nextToken = nextCommand === -1 ? this.commandTokens.length : nextCommand;
 
-    if (commandName !== mws_command_separator.info.name)
+    if (commandName !== divider.info.name)
       console.log("Commander executing", commandName, params);
 
 

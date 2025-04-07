@@ -3,7 +3,7 @@ import * as path from "path";
 import { SiteConfig } from "./router";
 import { AttachmentService, TiddlerFields } from "./services/attachments";
 import { ok } from "assert";
-import { Commander } from "../commands";
+import { Commander } from "../commander";
 import { FileInfoTiddlers } from "tiddlywiki";
 import { UserError } from "../utils";
 

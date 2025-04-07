@@ -1,5 +1,5 @@
 
-import { Commander, CommandInfo } from ".";
+import { Commander, CommandInfo } from "../commander";
 import { TiddlerStore } from "../routes/TiddlerStore";
 import { join, resolve } from "path";
 import { Prisma } from "@prisma/client";

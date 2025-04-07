@@ -1,4 +1,4 @@
-import { Commander, CommandInfo } from ".";
+import { Commander, CommandInfo } from "../commander";
 import { TiddlerStore } from "../routes/TiddlerStore";
 
 export const info: CommandInfo = {

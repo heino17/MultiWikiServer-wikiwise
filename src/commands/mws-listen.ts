@@ -1,5 +1,5 @@
 
-import { Commander, CommandInfo } from ".";
+import { Commander, CommandInfo } from "../commander";
 import { ok } from "assert";
 import { existsSync, readFileSync } from "fs";
 import { Server, IncomingMessage, ServerResponse, createServer } from "http";
@@ -105,7 +105,7 @@ export class Command {
 
       this.commander.addCommandTokens([
         "--mws-render-tiddlywiki5",
-        "--mws-command-separator",
+        "--divider",
       ]);
 
       const router = await Router.makeRouter(

@@ -11,7 +11,7 @@ Command to create and load a bag for the specified core editions
 
 
 import { resolve } from "node:path";
-import { Commander, CommandInfo } from ".";
+import { Commander, CommandInfo } from "../commander";
 
 const { writeFileSync } = require("fs");
 

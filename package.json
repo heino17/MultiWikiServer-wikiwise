@@ -31,7 +31,8 @@
     "certs": "(cd runtime-config && bash localhost_certs.sh)",
     "start": "npm run build && node mws.dev.mjs",
     "build": "npm run tsc && tsup",
-    "install": "prisma generate"
+    "install": "prisma generate",
+    "test": "(git clean -dfx tests && cd tests && npm install && npm test)"
   },
   "dependencies": {
     "@libsql/client": "^0.8.1",
@@ -43,17 +44,17 @@
     "@types/send": "^0.17.4",
     "@types/sjcl": "^1.0.34",
     "prisma": "^6.4.0",
-    "source-map-support": "^0.5.21",
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "source-map-support": "^0.5.21",
+    "uuid": "^11.1.0",
     "esbuild": "^0.25.0",
     "mime-types": "^2.1.35",
     "send": "^1.1.0",
     "sjcl": "^1.0.8",
     "tiddlywiki": "^5.1.22",
     "tsup": "^8.4.0",
-    "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   },
   "peerDependencies": {

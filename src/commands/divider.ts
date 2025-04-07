@@ -1,7 +1,7 @@
-import { Commander, CommandInfo } from ".";
+import { Commander, CommandInfo } from "../commander";
 
 export const info: CommandInfo = {
-  name: "mws-command-separator",
+  name: "divider",
   synchronous: true,
 };
 

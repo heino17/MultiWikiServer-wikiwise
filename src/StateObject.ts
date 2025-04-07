@@ -9,7 +9,7 @@ import { Prisma, PrismaClient } from '@prisma/client';
 import { Types } from '@prisma/client/runtime/library';
 import { DataChecks } from './utils';
 import { setupDevServer } from "./setupDevServer";
-import { Commander } from './commands';
+import { Commander } from './commander';
 import { PasswordService } from './routes/services/PasswordService';
 
 export interface AuthStateRouteACL {

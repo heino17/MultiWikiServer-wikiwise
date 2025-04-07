@@ -6,7 +6,7 @@ import { createStrictAwaitProxy } from "../utils";
 import { Route, rootRoute, RouteOptAny, RouteMatch, } from "../utils";
 import { MWSConfigConfig } from "../server";
 import { setupDevServer } from "../setupDevServer";
-import { Commander } from "../commands";
+import { Commander } from "../commander";
 
 export { RouteMatch, Route, rootRoute };
 

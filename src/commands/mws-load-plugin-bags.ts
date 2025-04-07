@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 
-import { Commander, CommandInfo } from ".";
+import { Commander, CommandInfo } from "../commander";
 import { TiddlerStore } from "../routes/TiddlerStore";
 import { TiddlerFields } from "../routes/services/attachments";
 import { truthy, tryParseJSON } from "../utils";

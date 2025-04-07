@@ -8,7 +8,7 @@ Command to load an archive of recipes, bags and tiddlers to a directory
 \*/
 
 import { writeFileSync } from "fs";
-import { Commander, CommandInfo } from ".";
+import { Commander, CommandInfo } from "../commander";
 import { TiddlerStore } from "../routes/TiddlerStore";
 import { resolve } from "path";
 import * as _fsp from "fs/promises";
