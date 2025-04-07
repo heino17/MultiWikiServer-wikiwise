@@ -13,6 +13,6 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: "${{ env.NODE_VERSION }}"
-      - run: "./.github/scripts/build-mws-site.sh"
+      - run: "bash .github/scripts/build-mws-site.sh"
         env:
           GH_TOKEN: ${{ secrets.GITHUBPUSHTOKEN }}
