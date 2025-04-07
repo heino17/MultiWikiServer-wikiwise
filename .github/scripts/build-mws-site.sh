@@ -89,6 +89,8 @@ rm $MWSTWCOM_BUILD_OUTPUT/build.tid || exit 1
 # Exit script immediately if any command fails
 set -e
 
+export GITHUB_TOKEN=$GH_TOKEN
+
 pushd $MWSTWCOM_BUILD_OUTPUT
 git config --global user.email "actions@github.com"
 git config --global user.name "GitHub Actions"
