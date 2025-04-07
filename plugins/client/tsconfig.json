@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "outDir": "./tiddlers",
+    "strict": true,
+    "target": "es2015", // ES6 is the first one that has promises
+    "module": "CommonJS",
+    "lib": [
+      "DOM",
+      "ES2015"
+    ],
+    "declaration": false,
+    "inlineSourceMap": true,
+    "inlineSources": true,
+    "skipLibCheck": true,
+    "removeComments": false,
+    "types": [
+      "tw5-typed"
+    ]
+  },
+  "include": [
+    "./src/**/*.ts"
+  ]
+}

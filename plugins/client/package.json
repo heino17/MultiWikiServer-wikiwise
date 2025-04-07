@@ -1,7 +1,11 @@
 {
   "title": "$:/plugins/tiddlywiki/multiwikiclient",
   "version": "1.0.0",
+  "scripts": {
+    "tsc": "tsc"
+  },
   "devDependencies": {
-    "tw5-typed": "*"
+    "tw5-typed": "*",
+    "typescript": "^5.8.3"
   }
 }
