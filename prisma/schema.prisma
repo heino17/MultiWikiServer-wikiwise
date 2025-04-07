@@ -1,6 +1,6 @@
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
+  url      = "file:../editions/mws/store/database.sqlite"
 }
 
 generator client {
@@ -27,7 +27,6 @@ model Recipes {
   recipe_name String        @unique
   description String
   owner_id    Int?
-  owner       Users?        @relation(fields: [owner_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
   recipe_bags Recipe_bags[]
   acl         RecipeAcl[]
 
@@ -37,10 +36,9 @@ model Recipes {
 model RecipeAcl {
   acl_id     Int        @id @default(autoincrement())
   role_id    Int
-  role       Roles      @relation(fields: [role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction)
   permission Permission
-  Recipes    Recipes?   @relation(fields: [recipe_id], references: [recipe_id], onDelete: Cascade)
-  recipe_id  Int?
+  recipe    Recipes   @relation(fields: [recipe_id], references: [recipe_id], onDelete: Cascade)
+  recipe_id  Int
 
   @@map("recipe_acl")
 }
@@ -64,7 +62,6 @@ model Bags {
   description String
   is_plugin   Boolean
   owner_id    Int?
-  owner       Users?        @relation(fields: [owner_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
   recipe_bags Recipe_bags[]
   tiddlers    Tiddlers[]
   acl         BagAcl[]
@@ -77,32 +74,9 @@ model BagAcl {
   bag_id     Int
   bag        Bags       @relation(fields: [bag_id], references: [bag_id], onDelete: Cascade)
   role_id    Int
-  role       Roles      @relation(fields: [role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction)
   permission Permission
 
   @@map("bag_acl")
-}
-
-model Groups {
-  group_id    Int     @id @default(autoincrement())
-  group_name  String  @unique()
-  description String?
-  roles       Roles[]
-  users       Users[]
-
-  @@map("groups")
-}
-
-model Roles {
-  role_id     Int         @id @default(autoincrement())
-  role_name   String      @unique()
-  description String?
-  acls        BagAcl[]
-  groups      Groups[]
-  users       Users[]
-  RecipeAcl   RecipeAcl[]
-
-  @@map("roles")
 }
 
 model Tiddlers {
@@ -132,6 +106,26 @@ model Fields {
   @@map("fields")
 }
 
+model Groups {
+  group_id    Int     @id @default(autoincrement())
+  group_name  String  @unique()
+  description String?
+  roles       Roles[]
+  users       Users[]
+
+  @@map("groups")
+}
+
+model Roles {
+  role_id     Int         @id @default(autoincrement())
+  role_name   String      @unique()
+  description String?
+  groups      Groups[]
+  users       Users[]
+
+  @@map("roles")
+}
+
 model Users {
   user_id    Int        @id @default(autoincrement())
   username   String     @unique
@@ -139,11 +133,9 @@ model Users {
   password   String
   created_at DateTime   @default(now())
   last_login DateTime?
-  recipes    Recipes[]
   sessions   Sessions[]
   groups     Groups[]
   roles      Roles[]
-  bags       Bags[]
 
   @@map("users")
 }
