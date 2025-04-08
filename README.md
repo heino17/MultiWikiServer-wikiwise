@@ -68,3 +68,4 @@ You can change the listeners as explained in the mws.dev.mjs file.
 - Support for other database and storage systems. Most likely MariaDB and Postgres.
 - Additional recipe strategies with features like prefixed bags and namespaces.
 - Server rendering of pages, for a more wikipedia-like experience.
+
