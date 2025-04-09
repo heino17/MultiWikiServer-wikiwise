@@ -69,3 +69,4 @@ You can change the listeners as explained in the mws.dev.mjs file.
 - Additional recipe strategies with features like prefixed bags and namespaces.
 - Server rendering of pages, for a more wikipedia-like experience.
 
+
