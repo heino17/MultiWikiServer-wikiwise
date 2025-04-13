@@ -76,7 +76,7 @@ class StartupCommander {
     public PasswordService: PasswordService,
   ) {
 
-
+    // console.log(config.wikiPath);
     // this is already resolved to the cwd.
     this.wikiPath = config.wikiPath;
     this.storePath = path.resolve(this.wikiPath, "store");
@@ -93,12 +93,13 @@ class StartupCommander {
     // the libsql adapter has an additional advantage of letting us specify pragma 
     // and also gives us more control over connections. 
 
-    this.libsql = createClient({ url: "file:" + this.databasePath });
-
+    this.libsql = createClient({ url: "file://" + this.databasePath });
+    // console.log(this.libsql.protocol, this.databasePath);
     // this.libsql.execute("pragma synchronous=off");
     this.engine = new PrismaClient({
       log: ["info", "warn"],
-      adapter: new PrismaLibSQL(this.libsql)
+      adapter: new PrismaLibSQL(this.libsql),
+      // datasourceUrl: "file:" + this.databasePath
     });
 
     this.siteConfig = {

@@ -1,6 +1,6 @@
 {
   "name": "@tiddlywiki/mws",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "type": "module",
   "exports": {
     "types": "./src/server.ts",
@@ -39,18 +39,18 @@
   },
   "dependencies": {
     "@libsql/client": "^0.8.1",
-    "@prisma/adapter-libsql": "^6.4.1",
-    "@prisma/client": "^6.4.0",
+    "@prisma/adapter-libsql": "~6.4.0",
+    "@prisma/client": "~6.4.0",
     "@serenity-kit/opaque": "^0.8.4",
     "@types/mime-types": "^2.1.4",
     "@types/node": "^22.13.1",
     "@types/send": "^0.17.4",
     "@types/sjcl": "^1.0.34",
-    "prisma": "^6.4.0",
+    "prisma": "~6.4.0",
+    "source-map-support": "^0.5.21",
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "source-map-support": "^0.5.21",
     "uuid": "^11.1.0",
     "esbuild": "^0.25.0",
     "mime-types": "^2.1.35",
