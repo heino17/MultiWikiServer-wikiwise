@@ -8,6 +8,7 @@ import { MWSConfigConfig } from "../server";
 import { setupDevServer } from "../setupDevServer";
 import { Commander } from "../commander";
 import { ZodRoute, ZodState } from "./BaseManager";
+import { CacheState, startupCache } from "./cache";
 
 export { RouteMatch, Route, rootRoute };
 
@@ -70,16 +71,9 @@ export class Router {
 
     await RootRoute(rootRoute);
 
-    // this code needs to be async-possible :)
-    const $tw = commander.$tw;
-    const bootTiddlers = $tw.loadTiddlersFromPath($tw.boot.bootPath).flatMap(file => file.tiddlers);
-    const tiddlerMemoryCache = new Map<string, string>(
-      bootTiddlers.map(e => e.title && e && [e.title, JSON.stringify(e)] as const).filter(truthy)
-    );
-    // map ( title -> hash )
-    // tiddler cache files are named [hash].json
-    const tiddlerFileCache = new Map<string, string>();
-    return new Router(rootRoute, commander, { tiddlerMemoryCache, tiddlerFileCache });
+    const cache = await startupCache(commander);
+
+    return new Router(rootRoute, commander, cache);
   }
 
 
@@ -98,10 +92,7 @@ export class Router {
   constructor(
     private rootRoute: rootRoute,
     private commander: Commander,
-    private tiddlerCache: {
-      tiddlerMemoryCache: Map<string, string>,
-      tiddlerFileCache: Map<string, string>,
-    },
+    private tiddlerCache: CacheState,
   ) {
     this.engine = commander.engine;
     this.SessionManager = commander.SessionManager;
