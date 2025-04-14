@@ -1,7 +1,7 @@
-import { EventEmitter } from "@angular/core";
+import { EventEmitter } from "angular-forms-only";
 import { createContext, PropsWithChildren, ReactNode, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { from, NEVER, Observable, Observer, Subscription } from "rxjs";
-import * as forms from "@angular/forms";
+import * as forms from "angular-forms-only";
 import { ButtonAwait } from "./utils";
 import { Alert, Autocomplete, Button, Dialog, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, MenuItemProps, OutlinedInput, Select, SelectChangeEvent, Stack, SvgIcon, SxProps, TextField, Theme } from "@mui/material";
 

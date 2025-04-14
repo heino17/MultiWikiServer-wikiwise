@@ -14,7 +14,7 @@ import ArrowUpward from '@mui/icons-material/ArrowUpward';
 import ArrowDownward from '@mui/icons-material/ArrowDownward';
 
 
-import * as forms from "@angular/forms";
+import * as forms from "angular-forms-only";
 import { EventEmitter, FormDialog, FormDialogEvents, FormDialogSubmitButton, useFormDialogForm, useObservable } from '../../helpers';
 import { onChange, OwnerSelection, sortBagNames } from './Shared';
 

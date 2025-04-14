@@ -5,9 +5,7 @@ import Header from './Header';
 import { Dashboard } from '../Dashboard/Dashboard';
 import UserManagement from '../UserList/UserManagement';
 import ManageUser from '../UserEdit/ManageUser';
-import { DataLoader, useIndexJson } from '../../helpers/utils';
-import ManageAcl from '../ACL/ManageAcl';
-import { Alert, CardContent, CardHeader, Container, Stack } from '@mui/material';
+import { useIndexJson } from '../../helpers/utils';
 import { UsersScreen } from '../Users';
 
 
@@ -29,13 +27,6 @@ export const Frame = (props: {}) => {
     [/^\/$/, () => <Dashboard />, "Wikis Available Here"],
     [/^\/admin\/users\/?$/, () => <UserManagement />, "User Management"],
     [/^\/admin\/users\/(\d+)$/, ([, user_id]) => <ManageUser userID={user_id} />, "Manage User"],
-    [
-      /^\/admin\/acl\/([^\/]+)$/,
-      ([, recipe_name]) => <ManageAcl
-        recipe_name={decodeURIComponent(recipe_name) as PrismaField<"Recipes", "recipe_name">}
-      />,
-      "ACL Management"
-    ],
     [/^\/admin\/roles$/, () => <UsersScreen />, "Roles"],
   ];
 

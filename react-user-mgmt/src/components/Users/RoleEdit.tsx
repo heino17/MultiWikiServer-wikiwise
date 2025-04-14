@@ -1,5 +1,5 @@
 import { PropsWithChildren, useCallback } from 'react';
-import * as forms from "@angular/forms";
+import * as forms from "angular-forms-only";
 import {
   EventEmitter, FormDialog, FormDialogEvents, useFormDialogForm,
   IndexJson, useIndexJson,

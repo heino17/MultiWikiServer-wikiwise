@@ -1,5 +1,5 @@
 import { PropsWithChildren, useCallback } from 'react';
-import * as forms from "@angular/forms";
+import * as forms from "angular-forms-only";
 import {
   EventEmitter, FormDialog, FormDialogEvents, useFormDialogForm,
   IndexJson, useIndexJson,
@@ -28,7 +28,7 @@ const UserForm = (value: User | null) => {
   return form;
 }
 
-type User = (IndexJson["userList"] & {})[number];
+type User = (Exclude<IndexJson["userListAdmin"] & {}, false>)[number];
 
 function useUserEditContext() {
   return useFormDialogForm<User, ReturnType<typeof UserForm>>();

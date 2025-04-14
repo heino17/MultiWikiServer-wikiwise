@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useIndexJson } from '../../helpers/utils';
 import { Checkbox, FormControlLabel } from "@mui/material";
-import * as forms from "@angular/forms";
+import * as forms from "angular-forms-only";
 import { SelectField, useObservable } from '../../helpers';
 
 
@@ -16,12 +16,16 @@ export function OwnerSelection({ isCreate, control }: { isCreate: boolean; contr
   const [indexJson] = useIndexJson();
   useObservable(control.valueChanges);
 
-  const ownerOptions = useMemo(() => indexJson.userList?.map(e => ({
+  const ownerOptions = useMemo(() => (
+    indexJson.userListAdmin || indexJson.userListUser || []
+  )?.map(e => ({
     label: e.username,
     value: e.user_id
-  })), [indexJson.userList]);
+  })), [indexJson.userListAdmin]);
 
-  if (!indexJson.isAdmin || !indexJson.userList) return null;
+  // this has to be after the hook, although it would only change if 
+  // the user's admin status changes, and they would probably refresh the page anyway
+  if (!indexJson.isAdmin || !indexJson.userListAdmin) return null;
 
   if (isCreate) return (
     <FormControlLabel

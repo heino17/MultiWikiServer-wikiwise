@@ -6,48 +6,49 @@ import {
 } from "@mui/material";
 import Add from '@mui/icons-material/Add';
 import Remove from '@mui/icons-material/Remove';
+import * as forms from "angular-forms-only";
+import { EventEmitter, FormDialog, FormDialogEvents, MissingFavicon, SelectField, SelectOption, FormDialogSubmitButton, useFormDialogForm, useEventEmitter } from '../../helpers';
+import { BagAcl, RecipeAcl } from '@prisma/client';
 
-import * as forms from "@angular/forms";
-import { EventEmitter, FormDialog, FormDialogEvents, MissingFavicon, SelectField, SelectOption, FormDialogSubmitButton, useFormDialogForm, useObservable } from '../../helpers';
+type FormType = ReturnType<typeof ACLForm>;
+type ValueType = EntityACL;
 
+export function useACLEditForm() {
+  const events = useEventEmitter<FormDialogEvents<EntityACL>>();
+  const markup = <FormDialog
+    events={events}
+    createForm={ACLForm}
+    children={<EntityACLInner />}
+  />;
+  return {
+    events,
+    markup,
+    useContext: () => {
+      return useFormDialogForm<EntityACL, FormType>();
+    }
+  };
+}
 
 type ACL = { role_id: number | null, permission: "READ" | "WRITE" | "ADMIN" };
 
-
-const ACLForm = (acl: ACL[] | null) =>
-  new forms.FormArray(acl?.map(e => ACLRow(e)) ?? []);
+const ACLForm = (entity: EntityACL | null) =>
+  new forms.FormArray(entity?.acl?.map(e => ACLRow(e)) ?? []);
 
 const ACLRow = (value: ACL | null) => new forms.FormGroup({
   role_id: new forms.FormControl<number | null>(value?.role_id ?? null, { nonNullable: true, validators: [forms.Validators.required] }),
   permission: new forms.FormControl<"READ" | "WRITE" | "ADMIN">(value?.permission ?? "READ", { nonNullable: true, validators: [forms.Validators.required] }),
-})
+});
 
 export type EntityACL = {
   type: "recipe" | "bag";
   id: number;
   name: string;
   description: string;
-  owner: { username: string } | null;
+  owner_id: number | null;
   acl: ACL[];
 }
-export type EntityACLEditEvents = FormDialogEvents<EntityACL>;
-function useEntityACLEditContext() {
-  return useFormDialogForm<EntityACL, ReturnType<typeof ACLForm>>();
-}
-export function EntityACLEdit({ events }: PropsWithChildren<{
-  events: EventEmitter<EntityACLEditEvents>
-}>) {
-  const [indexJson] = useIndexJson();
 
-  const createForm = useCallback((entity: EntityACL | null) =>
-    ACLForm(entity?.acl ?? null), [indexJson]);
 
-  return <FormDialog
-    events={events}
-    createForm={createForm}
-    children={<EntityACLInner />}
-  />;
-}
 
 const PermissionOptions = (["READ", "WRITE", "ADMIN"] as const).map(e => ({ value: e, label: e }));
 
@@ -55,12 +56,18 @@ const PermissionOptions = (["READ", "WRITE", "ADMIN"] as const).map(e => ({ valu
 function EntityACLInner() {
   const theme = useTheme();
   const [indexJson, globalRefresh] = useIndexJson();
-  const { value, form, onRefresh } = useEntityACLEditContext();
+  const { value, form, onRefresh } = useACLEditForm().useContext();
 
   const roleOptions = useMemo(() => indexJson.roleList.map(e => ({
     label: e.role_name,
     value: e.role_id
   })), [indexJson.roleList]);
+
+  const getOwner = useCallback((owner_id: number | null): string => {
+    if (owner_id === null) return "System";
+    return (indexJson.userListAdmin || indexJson.userListUser || [])
+      .find(e => e.user_id === owner_id)?.username ?? "Unknown";
+  }, [indexJson]);
 
   return <>
     <DialogTitle>Edit {value?.type} ACL</DialogTitle>
@@ -76,7 +83,7 @@ function EntityACLInner() {
             <ListItemText
               primary={<>
                 <Link href={`/wiki/${encodeURIComponent(value.name)}`}>{value.name}</Link>
-                {value.owner && <span> (by {value.owner.username})</span>}
+                {value.owner_id && <span> (by {getOwner(value.owner_id)})</span>}
               </>}
               secondary={value.description}
             />
@@ -137,7 +144,7 @@ function EntityACLInner() {
                   id: newBag.bag_id,
                   name: newBag.bag_name,
                   description: newBag.description,
-                  owner: newBag.owner,
+                  owner_id: newBag.owner_id,
                   acl: newBag.acl
                 });
                 return `Bag ACL updated successfully. `
@@ -157,7 +164,7 @@ function EntityACLInner() {
                   id: newRecipe.recipe_id,
                   name: newRecipe.recipe_name,
                   description: newRecipe.description,
-                  owner: newRecipe.owner,
+                  owner_id: newRecipe.owner_id,
                   acl: newRecipe.acl
                 });
                 return `Recipe ACL updated successfully. `

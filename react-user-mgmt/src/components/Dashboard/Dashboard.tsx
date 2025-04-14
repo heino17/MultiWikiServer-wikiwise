@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { EventEmitter, IndexJson, MissingFavicon, useIndexJson } from '../../helpers';
+import React, { useCallback, useState } from 'react';
+import { EventEmitter, FormDialogEvents, IndexJson, MissingFavicon, useIndexJson } from '../../helpers';
 import {
   Avatar, Button, Card, CardActions, CardContent, IconButton, Link, List, ListItem, ListItemAvatar, ListItemButton,
   ListItemText, Stack
@@ -15,15 +15,19 @@ import WithoutACL from '@mui/icons-material/GppBadOutlined';
 import { useEventEmitter } from '../../helpers';
 import { RecipeEdit, RecipeEditEvents } from './RecipeEdit';
 import { BagEdit, BagEditEvents } from './BagEdit';
-import { EntityACLEdit, EntityACLEditEvents, } from './ACLEdit';
-
-
+import { EntityACL, useACLEditForm, } from './ACLEdit';
 
 export const Dashboard = () => {
 
   const [{ getBag, getBagName, getBagDesc, hasBagAclAccess, hasRecipeAclAccess, ...indexJson }, refresh] = useIndexJson();
 
   const [showSystem, setShowSystem] = useState(false);
+
+  const getOwner = useCallback((owner_id: number | null): string => {
+    if (owner_id === null) return "System";
+    return (indexJson.userListAdmin || indexJson.userListUser || [])
+      .find(e => e.user_id === owner_id)?.username ?? "Unknown";
+  }, [indexJson]);
 
   // Filter system bags based on showSystem state
   const normalBags = indexJson.bagList.filter(bag => !bag.is_plugin);
@@ -45,9 +49,8 @@ export const Dashboard = () => {
     // }
   };
   const recipeEditEvents = useEventEmitter<RecipeEditEvents>();
-  const aclEditEvents = useEventEmitter<EntityACLEditEvents>();
   const bagEditEvents = useEventEmitter<BagEditEvents>();
-
+  const { events: aclEditEvents, markup: aclEditMarkup } = useACLEditForm();
 
   const [openRecipeItems, setOpenRecipeItems] = useState<string | null>(null);
 
@@ -55,7 +58,7 @@ export const Dashboard = () => {
     <CardContent>
       <RecipeEdit events={recipeEditEvents} />
       <BagEdit events={bagEditEvents} />
-      <EntityACLEdit events={aclEditEvents} />
+      {aclEditMarkup}
       <Stack direction="column" spacing={2}>
         <Card variant='outlined'>
           <CardContent>
@@ -69,11 +72,10 @@ export const Dashboard = () => {
                       <MissingFavicon />
                     </Avatar>
                   </ListItemAvatar>
-
                   <ListItemText
                     primary={<>
                       <Link href={`/wiki/${encodeURIComponent(recipe.recipe_name)}`}>{recipe.recipe_name}</Link>
-                      {recipe.owner && <span> (by {recipe.owner.username})</span>}
+                      {recipe.owner_id && <span> (by {getOwner(recipe.owner_id)})</span>}
                     </>}
                     secondary={recipe.description}
                   />
@@ -100,7 +102,7 @@ export const Dashboard = () => {
                               id: recipe.recipe_id,
                               name: recipe.recipe_name,
                               description: recipe.description,
-                              owner: recipe.owner,
+                              owner_id: recipe.owner_id,
                               acl: recipe.acl
                             }
                           });
@@ -136,7 +138,7 @@ export const Dashboard = () => {
                         <ListItemText
                           primary={<>
                             {getBagName(bag.bag_id)}
-                            {getBag(bag.bag_id)?.owner && <span> (by {getBag(bag.bag_id)!.owner!.username})</span>}
+                            {getBag(bag.bag_id)?.owner_id && <span> (by {getBag(bag.bag_id)!.owner_id})</span>}
                           </>}
                           secondary={getBagDesc(bag.bag_id)} />
                       </ListItem>
@@ -164,14 +166,16 @@ export const Dashboard = () => {
           filteredBags: normalBags,
           bagEditEvents,
           hasBagAclAccess,
-          aclEditEvents
+          aclEditEvents,
+          getOwner
         })}
 
         {renderBags({
           title: "Plugins",
           filteredBags: pluginBags,
           bagEditEvents,
-          aclEditEvents
+          aclEditEvents,
+          getOwner
         })}
 
       </Stack>
@@ -179,12 +183,13 @@ export const Dashboard = () => {
   );
 };
 
-function renderBags({ title, filteredBags, bagEditEvents, hasBagAclAccess, aclEditEvents }: {
+function renderBags({ title, filteredBags, bagEditEvents, hasBagAclAccess, aclEditEvents, getOwner }: {
   filteredBags: IndexJson["bagList"][number][];
   bagEditEvents: EventEmitter<BagEditEvents>;
   hasBagAclAccess?: (bag: IndexJson["bagList"][number]) => boolean;
-  aclEditEvents: EventEmitter<EntityACLEditEvents>;
+  aclEditEvents: EventEmitter<FormDialogEvents<EntityACL>>;
   title: string;
+  getOwner: (owner_id: number | null) => string;
 }) {
   return <Card variant='outlined'>
     <CardContent>
@@ -200,7 +205,7 @@ function renderBags({ title, filteredBags, bagEditEvents, hasBagAclAccess, aclEd
             <ListItemText
               primary={<>
                 {bag.bag_name}
-                {bag.owner && <span> (by {bag.owner.username})</span>}
+                {bag.owner_id && <span> (by {getOwner(bag.owner_id)})</span>}
               </>}
               secondary={bag.description} />
             <Stack direction="row" spacing={1}>
@@ -226,7 +231,7 @@ function renderBags({ title, filteredBags, bagEditEvents, hasBagAclAccess, aclEd
                         id: bag.bag_id,
                         name: bag.bag_name,
                         description: bag.description,
-                        owner: bag.owner,
+                        owner_id: bag.owner_id,
                         acl: bag.acl
                       }
                     });

@@ -14,7 +14,7 @@ export const UsersScreen = () => {
       <RoleEdit events={roleEditEvents} />
       <UserEdit events={userEditEvents} />
       <Stack direction="column" spacing={2}>
-        <Card variant='outlined'>
+        {/* <Card variant='outlined'>
           <CardContent>
             <h3>Users</h3>
             <List>
@@ -37,7 +37,7 @@ export const UsersScreen = () => {
               userEditEvents.emit({ type: "open", value: null });
             }}>Create new user</Button>
           </CardActions>
-        </Card>
+        </Card> */}
         <Card variant='outlined'>
           <CardContent>
             <h3>Roles</h3>

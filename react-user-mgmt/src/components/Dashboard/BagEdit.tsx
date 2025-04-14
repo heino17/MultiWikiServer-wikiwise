@@ -1,6 +1,6 @@
 import { PropsWithChildren, useCallback } from 'react';
 import { Checkbox, DialogContent, DialogTitle, FormControlLabel, Stack, TextField } from "@mui/material";
-import * as forms from "@angular/forms";
+import * as forms from "angular-forms-only";
 import {
   EventEmitter, FormDialog, FormDialogEvents, FormDialogSubmitButton, useFormDialogForm,
   IndexJson, serverRequest, useIndexJson, ok,

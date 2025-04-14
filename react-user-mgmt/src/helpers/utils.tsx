@@ -3,7 +3,6 @@ import { useAsyncEffect } from "./useAsyncEffect";
 import React, { ReactNode, useCallback, useId, useMemo, useState } from "react";
 import { FieldValues, useForm, UseFormRegisterReturn } from "react-hook-form";
 import { proxy } from "./prisma-proxy";
-import type { ZodAction } from "../../../src/routes/BaseManager";
 import { z } from "zod";
 import type { RecipeManagerMap, UserManagerMap } from "../../../src/routes/managers";
 import { Button, ButtonProps } from "@mui/material";
@@ -96,16 +95,13 @@ export class PromiseSubject<T> {
 }
 export function Render({ useRender }: { useRender: () => ReactNode }) { return useRender(); }
 
-export const IndexJsonContext = React.createContext<DataLoaderContext<Awaited<ReturnType<typeof getIndexJson>>>>(null as any);
+export const IndexJsonContext = React.createContext<DataLoaderContext<ART<typeof getIndexJson>>>(null as any);
 
 export function useIndexJson() { return React.useContext(IndexJsonContext); }
 
-export type IndexJson = Awaited<ReturnType<typeof getIndexJson>>;
+export type IndexJson = ART<typeof getIndexJson>;
 
-type PART<T extends (...args: any) => any> = Promise<Awaited<ReturnType<T>>>;
-
-type Handler<T extends Record<string, ZodAction<any, any>>, K extends keyof T> =
-  ((data: Parameters<z.input<ReturnType<T[K]["zodRequest"]>>>) => PART<z.output<ReturnType<T[K]["zodResponse"]>>>) & { zodRequest: any; zodResponse: any; };
+type ART<T extends (...args: any) => any> = Awaited<ReturnType<T>>;
 
 function postManager<K extends keyof RecipeManagerMap>(key: K): RecipeManagerMap[K]
 function postManager<K extends keyof UserManagerMap>(key: K): UserManagerMap[K]

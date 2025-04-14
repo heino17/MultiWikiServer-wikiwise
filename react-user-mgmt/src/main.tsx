@@ -1,5 +1,3 @@
-// required by @angular/forms
-import "@angular/compiler";
 import { StrictMode, useEffect } from 'react';
 import './styles/index.css';
 import './styles/login.css';

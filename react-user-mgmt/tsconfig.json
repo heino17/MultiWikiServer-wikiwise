@@ -10,7 +10,7 @@
     ],
     "module": "ESNext",
     "skipLibCheck": true,
-    // "rootDir": ".",
+    // "rootDir": ".", // useful for auditing the imports from outside the src folder
     "types": [],
     /* Bundler mode */
     "moduleResolution": "bundler",
@@ -25,7 +25,10 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+    "paths": {
+      "tiddlywiki": ["../tiddlywiki-types"]
+    }
   },
   "include": [
     "src",
