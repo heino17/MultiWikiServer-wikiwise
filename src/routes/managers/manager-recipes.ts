@@ -68,7 +68,11 @@ export class RecipeManager extends BaseManager {
       where: isAdmin ? undefined : { recipe_bags: { every: { bag: { OR } } } }
     });
 
-    const userList = !isAdmin ? null : await this.prisma.users.findMany({
+    const userListUser = !isAdmin && await this.prisma.users.findMany({
+      select: { user_id: true, username: true }
+    });
+
+    const userListAdmin = !!isAdmin && await this.prisma.users.findMany({
       select: { user_id: true, username: true, email: true, roles: true, last_login: true, created_at: true }
     });
 
@@ -79,7 +83,8 @@ export class RecipeManager extends BaseManager {
       recipeList,
       isAdmin,
       user_id,
-      userList,
+      userListUser,
+      userListAdmin,
       roleList,
       username,
       firstGuestUser: !!this.firstGuestUser,

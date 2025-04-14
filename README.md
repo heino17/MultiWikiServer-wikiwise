@@ -35,6 +35,9 @@ If you want to work on the project,
 
 - `git clone https://github.com/TiddlyWiki/MultiWikiServer`
 - `npm install`
+- `cd react-user-mgmt`
+- `npm install`
+- `cd ..`
 - `npm run certs` - if you want https
 - `npm start` - this runs the build and test every time, but it's pretty fast
 

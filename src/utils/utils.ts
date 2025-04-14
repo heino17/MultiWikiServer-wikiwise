@@ -396,3 +396,8 @@ export function dist_require_resolve(filepath: string) {
   const filename = typeof module === "undefined" ? fileURLToPath(import.meta.url) : module.filename;
   return createRequire(filename).resolve(filepath);
 }
+
+
+export declare interface JsonArray extends Array<JsonValue> { }
+export declare type JsonObject = { [Key in string]?: JsonValue; };
+export declare type JsonValue = string | number | boolean | JsonObject | JsonArray | null | Date;

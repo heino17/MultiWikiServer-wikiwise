@@ -1,9 +1,9 @@
 import { StateObject } from "../../StateObject";
 import { STREAM_ENDED } from "../../streamer";
 import { ZodAssert as zodAssert, Z2 } from "../../utils";
-import { BaseKeyMap, BaseManager, BaseManagerMap, JsonValue, ZodAction, } from "../BaseManager";
+import { BaseKeyMap, BaseManager, BaseManagerMap, ZodAction, ZodRoute, } from "../BaseManager";
 import { ZodTypeAny, ZodType, z } from "zod";
-import { AllowedMethod, BodyFormat } from "../router";
+import { AllowedMethod, BodyFormat, registerZodRoutes, zodRoute } from "../router";
 import { TiddlerServer } from "../bag-file-server";
 
 
@@ -18,45 +18,15 @@ export const TiddlerKeyMap: BaseKeyMap<TiddlerRouter, true> = {
   handleSaveRecipeTiddler: true,
   handleGetWikiIndex: true,
 }
-function isKeyOf<T extends Record<string, any>>(obj: T, key: string | number | symbol): key is keyof T {
-  return key in obj;
-}
 
 export type TiddlerManagerMap = BaseManagerMap<TiddlerRouter>;
 
 export class TiddlerRouter {
   static defineRoutes = (root: rootRoute) => {
-    const router = new TiddlerRouter();
-    Object.keys(TiddlerKeyMap).forEach((key) => {
-      const route = router[key as keyof typeof router] as ZodRoute<any, any, any, any, any>;
-      const { method, path, bodyFormat } = route;
-      const pathParams = path.split("/").filter(e => e.startsWith(":")).map(e => e.substring(1));
-      ///^\/recipes\/([^\/]+)\/tiddlers\/(.+)$/,
-      const pathregex = "^" + path.split("/").map(e => e.startsWith(":") ? "([^/]+)" : e).join("\\/") + "$";
-      root.defineRoute({
-        method,
-        path: new RegExp(pathregex),
-        pathParams,
-        bodyFormat,
-      }, async state => {
-        if (state.method === "OPTIONS") {
-          return state.sendEmpty(200, {
-            // "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": method.join(","),
-            "Access-Control-Allow-Headers": "Content-Type, X-Requested-With",
-          });
-        }
-        // we do it out here so we don't start a transaction if the key is invalid.
-        if (!isKeyOf(TiddlerKeyMap, key)) throw new Error("No such action");
-        const action = router[key] as ZodRoute<any, any, any, any, any>;
-        return await action(state);
-      });
-    });
+    registerZodRoutes(root, new TiddlerRouter(), Object.keys(TiddlerKeyMap));
   }
 
-
-
-  handleGetRecipeStatus = this.ZodRoute(
+  handleGetRecipeStatus = zodRoute(
     ["GET", "HEAD"],
     "/recipes/:recipe_name/status",
     z => ({
@@ -87,7 +57,7 @@ export class TiddlerRouter {
     }
   );
 
-  handleGetRecipeTiddler = this.ZodRoute(
+  handleGetRecipeTiddler = zodRoute(
     ["GET", "HEAD"],
     "/recipes/:recipe_name/tiddlers/:title",
     z => ({
@@ -112,7 +82,7 @@ export class TiddlerRouter {
     }
   )
 
-  handleGetBagTiddler = this.ZodRoute(
+  handleGetBagTiddler = zodRoute(
     ["GET", "HEAD"],
     "/bags/:bag_name/tiddlers/:title",
     z => ({
@@ -135,7 +105,7 @@ export class TiddlerRouter {
 
     });
 
-  handleGetBagTiddlerBlob = this.ZodRoute(
+  handleGetBagTiddlerBlob = zodRoute(
     ["GET", "HEAD"],
     "/bags/:bag_name/tiddlers/:title/blob",
     z => ({
@@ -162,7 +132,7 @@ export class TiddlerRouter {
       }, result.stream);
     });
 
-  handleListRecipeTiddlers = this.ZodRoute(
+  handleListRecipeTiddlers = zodRoute(
     ["GET", "HEAD"],
     "/recipes/:recipe_name/tiddlers.json",
     z => ({
@@ -195,7 +165,7 @@ export class TiddlerRouter {
   )
 
 
-  handleSaveRecipeTiddler = this.ZodRoute(
+  handleSaveRecipeTiddler = zodRoute(
     ["PUT"],
     "/recipes/:recipe_name/tiddlers/:title",
     z => ({
@@ -222,7 +192,7 @@ export class TiddlerRouter {
     });
 
 
-  handleDeleteRecipeTiddler = this.ZodRoute(
+  handleDeleteRecipeTiddler = zodRoute(
     ["DELETE"],
     "/recipes/:recipe_name/tiddlers/:title",
     z => ({
@@ -248,7 +218,7 @@ export class TiddlerRouter {
     });
 
   // this is not used by the sync adaptor. I'm not sure what uses it.
-  handleCreateRecipeTiddler = this.ZodRoute(
+  handleCreateRecipeTiddler = zodRoute(
     ["POST"],
     "/recipes/:recipe_name/tiddlers",
     z => ({
@@ -273,7 +243,7 @@ export class TiddlerRouter {
 
     });
 
-  handleGetWikiIndex = this.ZodRoute(
+  handleGetWikiIndex = zodRoute(
     ["GET", "HEAD"],
     "/wiki/:recipe_name",
     z => ({
@@ -315,81 +285,5 @@ export class TiddlerRouter {
     return tiddlerInfo;
   }
 
-  protected ZodRoute<M extends AllowedMethod, B extends "GET" | "HEAD" extends M ? "ignore" : BodyFormat, P extends Record<string, ZodTypeAny>, T extends ZodTypeAny, R extends JsonValue>(
-    method: M[],
-    path: string,
-    zodPathParams: (z: Z2<"STRING">) => P,
-    bodyFormat: B,
-    zodRequest: (z: Z2<"JSON">) => T,
-    handler: (state: ZodState<M, B, P, T>) => Promise<R>,
-  ): ZodRoute<M, B, P, T, R> {
-    // return and throw indicate whether the transaction should commit or rollback
-    const action = async (state: StateObject): Promise<typeof STREAM_ENDED> => {
 
-      const pathCheck = Z2.object(zodPathParams(Z2)).safeParse(state.pathParams);
-      if (!pathCheck.success) {
-        console.log(pathCheck.error);
-        throw state.sendEmpty(400, { "x-reason": "zod-path" });
-      }
-
-      const inputCheck = zodRequest(Z2).safeParse(state.data);
-      if (!inputCheck.success) {
-        console.log(inputCheck.error);
-        throw state.sendEmpty(400, { "x-reason": "zod-request" });
-      }
-
-      const [good, error, res] = await handler(state as ZodState<M, B, P, T>)
-        .then(e => [true, undefined, e] as const, e => [false, e, undefined] as const);
-
-      if (!good) {
-        if (error === STREAM_ENDED) {
-          return error;
-        } else if (typeof error === "string") {
-          throw state.sendString(400, { "x-reason": "zod-handler" }, error, "utf8");
-        } else if (error instanceof Error && error.name === "UserError") {
-          throw state.sendString(400, { "x-reason": "user-error" }, error.message, "utf8");
-        } else {
-          throw error;
-        }
-      }
-
-      return state.sendJSON(200, res);
-
-    };
-    action.path = path;
-    action.inner = handler;
-    action.zodRequest = zodRequest;
-    // action.zodResponse = zodResponse;
-    action.zodPathParams = zodPathParams;
-    action.method = method;
-    action.bodyFormat = bodyFormat;
-
-    return action
-  }
 }
-
-
-export interface ZodRoute<
-  M extends AllowedMethod,
-  B extends BodyFormat,
-  P extends Record<string, ZodTypeAny>,
-  T extends ZodTypeAny,
-  R extends JsonValue
-> extends ZodAction<T, R> {
-  zodPathParams: (z: Z2<"STRING">) => P;
-  method: M[];
-  path: string;
-  bodyFormat: B;
-}
-
-
-export class ZodState<
-  M extends AllowedMethod,
-  B extends BodyFormat,
-  P extends Record<string, ZodTypeAny>,
-  T extends ZodTypeAny
-> extends StateObject<B, M, string[][], z.output<T>> {
-  declare pathParams: z.output<z.ZodObject<P>>;
-  // declare data: z.output<T>;
-}
-

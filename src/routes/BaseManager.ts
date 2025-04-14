@@ -1,9 +1,9 @@
 import { ZodTypeAny, ZodType, z } from "zod";
 import { StateObject } from "../StateObject";
-import { Z2 } from "../utils";
+import { JsonValue, Z2 } from "../utils";
 import { DataChecks } from "../utils";
 import { STREAM_ENDED } from "../streamer";
-import { SiteConfig } from "./router";
+import { AllowedMethod, BodyFormat, SiteConfig } from "./router";
 import { AuthUser } from "../server";
 import { PasswordService } from "./services/PasswordService";
 
@@ -25,22 +25,45 @@ Nothing should be happening to tiddlers in a bag unless they're in a writable la
 
 */
 
-export declare interface JsonArray extends Array<JsonValue> { }
-export declare type JsonObject = { [Key in string]?: JsonValue; };
-export declare type JsonValue = string | number | boolean | JsonObject | JsonArray | null | Date;
 
-export interface ZodAction<T extends ZodTypeAny, R extends JsonValue> {
+
+export interface ZodAction<T extends z.ZodTypeAny, R extends JsonValue> {
   (state: StateObject): Promise<typeof STREAM_ENDED>;
   zodRequest: (z: Z2<"JSON">) => T;
-  zodResponse?: (z: Z2<"JSON">) => ZodType<R>;
+  zodResponse?: (z: Z2<"JSON">) => z.ZodType<R>;
   inner: (route: z.output<T>) => Promise<R>,
 }
 
+export interface ZodRoute<
+  M extends AllowedMethod,
+  B extends BodyFormat,
+  P extends Record<string, z.ZodTypeAny>,
+  T extends z.ZodTypeAny,
+  R extends JsonValue
+> extends ZodAction<T, R> {
+  zodPathParams: (z: Z2<"STRING">) => P;
+  method: M[];
+  path: string;
+  bodyFormat: B;
+}
+
+export class ZodState<
+  M extends AllowedMethod,
+  B extends BodyFormat,
+  P extends Record<string, z.ZodTypeAny>,
+  T extends z.ZodTypeAny
+> extends StateObject<B, M, string[][], z.output<T>> {
+  declare pathParams: z.output<z.ZodObject<P>>;
+  // declare data: z.output<T>;
+}
+
+
 export type BaseManagerMap<T> = {
   [K in keyof T as T[K] extends ZodAction<any, any> ? K : never]:
-  T[K] extends { zodRequest: (z: any) => ZodTypeAny, zodResponse: (z: any) => ZodType<JsonValue> }
-  ? ((data: z.input<ReturnType<T[K]["zodRequest"]>>) => Promise<z.output<ReturnType<T[K]["zodResponse"]>>>)
-  : never;
+  T[K] extends {
+    zodRequest: (z: any) => infer REQ extends ZodTypeAny,
+    zodResponse?: (z: any) => infer RES extends ZodType<JsonValue>
+  } ? ((data: z.input<REQ>) => Promise<z.output<RES>>) : never;
 }
 
 export type BaseKeyMap<T, V> = {

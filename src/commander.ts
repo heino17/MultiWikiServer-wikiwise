@@ -191,6 +191,7 @@ class StartupCommander {
         console.log("Applying migration", migration);
         await this.libsql.executeMultiple(fileContent);
       }
+
       await this.libsql.execute({
         sql: 'INSERT INTO _prisma_migrations (' +
           'id, migration_name, checksum, finished_at, logs, rolled_back_at, started_at, applied_steps_count' +
