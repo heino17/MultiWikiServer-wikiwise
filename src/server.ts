@@ -15,7 +15,10 @@ import { resolve } from "node:path";
 export * from "./routes/services/sessions";
 
 export interface MWSConfig {
-  /** Listener config for the mws-listen command. */
+  /** 
+   * Listener config for the mws-listen command. 
+   * This is extracted from the config early and passed directly to mws-listen. 
+   */
   listeners: {
     /** The key file for the HTTPS server. If either key or cert are set, both are required, and HTTPS is enforced. */
     key?: string
@@ -26,7 +29,10 @@ export interface MWSConfig {
     /** The hostname to listen on. If this is specified, then port is required. */
     host?: string
   }[]
-  /** Called and awaited by the mws-listen command. */
+  /**
+   * Called and awaited by the mws-listen command. 
+   * This is extracted from the config early and passed directly to mws-listen. 
+   */
   onListenersCreated?: (listeners: ListenerBase[]) => Promise<void>;
 
   /** 

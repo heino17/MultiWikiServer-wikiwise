@@ -20,7 +20,7 @@ export const info: CommandInfo = {
 	name: "mws-load-wiki-folder",
 	synchronous: true
 };
-
+// tiddlywiki --load ./mywiki.html --savewikifolder ./mywikifolder
 export class Command {
 	constructor(
 		public params: string[],

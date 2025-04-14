@@ -3,7 +3,8 @@ declare module "tiddlywiki" {
 
   // Main TiddlyWiki interface - defined in global scope for augmentation
   interface TW {
-    boot: TWBoot;
+    /** This represents `$tw.boot` at the completion of `$tw.boot.boot()` */
+    boot: TWBootNode;
     config: TWConfig;
     browser: Record<string, any> | null;
     node: Record<string, any> | null;
@@ -15,10 +16,16 @@ declare module "tiddlywiki" {
   }
 
   // Breaking down into component interfaces for better augmentation
-  interface TWBoot {
+  interface TWBootBrowser {
     tasks: {
       trapErrors: boolean;
-      readBrowserTiddlers: boolean;
+      readBrowserTiddlers: true;
+    };
+  }
+  interface TWBootNode {
+    tasks: {
+      trapErrors: boolean;
+      readBrowserTiddlers: false;
     };
   }
 

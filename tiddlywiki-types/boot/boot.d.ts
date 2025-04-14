@@ -16,7 +16,7 @@ declare module "tiddlywiki" {
     safeMode?: boolean;
     locationHash: string;
     packageInfo: any;
-    boot: TWBoot;
+    boot: TWBootNode;
     addUnloadTask(task: (event: BeforeUnloadEvent) => any): void;
     unloadTasks: Array<(event: BeforeUnloadEvent) => any>;
     modules: TWModules;
@@ -64,18 +64,10 @@ declare module "tiddlywiki" {
     maxEditFileSize: number;
   }
 
-  // Augment the boot interface with additional properties defined in boot.js
-  interface TWBoot {
+  interface TWBootBase {
     log(str: string): void;
     logMessages?: string[];
-    files?: Record<string, FileInfo>;
-    bootPath?: string;
-    corePath?: string;
     argv: string[];
-    extraPlugins?: string[];
-    wikiPath: string;
-    wikiTiddlersPath?: string;
-    wikiInfo?: any;
     remainingStartupModules?: StartupModule[];
     executedStartupModules?: Record<string, boolean>;
     disabledStartupModules?: string[];
@@ -88,6 +80,26 @@ declare module "tiddlywiki" {
     execStartup(options: BootOptions): void;
     startup(options?: BootOptions): void;
     boot(callback?: () => void): void;
+  }
+
+  interface TWBootBrowser extends TWBootBase {
+    bootPath: undefined;
+    corePath: undefined;
+    wikiPath: undefined;
+    wikiInfo: undefined;
+    files: undefined;
+    wikiTiddlersPath: undefined;
+    extraPlugins?: string[];
+  }
+
+  interface TWBootNode extends TWBootBase {
+    bootPath: string;
+    corePath: string;
+    wikiPath: string;
+    files: Record<string, FileInfo>;
+    extraPlugins: string[];
+    wikiInfo: object | null;
+    wikiTiddlersPath: string;
   }
 
   // Options for boot functions

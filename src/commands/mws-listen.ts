@@ -7,7 +7,6 @@ import * as http2 from "node:http2";
 import { Router } from "../routes/router";
 import { MWSConfig } from "../server";
 import { Streamer } from "../streamer";
-import { createRequire } from 'node:module';
 
 
 export class ListenerBase {
@@ -98,6 +97,7 @@ export class Command {
     public params: string[],
     public commander: Commander,
     listenConfig: MWSConfig["listeners"],
+    onListenersCreated: MWSConfig["onListenersCreated"]
   ) {
     if (this.params.length) throw `${info.name}: No parameters allowed. Please put listener options in the config file.`;
 
@@ -110,7 +110,7 @@ export class Command {
 
       const router = await Router.makeRouter(
         this.commander,
-        this.commander.config.enableDevServer
+        this.commander.config.enableDevServer,
       ).catch(e => {
         console.log(e.stack);
         throw "Router failed to load";
@@ -128,7 +128,7 @@ export class Command {
         return listener;
       });
 
-      await this.commander.config.onListenersCreated?.(listeners);
+      await onListenersCreated?.(listeners);
     };
 
   }

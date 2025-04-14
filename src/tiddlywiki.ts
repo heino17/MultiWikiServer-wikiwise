@@ -1,8 +1,9 @@
-import { TiddlyWiki, TWBoot } from "tiddlywiki";
+import { TiddlyWiki, TWBoot, TWBootBrowser, TWBootNode } from "tiddlywiki";
 import { } from "tiddlywiki/boot/bootprefix";
 import { $TW } from "./commander";
 import { resolve } from "node:path";
-import { dist_resolve } from "./utils";
+import { dist_resolve, is } from "./utils";
+import { ok } from "node:assert";
 
 declare module "tiddlywiki" {
   interface TWUtils {
@@ -84,6 +85,9 @@ export async function bootTiddlyWiki(wikiPath: string) {
 
   // use callback to match the type signature
   await new Promise<void>(resolve => $tw.boot.boot(resolve));
+
+  // this makes sure boot followed the node path
+  ok(!$tw.boot.tasks.readBrowserTiddlers);
 
   return $tw;
 

@@ -18,3 +18,4 @@ localhost.*
 TiddlyWiki5
 test5213tw
 *.tgz
+/.vscode/settings.json

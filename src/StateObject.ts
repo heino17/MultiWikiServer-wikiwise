@@ -87,6 +87,7 @@ export class StateObject<
     public bodyFormat: B,
     public user: AuthUser,
     public commander: Commander,
+    public tiddlerCache: Router["tiddlerCache"],
   ) {
     super(streamer);
 
@@ -114,6 +115,7 @@ export class StateObject<
     const queryParamsZodCheck = z.record(z.array(z.string())).safeParse(this.queryParams);
     if (!queryParamsZodCheck.success) console.log("BUG: Query params zod error", queryParamsZodCheck.error, this.queryParams);
     else this.queryParams = queryParamsZodCheck.data;
+
 
   }
 

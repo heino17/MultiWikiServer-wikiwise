@@ -2,7 +2,7 @@ import { STREAM_ENDED, Streamer } from "../streamer";
 import { StateObject } from "../StateObject";
 import RootRoute from ".";
 import * as z from "zod";
-import { createStrictAwaitProxy, JsonValue, Z2 } from "../utils";
+import { createStrictAwaitProxy, JsonValue, truthy, Z2 } from "../utils";
 import { Route, rootRoute, RouteOptAny, RouteMatch, } from "../utils";
 import { MWSConfigConfig } from "../server";
 import { setupDevServer } from "../setupDevServer";
@@ -53,7 +53,7 @@ export class Router {
 
   static async makeRouter(
     commander: Commander,
-    enableDevServer: string | undefined,
+    enableDevServer: string | undefined
   ) {
 
     const sendDevServer = await setupDevServer(enableDevServer);
@@ -70,9 +70,16 @@ export class Router {
 
     await RootRoute(rootRoute);
 
-    const router = new Router(rootRoute, commander);
-
-    return router;
+    // this code needs to be async-possible :)
+    const $tw = commander.$tw;
+    const bootTiddlers = $tw.loadTiddlersFromPath($tw.boot.bootPath).flatMap(file => file.tiddlers);
+    const tiddlerMemoryCache = new Map<string, string>(
+      bootTiddlers.map(e => e.title && e && [e.title, JSON.stringify(e)] as const).filter(truthy)
+    );
+    // map ( title -> hash )
+    // tiddler cache files are named [hash].json
+    const tiddlerFileCache = new Map<string, string>();
+    return new Router(rootRoute, commander, { tiddlerMemoryCache, tiddlerFileCache });
   }
 
 
@@ -91,9 +98,14 @@ export class Router {
   constructor(
     private rootRoute: rootRoute,
     private commander: Commander,
+    private tiddlerCache: {
+      tiddlerMemoryCache: Map<string, string>,
+      tiddlerFileCache: Map<string, string>,
+    },
   ) {
     this.engine = commander.engine;
     this.SessionManager = commander.SessionManager;
+
   }
 
   async handle(streamer: Streamer) {
@@ -126,6 +138,7 @@ export class Router {
         bodyFormat,
         authUser,
         this.commander,
+        this.tiddlerCache,
       ) as statetype
     );
 
