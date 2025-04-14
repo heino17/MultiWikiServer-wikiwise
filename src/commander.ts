@@ -126,7 +126,9 @@ class StartupCommander {
     this.setupRequired = false;
 
     if (process.env.RUN_OLD_MWS_DB_SETUP_FOR_TESTING) {
-      await this.libsql.executeMultiple(readFileSync(dist_resolve("../prisma/migrations/20250406213424_init/migration.sql"), "utf8"));
+      await this.libsql.executeMultiple(readFileSync(dist_resolve(
+        "../prisma/migrations/20250406213424_init/migration.sql"
+      ), "utf8"));
     }
 
     const tables = await this.libsql.batch([{
