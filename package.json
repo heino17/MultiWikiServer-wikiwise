@@ -20,6 +20,7 @@
     "node": ">14"
   },
   "scripts": {
+    "docs": "tiddlywiki +plugins/tiddlywiki/tiddlyweb +plugins/tiddlywiki/filesystem editions/mws-docs --listen",
     "lint:fix": "exit 1 && eslint . --fix",
     "lint": "exit 1 && eslint .",
     "jsc": "tsc -p jsconfig.json --noEmit",
@@ -51,14 +52,14 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "uuid": "^11.1.0",
-    "esbuild": "^0.25.0",
+    "esbuild": "0.25.2",
     "mime-types": "^2.1.35",
     "send": "^1.1.0",
     "sjcl": "^1.0.8",
     "tiddlywiki": "^5.1.22",
     "tsup": "^8.4.0",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "uuid": "^11.1.0"
   },
   "peerDependencies": {
     "tiddlywiki": "^5.1.22"

@@ -1,13 +1,14 @@
-title: Usage
-tags: TableOfContents
-modified: 20241105133737778
 created: 20241105133737778
+modified: 20250417170530535
+tags: TableOfContents
+title: Usage
+type: text/vnd.tiddlywiki
 
 Once MWS is successfully [[installed|Installation]], you can access it by visiting http://localhost:8080 in a browser on the same computer.
 
-By default, MWS is installed with full anonymous access enabled, meaning that anyone with access to the server has full access to read and modify anything. However, also by default, the server is only accessible to browsers on the same machine.
+On first start, a default user is created with username `admin` and password `1234`. However, also by default, the server is only accessible to browsers on the same machine.
 
 If you intend to put an MWS installation on a public network like the Internet, the server will need to be secured with the following steps:
 
-* Create and login with a new administrator account
-* Disable anonymouse access
+* Change the administrator password.
+* Install HTTPS server certificates.
