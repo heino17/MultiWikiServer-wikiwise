@@ -4,7 +4,7 @@ tags: TableOfContents
 title: Installation
 type: text/vnd.tiddlywiki
 
-These instructions require minimal knowledge of the terminal and require NodeJS to be installed. There are also [[alternative instructions for those using Git|Installation using Git]].
+These instructions require minimal knowledge of the terminal and require NodeJS to be installed.
 
 # Open a terminal window and set the current directory to the folder you want to create the project folder in. 
 # The init command creates the project folder and installs the required dependencies and config files. You can change the name to whatever you like. <<.copy-code-to-clipboard """npm init @tiddlywiki/mws@latest "new_folder_name" """>>

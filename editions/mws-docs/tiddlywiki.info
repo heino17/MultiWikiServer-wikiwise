@@ -1,6 +1,7 @@
 {
 	"description": "Multiple wiki server documentation edition",
 	"plugins": [
+		"tiddlywiki/markdown"
 	],
 	"themes": [
 		"tiddlywiki/vanilla",
