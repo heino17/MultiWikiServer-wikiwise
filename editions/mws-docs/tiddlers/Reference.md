@@ -135,10 +135,9 @@ Each user account contains the following essential components:
 
 The MultiWikiServer HTTP API provides management and tiddler endpoints. It was based on [the API of TiddlyWeb](https://tank.peermore.com/tanks/tiddlyweb/HTTP%20API), first developed in 2008 by Chris Dent, but is more oriented around JSON and Typescript. 
 
-The purpose of the API is to connect the client and server as transparently as possible. This means that, at least for the moment, we aren't looking at specific formats, and are generally just dumping JSON onto the wire.
-
 The design goals of the API are:
 
+ - Connect the client and server as transparently as possible. 
  - Follow the principles of remote procedure calls.
  - Be easy to understand and use via Javascript. 
  - Have strict validation of incoming requests.
