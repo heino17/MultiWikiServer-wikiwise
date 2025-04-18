@@ -7,7 +7,6 @@ import { Route, rootRoute, RouteOptAny, RouteMatch, } from "../utils";
 import { MWSConfigConfig } from "../server";
 import { setupDevServer } from "../setupDevServer";
 import { Commander } from "../commander";
-import { ZodRoute, ZodState } from "./BaseManager";
 import { CacheState, startupCache } from "./cache";
 
 export { RouteMatch, Route, rootRoute };
@@ -69,7 +68,7 @@ export class Router {
 
     await commander.SessionManager.defineRoutes(rootRoute);
 
-    await RootRoute(rootRoute);
+    await RootRoute(rootRoute, commander.siteConfig);
 
     const cache = await startupCache(commander);
 
@@ -272,75 +271,92 @@ function defineRoute(
 
   (route as any).defineRoute = (...args: [any, any]) => defineRoute(route, ...args);
 
-  (route as any).handler = handler;
+  (route as Route).handler = handler;
 
   return route as any; // this is usually ignored except for the root route.
 }
 
 
+export interface ZodAction<T extends z.ZodTypeAny, R extends JsonValue> {
+  // (state: StateObject): Promise<typeof STREAM_ENDED>;
+  inner: (route: z.output<T>) => Promise<R>
+  zodRequest: (z: Z2<"JSON">) => T;
+  zodResponse?: (z: Z2<"JSON">) => z.ZodType<R>;
+}
+
+export interface ZodRoute<
+  M extends AllowedMethod,
+  B extends BodyFormat,
+  P extends Record<string, z.ZodTypeAny>,
+  T extends z.ZodTypeAny,
+  R extends JsonValue
+> extends ZodAction<T, R> {
+  zodPathParams: (z: Z2<"STRING">) => P;
+  method: M[];
+  path: string;
+  bodyFormat: B;
+  inner: (state: ZodState<M, B, P, T>) => Promise<R>,
+}
+
+export class ZodState<
+  M extends AllowedMethod,
+  B extends BodyFormat,
+  P extends Record<string, z.ZodTypeAny>,
+  T extends z.ZodTypeAny
+> extends StateObject<B, M, string[][], z.output<T>> {
+  declare pathParams: z.output<z.ZodObject<P>>;
+  // declare data: z.output<T>;
+}
+
+
+export type RouterRouteMap<T> = {
+  [K in keyof T as T[K] extends ZodAction<any, any> ? K : never]:
+  T[K] extends {
+    zodRequest: (z: any) => infer REQ extends z.ZodTypeAny,
+    zodResponse?: (z: any) => infer RES extends z.ZodType<JsonValue>
+  } ? ((data: z.input<REQ>) => Promise<z.output<RES>>) : never;
+}
+
+export type RouterKeyMap<T, V> = {
+  [K in keyof T as T[K] extends ZodAction<any, any> ? K : never]: V;
+}
+
 
 // this is definitely the better version of defineRoute, but that was the starting point
 export function zodRoute<M extends AllowedMethod, B extends "GET" | "HEAD" extends M ? "ignore" : BodyFormat, P extends Record<string, z.ZodTypeAny>, T extends z.ZodTypeAny, R extends JsonValue>(
   method: M[],
+  /** `"path/to/route/:var/route/:var2"` */
   path: string,
   zodPathParams: (z: Z2<"STRING">) => P,
   bodyFormat: B,
   zodRequest: (z: Z2<"JSON">) => T,
-  handler: (state: ZodState<M, B, P, T>) => Promise<R>,
+  inner: (state: ZodState<M, B, P, T>) => Promise<R>,
 ): ZodRoute<M, B, P, T, R> {
-  // return and throw indicate whether the transaction should commit or rollback
-  const action = async (state: StateObject): Promise<typeof STREAM_ENDED> => {
-
-    const pathCheck = Z2.object(zodPathParams(Z2)).safeParse(state.pathParams);
-    if (!pathCheck.success) {
-      console.log(pathCheck.error);
-      throw state.sendEmpty(400, { "x-reason": "zod-path" });
-    }
-
-    const inputCheck = zodRequest(Z2).safeParse(state.data);
-    if (!inputCheck.success) {
-      console.log(inputCheck.error);
-      throw state.sendEmpty(400, { "x-reason": "zod-request" });
-    }
-
-    const [good, error, res] = await handler(state as ZodState<M, B, P, T>)
-      .then(e => [true, undefined, e] as const, e => [false, e, undefined] as const);
-
-    if (!good) {
-      if (error === STREAM_ENDED) {
-        return error;
-      } else if (typeof error === "string") {
-        throw state.sendString(400, { "x-reason": "zod-handler" }, error, "utf8");
-      } else if (error instanceof Error && error.name === "UserError") {
-        throw state.sendString(400, { "x-reason": "user-error" }, error.message, "utf8");
-      } else {
-        throw error;
-      }
-    }
-
-    return state.sendJSON(200, res);
-
-  };
-  action.path = path;
-  action.inner = handler;
-  action.zodRequest = zodRequest;
-  action.zodPathParams = zodPathParams;
-  action.method = method;
-  action.bodyFormat = bodyFormat;
-
-  return action
+  return {
+    method,
+    path,
+    bodyFormat,
+    inner,
+    zodRequest,
+    zodPathParams,
+  } as ZodRoute<M, B, P, T, R>;
 }
 
 export const registerZodRoutes = (root: rootRoute, router: any, keys: string[]) => {
   // const router = new TiddlerRouter();
   keys.forEach((key) => {
     const route = router[key as keyof typeof router] as ZodRoute<any, any, any, any, any>;
-    const { method, path, bodyFormat } = route;
+    const { method, path, bodyFormat, zodPathParams, zodRequest, inner } = route;
     const pathParams = path.split("/").filter(e => e.startsWith(":")).map(e => e.substring(1));
     ///^\/recipes\/([^\/]+)\/tiddlers\/(.+)$/,
-    const pathregex = "^" + path.split("/").map(e => e.startsWith(":") ? "([^/]+)" : e).join("\\/") + "$";
+    if (!path.startsWith("/")) throw new Error(`Path ${path} must start with a forward slash`);
+    if (key.startsWith(":")) throw new Error(`Key ${key} must not start with a colon`)
+    const pathregex = "^" + path.split("/").map(e =>
+      e === "$key" ? key : e.startsWith(":") ? "([^/]+)" : e
+    ).join("\\/") + "$";
+
     root.defineRoute({
-      method,
+      method: [...method, "OPTIONS"],
       path: new RegExp(pathregex),
       pathParams,
       bodyFormat,
@@ -352,10 +368,46 @@ export const registerZodRoutes = (root: rootRoute, router: any, keys: string[]) 
           "Access-Control-Allow-Headers": "Accept, Content-Type, X-Requested-With",
         });
       }
-      // we do it out here so we don't start a transaction if the key is invalid.
-      if (!keys.includes(key)) throw new Error("No such action");
-      const action = router[key] as ZodRoute<any, any, any, any, any>;
-      return await action(state);
+      // return await (router[key] as ZodRoute<any, any, any, any, any>)(state);
+      const pathCheck = Z2.object(zodPathParams(Z2)).safeParse(state.pathParams);
+      if (!pathCheck.success) {
+        console.log(pathCheck.error);
+        throw state.sendEmpty(400, { "x-reason": "zod-path" });
+      }
+
+      const inputCheck = zodRequest(Z2).safeParse(state.data);
+      if (!inputCheck.success) {
+        console.log(inputCheck.error);
+        throw state.sendEmpty(400, { "x-reason": "zod-request" });
+      }
+
+      const [good, error, res] = await inner(state)
+        .then(e => [true, undefined, e] as const, e => [false, e, undefined] as const);
+
+      if (!good) {
+        if (error === STREAM_ENDED) {
+          return error;
+        } else if (typeof error === "string") {
+          return state.sendString(400, { "x-reason": "zod-handler" }, error, "utf8");
+        } else if (error instanceof Error && error.name === "UserError") {
+          return state.sendString(400, { "x-reason": "user-error" }, error.message, "utf8");
+        } else {
+          throw error;
+        }
+      }
+
+      return state.sendJSON(200, res);
     });
+  });
+}
+
+
+
+export function zodManage<T extends z.ZodTypeAny, R extends JsonValue>(
+  zodRequest: (z: Z2<"JSON">) => T,
+  inner: (state: ZodState<"POST", "json", Record<string, z.ZodTypeAny>, T>, prisma: PrismaTxnClient) => Promise<R>
+) {
+  return zodRoute(["POST"], "/manager/$key", z => ({}), "json", zodRequest, async state => {
+    return state.$transaction(async (prisma) => await inner(state, prisma));
   });
 }

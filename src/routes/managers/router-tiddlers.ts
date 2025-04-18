@@ -1,13 +1,11 @@
 import { StateObject } from "../../StateObject";
 import { STREAM_ENDED } from "../../streamer";
-import { ZodAssert as zodAssert, Z2 } from "../../utils";
-import { BaseKeyMap, BaseManager, BaseManagerMap, ZodAction, ZodRoute, } from "../BaseManager";
-import { ZodTypeAny, ZodType, z } from "zod";
-import { AllowedMethod, BodyFormat, registerZodRoutes, zodRoute } from "../router";
+import { ZodAssert as zodAssert } from "../../utils";
+import { registerZodRoutes, zodRoute, RouterKeyMap, RouterRouteMap } from "../router";
 import { TiddlerServer } from "../bag-file-server";
 
 
-export const TiddlerKeyMap: BaseKeyMap<TiddlerRouter, true> = {
+export const TiddlerKeyMap: RouterKeyMap<TiddlerRouter, true> = {
   handleCreateRecipeTiddler: true,
   handleDeleteRecipeTiddler: true,
   handleGetBagTiddler: true,
@@ -19,7 +17,7 @@ export const TiddlerKeyMap: BaseKeyMap<TiddlerRouter, true> = {
   handleGetWikiIndex: true,
 }
 
-export type TiddlerManagerMap = BaseManagerMap<TiddlerRouter>;
+export type TiddlerManagerMap = RouterRouteMap<TiddlerRouter>;
 
 export class TiddlerRouter {
   static defineRoutes = (root: rootRoute) => {

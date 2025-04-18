@@ -26,7 +26,6 @@ export const UserManagement = DataLoader(async () => {
 }, (userList, refreshUsers, props) => {
   const [indexJson, refreshIndex] = useIndexJson();
   const userIsAdmin = indexJson?.isAdmin || false;
-  const firstGuestUser = indexJson?.firstGuestUser || false;
   const username = indexJson?.username || "";
 
   const refreshPage = useCallback(() => {

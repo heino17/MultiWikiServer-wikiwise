@@ -1,9 +1,10 @@
 
 import { Streamer } from "../../streamer";
-import { BaseKeyMap, BaseManager, BaseManagerMap } from "../BaseManager";
 import { randomBytes } from "node:crypto";
-import { Router } from "../router";
+import { registerZodRoutes, Router, RouterKeyMap, RouterRouteMap, zodRoute, ZodState } from "../router";
 import { StateObject } from "../../StateObject";
+import { z } from "zod";
+import { JsonValue, Z2 } from "../../utils";
 
 export interface AuthUser {
   /** User ID. 0 if the user is not logged in. */
@@ -16,37 +17,41 @@ export interface AuthUser {
   sessionId: PrismaField<"Sessions", "session_id"> | undefined;
   /** Is this user considered a site-admin. This is determined by the auth service, not MWS. */
   isAdmin: boolean;
-  /** Is the user logged in? This also means that user_id should be 0. role_ids may still be effective. */
+  /** Is the user logged in? This also means that user_id should be 0. role_ids may still be specified. */
   isLoggedIn: boolean;
 }
 
-export const SessionKeyMap: BaseKeyMap<SessionManager, true> = {
+export const SessionKeyMap: RouterKeyMap<SessionManager, true> = {
   login1: true,
   login2: true,
   logout: true,
 }
 
-export type SessionManagerMap = BaseManagerMap<SessionManager>;
 
-export class SessionManager extends BaseManager {
+/**
+ * 
+ * @param path path starting with a forward slash
+ * @param zodRequest the zod for state.data
+ * @param inner the handler to call
+ * @returns the ZodRoute
+ */
+export function zodSession<T extends z.ZodTypeAny, R extends JsonValue>(
+  path: string,
+  zodRequest: (z: Z2<"JSON">) => T,
+  inner: (state: ZodState<"POST", "json", Record<string, z.ZodTypeAny>, T>, prisma: PrismaTxnClient) => Promise<R>
+) {
+  return zodRoute(["POST"], path, z => ({}), "json", zodRequest, async state => {
+    return state.$transaction(async (prisma) => await inner(state, prisma));
+  });
+}
+
+
+export type SessionManagerMap = RouterRouteMap<SessionManager>;
+
+export class SessionManager {
 
   static async defineRoutes(root: rootRoute) {
-    root.defineRoute({
-      method: ["POST"],
-      path: /^\/(login\/1|login\/2|logout)$/,
-      pathParams: ["login"],
-      bodyFormat: "json",
-    }, async state => {
-      return await state.$transaction(async prisma => {
-        const session = new SessionManager(state, prisma);
-        switch (state.pathParams.login) {
-          case "login/1": return await session.login1(state);
-          case "login/2": return await session.login2(state);
-          case "logout": return await session.logout(state);
-          default: throw "No such login";
-        }
-      });
-    });
+    registerZodRoutes(root, new SessionManager(), Object.keys(SessionKeyMap))
   }
 
   static async parseIncomingRequest(streamer: Streamer, router: Router): Promise<AuthUser> {
@@ -75,19 +80,13 @@ export class SessionManager extends BaseManager {
     };
   }
 
-  constructor(protected state: StateObject, prisma: PrismaTxnClient) {
-    super(state.config, prisma, state.user, false, state.PasswordService);
-  }
-
-  login1 = this.ZodRequest(z => z.object({
-    // userID: z.prismaField("Users", "user_id", "number", false),
-    // registrationRecord: z.string(),
-    // startLoginRequest: z.string(),
+  login1 = zodSession("/login/1", z => z.object({
     username: z.prismaField("Users", "username", "string"),
     startLoginRequest: z.string(),
-  }), async ({ username, startLoginRequest }) => {
+  }), async (state, prisma) => {
+    const { username, startLoginRequest } = state.data;
 
-    const user = await this.prisma.users.findUnique({
+    const user = await prisma.users.findUnique({
       where: { username },
       select: { user_id: true, password: true, }
     });
@@ -96,7 +95,7 @@ export class SessionManager extends BaseManager {
 
     const { user_id, password } = user;
 
-    const stater = this.PasswordService.LoginGenerator({
+    const stater = state.PasswordService.LoginGenerator({
       user_id,
       startLoginRequest,
       registrationRecord: password,
@@ -106,21 +105,22 @@ export class SessionManager extends BaseManager {
 
     if (loginResponse.done) throw "Login failed.";
 
-    const loginSession = await this.PasswordService.startLoginSession(stater);
+    const loginSession = await state.PasswordService.startLoginSession(stater);
 
-    this.state.setCookie("loginsession", loginSession, { httpOnly: true, path: "/", secure: this.state.isSecure, sameSite: "Strict" });
+    state.setCookie("loginsession", loginSession, { httpOnly: true, path: "/", secure: state.isSecure, sameSite: "Strict" });
 
     return { loginResponse: loginResponse.value };
 
   })
 
-  login2 = this.ZodRequest(z => z.object({
+  login2 = zodSession("/login/2", z => z.object({
     finishLoginRequest: z.string()
-  }), async ({ finishLoginRequest }) => {
+  }), async (state, prisma) => {
+    const { finishLoginRequest } = state.data;
 
-    if (!this.state.cookies.loginsession) throw "Login session not found.";
+    if (!state.cookies.loginsession) throw "Login session not found.";
 
-    const stater = this.state.PasswordService.serverState.get(this.state.cookies.loginsession);
+    const stater = state.PasswordService.serverState.get(state.cookies.loginsession);
 
     if (!stater) throw "Login session not found.";
 
@@ -128,18 +128,18 @@ export class SessionManager extends BaseManager {
 
     if (!value?.session?.sessionKey) throw "Login failed.";
 
-    const session_id = await this.createSession(value.user_id, value.session.sessionKey);
+    const session_id = await this.createSession(prisma, value.user_id, value.session.sessionKey);
 
-    this.state.setCookie("session", session_id, { httpOnly: true, path: "/", secure: this.state.isSecure, sameSite: "Strict" });
+    state.setCookie("session", session_id, { httpOnly: true, path: "/", secure: state.isSecure, sameSite: "Strict" });
 
     return null;
 
   })
 
-  logout = this.ZodRequest(z => z.undefined(), async () => {
-    const state = this.state;
+  logout = zodSession("/logout", z => z.undefined(), async (state, prisma) => {
+
     if (state.user.isLoggedIn) {
-      await this.prisma.sessions.delete({ where: { session_id: state.user.sessionId } });
+      await prisma.sessions.delete({ where: { session_id: state.user.sessionId } });
     }
     var cookies = state.headers.cookie ? state.headers.cookie.split(";") : [];
     for (var i = 0; i < cookies.length; i++) {
@@ -152,9 +152,9 @@ export class SessionManager extends BaseManager {
     return null;
   });
 
-  async createSession(user_id: PrismaField<"Users", "user_id">, session_key: string) {
+  async createSession(prisma: PrismaTxnClient, user_id: PrismaField<"Users", "user_id">, session_key: string) {
     const session_id = randomBytes(16).toString("base64url");
-    return await this.prisma.sessions.create({
+    return await prisma.sessions.create({
       data: {
         user_id,
         session_key,

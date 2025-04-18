@@ -1,17 +1,16 @@
 import { readdirSync, statSync } from "fs";
-import { rootRoute } from "./router";
+import { rootRoute, SiteConfig } from "./router";
 import { ZodAssert } from "../utils";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { ManagerRoutes } from "./managers";
 import { TiddlerRouter } from "./managers/router-tiddlers";
-import { TiddlerFields } from "./services/attachments";
 
 declare global { const ENABLE_UNSAFE_PRISMA_ROUTE: any; }
 
-export default async function RootRoute(root: rootRoute) {
+export default async function RootRoute(root: rootRoute, config: SiteConfig) {
   // TiddlerServer.defineRoutes(root);
   TiddlerRouter.defineRoutes(root);
-  ManagerRoutes(root);
+  ManagerRoutes(root, config);
   if (typeof ENABLE_UNSAFE_PRISMA_ROUTE !== "undefined")
     root.defineRoute({
       method: ["POST"],

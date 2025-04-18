@@ -16,12 +16,7 @@ export const Frame = (props: {}) => {
   const username = indexJson?.username;
   const userIsAdmin = indexJson?.isAdmin || false;
   const userIsLoggedIn = !!indexJson.isLoggedIn;
-  const firstGuestUser = indexJson.firstGuestUser;
   const user = indexJson;
-  const allowReads = indexJson.allowAnonReads;
-  const allowWrites = indexJson.allowAnonWrites;
-
-  const [showAnonConfig, setShowAnonConfig] = useState(false);
 
   const pages: [RegExp, (args: string[]) => ReactNode, string][] = [
     [/^\/$/, () => <Dashboard />, "Wikis Available Here"],
@@ -41,12 +36,10 @@ export const Frame = (props: {}) => {
         username={username}
         userIsAdmin={userIsAdmin}
         userIsLoggedIn={userIsLoggedIn}
-        firstGuestUser={firstGuestUser}
         userId={user?.user_id}
-        setShowAnonConfig={setShowAnonConfig}
       />
 
-      {firstGuestUser && (
+      {/* {firstGuestUser && (
         <div className="mws-security-warning">
           <div className="mws-security-warning-content">
             <div className="mws-security-warning-icon">⚠️</div>
@@ -58,7 +51,7 @@ export const Frame = (props: {}) => {
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {page ?? <div className="mws-error">Page not found</div>}
     </>

@@ -1,9 +1,11 @@
-import { BaseKeyMap, BaseManager, BaseManagerMap, } from "../BaseManager";
+import { registerZodRoutes, SiteConfig, zodManage, RouterKeyMap, RouterRouteMap } from "../router";
+import { DataChecks } from "../../utils";
+import { AuthUser } from "../services/sessions";
 
 // https://crates.io/crates/indradb
 
 
-export const RecipeKeyMap: BaseKeyMap<RecipeManager, true> = {
+export const RecipeKeyMap: RouterKeyMap<RecipeManager, true> = {
   index_json: true,
 
   bag_create: true,
@@ -20,17 +22,28 @@ export const RecipeKeyMap: BaseKeyMap<RecipeManager, true> = {
 
 }
 
-export type RecipeManagerMap = BaseManagerMap<RecipeManager>;
+export type RecipeManagerMap = RouterRouteMap<RecipeManager>;
 
-export class RecipeManager extends BaseManager {
+export class RecipeManager {
 
-  index_json = this.ZodRequest(z => z.undefined(), async () => {
+  static defineRoutes(root: rootRoute, config: SiteConfig) {
+    registerZodRoutes(root, new RecipeManager(config), Object.keys(RecipeKeyMap));
+  }
 
-    const { isAdmin, user_id, username, role_ids } = this.user;
+  checks: DataChecks;
+
+  constructor(private config: SiteConfig) {
+    const { allowAnonReads, allowAnonWrites } = config;
+    this.checks = new DataChecks({ allowAnonReads, allowAnonWrites })
+  }
+
+  index_json = zodManage(z => z.undefined(), async (state, prisma) => {
+
+    const { isAdmin, user_id, username, role_ids } = state.user;
 
     const OR = this.checks.getBagWhereACL({ permission: "READ", user_id, role_ids });
 
-    const bagList = await this.prisma.bags.findMany({
+    const bagList = await prisma.bags.findMany({
       include: {
         _count: isAdmin ? undefined : {
           select: {
@@ -47,7 +60,7 @@ export class RecipeManager extends BaseManager {
       where: isAdmin ? undefined : { OR }
     });
 
-    const recipeList = await this.prisma.recipes.findMany({
+    const recipeList = await prisma.recipes.findMany({
       include: {
         recipe_bags: {
           select: { bag_id: true, position: true, with_acl: true, },
@@ -68,15 +81,15 @@ export class RecipeManager extends BaseManager {
       where: isAdmin ? undefined : { recipe_bags: { every: { bag: { OR } } } }
     });
 
-    const userListUser = !isAdmin && await this.prisma.users.findMany({
+    const userListUser = !isAdmin && await prisma.users.findMany({
       select: { user_id: true, username: true }
     });
 
-    const userListAdmin = !!isAdmin && await this.prisma.users.findMany({
+    const userListAdmin = !!isAdmin && await prisma.users.findMany({
       select: { user_id: true, username: true, email: true, roles: true, last_login: true, created_at: true }
     });
 
-    const roleList = await this.prisma.roles.findMany();
+    const roleList = await prisma.roles.findMany();
 
     return {
       bagList,
@@ -87,70 +100,69 @@ export class RecipeManager extends BaseManager {
       userListAdmin,
       roleList,
       username,
-      firstGuestUser: !!this.firstGuestUser,
-      isLoggedIn: this.user.isLoggedIn,
-      allowAnonReads: this.config.allowAnonReads,
-      allowAnonWrites: this.config.allowAnonWrites,
+      isLoggedIn: state.user.isLoggedIn,
+      allowAnonReads: state.config.allowAnonReads,
+      allowAnonWrites: state.config.allowAnonWrites,
     }
   });
 
-  recipe_create = this.ZodRequest(z => z.object({
+  recipe_create = zodManage(z => z.object({
     recipe_name: z.string(),
     description: z.string(),
     bag_names: z.array(z.object({ bag_name: z.string(), with_acl: z.boolean() })),
     owner_id: z.prismaField("Recipes", "owner_id", "number", true).optional(),
     isCreate: z.literal(true).default(true),
-  }), async (input) => {
-    return await this.recipeCreateOrUpdate(input);
+  }), async (state, prisma) => {
+    return await this.recipeCreateOrUpdate(state.data, prisma, state.user);
   });
-  recipe_update = this.ZodRequest(z => z.object({
+  recipe_update = zodManage(z => z.object({
     recipe_name: z.string(),
     description: z.string(),
     bag_names: z.array(z.object({ bag_name: z.string(), with_acl: z.boolean() })),
     owner_id: z.prismaField("Recipes", "owner_id", "number", true).optional(),
     isCreate: z.literal(false).default(false),
-  }), async (input) => {
-    return await this.recipeCreateOrUpdate(input);
+  }), async (state, prisma) => {
+    return await this.recipeCreateOrUpdate(state.data, prisma, state.user);
   });
 
-  recipe_upsert = this.ZodRequest(z => z.object({
+  recipe_upsert = zodManage(z => z.object({
     recipe_name: z.string(),
     description: z.string(),
     bag_names: z.array(z.object({ bag_name: z.string(), with_acl: z.boolean() })),
     owner_id: z.prismaField("Recipes", "owner_id", "number", true).optional(),
     isCreate: z.boolean(),
-  }), async (input) => {
-    return await this.recipeCreateOrUpdate(input);
+  }), async (state, prisma) => {
+    return await this.recipeCreateOrUpdate(state.data, prisma, state.user);
   });
 
-  bag_create = this.ZodRequest(z => z.object({
+  bag_create = zodManage(z => z.object({
     bag_name: z.string(),
     description: z.string(),
     is_plugin: z.boolean(),
     owner_id: z.prismaField("Bags", "owner_id", "number", true).optional(),
     isCreate: z.literal(true).default(true),
-  }), async (input) => {
-    return await this.bagCreateOrUpdate(input);
+  }), async (state, prisma) => {
+    return await this.bagCreateOrUpdate(state.data, prisma, state.user);
   });
 
-  bag_update = this.ZodRequest(z => z.object({
+  bag_update = zodManage(z => z.object({
     bag_name: z.string(),
     description: z.string(),
     is_plugin: z.boolean(),
     owner_id: z.prismaField("Bags", "owner_id", "number", true).optional(),
     isCreate: z.literal(false).default(false),
-  }), async (input) => {
-    return await this.bagCreateOrUpdate(input);
+  }), async (state, prisma) => {
+    return await this.bagCreateOrUpdate(state.data, prisma, state.user);
   });
 
-  bag_upsert = this.ZodRequest(z => z.object({
+  bag_upsert = zodManage(z => z.object({
     bag_name: z.string(),
     description: z.string(),
     is_plugin: z.boolean(),
     owner_id: z.prismaField("Bags", "owner_id", "number", true).optional(),
     isCreate: z.boolean(),
-  }), async (input) => {
-    return await this.bagCreateOrUpdate(input);
+  }), async (state, prisma) => {
+    return await this.bagCreateOrUpdate(state.data, prisma, state.user);
   });
 
   async recipeCreateOrUpdate({ bag_names, description, owner_id, recipe_name, isCreate }: {
@@ -159,19 +171,17 @@ export class RecipeManager extends BaseManager {
     bag_names: { bag_name: string, with_acl: boolean }[],
     owner_id?: number | null,
     isCreate: boolean,
-  }) {
-    const existing = await this.prisma.recipes.findUnique({
-      where: { recipe_name },
-    });
+  }, prisma: PrismaTxnClient, user: AuthUser) {
+    const existing = await prisma.recipes.findUnique({ where: { recipe_name }, });
 
-    this.assertCreateOrUpdate({ type: "recipe", isCreate, owner_id, existing, });
+    this.assertCreateOrUpdate({ user, type: "recipe", isCreate, owner_id, existing, });
 
-    const { isAdmin, user_id } = this.user;
+    const { isAdmin, user_id } = user;
 
     const OR = this.checks.getWhereACL({ permission: "ADMIN", user_id, });
 
     const bags = new Map(
-      await this.prisma.bags.findMany({
+      await prisma.bags.findMany({
         where: { bag_name: { in: bag_names.map(e => e.bag_name) } },
       }).then(bags => bags.map(bag => [bag.bag_name as string, bag]))
     );
@@ -180,7 +190,7 @@ export class RecipeManager extends BaseManager {
     if (missing.length) throw "Some bags not found: " + JSON.stringify(missing);
 
     const bagsAcl = new Map(
-      await this.prisma.bags.findMany({
+      await prisma.bags.findMany({
         where: { bag_name: { in: bag_names.map(e => e.bag_name) }, OR },
       }).then(bags => bags.map(bag => [bag.bag_name as string, bag]))
     );
@@ -192,7 +202,7 @@ export class RecipeManager extends BaseManager {
     }));
 
     if (existing) {
-      await this.prisma.recipes.update({
+      await prisma.recipes.update({
         where: { recipe_name },
         data: {
           description,
@@ -202,7 +212,7 @@ export class RecipeManager extends BaseManager {
           }
         }
       });
-      await this.prisma.recipes.update({
+      await prisma.recipes.update({
         where: { recipe_name },
         data: {
           recipe_bags: {
@@ -213,7 +223,7 @@ export class RecipeManager extends BaseManager {
       return existing;
     } else {
 
-      return await this.prisma.recipes.create({
+      return await prisma.recipes.create({
         data: {
           recipe_name,
           description,
@@ -230,17 +240,17 @@ export class RecipeManager extends BaseManager {
     is_plugin: boolean,
     owner_id?: number | null,
     isCreate: boolean,
-  }) {
-    const existing = await this.prisma.bags.findUnique({
+  }, prisma: PrismaTxnClient, user: AuthUser) {
+    const existing = await prisma.bags.findUnique({
       where: { bag_name },
       select: { owner_id: true }
     });
 
-    this.assertCreateOrUpdate({ type: "bag", isCreate, owner_id, existing });
+    this.assertCreateOrUpdate({ type: "bag", isCreate, owner_id, existing, user });
 
-    const { isAdmin, user_id } = this.user;
+    const { isAdmin, user_id } = user;
 
-    return await this.prisma.bags.upsert({
+    return await prisma.bags.upsert({
       where: { bag_name },
       update: {
         description,
@@ -259,19 +269,20 @@ export class RecipeManager extends BaseManager {
 
 
   assertCreateOrUpdate({
-    existing, isCreate, owner_id, type
+    existing, isCreate, owner_id, type, user
   }: {
+    user: AuthUser,
     isCreate: boolean,
     owner_id?: number | null,
     existing: { owner_id: PrismaField<"Users", "user_id"> | null } | null
     type: "recipe" | "bag"
-  }): asserts this is { user: { isAdmin: boolean, user_id: number } } {
+  }) {
     // check user_id just to be safe because we depend on it for an additional check here and elsewhere
     // user_id 0 is also not a valid user_id and only used for anonymous users
-    if (!this.user.isLoggedIn || !this.user.user_id)
+    if (!user.isLoggedIn || !user.user_id)
       throw "User not authenticated";
 
-    const { isAdmin, user_id } = this.user;
+    const { isAdmin, user_id } = user;
 
     if (!isAdmin && owner_id !== undefined)
       throw "owner_id is only valid for admins";
@@ -284,44 +295,46 @@ export class RecipeManager extends BaseManager {
 
   }
 
-  recipe_delete = this.ZodRequest(z => z.object({
+  recipe_delete = zodManage(z => z.object({
     recipe_name: z.string(),
-  }), async ({ recipe_name }) => {
+  }), async (state, prisma) => {
+    const { recipe_name } = state.data;
 
-    if (!this.user) throw "User not authenticated";
+    if (!state.user.isLoggedIn) throw "User not authenticated";
 
-    const recipe = await this.prisma.recipes.findUnique({
+    const recipe = await prisma.recipes.findUnique({
       where: { recipe_name },
     });
 
     if (!recipe) throw "Recipe not found";
 
-    const { isAdmin, user_id } = this.user;
+    const { isAdmin, user_id } = state.user;
 
     if (!isAdmin && recipe.owner_id !== user_id)
       throw "User does not own the recipe and is not an admin";
 
-    await this.prisma.recipes.delete({
+    await prisma.recipes.delete({
       where: { recipe_name }
     });
 
     return null;
   });
 
-  bag_delete = this.ZodRequest(z => z.object({
+  bag_delete = zodManage(z => z.object({
     bag_name: z.string(),
-  }), async ({ bag_name }) => {
+  }), async (state, prisma) => {
+    const { bag_name } = state.data;
 
-    if (!this.user) throw "User not authenticated";
+    if (!state.user.isLoggedIn) throw "User not authenticated";
 
-    const bag = await this.prisma.bags.findUnique({
+    const bag = await prisma.bags.findUnique({
       where: { bag_name },
       include: { _count: { select: { tiddlers: true } } }
     });
 
     if (!bag) throw "Bag not found";
 
-    const { isAdmin, user_id } = this.user;
+    const { isAdmin, user_id } = state.user;
 
     if (!isAdmin && bag.owner_id !== user_id)
       throw "User does not own the bag and is not an admin";
@@ -329,7 +342,7 @@ export class RecipeManager extends BaseManager {
     if (bag._count.tiddlers)
       throw "Bag has tiddlers added and can no longer be deleted.";
 
-    await this.prisma.bags.delete({
+    await prisma.bags.delete({
       where: { bag_name }
     });
 
@@ -340,23 +353,24 @@ export class RecipeManager extends BaseManager {
   //     role_id: number | null;
   //     permission: "READ" | "WRITE" | "ADMIN";
   // }>[]
-  recipe_acl_update = this.ZodRequest(z => z.object({
+  recipe_acl_update = zodManage(z => z.object({
     recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
     acl: z.array(z.object({
       role_id: z.number().nullable(),
       permission: z.enum(["READ", "WRITE", "ADMIN"]),
     })),
-  }), async ({ recipe_name, acl }) => {
+  }), async (state, prisma) => {
+    const { recipe_name, acl } = state.data;
 
-    if (!this.user) throw "User not authenticated";
+    if (!state.user.isLoggedIn) throw "User not authenticated";
 
-    const recipe = await this.prisma.recipes.findUnique({
+    const recipe = await prisma.recipes.findUnique({
       where: { recipe_name }
     });
 
     if (!recipe) throw "Recipe not found";
 
-    const { isAdmin, user_id } = this.user;
+    const { isAdmin, user_id } = state.user;
 
     if (!isAdmin && recipe.owner_id !== user_id)
       throw "User does not own the recipe and is not an admin";
@@ -365,11 +379,11 @@ export class RecipeManager extends BaseManager {
 
     const { recipe_id } = recipe;
 
-    await this.prisma.recipeAcl.deleteMany({
+    await prisma.recipeAcl.deleteMany({
       where: { recipe_id }
     });
 
-    await this.prisma.recipeAcl.createMany({
+    await prisma.recipeAcl.createMany({
       data: Array.from(distinct).map(e => {
         const [role_id, permission] = JSON.parse(e);
         return { recipe_id, role_id, permission };
@@ -379,24 +393,25 @@ export class RecipeManager extends BaseManager {
     return null;
   });
 
-  bag_acl_update = this.ZodRequest(z => z.object({
+  bag_acl_update = zodManage(z => z.object({
     bag_name: z.prismaField("Bags", "bag_name", "string"),
     acl: z.array(z.object({
       role_id: z.number().nullable(),
       permission: z.enum(["READ", "WRITE", "ADMIN"]),
     })),
-  }), async ({ bag_name, acl }) => {
+  }), async (state, prisma) => {
+    const { bag_name, acl } = state.data;
 
-    if (!this.user) throw "User not authenticated";
+    if (!state.user.isLoggedIn) throw "User not authenticated";
 
-    const bag = await this.prisma.bags.findUnique({
+    const bag = await prisma.bags.findUnique({
       where: { bag_name },
       include: { acl: true }
     });
 
     if (!bag) throw "Bag not found";
 
-    const { isAdmin, user_id } = this.user;
+    const { isAdmin, user_id } = state.user;
 
     if (!isAdmin && bag.owner_id !== user_id)
       throw "User does not own the bag and is not an admin";
@@ -405,11 +420,11 @@ export class RecipeManager extends BaseManager {
 
     const { bag_id } = bag;
 
-    await this.prisma.bagAcl.deleteMany({
+    await prisma.bagAcl.deleteMany({
       where: { bag_id }
     });
 
-    await this.prisma.bagAcl.createMany({
+    await prisma.bagAcl.createMany({
       data: Array.from(distinct).map(e => {
         const [role_id, permission] = JSON.parse(e);
         return { bag_id, role_id, permission };

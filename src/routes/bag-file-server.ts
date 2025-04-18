@@ -5,14 +5,8 @@ import { createWriteStream, readFileSync } from "fs";
 import sjcl from "sjcl";
 import { createHash } from "crypto";
 import { TiddlerFields } from "./services/attachments";
-import { TiddlerRouter } from "./TiddlerRouter";
 
 export class TiddlerServer extends TiddlerStore {
-
-
-  static defineRoutes(root: rootRoute) {
-    new TiddlerRouter(root);
-  }
 
   constructor(
     protected state: StateObject,

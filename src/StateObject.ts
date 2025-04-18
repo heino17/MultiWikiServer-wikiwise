@@ -105,6 +105,14 @@ export class StateObject<
 
 
   }
+  
+  okUser() {
+    if (!this.user.isLoggedIn) throw "User not authenticated";
+  }
+  okAdmin() {
+    if (!this.user.isLoggedIn) throw "User not authenticated";
+    if (!this.user.isAdmin) throw "User is not an admin";
+  }
 
   // createStore(engine: PrismaTxnClient) {
   //   const sql = createStrictAwaitProxy(new SqlTiddlerDatabase(engine));

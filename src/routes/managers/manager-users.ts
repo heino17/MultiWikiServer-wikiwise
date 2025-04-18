@@ -1,6 +1,6 @@
-import { BaseKeyMap, BaseManager, BaseManagerMap, } from "../BaseManager";
+import { registerZodRoutes, SiteConfig, zodManage, RouterKeyMap, RouterRouteMap } from "../router";
 
-export const UserKeyMap: BaseKeyMap<UserManager, true> = {
+export const UserKeyMap: RouterKeyMap<UserManager, true> = {
   user_create: true,
   user_delete: true,
   user_list: true,
@@ -10,17 +10,19 @@ export const UserKeyMap: BaseKeyMap<UserManager, true> = {
   role_update: true,
 }
 
-export type UserManagerMap = BaseManagerMap<UserManager>;
+export type UserManagerMap = RouterRouteMap<UserManager>;
 
-export class UserManager extends BaseManager {
 
-  user_list = this.ZodRequest(z => z.undefined(), async () => {
+export class UserManager {
+  static defineRoutes(root: rootRoute, config: SiteConfig) {
+    registerZodRoutes(root, new UserManager(), Object.keys(UserKeyMap));
+  }
 
-    if (!this.user) throw "User not authenticated";
+  user_list = zodManage(z => z.undefined(), async (state, prisma) => {
 
-    if (!this.user.isAdmin) throw "User is not an admin";
+    state.okAdmin();
 
-    const res = await this.prisma.users.findMany({
+    const res = await prisma.users.findMany({
       select: {
         user_id: true,
         username: true,
@@ -38,17 +40,16 @@ export class UserManager extends BaseManager {
   });
 
 
-  user_create = this.ZodRequest(z => z.object({
+  user_create = zodManage(z => z.object({
     username: z.string(),
     email: z.string(),
     role_id: z.prismaField("Roles", "role_id", "number", false),
-  }), async ({ username, email, role_id }) => {
+  }), async (state, prisma) => {
+    const { username, email, role_id } = state.data;
 
-    if (!this.user) throw "User not authenticated";
+    state.okAdmin();
 
-    if (!this.user.isAdmin) throw "User is not an admin";
-
-    const user = await this.prisma.users.create({
+    const user = await prisma.users.create({
       data: { username, email, password: "", roles: { connect: { role_id } } },
       select: { user_id: true, created_at: true }
     });
@@ -56,70 +57,69 @@ export class UserManager extends BaseManager {
     return user;
   });
 
-  user_update = this.ZodRequest(z => z.object({
+  user_update = zodManage(z => z.object({
     user_id: z.number(),
     username: z.string(),
     email: z.string(),
     role_id: z.prismaField("Roles", "role_id", "number").optional(),
-  }), async ({ user_id, username, email, role_id }) => {
+  }), async (state, prisma) => {
+    const { user_id, username, email, role_id } = state.data;
 
-    if (!this.user) throw "User not authenticated";
+    state.okAdmin();
 
-    if (!this.user.isAdmin) throw "User is not an admin";
+    if (state.user.user_id === user_id) throw "Admin cannot update themselves";
 
-    if (this.user.user_id === user_id) throw "Admin cannot update themselves";
-
-    await this.prisma.users.update({
+    await prisma.users.update({
       where: { user_id },
       data: { username, email, roles: { set: [{ role_id }] } }
     });
 
     return null;
-  }, z => z.null());
+  });
 
 
-  user_delete = this.ZodRequest(z => z.object({
+  user_delete = zodManage(z => z.object({
     user_id: z.number(),
-  }), async ({ user_id }) => {
+  }), async (state, prisma) => {
+    const { user_id } = state.data;
 
-    if (!this.user) throw "User not authenticated";
+    state.okAdmin();
 
-    if (!this.user.isAdmin) throw "User is not an admin";
+    if (state.user.user_id === user_id) throw "Admin cannot delete themselves";
 
-    if (this.user.user_id === user_id) throw "Admin cannot delete themselves";
-
-    const bags = await this.prisma.bags.count({ where: { owner_id: user_id } });
+    const bags = await prisma.bags.count({ where: { owner_id: user_id } });
 
     if (bags) throw "User owns bags and cannot be deleted";
 
-    await this.prisma.users.delete({ where: { user_id } });
+    await prisma.users.delete({ where: { user_id } });
 
     return null;
   });
 
 
-  user_update_password = this.ZodRequest(z => z.object({
+  user_update_password = zodManage(z => z.object({
     user_id: z.prismaField("Users", "user_id", "number"),
     registrationRequest: z.string().optional(),
     registrationRecord: z.string().optional(),
-  }), async ({ user_id, registrationRecord, registrationRequest }) => {
+  }), async (state, prisma) => {
+    const { user_id, registrationRecord, registrationRequest } = state.data;
 
-    if (!this.user)
-      throw "You are not authenticated";
+    state.okUser();
 
-    if (this.user.user_id !== user_id && !this.user.isAdmin)
+
+    if (state.user.user_id !== user_id && !state.user.isAdmin)
       throw "You must be an admin to update another user's password";
 
-    const userExists = await this.prisma.users.count({ where: { user_id } });
+    const userExists = await prisma.users.count({ where: { user_id } });
     if (!userExists) throw "User does not exist";
 
     if (registrationRequest) {
-      return this.PasswordService.createRegistrationResponse({
+      return state.PasswordService.createRegistrationResponse({
         userID: user_id,
         registrationRequest
       });
     } else if (registrationRecord) {
-      await this.prisma.users.update({
+      await prisma.users.update({
         where: { user_id },
         data: { password: registrationRecord }
       });
@@ -128,36 +128,34 @@ export class UserManager extends BaseManager {
     return null;
   });
 
-  role_create = this.ZodRequest(z => z.object({
+  role_create = zodManage(z => z.object({
     role_name: z.string(),
     description: z.string(),
-  }), async ({ role_name, description }) => {
+  }), async (state, prisma) => {
+    const { role_name, description } = state.data;
 
-    if (!this.user) throw "User not authenticated";
+    state.okAdmin();
 
-    if (!this.user.isAdmin) throw "User is not an admin";
-
-    return await this.prisma.roles.create({
+    return await prisma.roles.create({
       data: { role_name, description }
     });
 
   });
 
-  role_update = this.ZodRequest(z => z.object({
+  role_update = zodManage(z => z.object({
     role_id: z.prismaField("Roles", "role_id", "number"),
     role_name: z.prismaField("Roles", "role_name", "string"),
     description: z.prismaField("Roles", "description", "string"),
-  }), async ({ role_id, role_name, description }) => {
+  }), async (state, prisma) => {
+    const { role_id, role_name, description } = state.data;
 
-    if (!this.user) throw "User not authenticated";
-
-    if (!this.user.isAdmin) throw "User is not an admin";
+    state.okUser();
 
     if (role_id < 1) throw "Invalid role id";
     if (role_id === 1) throw "Cannot update the admin role";
     if (role_id === 2) throw "Cannot update the user role";
 
-    return await this.prisma.roles.update({
+    return await prisma.roles.update({
       where: { role_id },
       data: { role_name, description }
     });
