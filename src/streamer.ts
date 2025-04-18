@@ -379,17 +379,18 @@ export class StreamerState {
   end
 
   /** sends a status and plain text string body */
-  sendSimple(status: number, msg: string) {
+  sendSimple(status: number, msg: string): typeof STREAM_ENDED {
     return this.sendString(status, {
       "content-type": "text/plain"
     }, msg, "utf8");
   }
   /** Stringify the value (unconditionally) and send it with content-type `application/json` */
-  sendJSON<T>(status: number, obj: T) {
+  sendJSON<T>(status: number, obj: T): typeof STREAM_ENDED {
     return this.sendString(status, {
       "content-type": "application/json"
     }, JSON.stringify(obj), "utf8");
   }
+  
 
   STREAM_ENDED: typeof STREAM_ENDED = STREAM_ENDED;
 

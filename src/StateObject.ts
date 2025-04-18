@@ -29,21 +29,6 @@ export class StateObject<
 
   z: typeof z = z;
 
-
-
-  /** sends a status and plain text string body */
-  sendSimple(status: number, msg: string): typeof STREAM_ENDED {
-    return this.sendString(status, {
-      "content-type": "text/plain"
-    }, msg, "utf8");
-  }
-  /** Stringify the value (unconditionally) and send it with content-type `application/json` */
-  sendJSON(status: number, obj: any): typeof STREAM_ENDED {
-    return this.sendString(status, {
-      "content-type": "application/json"
-    }, JSON.stringify(obj), "utf8");
-  }
-
   STREAM_ENDED: typeof STREAM_ENDED = STREAM_ENDED;
 
   get method(): M { return super.method as M; }
@@ -63,6 +48,8 @@ export class StateObject<
    * an *object from entries* of all the pathParams in the tree mapped to the path regex matches from that route.
    * 
    * Object.fromEntries takes the last value if there are duplicates, so conflicting names will have the last value in the path. 
+   * 
+   * Conflicting names would be defined on the route definitions, so just change the name there if there is a conflict.
    */
   pathParams: Record<RoutePathParams extends (infer X extends string)[][] ? X : never, string | undefined>;
   /** 
