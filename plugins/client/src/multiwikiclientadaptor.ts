@@ -3,11 +3,12 @@ title: $:/plugins/tiddlywiki/tiddlyweb/tiddlywebadaptor.js
 type: application/javascript
 module-type: syncadaptor
 
-A sync adaptor module for synchronising with MultiWikiServer-compatible servers. It has three key areas of concern:
+A sync adaptor module for synchronising with MultiWikiServer-compatible servers. 
+
+It has three key areas of concern:
 
 * Basic operations like put, get, and delete a tiddler on the server
 * Real time updates from the server (handled by SSE)
-* Managing login/logout (not yet implemeneted)
 * Bags and recipes, which are unknown to the syncer
 
 A key aspect of the design is that the syncer never overlaps basic server operations; it waits for the
@@ -30,8 +31,8 @@ declare module 'tiddlywiki' {
 		processTaskQueue(): void;
 	}
 	interface ITiddlyWiki {
-    browserStorage: any;
-  }
+		browserStorage: any;
+	}
 }
 
 declare const exports: {
@@ -437,13 +438,21 @@ class MultiWikiClientAdaptor {
 			return callback(null);
 		}
 		self.outstandingRequests[title] = { type: "PUT" };
+		// TODO: not using getFieldStringBlock because what happens if a field name has a colon in it?
+		let body = JSON.stringify(tiddler.getFieldStrings({ exclude: ["text"] }));
+		if (tiddler.hasField("text")) {
+			if (typeof tiddler.fields.text !== "string" && tiddler.fields.text)
+				return callback(new Error("Error saving tiddler " + tiddler.fields.title + ": the text field is truthy but not a string"));
+			body += `\n\n${tiddler.fields.text}`
+		}
+
 		const [ok, err, result] = await this.httpRequest({
 			url: this.host + "recipes/" + encodeURIComponent(this.recipe) + "/tiddlers/" + encodeURIComponent(title),
 			type: "PUT",
 			headers: {
-				"Content-type": "application/json"
+				"Content-type": "application/x-mws-tiddler"
 			},
-			data: JSON.stringify(tiddler.getFieldStrings()),
+			data: body,
 			responseType: "json",
 		});
 		delete self.outstandingRequests[title];
