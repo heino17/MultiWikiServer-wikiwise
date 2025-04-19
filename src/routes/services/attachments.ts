@@ -52,7 +52,7 @@ export class AttachmentService {
   - Apply the tiddler_id as the revision field
   - Apply the bag_name as the bag field
   */
-  async processOutgoingTiddler({ tiddler, tiddler_id, bag_name, attachment_hash }: {
+  processOutgoingTiddler({ tiddler, tiddler_id, bag_name, attachment_hash }: {
     tiddler: TiddlerFields;
     tiddler_id: any;
     bag_name: PrismaField<"Bags", "bag_name">;

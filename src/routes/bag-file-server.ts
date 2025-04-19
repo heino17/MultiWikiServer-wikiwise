@@ -5,6 +5,8 @@ import { createWriteStream, readFileSync } from "fs";
 import sjcl from "sjcl";
 import { createHash } from "crypto";
 import { TiddlerFields } from "./services/attachments";
+import { UserError } from "../utils";
+
 
 export class TiddlerServer extends TiddlerStore {
 
@@ -174,12 +176,9 @@ export class TiddlerServer extends TiddlerStore {
     return parts;
   }
 
-  async getRecipeTiddlers(recipe_name: PrismaField<"Recipes", "recipe_name">, options: {
-    include_deleted?: boolean, last_known_tiddler_id?: number
-  } = {}) {
+  async getRecipeTiddlers(recipe_name: PrismaField<"Recipes", "recipe_name">) {
     // Get the recipe name from the parameters
-    const bagTiddlers = recipe_name && await this.getRecipeTiddlersByBag(recipe_name);
-
+    const bagTiddlers = await this.getRecipeTiddlersByBag(recipe_name);
 
     bagTiddlers.sort((a, b) => a.position - b.position);
 
@@ -188,11 +187,11 @@ export class TiddlerServer extends TiddlerStore {
         title: tiddler.title,
         tiddler_id: tiddler.tiddler_id,
         is_deleted: tiddler.is_deleted,
-        bag_name: bag.bag_name
+        is_plugin: false,
+        bag_name: bag.bag_name,
+        bag_id: bag.bag_id
       }])
-    )).values())
-      .filter(tiddler => options.include_deleted || !tiddler.is_deleted)
-      .filter(tiddler => !options.last_known_tiddler_id || tiddler.tiddler_id > options.last_known_tiddler_id);
+    )).values());
 
     //   SELECT title, tiddler_id, is_deleted, bag_name
     //   FROM (
@@ -212,18 +211,51 @@ export class TiddlerServer extends TiddlerStore {
   async serveIndexFile(recipe_name: PrismaField<"Recipes", "recipe_name">) {
     const state = this.state;
 
-    const recipeTiddlers = await this.getRecipeTiddlers(recipe_name);
-
     // Check request is valid
-    if (!recipe_name || !recipeTiddlers) {
+    if (!recipe_name) {
       return state.sendEmpty(404);
     }
+
+    // const bagTiddlers = await this.getRecipeTiddlersByBag(recipe_name);
+    const bagTiddlers = await this.prisma.recipe_bags.findMany({
+      where: { recipe: { recipe_name } },
+      select: {
+        position: true,
+        bag: {
+          select: {
+            bag_id: true,
+            bag_name: true,
+            is_plugin: true,
+            tiddlers: {
+              select: {
+                title: true,
+                tiddler_id: true,
+                is_deleted: true,
+                attachment_hash: true,
+                fields: true,
+              },
+              where: {
+                is_deleted: false,
+              },
+            }
+          }
+        }
+      },
+    });
+
+    bagTiddlers.sort((a, b) => a.position - b.position);
+
+    // const recipeTiddlers = await this.getRecipeTiddlers(recipe_name);
+    const recipeTiddlers = Array.from(new Map(bagTiddlers.flatMap(bag =>
+      bag.bag.tiddlers.map(tiddler => [tiddler.title, { bag: bag.bag, tiddler }])
+    )).values());
+
     const template = readFileSync(resolve(this.state.config.wikiPath, "tiddlywiki5.html"), "utf8");
     const hash = createHash('md5');
     // Put everything into the hash that could change and invalidate the data that
     // the browser already stored. The headers the data and the encoding.
     hash.update(template);
-    hash.update(JSON.stringify(recipeTiddlers));
+    hash.update(recipeTiddlers.map(e => e.tiddler.tiddler_id).join("|"));
     const contentDigest = hash.digest("hex");
 
 
@@ -252,17 +284,32 @@ export class TiddlerServer extends TiddlerStore {
       state.write(",\n");
     }
     state.write(template.substring(0, markerPos + marker.length));
+
+
     const
       bagInfo: Record<string, string> = {},
       revisionInfo: Record<string, string> = {};
 
     for (const recipeTiddlerInfo of recipeTiddlers) {
-      var result = await this.getRecipeTiddler(recipeTiddlerInfo.title, recipe_name);
-      if (result) {
-        bagInfo[result.tiddler.title] = result.bag_name;
-        revisionInfo[result.tiddler.title] = result.tiddler_id.toString();
-        writeTiddler(result.tiddler);
-      }
+      // var result = await this.getRecipeTiddler(recipeTiddlerInfo.title, recipe_name);
+      // const { title, bag_id, tiddler_id } = recipeTiddlerInfo;
+      // var result = await this.getBagTiddler({ title, bag_id });
+
+      const { title, tiddler_id, attachment_hash, fields } = recipeTiddlerInfo.tiddler;
+      const { bag_name } = recipeTiddlerInfo.bag;
+
+      const tiddler = Object.fromEntries([
+        ...fields.map(e => [e.field_name, e.field_value] as const),
+        ["title", title]
+      ]) as TiddlerFields;
+
+      const tiddler2 = this.attachService.processOutgoingTiddler({
+        tiddler, tiddler_id, attachment_hash, bag_name
+      });
+
+      bagInfo[title] = bag_name;
+      revisionInfo[title] = tiddler_id.toString();
+      writeTiddler(tiddler2);
     }
 
     writeTiddler({
@@ -279,10 +326,8 @@ export class TiddlerServer extends TiddlerStore {
       title: "$:/config/multiwikiclient/recipe",
       text: recipe_name
     });
-    const lastTiddlerId = await this.prisma.tiddlers.aggregate({
-      where: { bag: { recipe_bags: { some: { recipe: { recipe_name } } } } },
-      _max: { tiddler_id: true }
-    });
+    // get the latest tiddler id in the database. It doesn't have to be filtered.
+    const lastTiddlerId = await this.prisma.tiddlers.aggregate({ _max: { tiddler_id: true } });
     writeTiddler({
       title: "$:/state/multiwikiclient/recipe/last_tiddler_id",
       text: (lastTiddlerId._max.tiddler_id ?? 0).toString()

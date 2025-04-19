@@ -72,11 +72,9 @@ export class TiddlerRouter {
       throw await state.$transaction(async prisma => {
         const server = new TiddlerServer(state, prisma);
         const bag = await server.getRecipeBagWithTiddler({ recipe_name, title });
-        // return await server.getBagTiddler({ bag_id: bag?.bag_id, title });
         return server.sendBagTiddler({ state, bag_id: bag?.bag_id, title });
       });
 
-      // return this.sendTiddlerInfo(state, tiddlerInfo);
     }
   )
 
@@ -152,11 +150,11 @@ export class TiddlerRouter {
 
       const result = await state.$transaction(async prisma => {
         const server = new TiddlerServer(state, prisma);
-        return await server.getRecipeTiddlers(recipe_name, {
-          include_deleted,
-          last_known_tiddler_id
-        });
-
+        const options = { include_deleted, last_known_tiddler_id };
+        let result = await server.getRecipeTiddlers(recipe_name);
+        return result
+          .filter(tiddler => options.include_deleted || !tiddler.is_deleted)
+          .filter(tiddler => !options.last_known_tiddler_id || tiddler.tiddler_id > options.last_known_tiddler_id);
       });
       return result;
     }
