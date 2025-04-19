@@ -314,8 +314,24 @@ export type RouterRouteMap<T> = {
   T[K] extends {
     zodRequest: (z: any) => infer REQ extends z.ZodTypeAny,
     zodResponse?: (z: any) => infer RES extends z.ZodType<JsonValue>
-  } ? ((data: z.input<REQ>) => Promise<z.output<RES>>) : never;
+  } ? ((data: z.input<REQ>) => Promise<jsonify<z.output<RES>>>) : never;
 }
+
+export type jsonify<T> =
+  T extends void ? null :
+  T extends Promise<any> ? unknown :
+  T extends Date ? string :
+  // T extends Map<infer K, infer V> ? [jsonify<K>, jsonify<V>][] :
+  // T extends Set<infer U> ? jsonify<U>[] :
+  T extends string | number | boolean | null | undefined ? T :
+  T extends [...any[]] ? number extends T["length"] ? jsonify<T[number]>[] : [...jsonifyTuple<T>] :
+  T extends Array<infer U> ? jsonify<U>[] :
+  T extends object ? { [K in keyof T]: jsonify<T[K]> } :
+  unknown;
+
+export type jsonifyTuple<T> = T extends [infer A, ...infer B] ? [jsonify<A>, ...jsonifyTuple<B>] : T extends [infer A] ? [jsonify<A>] : [];
+
+
 
 export type RouterKeyMap<T, V> = {
   [K in keyof T as T[K] extends ZodAction<any, any> ? K : never]: V;

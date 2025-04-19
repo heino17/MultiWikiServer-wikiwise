@@ -75,27 +75,8 @@ interface UserJson {
 
 
 const ManageUser = DataLoader(async (props: { userID: string }) => {
-  const res = await serverRequest.prisma.users.findUnique({
-    where: { user_id: +props.userID },
-    select: {
-      user_id: true,
-      username: true,
-      email: true,
-      roles: true,
-      last_login: true,
-      created_at: true,
-    }
-  });
-  if (!res) throw "User not found";
-  const allRoles = await serverRequest.prisma.roles.findMany({
-    select: {
-      role_id: true,
-      role_name: true,
-    }
-  });
-  return [res, allRoles] as const;
-
-}, ([user, allRoles], refreshUser, props) => {
+  return await serverRequest.user_edit_data({ user_id: +props.userID });
+}, ({ user, allRoles }, refreshUser, props) => {
 
   const [indexJson] = useIndexJson();
   const isCurrentUserProfile = indexJson.user_id === user.user_id;

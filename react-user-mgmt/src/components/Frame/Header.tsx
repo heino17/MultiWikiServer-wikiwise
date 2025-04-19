@@ -17,6 +17,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({
   pageTitle,
   userIsLoggedIn,
+  userIsAdmin,
   userId,
 }) => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -26,11 +27,11 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   const handleManageUsers = () => {
-    navigateTo('/admin/users?q=*');
+    navigateTo('/admin/users');
   };
 
   const handleManageRoles = () => {
-    navigateTo('/admin/roles?q=*');
+    navigateTo('/admin/roles');
   };
 
   const handleClickProfile = async () => {
@@ -91,8 +92,8 @@ const Header: React.FC<HeaderProps> = ({
                 onClose={() => { setAnchorEl(null); }}
               >
                 <MenuItem divider onClick={handleClickProfile}>Profile</MenuItem>
-                <MenuItem onClick={handleManageUsers}>Manage Users</MenuItem>
-                <MenuItem divider onClick={handleManageRoles}>Manage Roles</MenuItem>
+                {userIsAdmin && <MenuItem onClick={handleManageUsers}>Manage Users</MenuItem>}
+                {userIsAdmin && <MenuItem divider onClick={handleManageRoles}>Manage Roles</MenuItem>}
                 <MenuItem onClick={handleLogout}>Logout</MenuItem>
               </Menu>
             </div>

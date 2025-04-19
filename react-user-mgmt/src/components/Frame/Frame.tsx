@@ -1,5 +1,5 @@
 
-import { ReactNode, useState } from 'react';
+import { PropsWithChildren, ReactNode, useState } from 'react';
 import Header from './Header';
 
 import { Dashboard } from '../Dashboard/Dashboard';
@@ -7,6 +7,8 @@ import UserManagement from '../UserList/UserManagement';
 import ManageUser from '../UserEdit/ManageUser';
 import { useIndexJson } from '../../helpers/utils';
 import { UsersScreen } from '../Users';
+import { ErrorBoundary } from 'react-error-boundary';
+import { Container, Stack } from '@mui/material';
 
 
 export const Frame = (props: {}) => {
@@ -52,10 +54,15 @@ export const Frame = (props: {}) => {
           </div>
         </div>
       )} */}
-
-      {page ?? <div className="mws-error">Page not found</div>}
+      <ErrorBoundary fallback={<Message>An error occured</Message>}>
+        {page ?? <Message>Page not found</Message>}
+      </ErrorBoundary>
     </>
   )
 };
 
+function Message({ children }: PropsWithChildren<{}>) {
+  return <Stack alignItems="center" direction="column" padding={8} >{children}</Stack>
+
+}
 

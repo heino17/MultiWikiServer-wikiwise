@@ -1,6 +1,7 @@
 import { registerZodRoutes, SiteConfig, zodManage, RouterKeyMap, RouterRouteMap } from "../router";
 
 export const UserKeyMap: RouterKeyMap<UserManager, true> = {
+  user_edit_data: true,
   user_create: true,
   user_delete: true,
   user_list: true,
@@ -17,6 +18,41 @@ export class UserManager {
   static defineRoutes(root: rootRoute, config: SiteConfig) {
     registerZodRoutes(root, new UserManager(), Object.keys(UserKeyMap));
   }
+
+  user_edit_data = zodManage(z => z.object({
+    user_id: z.prismaField("Users", "user_id", "number")
+  }), async (state, prisma) => {
+    state.okUser();
+    
+    const { user_id } = state.data;
+
+    if (!state.user.isAdmin && state.user.user_id !== user_id)
+      throw "Non-admins cannot retrieve the profile of other users"
+
+    const user = await prisma.users.findUnique({
+      where: { user_id },
+      select: {
+        user_id: true,
+        username: true,
+        email: true,
+        roles: true,
+        last_login: true,
+        created_at: true,
+      }
+    });
+    
+    if (!user) throw "User not found";
+    
+    const allRoles = await prisma.roles.findMany({
+      select: {
+        role_id: true,
+        role_name: true,
+        description: true,
+      }
+    });
+
+    return { user, allRoles }
+  });
 
   user_list = zodManage(z => z.undefined(), async (state, prisma) => {
 

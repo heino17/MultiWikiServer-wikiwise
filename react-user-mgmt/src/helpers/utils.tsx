@@ -127,7 +127,7 @@ interface ManagerMap extends RecipeManagerMap, UserManagerMap {
 
 
 export const serverRequest: ManagerMap = {
-
+  user_edit_data: postManager("user_edit_data"),
   user_list: postManager("user_list"),
   user_create: postManager("user_create"),
   user_delete: postManager("user_delete"),
