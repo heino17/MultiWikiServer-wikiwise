@@ -94,7 +94,7 @@ class StartupCommander {
     // the libsql adapter has an additional advantage of letting us specify pragma 
     // and also gives us more control over connections. 
 
-    this.libsql = createClient({ url: "file://" + this.databasePath });
+    this.libsql = createClient({ url: "file:" + this.databasePath });
     // console.log(this.libsql.protocol, this.databasePath);
     // this.libsql.execute("pragma synchronous=off");
     this.engine = new PrismaClient({

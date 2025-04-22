@@ -1,6 +1,6 @@
 
 import { request } from "http";
-import { resolve } from "path/posix";
+import { resolve } from "path";
 import { StateObject } from "./StateObject";
 import { dist_resolve } from "./utils";
 

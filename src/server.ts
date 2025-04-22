@@ -38,7 +38,6 @@ export interface MWSConfig {
   /** 
    * Enables the dev configuration of the server.
    * The string is the absolute path to the dev repo. 
-   * This somewhat clunky solution allows us to run the dev configuration using basically the same setup.
    */
   enableDevServer?: string
   /** 
