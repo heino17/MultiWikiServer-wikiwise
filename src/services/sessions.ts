@@ -1,10 +1,10 @@
 
-import { Streamer } from "../../streamer";
+import { Streamer } from "../streamer";
 import { randomBytes } from "node:crypto";
-import { registerZodRoutes, Router, RouterKeyMap, RouterRouteMap, zodRoute, ZodState } from "../router";
-import { StateObject } from "../../StateObject";
+import { registerZodRoutes, Router, RouterKeyMap, RouterRouteMap, zodRoute, ZodState } from "../routes/router";
+import { StateObject } from "../StateObject";
 import { z } from "zod";
-import { JsonValue, Z2 } from "../../utils";
+import { JsonValue, Z2 } from "../utils";
 
 export interface AuthUser {
   /** User ID. 0 if the user is not logged in. */

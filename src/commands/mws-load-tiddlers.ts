@@ -2,7 +2,7 @@ import { resolve } from "path";
 import { CommandInfo, Commander } from "../commander";
 import { TiddlerStore } from "../routes/TiddlerStore";
 import { SiteConfig } from "../routes/router";
-import { TiddlerFields } from "../routes/services/attachments";
+import { TiddlerFields } from "../services/attachments";
 
 export const info: CommandInfo = {
 	name: "mws-load-tiddlers",

@@ -4,15 +4,15 @@ import "./streamer";
 import "./global";
 import * as opaque from "@serenity-kit/opaque";
 import { existsSync, mkdirSync, PathOrFileDescriptor, readFileSync, writeFileSync } from 'node:fs';
-import * as sessions from "./routes/services/sessions";
-import * as attacher from "./routes/services/attachments";
+import * as sessions from "./services/sessions";
+import * as attacher from "./services/attachments";
 import { bootTiddlyWiki } from "./tiddlywiki";
 import { Commander } from "./commander";
 import { ListenerBase } from "./commands/mws-listen";
-import { createPasswordService } from "./routes/services/PasswordService";
+import { createPasswordService } from "./services/PasswordService";
 import { resolve } from "node:path";
 
-export * from "./routes/services/sessions";
+export * from "./services/sessions";
 
 export interface MWSConfig {
   /** 

@@ -4,7 +4,7 @@ import { resolve } from "path";
 import { createWriteStream, readFileSync } from "fs";
 import sjcl from "sjcl";
 import { createHash } from "crypto";
-import { TiddlerFields } from "./services/attachments";
+import { TiddlerFields } from "../services/attachments";
 import { UserError } from "../utils";
 
 

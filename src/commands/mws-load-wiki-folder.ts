@@ -13,7 +13,7 @@ Command to create and load a bag for the specified core editions
 import { resolve } from "path";
 import { Commander, CommandInfo } from "../commander";
 import { TiddlerStore } from "../routes/TiddlerStore";
-import { TiddlerFields } from "../routes/services/attachments";
+import { TiddlerFields } from "../services/attachments";
 import { Prisma, PrismaClient } from "@prisma/client";
 
 export const info: CommandInfo = {

@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { SiteConfig } from "./router";
-import { AttachmentService, TiddlerFields } from "./services/attachments";
+import { AttachmentService, TiddlerFields } from "../services/attachments";
 import { ok } from "assert";
 import { Commander } from "../commander";
 import { FileInfoTiddlers } from "tiddlywiki";
