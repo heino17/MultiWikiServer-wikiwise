@@ -26,8 +26,8 @@ export const Frame = (props: {}) => {
     [/^\/admin\/users\/(\d+)$/, ([, user_id]) => <ManageUser userID={user_id} />, "Manage User"],
     [/^\/admin\/roles$/, () => <UsersScreen />, "Roles"],
   ];
-
-  const matches = pages.map(([re]) => re.exec(location.pathname));
+  const route = location.pathname.slice(pathPrefix.length);
+  const matches = pages.map(([re]) => re.exec(route));
   const index = matches.findIndex(m => m !== null);
   const page = index > -1 && pages[index][1](matches[index]!) || null;
 

@@ -1,11 +1,17 @@
-import { EventEmitter } from "angular-forms-only";
-import { createContext, PropsWithChildren, ReactNode, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+
+import { PropsWithChildren, ReactNode, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { from, NEVER, Observable, Observer, Subscription } from "rxjs";
 import * as forms from "angular-forms-only";
-import { ButtonAwait } from "./utils";
-import { Alert, Autocomplete, Button, Dialog, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, MenuItemProps, OutlinedInput, Select, SelectChangeEvent, Stack, SvgIcon, SxProps, TextField, Theme } from "@mui/material";
+import { Autocomplete, MenuItem, MenuItemProps, SvgIcon, SxProps, TextField, Theme } from "@mui/material";
+import { Subject } from "rxjs";
 
-export { EventEmitter };
+export class EventEmitter<T> extends Subject<T> {
+
+  emit(value: T) {
+    this.next(value);
+  }
+
+}
 export function useEventEmitter<T>() {
   return useMemo(() => new EventEmitter<T>(), []);
 }
@@ -113,43 +119,6 @@ export function useSubscribeLayoutEffect<T>(subscribeEffect: () => { unsubscribe
   }, deps);
 }
 
-
-export function FormDialogSubmitButton<T extends forms.AbstractControl>({ submitLabel, onSubmit }: {
-  /** 
-   * A function which returns a string for the success message, or throws an error.
-   * 
-   * Uses error directly if it is a string, or error.message if available, or `${error}`.
-   */
-  onSubmit: () => Promise<string>;
-  submitLabel?: string;
-}) {
-  const { form, onClose, onRefresh } = useFormDialogForm();
-  useObservable(form.events);
-  const [submitResult, setSubmitResult] = useState<{ ok: boolean, message: string } | null>(null);
-  const onDiscard = useCallback(() => onRefresh(), [onRefresh]);
-  return <>
-    <Stack direction="row-reverse" spacing={2}>
-      {form.dirty && <ButtonAwait disabled={form.invalid || form.disabled || !form.dirty} variant="contained" onClick={async () => {
-        setSubmitResult(null);
-        const submitResult = await onSubmit().then(
-          message => ({ ok: true, message }),
-          error => {
-            console.error(error);
-            return {
-              ok: false,
-              message: typeof error === "string" ? error : `${error?.message ?? error}`
-            }
-          }
-        );
-        setSubmitResult(submitResult);
-      }}>{submitLabel || "Save"}</ButtonAwait>}
-      {form.dirty && <Button disabled={form.disabled} onClick={onDiscard}>Discard</Button>}
-      {!form.dirty && <Button onClick={onClose}>Close</Button>}
-    </Stack>
-    {submitResult && submitResult.ok === false && <Alert severity='error'>{submitResult.message}</Alert>}
-    {submitResult && submitResult.ok === true && <Alert severity='success'>{submitResult.message}</Alert>}
-  </>
-}
 
 export function SelectField<V>({
   title, required, multiple, sx, control, options
@@ -267,62 +236,6 @@ export function MissingFavicon() {
 
 
 
-const FormDialogFormContext = createContext<{
-  form: any,
-  value: any,
-  onClose: () => void,
-  onRefresh: (value?: any) => void
-}>(null as never);
-export function useFormDialogForm<T, F extends forms.AbstractControl>() {
-  return useContext(FormDialogFormContext) as {
-    form: F,
-    value: T | null,
-    onClose: () => void,
-    onRefresh: (value?: T | null | undefined) => void
-  };
-}
-export type FormDialogEvents<T> =
-  | { type: "close" }
-  | { type: "open", value: T | null }
-  | { type: "reset" }
-  ;
-
-export function FormDialog<T, F extends forms.AbstractControl>({
-  events,
-  createForm,
-  children,
-}: PropsWithChildren<{
-  events: EventEmitter<FormDialogEvents<T>>,
-  createForm: (value: T | null) => F
-}>) {
-
-  const [value, setValue] = useState<T | null | undefined>(undefined);
-  const [reset, setReset] = useState({});
-  const form = useMemo(() => value === undefined ? null : createForm(value), [value, reset]);
-
-  const onClose = useCallback(() => { if (!form?.dirty) setValue(undefined); }, [form]);
-  const onRefresh = useCallback((newValue?: T | null) => {
-    newValue !== undefined ? setValue(newValue) : setReset({});
-  }, []);
-
-  useObserver(events, event => {
-    console.log(event);
-    if (event.type === "open") onRefresh(event.value);
-    if (event.type === "close") onClose();
-    if (event.type === "reset") onRefresh();
-  });
-
-  useObservable(form?.events);
-
-  return (
-    <Dialog open={!!form} onClose={onClose} maxWidth="md" fullWidth>
-      <FormDialogFormContext.Provider value={{ form, value, onClose, onRefresh }}>
-        {form && children}
-      </FormDialogFormContext.Provider>
-    </Dialog>
-  );
-
-}
 
 export function useBeforeExit(dirty: boolean) {
 

@@ -60,8 +60,7 @@ async function importEsbuild(root: rootRoute) {
 
   root.defineRoute({
     method: ['GET'],
-    path: /^\/(.*)/,
-    pathParams: ['reqpath'],
+    path: /^\/.*/,
     bodyFormat: "stream",
   }, async state => {
     await state.sendDevServer();

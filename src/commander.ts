@@ -17,6 +17,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { createHash, randomUUID } from "node:crypto";
 
 import { commands, mws_listen, divider } from "./commands";
+import { ok } from "node:assert";
 
 export interface $TW {
   utils: any;
@@ -76,6 +77,13 @@ class StartupCommander {
     public PasswordService: PasswordService,
   ) {
 
+
+
+    if (config.config?.pathPrefix) {
+      ok(config.config.pathPrefix.startsWith("/"), "pathPrefix must start with a slash");
+      ok(!config.config.pathPrefix.endsWith("/"), "pathPrefix must not end with a slash");
+    }
+
     // console.log(config.wikiPath);
     // this is already resolved to the cwd.
     this.wikiPath = config.wikiPath;
@@ -114,6 +122,7 @@ class StartupCommander {
       enableGzip: !!config.config?.enableGzip,
       contentTypeInfo: $tw.config.contentTypeInfo,
       storePath: this.storePath,
+      pathPrefix: config.config?.pathPrefix ?? "",
       saveLargeTextToFileSystem: undefined as never
     };
 

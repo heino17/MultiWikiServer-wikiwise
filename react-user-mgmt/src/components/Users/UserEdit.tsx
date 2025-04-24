@@ -1,89 +1,76 @@
 import { PropsWithChildren, useCallback } from 'react';
 import * as forms from "angular-forms-only";
 import {
-  EventEmitter, FormDialog, FormDialogEvents, useFormDialogForm,
-  IndexJson, useIndexJson,
-  FormDialogSubmitButton,
+  EventEmitter,
+  IndexJson, useIndexJson, SelectField,
+  useObservable,
   serverRequest,
-  ok,
-  SelectField,
-  useObservable
+  ok
 } from '../../helpers';
 import { DialogContent, DialogTitle, Stack, TextField } from '@mui/material';
 import { onChange } from './shared';
+import { createDialogForm, FormDialogSubmitButton } from '../../forms';
 
-
-const UserForm = (value: User | null) => {
-  const form = new forms.FormGroup({
+type User = Exclude<IndexJson["userListAdmin"], false>[number];
+const useUserEditForm = createDialogForm({
+  create: (value: User | null) => new forms.FormGroup({
     username: new forms.FormControl(value?.username ?? "", {
       nonNullable: true, validators: [forms.Validators.required]
     }),
     email: new forms.FormControl(value?.email ?? "", {
       nonNullable: true, validators: [forms.Validators.required]
     }),
-    roles: new forms.FormControl(value?.roles.map(e => e.role_id) ?? [], {
+    role_ids: new forms.FormControl(value?.roles.map(e => e.role_id) ?? [], {
       nonNullable: true, validators: [forms.Validators.required]
     }),
-  });
-  return form;
-}
+  }),
+  render: ({ form, value, indexJson: [indexJson, globalRefresh], onReset: onRefresh }) => {
+    const { roleList } = indexJson;
+    return <>
+      <TextField
+        label="User Name"
+        value={form.controls.username.value}
+        onChange={onChange(form.controls.username)}
+      />
+      <TextField
+        label="Email"
+        value={form.controls.email.value}
+        onChange={onChange(form.controls.email)}
+      />
+      <SelectField
+        title="Roles"
+        multiple
+        control={form.controls.role_ids}
+        options={roleList.map(e => ({ value: e.role_id, label: e.role_name }))}
+      />
+      <FormDialogSubmitButton
+        onSubmit={async () => {
+          const formData = form.value;
+          const isCreate = value === null;
+          console.log(formData, isCreate, value);
 
-type User = (Exclude<IndexJson["userListAdmin"] & {}, false>)[number];
+          if (form.invalid) { console.log(form.errors); throw form.errors; }
+          if (!isCreate && !value) throw new Error("No value provided");
 
-function useUserEditContext() {
-  return useFormDialogForm<User, ReturnType<typeof UserForm>>();
-}
+          ok(formData.username, "Username is required.");
+          ok(formData.email, "Email is required.");
+          ok(formData.role_ids?.length, "Role is required.");
 
-export type UserEditEvents = FormDialogEvents<User>;
+          console.log("not implemented", formData)
 
-export function UserEdit({ events }: PropsWithChildren<{
-  events: EventEmitter<UserEditEvents>
-}>) {
-  const [indexJson] = useIndexJson();
-  const { isAdmin = false } = indexJson;
-
-  const createForm = useCallback((value: User | null) => UserForm(value), [isAdmin]);
-
-  return <FormDialog events={events} createForm={createForm}><UserEditInner /></FormDialog>;
-}
-
-export function UserEditInner() {
-  const [indexJson, globalRefresh] = useIndexJson();
-  const { isAdmin = false } = indexJson;
-  const { value, form: form, onRefresh } = useUserEditContext();
-  const isCreate = value === null;
-  useObservable(form.events);
-
-  return <>
-    <DialogTitle>
-      {isCreate ? "Create new role" : "Update role"}
-    </DialogTitle>
-    <DialogContent>
-      <Stack direction="column" spacing={2} paddingBlock={2}>
-        <TextField
-          label="User Name"
-          value={form.controls.username.value}
-          onChange={onChange(form.controls.username)}
-        />
-        <TextField
-          label="Email"
-          value={form.controls.email.value}
-          onChange={onChange(form.controls.email)}
-        />
-        <SelectField
-          title="Roles"
-          multiple
-          control={form.controls.roles}
-          options={indexJson.roleList.map(e => ({ value: e.role_id, label: e.role_name }))}
-        />
-        <FormDialogSubmitButton
-          onSubmit={async () => {
-            const formData = form.value;
-            console.log(formData, isCreate);
-            return "Not implemented yet.";
-          }}
-        />
-      </Stack>
-    </DialogContent>
-  </>;
-}
+          // const { role_id } = isCreate ? await serverRequest.user_create({
+          //   ...formData,
+          // }) : await serverRequest.user_update({
+          //   user_id: value.user_id,
+          //   ...formData,
+          // });
+          // const newJson = await globalRefresh();
+          // const newUser = newJson.userListAdmin.find(e => e.user_id === role_id);
+          // if (newUser) onRefresh(newUser);
+          // return "";
+          throw "not implemented";
+        }}
+      />
+    </>;
+  }
+});

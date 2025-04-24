@@ -1,9 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import Header from '../Frame/Header';
-import { useAsyncEffect } from '../../helpers/useAsyncEffect';
-import AddUserForm from './AddUserForm';
+import { useCallback } from 'react';
 import { DataLoader, serverRequest, useIndexJson } from '../../helpers/utils';
-import { Box, Card, CardContent, Container, Grid, Stack } from '@mui/material';
+import { Card, CardContent, CardHeader, Container, Stack } from '@mui/material';
+import { useCreateUserForm } from './useCreateUserForm';
 
 
 interface User {
@@ -24,14 +22,8 @@ interface UserManagementResponse {
 export const UserManagement = DataLoader(async () => {
   return await serverRequest.user_list(undefined);
 }, (userList, refreshUsers, props) => {
-  const [indexJson, refreshIndex] = useIndexJson();
-  const userIsAdmin = indexJson?.isAdmin || false;
-  const username = indexJson?.username || "";
 
-  const refreshPage = useCallback(() => {
-    refreshUsers();
-    refreshIndex();
-  }, [refreshUsers, refreshIndex]);
+  const [createUserMarkup, createUserUpdate] = useCreateUserForm();
 
   return (
     <Container maxWidth="lg">
@@ -40,7 +32,7 @@ export const UserManagement = DataLoader(async () => {
 
           <a
             key={user.user_id}
-            href={`/admin/users/${user.user_id}?q=preview`}
+            href={`admin/users/${user.user_id}`}
             className="mws-user-item"
           >
             <div className="mws-user-info">
@@ -62,7 +54,12 @@ export const UserManagement = DataLoader(async () => {
           </a>
 
         ))}</CardContent></Card>
-        <AddUserForm refreshPage={refreshPage} />
+        <Card sx={{ width: "20rem" }}>
+          <CardHeader title="Add New User" />
+          <CardContent>
+            {createUserMarkup}
+          </CardContent>
+        </Card>
       </Stack>
     </Container>
   )

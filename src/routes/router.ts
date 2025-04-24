@@ -1,4 +1,4 @@
-import { STREAM_ENDED, Streamer } from "../streamer";
+import { STREAM_ENDED, Streamer, SYMBOL_IGNORE_ERROR } from "../streamer";
 import { StateObject } from "../StateObject";
 import RootRoute from ".";
 import * as z from "zod";
@@ -8,6 +8,11 @@ import { MWSConfigConfig } from "../server";
 import { setupDevServer } from "../setupDevServer";
 import { Commander } from "../commander";
 import { CacheState, startupCache } from "./cache";
+import * as http from "http";
+import * as http2 from "http2";
+
+// this should have been in server
+export { SiteConfig } from "../server";
 
 export { RouteMatch, Route, rootRoute };
 
@@ -40,23 +45,15 @@ const zodTransformJSON = (arg: string, ctx: z.RefinementCtx) => {
   }
 };
 
-export interface SiteConfig extends MWSConfigConfig {
-  wikiPath: string;
-  attachmentSizeLimit: number;
-  attachmentsEnabled: boolean;
-  contentTypeInfo: Record<string, any>;
-  saveLargeTextToFileSystem: never;
-  storePath: string;
-}
 
 export class Router {
 
   static async makeRouter(
     commander: Commander,
-    enableDevServer: string | undefined
+    enableDevServer: boolean
   ) {
 
-    const sendDevServer = await setupDevServer(enableDevServer);
+    const sendDevServer = await setupDevServer(enableDevServer, commander.siteConfig.pathPrefix);
 
     const rootRoute = defineRoute(ROOT_ROUTE, {
       method: AllowedMethods,
@@ -80,11 +77,7 @@ export class Router {
   enableBrowserCache: boolean = true;
   enableGzip: boolean = false;
   csrfDisable: boolean = false;
-  servername: string = "";
-  variables = new Map();
-  get(name: string): string {
-    return this.variables.get(name) || "";
-  }
+
   public engine: Commander["engine"];
   private SessionManager: Commander["SessionManager"];
 
@@ -95,17 +88,41 @@ export class Router {
   ) {
     this.engine = commander.engine;
     this.SessionManager = commander.SessionManager;
+    this.pathPrefix = commander.siteConfig.pathPrefix;
 
   }
 
+  handleIncomingRequest(
+    req: http.IncomingMessage | http2.Http2ServerRequest,
+    res: http.ServerResponse | http2.Http2ServerResponse
+  ) {
+    
+    const [ok, err, streamer] = function (this: Router) {
+      try {
+        return [true, undefined, new Streamer(req, res, this)] as const;
+      } catch (e) {
+        return [false, e, undefined] as const;
+      }
+    }.call(this);
+
+    if (!ok) {
+      if (err === STREAM_ENDED) return;
+      res.writeHead(500, { "x-reason": "handle incoming request" }).end();
+      throw err;
+    }
+
+    this.handle(streamer).catch(streamer.catcher);
+  }
+
   async handle(streamer: Streamer) {
+
 
     if (!this.csrfDisable
       && ["POST", "PUT", "DELETE"].includes(streamer.method)
       && streamer.headers["x-requested-with"] !== "TiddlyWiki"
     )
-      throw streamer.sendString(403, { "x-reason": "x-requested-with missing" },
-        `'X-Requested-With' header required to login to '${this.servername}'`, "utf8");
+      throw streamer.sendString(400, { "x-reason": "x-requested-with missing" },
+        `'X-Requested-With' header required`, "utf8");
 
     const authUser = await this.SessionManager.parseIncomingRequest(streamer, this);
 
@@ -242,8 +259,6 @@ export class Router {
   findRoute(streamer: Streamer): RouteMatch[] {
     const { method, urlInfo } = streamer;
     let testPath = urlInfo.pathname || "/";
-    if (this.pathPrefix && testPath.startsWith(this.pathPrefix))
-      testPath = testPath.slice(this.pathPrefix.length) || "/";
     return this.findRouteRecursive([this.rootRoute as any], testPath, method);
   }
 

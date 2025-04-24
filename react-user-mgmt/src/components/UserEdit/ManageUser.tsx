@@ -1,17 +1,11 @@
 import { Avatar, Card, CardContent, Chip, IconButton, List, ListItem, ListItemText, Stack } from '@mui/material';
-import { JsonFormSimple } from '../../helpers/forms';
-import {
-  changePassword,
-  DataLoader,
-  FormFieldInput,
-  serverRequest,
-  useFormFieldHandler,
-  useIndexJson
-} from '../../helpers/utils';
+import { ButtonAwait, DataLoader, serverRequest, useIndexJson } from '../../helpers';
 import { } from '@mui/material/colors';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useTheme } from '@mui/material/styles';
 import ArrowBack from '@mui/icons-material/ArrowBack';
+import { useProfileForm } from './useProfileForm';
+import { usePasswordForm } from './usePasswordForm';
 
 const MyComponent = () => {
   const theme = useTheme();
@@ -73,88 +67,31 @@ interface UserJson {
 
 }
 
+const handleDeleteAccount = async (user_id: number) => {
+  if (window.confirm('Are you sure you want to delete this user account? This action cannot be undone.'))
+    return await serverRequest.user_delete({ user_id }).then(() => {
+      return "User deleted successfully.";
+    }).catch(e => {
+      throw `${e}`;
+    });
+  else
+    throw "Cancelled.";
+};
+
 
 const ManageUser = DataLoader(async (props: { userID: string }) => {
   return await serverRequest.user_edit_data({ user_id: +props.userID });
 }, ({ user, allRoles }, refreshUser, props) => {
+
+  const [profileFormMarkup] = useProfileForm(allRoles, user, refreshUser);
+  const [passwordFormMarkup] = usePasswordForm(user);
 
   const [indexJson] = useIndexJson();
   const isCurrentUserProfile = indexJson.user_id === user.user_id;
   const userIsAdmin = indexJson.isAdmin;
   const theme = useTheme();
 
-  const [valueUpdate, onChangeUpdate] = useState<UpdateAccountFields>({
-    userId: `${user.user_id}`,
-    username: user.username,
-    email: user.email,
-    role: user.roles[0].role_id,
-  });
-  const [valueDelete, onChangeDelete] = useState<DeleteAccountFields>({
-    user_id: `${user.user_id}`,
-  });
-  const [valuePassword, onChangePassword] = useState({
-    userId: `${user.user_id}`,
-    newPassword: "",
-    confirmPassword: "",
-  });
-
-  console.log(valueUpdate, valueDelete, valuePassword);
-
   const userInitials = user.username?.[0].toUpperCase();
-  interface UpdateAccountFields {
-    userId: string;
-    username: string;
-    email: string;
-    role: number;
-  }
-  const handleUpdateProfile = async (formData: UpdateAccountFields) => {
-    return await serverRequest.user_update({
-      user_id: +formData.userId,
-      username: formData.username,
-      email: formData.email,
-      role_id: +formData.role,
-    }).then(async () => {
-      await refreshUser();
-      return "User updated successfully.";
-    }).catch(e => {
-      throw `${e}`;
-    });
-  }
-
-  interface DeleteAccountFields {
-    user_id: string;
-  }
-  const handleDeleteAccount = async (formData: DeleteAccountFields) => {
-    if (window.confirm('Are you sure you want to delete this user account? This action cannot be undone.'))
-      return await serverRequest.user_delete({ user_id: +formData.user_id }).then(() => {
-        return "User deleted successfully.";
-      }).catch(e => {
-        throw `${e}`;
-      });
-    else
-      throw "Cancelled.";
-  };
-  interface ChangePasswordFields {
-    userId: string;
-    newPassword: string;
-    confirmPassword: string;
-  }
-  const handleChangePassword = async (formData: ChangePasswordFields) => {
-    const { userId, newPassword: password, confirmPassword } = formData;
-
-    if (!userId || !password || !confirmPassword) throw "All fields are required.";
-
-    if (password !== confirmPassword) {
-      throw "Passwords do not match.";
-    }
-
-    return await changePassword({ userId, password, confirmPassword }).then(() => {
-      return "Password successfully changed.";
-    }).catch(e => {
-      throw `${e}`;
-    });
-
-  }
 
   return (
     <>
@@ -167,7 +104,8 @@ const ManageUser = DataLoader(async (props: { userID: string }) => {
               aria-label="account of current user"
               aria-controls="menu-appbar"
               aria-haspopup="true"
-              onClick={(event) => { location.pathname = "/admin/users"; }}
+              href={userIsAdmin ? "admin/users" : " "} // space is important
+              // onClick={(event) => { location.pathname = "admin/users"; }}
               sx={{ color: theme.palette.primary.contrastText }}
             >
               <ArrowBack />
@@ -196,7 +134,18 @@ const ManageUser = DataLoader(async (props: { userID: string }) => {
               <ListItem><ListItemText primary="Created At" secondary={user.created_at?.split('T')[0]} /></ListItem>
               <ListItem><ListItemText primary="Last Login" secondary={user.last_login?.split('T')[0]} /></ListItem>
             </List>
-
+            {userIsAdmin && !isCurrentUserProfile && (
+              <ButtonAwait
+                onClick={async () => {
+                  await handleDeleteAccount(user.user_id);
+                }}
+                variant="outlined"
+                color="error"
+                sx={{ marginBlock: 2 }}
+              >
+                Delete Account
+              </ButtonAwait>
+            )}
             <div className="mws-user-profile-roles">
               <h2>User Role</h2>
               <ul>
@@ -210,61 +159,10 @@ const ManageUser = DataLoader(async (props: { userID: string }) => {
 
         {(userIsAdmin || isCurrentUserProfile) && (
           <Card className="mws-user-profile-management">
-            <h2>Manage Account</h2>
-            <JsonFormSimple
-              required={["userId", "username", "email"]}
-              properties={{
-                userId: { type: "string", title: "User ID", "ui:widget": "hidden", default: `${user.user_id}` },
-                username: { type: "string", title: "Username" },
-                email: { type: "string", title: "Email" },
-                role: {
-                  type: "number", title: "Role", "ui:widget": "select",
-                  enum: allRoles.map(e => e.role_id),
-                  enumNames: allRoles.map(e => e.role_name)
-                },
-              }}
-              value={valueUpdate}
-              onChange={onChangeUpdate}
-              onSubmit={async (data, event) => {
-                return await handleUpdateProfile(data.formData);
-              }}
-              submitOptions={{
-                submitText: "Update Profile",
-              }}
-            />
-            {isCurrentUserProfile && <JsonFormSimple
-              required={["userId", "newPassword", "confirmPassword"]}
-              properties={{
-                userId: { type: "string", title: "User ID", "ui:widget": "hidden", default: `${user.user_id}` },
-                newPassword: { type: "string", title: "New Password", "ui:widget": "password" },
-                confirmPassword: { type: "string", title: "Confirm Password", "ui:widget": "password" },
-              }}
-              value={valuePassword}
-              onChange={onChangePassword}
-              onSubmit={async (data, event) => {
-                return await handleChangePassword(data.formData);
-              }}
-              submitOptions={{
-                submitText: "Change Password",
-              }}
-            />}
-            {userIsAdmin && !isCurrentUserProfile && (
-              <JsonFormSimple
-                required={["user_id"]}
-                properties={{
-                  user_id: { type: "string", title: "User ID", "ui:widget": "hidden", default: `${user.user_id}` },
-                }}
-                value={valueDelete}
-                onChange={onChangeDelete}
-                onSubmit={async (data, event) => {
-                  return await handleDeleteAccount(data.formData);
-                }}
-                submitOptions={{
-                  submitText: "Delete Account",
-                }}
-              />
-            )}
-
+            <h2>Manage User</h2>
+            {userIsAdmin && profileFormMarkup}
+            <h2>Change Password</h2>
+            {passwordFormMarkup}
           </Card>
         )}
       </div>

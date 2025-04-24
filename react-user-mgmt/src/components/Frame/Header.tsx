@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { AppBar, Box, Button, IconButton, Menu, MenuItem, Toolbar, Typography } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
 import SettingsIcon from '@mui/icons-material/Settings';
 import HomeIcon from '@mui/icons-material/Home';
-import { serverRequest } from '../../helpers/utils';
-import { logout } from '../Login';
+import { sessionRequest } from '../../helpers';
+
 
 interface HeaderProps {
   pageTitle: string;
@@ -23,7 +22,7 @@ const Header: React.FC<HeaderProps> = ({
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const navigateTo = (path: string) => {
-    window.location.href = path;
+    window.location.href = pathPrefix + path;
   };
 
   const handleManageUsers = () => {
@@ -40,9 +39,9 @@ const Header: React.FC<HeaderProps> = ({
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
-    await logout();
+    await sessionRequest.logout(undefined);
     setIsLoggingOut(false);
-    window.location.href = '/';
+    navigateTo('/');
   };
 
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);

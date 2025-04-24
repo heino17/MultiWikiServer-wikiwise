@@ -1,18 +1,18 @@
 import { Avatar, Button, Card, CardActions, CardContent, IconButton, List, ListItem, ListItemAvatar, ListItemIcon, ListItemText, Stack } from "@mui/material";
-import { useEventEmitter, useIndexJson } from "../../helpers";
-import { RoleEdit, RoleEditEvents } from "./RoleEdit";
+import { IndexJson, useEventEmitter, useIndexJson } from "../../helpers";
+
 import EditIcon from '@mui/icons-material/Edit';
-import { UserEdit, UserEditEvents } from "./UserEdit";
+import { useRoleEditForm } from "./RoleEdit";
+import { useState } from "react";
 
 export const UsersScreen = () => {
   const [indexJson] = useIndexJson();
-  const roleEditEvents = useEventEmitter<RoleEditEvents>();
-  const userEditEvents = useEventEmitter<UserEditEvents>();
+
+  const [roleEditMarkup, setRoleEdit] = useRoleEditForm();
 
   return <>
     <CardContent>
-      <RoleEdit events={roleEditEvents} />
-      <UserEdit events={userEditEvents} />
+      {roleEditMarkup}
       <Stack direction="column" spacing={2}>
         {/* <Card variant='outlined'>
           <CardContent>
@@ -47,7 +47,7 @@ export const UsersScreen = () => {
                   <ListItemAvatar><Avatar>{role.role_name[0]}</Avatar></ListItemAvatar>
                   <ListItemText primary={role.role_name} secondary={role.description} />
                   <Stack>
-                    <IconButton edge="end" onClick={() => roleEditEvents.emit({ type: 'open', value: role })}>
+                    <IconButton edge="end" onClick={() => setRoleEdit(role)}>
                       <EditIcon />
                     </IconButton>
                   </Stack>
@@ -57,7 +57,7 @@ export const UsersScreen = () => {
           </CardContent>
           <CardActions>
             <Button onClick={() => {
-              roleEditEvents.emit({ type: "open", value: null });
+              setRoleEdit(null);
             }}>Create new role</Button>
           </CardActions>
         </Card>

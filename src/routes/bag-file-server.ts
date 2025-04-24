@@ -332,6 +332,12 @@ export class TiddlerServer extends TiddlerStore {
       title: "$:/state/multiwikiclient/recipe/last_tiddler_id",
       text: (lastTiddlerId._max.tiddler_id ?? 0).toString()
     });
+
+    writeTiddler({
+      title: "$:/config/multiwikiclient/host",
+      text: "$protocol$//$host$" + this.state.config.pathPrefix + "/",
+    });
+
     state.write(template.substring(markerPos + marker.length))
     // Finish response
     return state.end();

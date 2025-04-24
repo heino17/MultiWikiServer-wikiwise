@@ -81,6 +81,7 @@ export class StateObject<
     this.engine = commander.engine;
     this.config = commander.siteConfig;
     this.PasswordService = commander.PasswordService;
+    
 
     this.readMultipartData = readMultipartData.bind(this);
     this.sendResponse = sendResponse.bind(undefined, this.config, this);

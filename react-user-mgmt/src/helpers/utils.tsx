@@ -21,31 +21,8 @@ export function toSearchParams(formData: MapLike | Record<string, any>): URLSear
 
 
 
-export interface ChangePasswordForm {
-  userId: string
-  password: string
-  confirmPassword: string
-}
 
-export async function changePassword(input: ChangePasswordForm) {
 
-  const { userId, password, confirmPassword } = input;
-
-  if (password !== confirmPassword) throw 'Passwords do not match';
-
-  const { clientRegistrationState, registrationRequest } = opaque.client.startRegistration({ password });
-
-  const registrationResponse = await serverRequest.user_update_password({ user_id: +userId, registrationRequest });
-
-  if (!registrationResponse) throw 'Failed to update password'; // wierd, but shouldn't happen
-
-  const { registrationRecord } = opaque.client.finishRegistration({
-    clientRegistrationState, registrationResponse, password,
-  });
-
-  await serverRequest.user_update_password({ user_id: +userId, registrationRecord });
-
-}
 
 export function DataLoader<T, P>(
   loader: (props: P) => Promise<T>,
@@ -95,19 +72,26 @@ export class PromiseSubject<T> {
 }
 export function Render({ useRender }: { useRender: () => ReactNode }) { return useRender(); }
 
-export const IndexJsonContext = React.createContext<DataLoaderContext<ART<typeof getIndexJson>>>(null as any);
+export type UseIndexJson = DataLoaderContext<ART<typeof getIndexJson>>;
+
+export const IndexJsonContext = React.createContext<UseIndexJson>(null as any);
 
 export function useIndexJson() { return React.useContext(IndexJsonContext); }
 
 export type IndexJson = ART<typeof getIndexJson>;
 
-type ART<T extends (...args: any) => any> = Awaited<ReturnType<T>>;
+
+
+declare global {
+  // see setupDevServer.ts
+  const pathPrefix: string;
+}
 
 function postManager<K extends keyof RecipeManagerMap>(key: K): RecipeManagerMap[K]
 function postManager<K extends keyof UserManagerMap>(key: K): UserManagerMap[K]
 function postManager(key: string) {
   return async (data: any) => {
-    const req = await fetch("/manager/" + key, {
+    const req = await fetch(pathPrefix + "/manager/" + key, {
       method: "POST",
       headers: {
         'Content-Type': 'application/json',
@@ -285,11 +269,13 @@ export function FormFieldInput({ id, type, children, title, ...inputProps }: For
 
 export interface ButtonAwaitProps extends ButtonProps {
   onClick: (event: Parameters<ButtonProps["onClick"] & {}>[0]) => Promise<void>
+  buttonRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
 export function ButtonAwait({ onClick, loading: propsLoading, ...props }: ButtonAwaitProps) {
   const [isLoading, setIsLoading] = useState(false);
   return <Button
+    ref={props.buttonRef}
     loading={isLoading || propsLoading}
     onClick={(event) => {
       setIsLoading(true);
@@ -301,8 +287,8 @@ export function ButtonAwait({ onClick, loading: propsLoading, ...props }: Button
   />
 }
 
-export function ok<T>(value: T | null | undefined | "" | 0 | false): asserts value is T {
-  if (!value) throw new Error(`AssertionError: ${value}`);
+export function ok<T>(value: T | null | undefined | "" | 0 | false, message?: string): asserts value is T {
+  if (!value) throw new Error(message ?? `AssertionError: ${value}`);
 }
 
 

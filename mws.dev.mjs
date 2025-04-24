@@ -23,8 +23,9 @@ const listeners = existsSync(listenerFile)
 
 
 startServer({
-  enableDevServer: resolve("."),
+  enableDevServer: true,
   passwordMasterKeyFile: "./runtime-config/localpass.key",
   listeners,
   wikiPath: "./editions/mws",
+  config: { pathPrefix: "/dev", }
 }).catch(console.log);

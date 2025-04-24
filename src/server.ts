@@ -37,9 +37,8 @@ export interface MWSConfig {
 
   /** 
    * Enables the dev configuration of the server.
-   * The string is the absolute path to the dev repo. 
    */
-  enableDevServer?: string
+  enableDevServer?: boolean
   /** 
    * Path or file descriptor to the password master key.
    * If this key changes, all passwords will be invalid and need to be changed.
@@ -73,8 +72,25 @@ export interface MWSConfigConfig {
   readonly saveLargeTextToFileSystem?: number;
   readonly enableGzip?: boolean
   readonly enableBrowserCache?: boolean
+  /** The path prefix must start with a slash, and end without a slash */
+  readonly pathPrefix?: string;
 }
 
+
+export interface SiteConfig extends MWSConfigConfig {
+  wikiPath: string;
+  attachmentSizeLimit: number;
+  attachmentsEnabled: boolean;
+  contentTypeInfo: Record<string, any>;
+  saveLargeTextToFileSystem: never;
+  storePath: string;
+  /** 
+   * The path prefix is a essentially folder mount point. 
+   * It starts with a slash, and ends without a slash. 
+   * If there is not a prefix, it is an empty string. 
+   */
+  pathPrefix: string;
+}
 
 
 /**

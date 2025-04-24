@@ -52,8 +52,7 @@ export class ListenerBase {
     req: IncomingMessage | http2.Http2ServerRequest,
     res: ServerResponse | http2.Http2ServerResponse
   ) {
-    const streamer = new Streamer(req, res, this.router);
-    this.router.handle(streamer).catch(streamer.catcher);
+    this.router.handleIncomingRequest(req, res);
   }
 }
 
@@ -110,7 +109,7 @@ export class Command {
 
       const router = await Router.makeRouter(
         this.commander,
-        this.commander.config.enableDevServer,
+        this.commander.config.enableDevServer ?? false,
       ).catch(e => {
         console.log(e.stack);
         throw "Router failed to load";

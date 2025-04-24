@@ -2,7 +2,7 @@ import { StrictMode, Suspense, useEffect } from 'react';
 import './styles/index.css';
 import './styles/login.css';
 import { createRoot } from 'react-dom/client';
-import Login from './components/Login';
+import Login from './components/Login/Login';
 import { Frame } from './components/Frame/Frame';
 import { DataLoader, getIndexJson, IndexJsonContext } from './helpers/utils';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
@@ -27,14 +27,14 @@ export const App = DataLoader(async () => {
   return await getIndexJson();
 }, (indexJson, refresh, props) => {
   useEffect(() => { window.document.documentElement.classList.add("loaded"); }, []);
-
+  const route = location.pathname.slice(pathPrefix.length);
   return (
     <StrictMode>
       <ThemeProvider theme={theme} defaultMode="system" noSsr>
         <CssBaseline enableColorScheme />
         <IndexJsonContext.Provider value={[indexJson, refresh]}>
           <ErrorBoundary fallback={null} > 
-            {location.pathname === "/login" ? <Login /> : <Frame />}
+            {route === "/login" ? <Login /> : <Frame />}
           </ErrorBoundary>
         </IndexJsonContext.Provider>
       </ThemeProvider>
@@ -54,41 +54,3 @@ export const App = DataLoader(async () => {
   createRoot(document.getElementById('root')!).render(<App />);
 })();
 
-
-class _Result<OK extends boolean, T> {
-  constructor(
-    public ok: OK,
-    public error: OK extends true ? undefined : unknown,
-    public value: OK extends true ? T : undefined
-  ) { }
-
-  get [Symbol.iterator]() { return [this.ok, this.error, this.value] }
-
-  static ok<T>(value: T) {
-    return new _Result(true, undefined, value)
-  }
-  static error(error: unknown) {
-    return new _Result(false, error, undefined)
-  }
-
-  /**
-   * @example
-   * // const result = try something();
-   * const result = Result.try_(() => {
-   *   something();
-   * });
-   */
-  static try_<T, This>(callback: (this: This) => T, thisarg: This) {
-    try {
-      return _Result.ok(callback.apply(thisarg));
-    } catch (e) {
-      return _Result.error(e);
-    }
-  }
-
-}
-
-(global as any).TryResult = _Result;
-Promise.prototype.try = function <T>(this: Promise<T>) {
-  return this.then(_Result.ok, _Result.error);
-}

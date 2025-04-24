@@ -1,3 +1,4 @@
+import { assertSignature } from "../../server";
 import { registerZodRoutes, SiteConfig, zodManage, RouterKeyMap, RouterRouteMap } from "../router";
 
 export const UserKeyMap: RouterKeyMap<UserManager, true> = {
@@ -23,7 +24,7 @@ export class UserManager {
     user_id: z.prismaField("Users", "user_id", "number")
   }), async (state, prisma) => {
     state.okUser();
-    
+
     const { user_id } = state.data;
 
     if (!state.user.isAdmin && state.user.user_id !== user_id)
@@ -40,9 +41,9 @@ export class UserManager {
         created_at: true,
       }
     });
-    
+
     if (!user) throw "User not found";
-    
+
     const allRoles = await prisma.roles.findMany({
       select: {
         role_id: true,
@@ -79,14 +80,14 @@ export class UserManager {
   user_create = zodManage(z => z.object({
     username: z.string(),
     email: z.string(),
-    role_id: z.prismaField("Roles", "role_id", "number", false),
+    role_ids: z.prismaField("Roles", "role_id", "number", false).array(),
   }), async (state, prisma) => {
-    const { username, email, role_id } = state.data;
+    const { username, email, role_ids } = state.data;
 
     state.okAdmin();
 
     const user = await prisma.users.create({
-      data: { username, email, password: "", roles: { connect: { role_id } } },
+      data: { username, email, password: "", roles: { connect: role_ids.map(role_id => ({ role_id })) } },
       select: { user_id: true, created_at: true }
     });
 
@@ -97,9 +98,9 @@ export class UserManager {
     user_id: z.number(),
     username: z.string(),
     email: z.string(),
-    role_id: z.prismaField("Roles", "role_id", "number").optional(),
+    role_ids: z.prismaField("Roles", "role_id", "number").array(),
   }), async (state, prisma) => {
-    const { user_id, username, email, role_id } = state.data;
+    const { user_id, username, email, role_ids } = state.data;
 
     state.okAdmin();
 
@@ -107,7 +108,7 @@ export class UserManager {
 
     await prisma.users.update({
       where: { user_id },
-      data: { username, email, roles: { set: [{ role_id }] } }
+      data: { username, email, roles: { set: role_ids.map(role_id => ({ role_id })) } }
     });
 
     return null;
@@ -137,14 +138,35 @@ export class UserManager {
     user_id: z.prismaField("Users", "user_id", "number"),
     registrationRequest: z.string().optional(),
     registrationRecord: z.string().optional(),
+    session_id: z.string().optional(),
+    signature: z.string().optional(),
   }), async (state, prisma) => {
     const { user_id, registrationRecord, registrationRequest } = state.data;
 
     state.okUser();
 
+    if (!state.user.isAdmin) {
+      if (!state.data) throw "Session id and signature are required";
+      const session = await prisma.sessions.findUnique({
+        where: { session_id: state.data.session_id },
+      });
 
-    if (state.user.user_id !== user_id && !state.user.isAdmin)
-      throw "You must be an admin to update another user's password";
+      if (!session?.session_key)
+        throw "Session not found";
+      const { session_key } = session;
+      const { session_id, signature } = state.data;
+      if (!session_id || !signature)
+        throw "Session id and signature are required";
+      assertSignature({ session_id, session_key, signature });
+
+      if (session.user_id !== user_id)
+        throw "You must be an admin to update another user's password";
+
+      if (state.user.user_id !== user_id)
+        throw "You must be logged in as this user to update the password, "
+        + "but normally this isn't supposed to happen (this is a bug, please report it)";
+
+    }
 
     const userExists = await prisma.users.count({ where: { user_id } });
     if (!userExists) throw "User does not exist";

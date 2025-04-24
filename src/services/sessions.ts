@@ -1,8 +1,7 @@
 
 import { Streamer } from "../streamer";
-import { randomBytes } from "node:crypto";
-import { registerZodRoutes, Router, RouterKeyMap, RouterRouteMap, zodRoute, ZodState } from "../routes/router";
-import { StateObject } from "../StateObject";
+import { createHash, randomBytes } from "node:crypto";
+import { jsonify, registerZodRoutes, Router, RouterKeyMap, ZodAction, zodRoute, ZodState } from "../routes/router";
 import { z } from "zod";
 import { JsonValue, Z2 } from "../utils";
 
@@ -35,18 +34,41 @@ export const SessionKeyMap: RouterKeyMap<SessionManager, true> = {
  * @param inner the handler to call
  * @returns the ZodRoute
  */
-export function zodSession<T extends z.ZodTypeAny, R extends JsonValue>(
-  path: string,
+export function zodSession<P extends string, T extends z.ZodTypeAny, R extends JsonValue>(
+  path: P,
   zodRequest: (z: Z2<"JSON">) => T,
   inner: (state: ZodState<"POST", "json", Record<string, z.ZodTypeAny>, T>, prisma: PrismaTxnClient) => Promise<R>
-) {
-  return zodRoute(["POST"], path, z => ({}), "json", zodRequest, async state => {
-    return state.$transaction(async (prisma) => await inner(state, prisma));
-  });
+): ZodSessionRoute<P, T, R> {
+  return {
+    ...zodRoute(["POST"], path, z => ({}), "json", zodRequest, async state => {
+      return state.$transaction(async (prisma) => await inner(state, prisma));
+    }),
+    path,
+  };
 }
 
+export interface ZodSessionRoute<
+  P extends string,
+  T extends z.ZodTypeAny,
+  R extends JsonValue
+> extends ZodAction<T, R> {
+  path: P;
+  inner: (state: ZodState<"POST", "json", {}, T>) => Promise<R>,
+}
 
-export type SessionManagerMap = RouterRouteMap<SessionManager>;
+export type RouterPathRouteMap<T> = {
+  [K in keyof T as T[K] extends ZodSessionRoute<any, any, any> ? K : never]:
+  T[K] extends {
+    path: infer P,
+    zodRequest: (z: any) => infer REQ extends z.ZodTypeAny,
+    zodResponse?: (z: any) => infer RES extends z.ZodType<JsonValue>
+  } ? {
+    (data: z.input<REQ>): Promise<jsonify<z.output<RES>>>;
+    path: P;
+    key: K;
+  } : never;
+}
+export type SessionManagerMap = RouterPathRouteMap<SessionManager>;
 
 export class SessionManager {
 
@@ -56,7 +78,7 @@ export class SessionManager {
 
   static async parseIncomingRequest(streamer: Streamer, router: Router): Promise<AuthUser> {
 
-    const sessionId = streamer.cookies.session as PrismaField<"Sessions", "session_id"> | undefined;
+    const sessionId = streamer.cookies.get("session") as PrismaField<"Sessions", "session_id"> | undefined;
     const session = sessionId && await router.engine.sessions.findUnique({
       where: { session_id: sessionId },
       select: { user: { select: { user_id: true, username: true, roles: { select: { role_id: true } } } } }
@@ -107,36 +129,62 @@ export class SessionManager {
 
     const loginSession = await state.PasswordService.startLoginSession(stater);
 
-    state.setCookie("loginsession", loginSession, { httpOnly: true, path: "/", secure: state.isSecure, sameSite: "Strict" });
-
-    return { loginResponse: loginResponse.value };
+    return { loginResponse: loginResponse.value, loginSession };
 
   })
 
   login2 = zodSession("/login/2", z => z.object({
-    finishLoginRequest: z.string()
+    finishLoginRequest: z.string(),
+    loginSession: z.string(),
+    skipCookie: z.boolean().optional().default(false),
   }), async (state, prisma) => {
-    const { finishLoginRequest } = state.data;
+    const { finishLoginRequest, skipCookie, loginSession } = state.data;
 
-    if (!state.cookies.loginsession) throw "Login session not found.";
+    if (!loginSession) throw "Login session not found.";
 
-    const stater = state.PasswordService.serverState.get(state.cookies.loginsession);
+    const stater = state.PasswordService.serverState.get(loginSession);
 
     if (!stater) throw "Login session not found.";
 
-    const { done, value } = await stater.next(1, finishLoginRequest);
+    const { value } = await stater.next(1, finishLoginRequest);
 
     if (!value?.session?.sessionKey) throw "Login failed.";
 
-    const session_id = await this.createSession(prisma, value.user_id, value.session.sessionKey);
+    const session_id = await createSession(prisma, value.user_id, value.session.sessionKey);
 
-    state.setCookie("session", session_id, { httpOnly: true, path: "/", secure: state.isSecure, sameSite: "Strict" });
+    if (!skipCookie) {
+      // the client can ask to skip the cookie for things like password change
+      state.setCookie("session", session_id, {
+        httpOnly: true,
+        path: state.config.pathPrefix + "/",
+        secure: state.isSecure,
+        sameSite: "Strict"
+      });
+    }
 
-    return null;
+    // NEVER send the session_key! The client already has it!
+    return { user_id: value.user_id, session_id, };
 
   })
 
-  logout = zodSession("/logout", z => z.undefined(), async (state, prisma) => {
+  logout = zodSession("/logout", z => z.object({
+    session_id: z.string(),
+    signature: z.string(),
+    skipCookie: z.boolean().refine(e => e === true),
+  }).optional(), async (state, prisma) => {
+
+    if (state.data?.skipCookie) {
+      const session = await prisma.sessions.findUnique({
+        where: { session_id: state.data.session_id },
+        select: { user_id: true, session_key: true }
+      });
+      if (!session?.session_key) throw "Session not found.";
+      const { session_key } = session;
+      const { session_id, signature } = state.data;
+      assertSignature({ session_id, signature, session_key });
+      await prisma.sessions.delete({ where: { session_id: state.data.session_id } });
+      return null;
+    }
 
     if (state.user.isLoggedIn) {
       await prisma.sessions.delete({ where: { session_id: state.user.sessionId } });
@@ -146,21 +194,32 @@ export class SessionManager {
       var cookie = cookies[i]?.trim().split("=")[0];
       if (!cookie) continue;
       // state.setHeader("Set-Cookie", cookie + "=; HttpOnly; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict");
-      state.setCookie(cookie, "", { httpOnly: true, path: "/", expires: new Date(0), secure: state.isSecure, sameSite: "Strict" });
+      state.setCookie(cookie, "", { httpOnly: true, path: state.config.pathPrefix + "/", expires: new Date(0), secure: state.isSecure, sameSite: "Strict" });
     }
 
     return null;
   });
 
-  async createSession(prisma: PrismaTxnClient, user_id: PrismaField<"Users", "user_id">, session_key: string) {
-    const session_id = randomBytes(16).toString("base64url");
-    return await prisma.sessions.create({
-      data: {
-        user_id,
-        session_key,
-        session_id,
-        last_accessed: new Date(),
-      }
-    }).then(({ session_id }) => session_id);
-  }
+
+}
+
+
+async function createSession(prisma: PrismaTxnClient, user_id: PrismaField<"Users", "user_id">, session_key: string) {
+  const session_id = randomBytes(16).toString("base64url");
+  return await prisma.sessions.create({
+    data: {
+      user_id,
+      session_key,
+      session_id,
+      last_accessed: new Date(),
+    }
+  }).then(({ session_id }) => session_id);
+}
+
+
+export function assertSignature({ session_id, signature, session_key }: {
+  session_id: string; signature: string; session_key: string;
+}) {
+  const hash = createHash("sha256").update(session_key + session_id).digest("base64");
+  if (hash !== signature) throw "Invalid session signature.";
 }

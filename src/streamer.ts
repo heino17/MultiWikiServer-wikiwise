@@ -39,7 +39,7 @@ export class Streamer {
   url: string;
   headers: IncomingHttpHeaders;
   isSecure: boolean;
-  cookies: Record<string, string | undefined>;
+  cookies: URLSearchParams;
   constructor(
     private req: IncomingMessage | http2.Http2ServerRequest,
     private res: ServerResponse | http2.Http2ServerResponse,
@@ -47,60 +47,80 @@ export class Streamer {
   ) {
 
     this.headers = req.headers;
+
     this.url = req.url as string;
-    if (is<http2.Http2ServerRequest>(req, req.httpVersionMajor > 1)) {
-      this.req.headers.host = req.headers[":authority"];
+    if (!this.url.startsWith("/")) throw new Error("This should never happen");
+
+    if (router.pathPrefix) {
+      if (this.url === router.pathPrefix) {
+        res.writeHead(302, { "location": req.url + "/" }).end();
+        throw STREAM_ENDED;
+      } else if (this.url.startsWith(router.pathPrefix)) {
+        this.url = this.url.slice(router.pathPrefix.length);
+      } else {
+        res.writeHead(500, {}).end("The server is setup with a path prefix " + router.pathPrefix + ", but this request is outside of that prefix.", "utf8");
+        throw STREAM_ENDED;
+      }
     }
 
+    if (is<http2.Http2ServerRequest>(req, req.httpVersionMajor > 1))
+      req.headers.host = req.headers[":authority"];
     if (!req.headers.host) throw new Error("This should never happen");
-    if (!req.method) throw new Error("This should never happen");
-    if (!req.url?.startsWith("/")) throw new Error("This should never happen");
-    //https://httpwg.org/specs/rfc9110.html#status.501
-    if (!is<AllowedMethod>(req.method, AllowedMethods.includes(req.method as any)))
-      throw this.sendString(501, {}, "Method not supported", "utf8");
     this.host = req.headers.host;
+
+    if (!req.method) throw new Error("This should never happen");
+    if (!is<AllowedMethod>(req.method, AllowedMethods.includes(req.method as any))) {
+      //https://httpwg.org/specs/rfc9110.html#status.501
+      res.writeHead(501, {}).end("Method not supported", "utf8");
+      throw STREAM_ENDED;
+    }
     this.method = req.method;
+
     this.isSecure = !!req.socket.encrypted;
-    this.urlInfo = new URL(`https://${req.headers.host}${req.url}`);
+    this.urlInfo = new URL(`https://${this.headers.host}${this.url}`);
 
     this.cookies = this.parseCookieString(req.headers.cookie || "");
+
+    if(this.cookies.getAll("session").length > 1) {
+      console.warn("Multiple session cookies found. This is very likely to cause problems. This may happen after changing the path prefix.");
+    }
   }
 
 
   // RIP Push Stream. it was a great idea.
-  async pushStream(path: string) {
-    return new Promise<Streamer>((resolve, reject) => {
-      const req2: http2.Http2ServerRequest = this.req as any;
-      if (!req2.stream || !req2.stream.pushAllowed) return reject();
-      req2.stream.write
-      const newRawHeaders = this.req.rawHeaders.slice();
-      for (let i = 0; i < newRawHeaders.length; i += 2) {
-        if (newRawHeaders[i] === ":method") newRawHeaders[i + 1] = "GET";
-        if (newRawHeaders[i] === ":path") newRawHeaders[i + 1] = path;
-      }
-      req2.stream.pushStream({ ":method": "GET", ":path": path }, (err, pushStream, headers) => {
-        if (err) return reject(err);
-        const preq = new http2.Http2ServerRequest(pushStream, req2.headers, {}, newRawHeaders);
-        const pres = new http2.Http2ServerResponse(pushStream);
-        const pushStreamer = new Streamer(preq, pres, this.router);
-        resolve(pushStreamer);
-      });
-    }).then(async streamer => {
-      await this.router.handle(streamer);
-      return streamer;
-    }, (err) => { if (err) throw err; });
-  }
+  // async pushStream(path: string) {
+  //   return new Promise<Streamer>((resolve, reject) => {
+  //     const req2: http2.Http2ServerRequest = this.req as any;
+  //     if (!req2.stream || !req2.stream.pushAllowed) return reject();
+  //     req2.stream.write
+  //     const newRawHeaders = this.req.rawHeaders.slice();
+  //     for (let i = 0; i < newRawHeaders.length; i += 2) {
+  //       if (newRawHeaders[i] === ":method") newRawHeaders[i + 1] = "GET";
+  //       if (newRawHeaders[i] === ":path") newRawHeaders[i + 1] = path;
+  //     }
+  //     req2.stream.pushStream({ ":method": "GET", ":path": path }, (err, pushStream, headers) => {
+  //       if (err) return reject(err);
+  //       const preq = new http2.Http2ServerRequest(pushStream, req2.headers, {}, newRawHeaders);
+  //       const pres = new http2.Http2ServerResponse(pushStream);
+  //       const pushStreamer = new Streamer(preq, pres, this.router);
+  //       resolve(pushStreamer);
+  //     });
+  //   }).then(async streamer => {
+  //     await this.router.handle(streamer);
+  //     return streamer;
+  //   }, (err) => { if (err) throw err; });
+  // }
 
 
   parseCookieString(cookieString: string) {
-    const cookies: any = {};
+    const cookies = new URLSearchParams();
     if (typeof cookieString !== 'string') throw new Error('cookieString must be a string');
     cookieString.split(';').forEach(cookie => {
       const parts = cookie.split('=');
       if (parts.length >= 2) {
         const key = parts[0]!.trim();
         const value = parts.slice(1).join('=').trim();
-        cookies[key] = decodeURIComponent(value);
+        cookies.append(key, decodeURIComponent(value));
       }
     });
     return cookies;
@@ -390,7 +410,7 @@ export class StreamerState {
       "content-type": "application/json"
     }, JSON.stringify(obj), "utf8");
   }
-  
+
 
   STREAM_ENDED: typeof STREAM_ENDED = STREAM_ENDED;
 

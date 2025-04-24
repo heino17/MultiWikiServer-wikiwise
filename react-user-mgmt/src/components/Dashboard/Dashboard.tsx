@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { EventEmitter, FormDialogEvents, IndexJson, MissingFavicon, useIndexJson } from '../../helpers';
+import { EventEmitter, IndexJson, MissingFavicon, useIndexJson } from '../../helpers';
 import {
   Avatar, Button, Card, CardActions, CardContent, IconButton, Link, List, ListItem, ListItemAvatar, ListItemButton,
   ListItemText, Stack
@@ -13,9 +13,11 @@ import ExpandMore from '@mui/icons-material/ExpandMore';
 import WithACL from '@mui/icons-material/GppGood';
 import WithoutACL from '@mui/icons-material/GppBadOutlined';
 import { useEventEmitter } from '../../helpers';
-import { RecipeEdit, RecipeEditEvents } from './RecipeEdit';
-import { BagEdit, BagEditEvents } from './BagEdit';
+
+
 import { EntityACL, useACLEditForm, } from './ACLEdit';
+import { useBagEditForm } from './BagEdit';
+import { useRecipeEditForm } from './RecipeEdit';
 
 export const Dashboard = () => {
 
@@ -33,32 +35,19 @@ export const Dashboard = () => {
   const normalBags = indexJson.bagList.filter(bag => !bag.is_plugin);
   const pluginBags = indexJson.bagList.filter(bag => bag.is_plugin);
 
-  const handleShowSystemChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newShowSystem = e.target.checked;
-    setShowSystem(newShowSystem);
+  const [recipeMarkup, recipeSet] = useRecipeEditForm();
 
+  const [bagMarkup, bagSet] = useBagEditForm();
 
-    // Optionally persist the preference
-    // nothing is reading this right now so just disable it
-    // try {
-    //   const url = new URL(window.location.href);
-    //   url.searchParams.set('show_system', newShowSystem ? 'on' : 'off');
-    //   window.history.replaceState({}, '', url.toString());
-    // } catch (error) {
-    //   console.error('Error updating URL:', error);
-    // }
-  };
-  const recipeEditEvents = useEventEmitter<RecipeEditEvents>();
-  const bagEditEvents = useEventEmitter<BagEditEvents>();
-  const { events: aclEditEvents, markup: aclEditMarkup } = useACLEditForm();
+  const [aclMarkup, aclSet] = useACLEditForm();
 
   const [openRecipeItems, setOpenRecipeItems] = useState<string | null>(null);
 
   return (
     <CardContent>
-      <RecipeEdit events={recipeEditEvents} />
-      <BagEdit events={bagEditEvents} />
-      {aclEditMarkup}
+      {recipeMarkup}
+      {bagMarkup}
+      {aclMarkup}
       <Stack direction="column" spacing={2}>
         <Card variant='outlined'>
           <CardContent>
@@ -68,13 +57,13 @@ export const Dashboard = () => {
 
                 <ListItemButton key={recipe.recipe_name} disableRipple>
                   <ListItemAvatar>
-                    <Avatar src={`/recipes/${encodeURIComponent(recipe.recipe_name)}/tiddlers/%24%3A%2Ffavicon.ico`}>
+                    <Avatar src={`recipes/${encodeURIComponent(recipe.recipe_name)}/tiddlers/%24%3A%2Ffavicon.ico`}>
                       <MissingFavicon />
                     </Avatar>
                   </ListItemAvatar>
                   <ListItemText
                     primary={<>
-                      <Link href={`/wiki/${encodeURIComponent(recipe.recipe_name)}`}>{recipe.recipe_name}</Link>
+                      <Link href={`wiki/${encodeURIComponent(recipe.recipe_name)}`}>{recipe.recipe_name}</Link>
                       {recipe.owner_id && <span> (by {getOwner(recipe.owner_id)})</span>}
                     </>}
                     secondary={recipe.description}
@@ -85,7 +74,14 @@ export const Dashboard = () => {
                       aria-label="edit recipe"
                       href=""
                       onClick={() => {
-                        recipeEditEvents.emit({ type: "open", value: recipe });
+                        // recipeEditEvents.emit({ type: "open", value: recipe });
+                        recipeSet({
+                          ...recipe,
+                          bag_names: recipe.recipe_bags.map(rb => ({
+                            bag_name: getBag(rb.bag_id)?.bag_name ?? "",
+                            with_acl: rb.with_acl,
+                          })),
+                        });
                       }}
                     >
                       <EditIcon />
@@ -95,16 +91,13 @@ export const Dashboard = () => {
                         edge="end"
                         aria-label="open acl"
                         onClick={() => {
-                          aclEditEvents.emit({
-                            type: "open",
-                            value: {
-                              type: "recipe",
-                              id: recipe.recipe_id,
-                              name: recipe.recipe_name,
-                              description: recipe.description,
-                              owner_id: recipe.owner_id,
-                              acl: recipe.acl
-                            }
+                          aclSet({
+                            type: "recipe",
+                            id: recipe.recipe_id,
+                            name: recipe.recipe_name,
+                            description: recipe.description,
+                            owner_id: recipe.owner_id,
+                            acl: recipe.acl
                           });
                         }}
                       >
@@ -128,7 +121,7 @@ export const Dashboard = () => {
                     {recipe.recipe_bags.map(bag => (
                       <ListItem key={getBagName(bag.bag_id)}>
                         <ListItemAvatar>
-                          <Avatar src={`/bags/${encodeURIComponent(getBagName(bag.bag_id)!)}/tiddlers/%24%3A%2Ffavicon.ico`}>
+                          <Avatar src={`bags/${encodeURIComponent(getBagName(bag.bag_id)!)}/tiddlers/%24%3A%2Ffavicon.ico`}>
                             <MissingFavicon />
                           </Avatar>
                         </ListItemAvatar>
@@ -154,9 +147,7 @@ export const Dashboard = () => {
 
           </CardContent>
           <CardActions>
-            <Button onClick={() => {
-              recipeEditEvents.emit({ type: "open", value: null });
-            }}>Create new recipe</Button>
+            <Button onClick={() => { recipeSet(null); }}>Create new recipe</Button>
           </CardActions>
         </Card>
 
@@ -164,18 +155,20 @@ export const Dashboard = () => {
         {renderBags({
           title: "Bags",
           filteredBags: normalBags,
-          bagEditEvents,
           hasBagAclAccess,
-          aclEditEvents,
-          getOwner
+          bagSet,
+          aclSet,
+          getOwner,
+          favicon: true,
         })}
 
         {renderBags({
           title: "Plugins",
           filteredBags: pluginBags,
-          bagEditEvents,
-          aclEditEvents,
-          getOwner
+          bagSet,
+          aclSet,
+          getOwner,
+          favicon: false,
         })}
 
       </Stack>
@@ -183,13 +176,14 @@ export const Dashboard = () => {
   );
 };
 
-function renderBags({ title, filteredBags, bagEditEvents, hasBagAclAccess, aclEditEvents, getOwner }: {
+function renderBags({ title, filteredBags, hasBagAclAccess, getOwner, aclSet, bagSet, favicon }: {
   filteredBags: IndexJson["bagList"][number][];
-  bagEditEvents: EventEmitter<BagEditEvents>;
   hasBagAclAccess?: (bag: IndexJson["bagList"][number]) => boolean;
-  aclEditEvents: EventEmitter<FormDialogEvents<EntityACL>>;
+  bagSet: (value: IndexJson["bagList"][number] | null) => void;
+  aclSet: (value: EntityACL) => void;
   title: string;
   getOwner: (owner_id: number | null) => string;
+  favicon: boolean;
 }) {
   return <Card variant='outlined'>
     <CardContent>
@@ -198,7 +192,7 @@ function renderBags({ title, filteredBags, bagEditEvents, hasBagAclAccess, aclEd
         {filteredBags.map(bag => (
           <ListItemButton key={bag.bag_name} disableRipple>
             <ListItemAvatar>
-              <Avatar src={`/bags/${encodeURIComponent(bag.bag_name)}/tiddlers/%24%3A%2Ffavicon.ico`}>
+              <Avatar src={favicon ? `bags/${encodeURIComponent(bag.bag_name)}/tiddlers/%24%3A%2Ffavicon.ico` : undefined}>
                 <MissingFavicon />
               </Avatar>
             </ListItemAvatar>
@@ -213,9 +207,7 @@ function renderBags({ title, filteredBags, bagEditEvents, hasBagAclAccess, aclEd
                 edge="end"
                 aria-label="edit"
                 href=""
-                onClick={(event) => {
-                  bagEditEvents.emit({ type: "open", value: bag });
-                }}
+                onClick={(event) => { bagSet(bag); }}
               >
                 <EditIcon />
               </IconButton>
@@ -224,16 +216,13 @@ function renderBags({ title, filteredBags, bagEditEvents, hasBagAclAccess, aclEd
                   edge="end"
                   aria-label="open acl"
                   onClick={() => {
-                    aclEditEvents.emit({
-                      type: "open",
-                      value: {
-                        type: "bag",
-                        id: bag.bag_id,
-                        name: bag.bag_name,
-                        description: bag.description,
-                        owner_id: bag.owner_id,
-                        acl: bag.acl
-                      }
+                    aclSet({
+                      type: "bag",
+                      id: bag.bag_id,
+                      name: bag.bag_name,
+                      description: bag.description,
+                      owner_id: bag.owner_id,
+                      acl: bag.acl
                     });
                   }}
                 >
@@ -246,9 +235,7 @@ function renderBags({ title, filteredBags, bagEditEvents, hasBagAclAccess, aclEd
       </List>
     </CardContent>
     <CardActions>
-      <Button onClick={() => {
-        bagEditEvents.emit({ type: "open", value: null });
-      }}>Create new bag</Button>
+      <Button onClick={() => { bagSet(null); }}>Create new bag</Button>
     </CardActions>
   </Card>;
 }
