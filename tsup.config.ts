@@ -2,24 +2,26 @@ import { defineConfig } from 'tsup';
 import "@serenity-kit/opaque"
 export default defineConfig({
   entry: ['src/server.ts'],
-  format: ['esm', 'cjs'],
+  format: ['esm'],
   outDir: "dist",
   external: [
     "tiddlywiki",
     "esbuild",
     "@prisma/client",
     "@prisma/adapter-libsql",
-    "@libsql/client",
+    "@prisma/adapter-better-sqlite3",
     "@serenity-kit/opaque",
+    "env-cmd",
   ],
   tsconfig: "tsconfig.json",
   keepNames: true,
-  dts: false,          // Generate type declaration files
+  dts: true,          // Generate type declaration files
   sourcemap: true,     // Generate source maps for debugging
   clean: true,         // Clean the output directory before each build
   minify: false,       // Set to true if you want minification
-  splitting: false,    // Enable or disable code splitting
-
+  splitting: false,     // Code splitting only if we need to lazy import
+  cjsInterop: true,
+  shims: true,        // Add shims for Node.js built-in modules
   banner: (ctx) => ctx.format === "esm" ? {
     js: `import {createRequire as __createRequire} from 'module'; const require=__createRequire(import.meta.url);import 'source-map-support/register.js';`,
   } : {

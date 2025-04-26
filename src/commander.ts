@@ -4,8 +4,7 @@ import * as path from "node:path";
 
 import { MWSConfig } from "./server";
 import { Prisma, PrismaClient } from "@prisma/client";
-import { createClient } from "@libsql/client";
-import { PrismaLibSQL } from "@prisma/adapter-libsql";
+
 import * as sessions from "./services/sessions";
 import * as attacher from "./services/attachments";
 import { PasswordService } from "./services/PasswordService";
@@ -15,19 +14,11 @@ import { TiddlerFields, TW } from "tiddlywiki";
 import { dist_resolve } from "./utils";
 import { readdir, readFile } from "node:fs/promises";
 import { createHash, randomUUID } from "node:crypto";
-import type { SqlDriverAdapter } from '@prisma/driver-adapter-utils';
+import type { SqlDriverAdapter, SqlMigrationAwareDriverAdapterFactory } from '@prisma/driver-adapter-utils';
+
 
 import { commands, mws_listen, divider } from "./commands";
 import { ok } from "node:assert";
-
-import type {
-  Client as LibSqlClientRaw,
-  Config as LibSqlConfig,
-  InStatement,
-  ResultSet as LibSqlResultSet,
-  Transaction as LibSqlTransactionRaw,
-} from '@libsql/client'
-
 export interface $TW {
   utils: any;
   wiki: any;
@@ -111,8 +102,7 @@ class StartupCommander {
     // the libsql adapter has an additional advantage of letting us specify pragma 
     // and also gives us more control over connections. 
 
-    this.libsql = new PrismaLibSQL({ url: "file:" + this.databasePath });
-    this.engine = new PrismaClient({ log: ["info", "warn"], adapter: this.libsql, });
+
 
     this.siteConfig = {
       wikiPath: this.wikiPath,
@@ -135,8 +125,19 @@ class StartupCommander {
   }
 
   async init() {
+    try {
+      //@ts-ignore - so we can still build if the adapter isn't installed
+      const { PrismaBetterSQLite3 } = await import("@prisma/adapter-better-sqlite3");
+      this.adapter = new PrismaBetterSQLite3({ url: "file:" + this.databasePath });
+    } catch (e) {
+      console.log("Failed to load better-sqlite3. Are you sure it's installed?");
+      throw e;
+    }
+
+    this.engine = new PrismaClient({ log: ["info", "warn"], adapter: this.adapter, });
+
     this.setupRequired = false;
-    const libsql = await this.libsql.connect();
+    const libsql = await this.adapter.connect();
 
     if (process.env.RUN_OLD_MWS_DB_SETUP_FOR_TESTING) {
       await libsql.executeScript(readFileSync(dist_resolve(
@@ -229,8 +230,8 @@ class StartupCommander {
   databasePath: string;
   cachePath: string;
 
-  libsql;
-  engine: PrismaClient<Prisma.PrismaClientOptions, never, {
+  adapter!: SqlMigrationAwareDriverAdapterFactory;
+  engine!: PrismaClient<Prisma.PrismaClientOptions, never, {
     result: {
       // this types every output field with PrismaField
       [T in Uncapitalize<Prisma.ModelName>]: {

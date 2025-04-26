@@ -18,12 +18,14 @@ You can customize the defaults by modifying `mws.run.mjs`.
 
 The initial user created on first run has the username `admin` and password `1234`.
 
+If you run into trouble, or need help figuring something out, feel free to [start a discussion](https://github.com/TiddlyWiki/MultiWikiServer/discussions). If you know what's wrong, you can also open an issue.
+
 
 ### Updates
 
 This is the process for updating to a new version of MWS.
 
-- Copy or zip your `store` folder to a safe backup folder.
+- Copy or zip your `store` folder to **a safe backup folder**.
 - `npm install @tiddlywiki/mws@latest`
 - Run `npm start`. This will update the database schema automatically if there are new changes.
 
