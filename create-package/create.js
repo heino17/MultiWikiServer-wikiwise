@@ -10,6 +10,16 @@ if(!process.argv[2]) {
 }
 const folder = path.resolve(process.cwd(), process.argv[2]);
 
+/** @type {import("child_process").ExecSyncOptions} */
+const options = {
+  cwd: folder,
+  stdio: "inherit",
+  env: process.platform === "android" ? {
+    GYP_DEFINES: "android_ndk_path=''", 
+    ...process.env
+  } : process.env,
+};
+
 if(fs.existsSync(folder)) {
   console.error(`Folder ${folder} already exists. Please choose a different name.`);
   process.exit(1);
@@ -17,8 +27,6 @@ if(fs.existsSync(folder)) {
 
 console.log(`${folder}`);
 fs.mkdirSync(folder, { recursive: true });
-
-
 
 printFile("package.json", `
 {
@@ -33,6 +41,7 @@ printFile("package.json", `
   }
 }
 `.trimStart());
+
 printFile("mws.run.mjs", `
 #!/usr/bin/env node
 //@ts-check
@@ -72,8 +81,10 @@ openssl req -new -nodes -out localhost.csr -config localhost.cnf
 openssl x509 -req -in localhost.csr -days 365 -out localhost.crt -signkey localhost.key -extensions req_ext -extfile localhost.cnf
 
 `);
-console.log("└─ Running npm install...")
-execSync("npm install --save-exact tiddlywiki@latest @tiddlywiki/mws@latest", { cwd: folder, stdio: "inherit" });
+
+console.log("└─ Running npm install...");
+execSync("npm install --save-exact tiddlywiki@latest @tiddlywiki/mws@latest", options);
+
 
 function printFile(file, text) {
   const abspath = path.resolve(folder, file);

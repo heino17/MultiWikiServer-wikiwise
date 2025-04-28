@@ -1,7 +1,7 @@
 {
   "name": "@tiddlywiki/mws",
-  "private": true,
-  "version": "0.0.12",
+  "private": false,
+  "version": "0.0.14",
   "type": "module",
   "exports": {
     "types": "./src/server.ts",
@@ -16,7 +16,8 @@
     "editions/mws-docs",
     "plugins/client",
     "libsql",
-    "libsql-android-arm64"
+    "libsql-android-arm64",
+    ".env-cmdrc"
   ],
   "engines": {
     "node": ">14"
