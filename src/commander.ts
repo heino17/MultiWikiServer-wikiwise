@@ -15,7 +15,7 @@ import { dist_resolve } from "./utils";
 import { readdir, readFile } from "node:fs/promises";
 import { createHash, randomUUID } from "node:crypto";
 import type { SqlDriverAdapter, SqlMigrationAwareDriverAdapterFactory } from '@prisma/driver-adapter-utils';
-
+import { PrismaBetterSQLite3 } from "@prisma/adapter-better-sqlite3";
 
 import { commands, mws_listen, divider } from "./commands";
 import { ok } from "node:assert";
@@ -125,14 +125,7 @@ class StartupCommander {
   }
 
   async init() {
-    try {
-      //@ts-ignore - so we can still build if the adapter isn't installed
-      const { PrismaBetterSQLite3 } = await import("@prisma/adapter-better-sqlite3");
-      this.adapter = new PrismaBetterSQLite3({ url: "file:" + this.databasePath });
-    } catch (e) {
-      console.log("Failed to load better-sqlite3. Are you sure it's installed?");
-      throw e;
-    }
+    this.adapter = new PrismaBetterSQLite3({ url: "file:" + this.databasePath });
 
     this.engine = new PrismaClient({ log: ["info", "warn"], adapter: this.adapter, });
 
