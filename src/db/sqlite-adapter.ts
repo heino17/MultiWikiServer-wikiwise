@@ -10,10 +10,9 @@ export class SqliteAdapter {
   constructor(private databasePath: string) {
     this.adapter = new PrismaBetterSQLite3({ url: "file:" + this.databasePath });
   }
-  setupRequired: boolean = true;
+
   adapter!: SqlMigrationAwareDriverAdapterFactory;
   async init() {
-    this.setupRequired = false;
     const libsql = await this.adapter.connect();
 
     if (process.env.RUN_OLD_MWS_DB_SETUP_FOR_TESTING) {

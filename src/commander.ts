@@ -130,6 +130,7 @@ class StartupCommander {
 
   async init() {
     await this.adapter.init();
+    this.setupRequired = false;
     const users = await this.engine.users.count();
     if (!users) { this.setupRequired = true; }
   }
@@ -175,13 +176,7 @@ class StartupCommander {
   AttachmentService: typeof attacher.AttachmentService;
 
   /** Signals that database setup is required. May be set to false by any qualified setup command. */
-  get setupRequired(): boolean {
-    return this.adapter.setupRequired;
-  }
-  set setupRequired(v: boolean) {
-    this.adapter.setupRequired = v;
-  }
-  // setupRequired: boolean = true;
+  setupRequired: boolean = true;
   outputPath: string;
 }
 /**
@@ -210,7 +205,7 @@ export class Commander extends StartupCommander {
     // this can be replaced, but it only recieves the listeners via closure.
     this.create_mws_listen = (params: string[]) => {
       return new mws_listen.Command(params, this, listeners, onListenersCreated);
-    }
+    };
   }
 
   create_mws_listen;
