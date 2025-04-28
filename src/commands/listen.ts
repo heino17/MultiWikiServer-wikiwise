@@ -8,6 +8,13 @@ import { Router } from "../routes/router";
 import { MWSConfig } from "../server";
 import { Streamer } from "../streamer";
 
+export const info: CommandInfo = {
+  name: "listen",
+  description: "Start the server and listen for incoming requests",
+  arguments: [],
+  synchronous: true,
+};
+
 
 export class ListenerBase {
   constructor(
@@ -83,10 +90,6 @@ export class ListenerHTTP extends ListenerBase {
 }
 
 
-export const info: CommandInfo = {
-  name: "mws-listen",
-  synchronous: true,
-};
 
 
 export class Command {

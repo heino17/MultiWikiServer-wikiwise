@@ -17,7 +17,15 @@ import { TiddlerFields } from "../services/attachments";
 import { Prisma, PrismaClient } from "@prisma/client";
 
 export const info: CommandInfo = {
-	name: "mws-load-wiki-folder",
+	name: "load-wiki-folder",
+	description: "Load a TiddlyWiki folder into a bag",
+	arguments: [
+		["path", "Path to the TiddlyWiki5 plugins folder"],
+		["bag-name", "Name of the bag to load tiddlers into"],
+		["bag-description", "Description of the bag"],
+		["recipe-name", "Name of the recipe to create"],
+		["recipe-description", "Description of the recipe"],
+	],
 	synchronous: true
 };
 // tiddlywiki --load ./mywiki.html --savewikifolder ./mywikifolder

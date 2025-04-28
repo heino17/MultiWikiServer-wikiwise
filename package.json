@@ -1,5 +1,6 @@
 {
   "name": "@tiddlywiki/mws",
+  "description": "TiddlyWiki Multiple Wiki Server",
   "private": false,
   "version": "0.0.15",
   "type": "module",
@@ -33,7 +34,7 @@
     "prisma": "npm run gen:client && npm run gen:sql",
     "prisma:studio": "DATABASE_URL=file:../editions/mws/store/database.sqlite prisma studio",
     "certs": "(cd runtime-config && bash localhost_certs.sh)",
-    "start": "npm run build && node mws.dev.mjs",
+    "start": "SKIPDTS=1 npm run build && node mws.dev.mjs",
     "build": "npm run tsc && tsup",
     "install-android": "GYP_DEFINES=\"android_ndk_path=''\" npm install",
     "postinstall": "env-cmd -e prisma-env prisma generate",
@@ -59,6 +60,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "commander": "^13.1.0",
     "esbuild": "0.25.2",
     "mime-types": "^2.1.35",
     "send": "^1.1.0",

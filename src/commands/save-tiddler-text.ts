@@ -2,7 +2,13 @@ import { Commander, CommandInfo } from "../commander";
 import { TiddlerStore } from "../routes/TiddlerStore";
 
 export const info: CommandInfo = {
-	name: "mws-save-tiddler-text",
+	name: "save-tiddler-text",
+	description: "Save a tiddler text to a bag",
+	arguments: [
+		["bag-name", "Name of the bag to save tiddler to"],
+		["tiddler-title", "Title of the tiddler to save"],
+		["tiddler-text", "Text of the tiddler to save"],
+	],
 	synchronous: true
 };
 

@@ -16,7 +16,11 @@ import { createStrictAwaitProxy } from "../utils";
 const fsp = createStrictAwaitProxy(_fsp);
 
 export const info: CommandInfo = {
-	name: "mws-save-archive",
+	name: "save-archive",
+	description: "Save an archive of recipes, bags and tiddlers to a directory",
+	arguments: [
+		["path", "Path to the directory to save the archive"],
+	],
 	synchronous: true
 };
 export class Command {

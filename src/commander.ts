@@ -10,14 +10,10 @@ import * as attacher from "./services/attachments";
 import { PasswordService } from "./services/PasswordService";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { ITXClientDenyList } from "@prisma/client/runtime/library";
-import { TiddlerFields, TW } from "tiddlywiki";
+import { TW } from "tiddlywiki";
 import { dist_resolve } from "./utils";
-import { readdir, readFile } from "node:fs/promises";
-import { createHash, randomUUID } from "node:crypto";
-import type { SqlDriverAdapter, SqlMigrationAwareDriverAdapterFactory } from '@prisma/driver-adapter-utils';
-import { PrismaBetterSQLite3 } from "@prisma/adapter-better-sqlite3";
-
-import { commands, mws_listen, divider } from "./commands";
+import * as commander from "commander";
+import { commands, listen as listen_command, divider } from "./commands";
 import { ok } from "node:assert";
 import { SqliteAdapter } from "./db/sqlite-adapter";
 export interface $TW {
@@ -36,8 +32,13 @@ export interface $TW {
   }
 }
 
+
 export interface CommandInfo {
   name: string;
+  description: string;
+  arguments: [string, string][];
+  options?: [string, string][];
+  internal?: boolean;
   /** 
    * @default false
    * 
@@ -65,8 +66,8 @@ export interface CommandInfo {
    * 
    */
   synchronous?: boolean;
-  namedParameterMode?: boolean;
-  mandatoryParameters?: string[];
+  // namedParameterMode?: boolean;
+  // mandatoryParameters?: string[];
 }
 
 // move the startup logic into a separate class
@@ -204,8 +205,46 @@ export class Commander extends StartupCommander {
     // but this just makes it a little bit harder for the listeners to be read.
     // this can be replaced, but it only recieves the listeners via closure.
     this.create_mws_listen = (params: string[]) => {
-      return new mws_listen.Command(params, this, listeners, onListenersCreated);
+      return new listen_command.Command(params, this, listeners, onListenersCreated);
     };
+  }
+  program!: commander.Command;
+
+  async init() {
+    await super.init();
+
+    this.program = new commander.Command();
+    const pkg = JSON.parse(readFileSync(dist_resolve("../package.json"), "utf-8"));
+
+    this.program
+      .name("mws")
+      .description(pkg.description)
+      .version(pkg.version)
+      .enablePositionalOptions()
+      .passThroughOptions()
+      .showHelpAfterError()
+
+    Object.keys(commands).forEach((key) => {
+      const c = commands[key]!;
+      if (c.info.internal) return;
+      if (c.info.name === "help") return;
+      const command = this.program.command(c.info.name);
+      command.description(c.info.description);
+      c.info.arguments.forEach(([name, description]) => {
+        command.argument(name, description);
+      });
+      c.info.options?.forEach(([name, description]) => {
+        command.option(name, description);
+      });
+      command.action((...args) => {
+        const command2 = args.pop();
+        const options = args.pop();
+        this.addCommandTokens(["--" + command2.name(), ...args]);
+        this.executeNextCommand();
+      });
+    });
+
+
   }
 
   create_mws_listen;
@@ -240,14 +279,18 @@ export class Commander extends StartupCommander {
   */
   execute(commandTokens: string[]) {
     console.log("Commander", commandTokens);
-    this.commandTokens = commandTokens;
+
     this.promise = new Promise<void>((resolve, reject) => {
       this.callback = (err: any) => {
         if (err) this.$tw.utils.error("Error: " + err);
         err ? reject(err) : resolve();
       };
     });
-    this.executeNextCommand();
+
+    this.commandTokens = [];
+    this.program.parse(commandTokens, { from: 'user' });
+    // we still use executeNextCommand so commands can add additional commands
+
     return this.promise;
   }
   /*
@@ -288,8 +331,7 @@ export class Commander extends StartupCommander {
 
 
     // Parse named parameters if required
-    const paramsIfMandetory = !command.info.mandatoryParameters ? params :
-      this.extractNamedParameters(params, command.info.mandatoryParameters);
+    const paramsIfMandetory = params;
     if (typeof params === "string") { this.callback(params); return; }
 
     new Promise<any>(async (resolve) => {

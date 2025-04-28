@@ -15,7 +15,7 @@ export default defineConfig({
   ],
   tsconfig: "tsconfig.json",
   keepNames: true,
-  dts: true,          // Generate type declaration files
+  dts: process.env.SKIPDTS ? false : true,          // Generate type declaration files
   sourcemap: true,     // Generate source maps for debugging
   clean: true,         // Clean the output directory before each build
   minify: false,       // Set to true if you want minification

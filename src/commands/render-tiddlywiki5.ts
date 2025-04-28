@@ -16,7 +16,9 @@ import { Commander, CommandInfo } from "../commander";
 const { writeFileSync } = require("fs");
 
 export const info: CommandInfo = {
-  name: "mws-render-tiddlywiki5",
+  name: "render-tiddlywiki5",
+  description: "Render the TiddlyWiki5 HTML file",
+  arguments: [],
   synchronous: true
 };
 

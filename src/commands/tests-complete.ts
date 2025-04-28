@@ -2,7 +2,10 @@ import { Commander, CommandInfo } from "../commander";
 
 export const info: CommandInfo = {
   name: "tests-complete",
+  description: "Tests completed successfully.",
+  arguments: [],
   synchronous: true,
+  internal: true,
 };
 
 

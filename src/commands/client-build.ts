@@ -5,8 +5,11 @@ import { esbuildStartup, setupDevServer } from "../setupDevServer";
 import { writeFileSync } from "fs";
 
 export const info: CommandInfo = {
-  name: "mws-client-build",
+  name: "client-build",
+  description: "Build the client for the TiddlyWiki5 server",
+  arguments: [],
   synchronous: true,
+  internal: true,
 };
 
 

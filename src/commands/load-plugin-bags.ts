@@ -7,7 +7,11 @@ import { truthy, tryParseJSON } from "../utils";
 import { Prisma, PrismaClient, PrismaPromise } from "@prisma/client";
 
 export const info: CommandInfo = {
-	name: "mws-load-plugin-bags",
+	name: "load-plugin-bags",
+	description: "Load plugin bags from the TiddlyWiki5 plugins folder",
+	arguments: [
+		["path", "Path to the TiddlyWiki5 plugins folder"],
+	],
 	synchronous: true,
 
 };

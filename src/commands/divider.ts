@@ -2,7 +2,10 @@ import { Commander, CommandInfo } from "../commander";
 
 export const info: CommandInfo = {
   name: "divider",
+  description: "A no-op command to delimit param concatenation.",
+  arguments: [],
   synchronous: true,
+  internal: true,
 };
 
 

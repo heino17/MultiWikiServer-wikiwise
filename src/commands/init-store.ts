@@ -6,7 +6,9 @@ import { readFileSync } from "node:fs";
 import { dist_require_resolve, dist_resolve } from "../utils";
 
 export const info: CommandInfo = {
-	name: "mws-init-store",
+	name: "init-store",
+	description: "Initialize the MWS Store",
+	arguments: [],
 	synchronous: true,
 };
 

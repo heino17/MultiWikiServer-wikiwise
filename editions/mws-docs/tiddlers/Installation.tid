@@ -1,5 +1,5 @@
 created: 20241105133737778
-modified: 20250417165800863
+modified: 20250428144159846
 tags: TableOfContents
 title: Installation
 type: text/vnd.tiddlywiki
@@ -20,5 +20,14 @@ See [[Troubleshooting]] if you encounter any errors.
 To update your copy of MWS in the future with newer changes will require re-downloading the code, taking care not to lose any changes you might have made.
 
 # Make a backup: Copy or zip your project folder to a safe backup folder.  <<.copy-code-to-clipboard "tar -cf archive.tar my_folder">>
-# Get the latest version. Notice that the second word is `install` instead of `init`. This pulls the latest version from NPM and installs it. <<.copy-code-to-clipboard "npm install @tiddlywiki/mws@latest">>
+# Get the latest version. Notice that the second word is `install` instead of `init`. This pulls the latest version from NPM and installs it. <<.copy-code-to-clipboard "npm install @tiddlywiki/mws@latest --save-exact">>
 # Start the server. On startup, MWS checks the database schema and updates it automatically if there are changes. Normally this works just fine, but it can fail, which is why it's important to save a backup first. <<.copy-code-to-clipboard "npm start">>
+
+!!! Git repo
+
+It is optionally recommended to save a history of your project configuration using git. 
+
+* On Windows you can use [[GitHub Desktop|https://github.com/apps/desktop]]. 
+* On Linux, git is usually preinstalled or available via the default package manager for your distro. 
+
+If you decide to do this, you should move the wiki folder out of the project folder, and change the `wikiPath` setting accordingly. 

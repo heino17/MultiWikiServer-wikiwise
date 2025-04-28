@@ -3,7 +3,7 @@ import { Commander, CommandInfo } from "../commander";
 import { TiddlerStore } from "../routes/TiddlerStore";
 import { join, resolve } from "path";
 import { Prisma } from "@prisma/client";
-import { Command as SaveArchiveCommand } from "./mws-save-archive";
+import { Command as SaveArchiveCommand } from "./save-archive";
 import * as _fsp from "fs/promises";
 import { createStrictAwaitProxy } from "../utils";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
@@ -11,7 +11,11 @@ import { existsSync } from "fs";
 const fsp = createStrictAwaitProxy(_fsp);
 
 export const info: CommandInfo = {
-	name: "mws-load-archive",
+	name: "load-archive",
+	description: "Load a MWS archive into the database",
+	arguments: [
+		["archivePath", "Path to the archive to load"],
+	],
 	synchronous: true
 };
 export class Command {

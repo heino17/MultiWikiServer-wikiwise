@@ -36,7 +36,7 @@ If there are any database changes, MWS should pick them up and apply them. The c
 If you want to work on the project, 
 
 - `git clone https://github.com/TiddlyWiki/MultiWikiServer`
-- `npm install`
+- `npm install` or `npm run install-android`
 - `cd react-user-mgmt`
 - `npm install`
 - `cd ..`

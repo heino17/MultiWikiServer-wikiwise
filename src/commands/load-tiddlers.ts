@@ -5,7 +5,12 @@ import { SiteConfig } from "../routes/router";
 import { TiddlerFields } from "../services/attachments";
 
 export const info: CommandInfo = {
-	name: "mws-load-tiddlers",
+	name: "load-tiddlers",
+	description: "Load tiddlers from a folder into a bag",
+	arguments: [
+		["path", "Path to the TiddlyWiki5 plugins folder"],
+		["bag-name", "Name of the bag to load tiddlers into"],
+	],
 	synchronous: true
 };
 

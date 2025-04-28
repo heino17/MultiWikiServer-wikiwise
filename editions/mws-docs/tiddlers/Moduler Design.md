@@ -22,3 +22,8 @@
 
 - Maps route definitions into service handlers
 - HTTP, Websockets
+
+### Database Connector
+- Prisma handles query translation (wasm or native addon)
+- Prisma supports custom adapters, and also provides standard ones
+- Connector classes in MWS take care of database setup and schema updates

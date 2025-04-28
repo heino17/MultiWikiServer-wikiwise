@@ -8,7 +8,7 @@ import * as sessions from "./services/sessions";
 import * as attacher from "./services/attachments";
 import { bootTiddlyWiki } from "./tiddlywiki";
 import { Commander } from "./commander";
-import { ListenerBase } from "./commands/mws-listen";
+import { ListenerBase } from "./commands/listen";
 import { createPasswordService } from "./services/PasswordService";
 import { resolve } from "node:path";
 
