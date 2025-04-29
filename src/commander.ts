@@ -237,6 +237,7 @@ export class Commander extends StartupCommander {
       c.info.options?.forEach(([name, description]) => {
         command.option(name, description);
       });
+
       command.action((...args) => {
         const command2 = args.pop();
         const options = args.pop();
@@ -282,7 +283,14 @@ export class Commander extends StartupCommander {
     console.log("Commander", commandTokens);
     this.setPromise();
     this.commandTokens = [];
-    this.program.parse(commandTokens, { from: 'user' });
+    switch (commandTokens[0]) {
+      // internal dev commands
+      case "--client-build":
+        this.commandTokens.push(...commandTokens); break;
+      default:
+        this.program.parse(commandTokens, { from: 'user' }); break;
+    }
+
     this.executeNextCommand();
     return this.promise;
   }

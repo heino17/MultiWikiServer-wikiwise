@@ -2,7 +2,7 @@
   "name": "@tiddlywiki/mws",
   "description": "TiddlyWiki Multiple Wiki Server",
   "private": false,
-  "version": "0.0.15",
+  "version": "0.0.16",
   "type": "module",
   "exports": {
     "types": "./src/server.ts",
@@ -43,7 +43,8 @@
     "test": "(git clean -dfx tests && cd tests && npm install .. --no-save && npm test)",
     "fulltest": "mv node_modules node_modules_old; npm run test:pack; mv node_modules_old node_modules",
     "prisma:adapter:better": "cp -rfv ../prisma/packages/adapter-better-sqlite3/src/* src/adapter-better-sqlite3",
-    "prisma:adapter:libsql": "cp -rfv ../prisma/packages/adapter-libsql/src/* src/adapter-libsql"
+    "prisma:adapter:libsql": "cp -rfv ../prisma/packages/adapter-libsql/src/* src/adapter-libsql",
+    "prepublishOnly": "npm run build && node mws.dev.mjs --client-build"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "6.7.0-dev.48",
