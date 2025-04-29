@@ -59,11 +59,14 @@ export async function setupDevServer<T extends StateObject>(
         "etag": index_hash,
       }, index_file);
 
+      // console.log(state.url);
+      // console.log(rootdir);
+
       if (state.url === "/") return sendIndex();
 
       // use sendFile directly instead of having the dev server send it
       return state.sendFile(200, {}, {
-        root: rootdir,
+        root: resolve(rootdir, "public"),
         reqpath: state.url,
         on404: async () => sendIndex()
       });

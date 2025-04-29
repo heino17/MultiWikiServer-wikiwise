@@ -205,6 +205,7 @@ export class Commander extends StartupCommander {
     // but this just makes it a little bit harder for the listeners to be read.
     // this can be replaced, but it only recieves the listeners via closure.
     this.create_mws_listen = (params: string[]) => {
+      console.log(listeners);
       return new listen_command.Command(params, this, listeners, onListenersCreated);
     };
   }
@@ -239,8 +240,8 @@ export class Commander extends StartupCommander {
       command.action((...args) => {
         const command2 = args.pop();
         const options = args.pop();
+        // TODO: options should become named parameters
         this.addCommandTokens(["--" + command2.name(), ...args]);
-        this.executeNextCommand();
       });
     });
 
@@ -279,7 +280,20 @@ export class Commander extends StartupCommander {
   */
   execute(commandTokens: string[]) {
     console.log("Commander", commandTokens);
-
+    this.setPromise();
+    this.commandTokens = [];
+    this.program.parse(commandTokens, { from: 'user' });
+    this.executeNextCommand();
+    return this.promise;
+  }
+  executeInternal(commandTokens: string[]) {
+    console.log("Commander", commandTokens);
+    this.setPromise();
+    this.commandTokens = commandTokens;
+    this.executeNextCommand();
+    return this.promise;
+  }
+  setPromise() {
     this.promise = new Promise<void>((resolve, reject) => {
       this.callback = (err: any) => {
         if (err) this.$tw.utils.error("Error: " + err);
@@ -287,11 +301,6 @@ export class Commander extends StartupCommander {
       };
     });
 
-    this.commandTokens = [];
-    this.program.parse(commandTokens, { from: 'user' });
-    // we still use executeNextCommand so commands can add additional commands
-
-    return this.promise;
   }
   /*
   Execute the next command in the sequence
@@ -331,15 +340,16 @@ export class Commander extends StartupCommander {
 
 
     // Parse named parameters if required
-    const paramsIfMandetory = params;
+    // const paramsIfMandetory = params;
     if (typeof params === "string") { this.callback(params); return; }
+    console.log(params);
 
     new Promise<any>(async (resolve) => {
       const { Command, info } = command!;
       try {
-        c = info.name === "mws-listen"
-          ? this.create_mws_listen(paramsIfMandetory)
-          : new Command(paramsIfMandetory, this, info.synchronous ? undefined : resolve);
+        c = info.name === listen_command.info.name
+          ? this.create_mws_listen(params)
+          : new Command(params, this, info.synchronous ? undefined : resolve);
         err = await c.execute();
         if (err || info.synchronous) resolve(err);
       } catch (e) {

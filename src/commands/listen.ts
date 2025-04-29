@@ -106,7 +106,7 @@ export class Command {
     this.execute = async () => {
 
       this.commander.addCommandTokens([
-        "--mws-render-tiddlywiki5",
+        "--render-tiddlywiki5",
         "--divider",
       ]);
 

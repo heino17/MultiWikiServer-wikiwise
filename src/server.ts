@@ -151,15 +151,16 @@ export default async function startServer(config: MWSConfig) {
   const cli = process.argv.slice(2);
   // mws-command-separator prevents params after it from being applied to the command before it.
   // it throws an error if it ends up with any params.
-  await commander.execute([
-    ...cli.length ? cli : [
-      "--mws-init-store",
-      "--mws-listen"
-    ],
-  ]);
+  if (cli.length)
+    await commander.execute(cli);
+  else
+    await commander.executeInternal([
+      "--init-store",
+      "--listen"
+    ]);
 
   if (commander.setupRequired) {
-    console.log("MWS setup required. Please run either --mws-init-store or --mws-load-archive");
+    console.log("MWS setup required. Please run either init-store or load-archive");
     process.exit(1);
   }
 

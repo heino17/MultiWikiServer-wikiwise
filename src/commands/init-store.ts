@@ -57,17 +57,17 @@ export class Command {
 		// should give us the path to boot.js
 		const tweditions = resolve(dist_require_resolve("tiddlywiki"), "../../editions");
 		this.commander.addCommandTokens([
-			"--mws-load-plugin-bags",
-			"--mws-load-wiki-folder", dist_resolve("../editions/mws-docs"),
+			"--load-plugin-bags",
+			"--load-wiki-folder", dist_resolve("../editions/mws-docs"),
 			"mws-docs", "MWS Documentation from https://mws.tiddlywiki.com",
 			"mws-docs", "MWS Documentation from https://mws.tiddlywiki.com",
-			"--mws-load-wiki-folder", resolve(tweditions, "tw5.com"),
+			"--load-wiki-folder", resolve(tweditions, "tw5.com"),
 			"docs", "TiddlyWiki Documentation from https://tiddlywiki.com",
 			"docs", "TiddlyWiki Documentation from https://tiddlywiki.com",
-			"--mws-load-wiki-folder", resolve(tweditions, "dev"),
+			"--load-wiki-folder", resolve(tweditions, "dev"),
 			"dev", "TiddlyWiki Developer Documentation from https://tiddlywiki.com/dev",
 			"dev-docs", "TiddlyWiki Developer Documentation from https://tiddlywiki.com/dev",
-			"--mws-load-wiki-folder", resolve(tweditions, "tour"),
+			"--load-wiki-folder", resolve(tweditions, "tour"),
 			"tour", "TiddlyWiki Interactive Tour from https://tiddlywiki.com",
 			"tour", "TiddlyWiki Interactive Tour from https://tiddlywiki.com",
 			"--divider",

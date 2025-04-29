@@ -5,7 +5,7 @@ module-type: command
 
 Command to create and load a bag for the specified core editions
 
---mws-load-wiki-folder <path> <bag-name> <bag-description> <recipe-name> <recipe-description>
+--load-wiki-folder <path> <bag-name> <bag-description> <recipe-name> <recipe-description>
 
 \*/
 

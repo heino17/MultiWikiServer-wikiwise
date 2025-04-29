@@ -34,7 +34,7 @@
     "prisma": "npm run gen:client && npm run gen:sql",
     "prisma:studio": "DATABASE_URL=file:../editions/mws/store/database.sqlite prisma studio",
     "certs": "(cd runtime-config && bash localhost_certs.sh)",
-    "start": "SKIPDTS=1 npm run build && node mws.dev.mjs",
+    "start": "SKIPDTS=1 npm run build && node mws.dev.mjs init-store && node mws.dev.mjs listen",
     "build": "npm run tsc && tsup",
     "install-android": "GYP_DEFINES=\"android_ndk_path=''\" npm install",
     "postinstall": "env-cmd -e prisma-env prisma generate",
