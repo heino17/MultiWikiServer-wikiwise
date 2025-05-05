@@ -2,12 +2,13 @@
 
 Multiple users, multiple wikis for TiddlyWiki.
 
-## The Features (most still being worked on)
-
 - Bag & Recipe system for storing tiddlers.
 - User and Role management with ACL.
 - Multiple database engines supported, using Prisma.
 - Third-party OAuth and password-based login.
+
+## Flexible and Extendible 
+
 - Plugins can add routes and hooks.
 - Abstractions everywhere, allowing flexibility.
 - The source code is fully typed and easy to navigate.
