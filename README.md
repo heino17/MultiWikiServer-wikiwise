@@ -14,6 +14,8 @@ Multiple users, multiple wikis for TiddlyWiki.
 - The source code is fully typed and easy to navigate.
 - Admin endpoints can also be called from the CLI.
 
+Most of these features are still in development. 
+
 ## How to run
 
 The init command creates a new folder and installs what you need to get started. 
