@@ -2,9 +2,6 @@
 
 Multiple users, multiple wikis for TiddlyWiki.
 
-Databases -- Logins -- Plugins
-
-
 ## The Features (most still being worked on)
 
 - Bag & Recipe system for storing tiddlers.
