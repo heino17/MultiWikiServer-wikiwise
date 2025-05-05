@@ -1,10 +1,10 @@
 import * as fs from "fs";
 import * as path from "path";
-import { SiteConfig } from "./router";
+import { Router, SiteConfig } from "./router";
 import { AttachmentService, TiddlerFields } from "../services/attachments";
 import { ok } from "assert";
 import { Commander } from "../commander";
-import { FileInfoTiddlers } from "tiddlywiki";
+import { FileInfoTiddlers, TiddlerFieldModule } from "tiddlywiki";
 import { UserError } from "../utils";
 
 /**
@@ -35,18 +35,26 @@ store/
 
 */
 export class TiddlerStore {
-  attachService: AttachmentService;
+  static fromCommander(commander: Commander, prisma: PrismaTxnClient) {
+    return new TiddlerStore(
+      commander.$tw.Tiddler.fieldModules,
+      new commander.AttachmentService(commander.siteConfig, prisma),
+      commander.siteConfig,
+      prisma
+    );
+  }
+
+
   storePath: string;
-  config;
-  fieldModules;
+
   constructor(
-    private commander: Commander,
+    public fieldModules: Record<string, TiddlerFieldModule>,
+    public attachService: AttachmentService,
+    public siteConfig: SiteConfig,
     public prisma: PrismaTxnClient
   ) {
-    this.fieldModules = this.commander.$tw.Tiddler.fieldModules;
-    this.attachService = new commander.AttachmentService(commander.siteConfig, prisma);
-    this.storePath = commander.siteConfig.storePath;
-    this.config = commander.siteConfig;
+
+    this.storePath = this.siteConfig.storePath;
   }
 
   /*
@@ -398,7 +406,7 @@ export class TiddlerStore {
       stream._read = () => {
         // Push data
         const type = tiddlerInfo.tiddler.type || "text/plain";
-        stream.push(tiddlerInfo.tiddler.text || "", (this.config.contentTypeInfo[type] || { encoding: "utf8" }).encoding);
+        stream.push(tiddlerInfo.tiddler.text || "", (this.siteConfig.contentTypeInfo[type] || { encoding: "utf8" }).encoding);
         // Push null to indicate the end of the stream
         stream.push(null);
       };
@@ -634,7 +642,7 @@ export class TiddlerStore {
     // 	});
     // 	return { tiddler_id: rowDeleteMarker.lastInsertRowid };
   }
-  
+
   async getRecipeTiddlersByBag(
     recipe_name: PrismaField<"Recipes", "recipe_name">,
     options: {

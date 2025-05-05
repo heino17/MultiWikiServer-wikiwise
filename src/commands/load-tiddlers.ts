@@ -31,7 +31,7 @@ export class Command {
 	async execute() {
 		if (this.params.length < 2) return "Missing pathname and/or bag name";
 		await this.commander.$transaction(async (prisma) => {
-			const store = new TiddlerStore(this.commander, prisma);
+			const store = TiddlerStore.fromCommander(this.commander, prisma);
 			var tiddlersFromPath = this.$tw.loadTiddlersFromPath(this.tiddlersPath);
 			//@ts-ignore
 			await store.saveTiddlersFromPath(tiddlersFromPath, this.bagName);

@@ -30,7 +30,7 @@ export class Command {
 			tiddlerText = this.params[2] as string;
 
 		await this.commander.$transaction(async (prisma) => {
-			const store = new TiddlerStore(this.commander, prisma);
+			const store = TiddlerStore.fromCommander(this.commander, prisma);
 			await store.saveBagTiddler({ title: tiddlerTitle, text: tiddlerText }, bagName);
 		});
 

@@ -31,7 +31,7 @@ export class Command {
 		console.time(`${info.name} complete`);
 		await loadPluginBags(
 			this.$tw,
-			new TiddlerStore(this.commander, this.commander.engine),
+			TiddlerStore.fromCommander(this.commander, this.commander.engine),
 			this.commander.engine
 		);
 		console.timeEnd(`${info.name} complete`);

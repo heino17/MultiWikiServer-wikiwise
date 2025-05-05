@@ -44,6 +44,8 @@ export async function bootTiddlyWiki(wikiPath: string) {
 
   };
 
+  // disable the default commander. We'll use our own version of it.
+
   // creating a new tiddler with the same title as a shadow tiddler
   // prevents the shadow tiddler from defining modules
 
@@ -52,7 +54,6 @@ export async function bootTiddlyWiki(wikiPath: string) {
     Commander: { initCommands: function () { } },
   });
 
-  // disable the default commander. We'll use our own version of it.
   $tw.preloadTiddler({ title: "$:/core/modules/startup/commands.js" })
   $tw.modules.define("$:/core/modules/startup/commands.js", "startup", {
     name: "commands",
@@ -63,27 +64,16 @@ export async function bootTiddlyWiki(wikiPath: string) {
   });
 
 
-
-  $tw.preloadTiddler({ title: "$:/plugins/tiddlywiki/multiwikiserver/startup.js" })
-  $tw.modules.define("$:/plugins/tiddlywiki/multiwikiserver/startup.js", "startup", {
-    name: "multiwikiserver",
-    platforms: ["node"],
-    after: ["load-modules"],
-    before: ["story", "commands"],
-    synchronous: true,
-    startup: () => { },
-  });
-
   // tiddlywiki [+<pluginname> | ++<pluginpath>] [<wikipath>] ...[--command ...args]
   $tw.boot.argv = [
     "++" + dist_resolve("../plugins/client"),
     "+plugins/tiddlywiki/tiddlyweb",
+    // these are sane defaults, these should be in the recipe
     "+themes/tiddlywiki/vanilla",
     "+themes/tiddlywiki/snowwhite",
-    wikiPath,
+    wikiPath, // this should be inert
   ];
 
-  // use callback to match the type signature
   await new Promise<void>(resolve => $tw.boot.boot(resolve));
 
   // this makes sure boot followed the node path

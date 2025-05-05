@@ -38,7 +38,7 @@ export class Command {
 		// Check parameters
 		if (this.params.length < 1) throw "Missing pathname";
 		await this.commander.$transaction(async (prisma) => {
-			this.store = new TiddlerStore(this.commander, prisma);
+			this.store = TiddlerStore.fromCommander(this.commander, prisma);
 			await this.saveArchive();
 			this.store = undefined;
 		});

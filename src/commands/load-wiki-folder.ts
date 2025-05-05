@@ -50,7 +50,7 @@ export class Command {
 			bagDescription: this.params[2] as PrismaField<"Bags", "description">,
 			recipeName: this.params[3] as PrismaField<"Recipes", "recipe_name">,
 			recipeDescription: this.params[4] as PrismaField<"Recipes", "description">,
-			store: new TiddlerStore(this.commander, this.commander.engine),
+			store: TiddlerStore.fromCommander(this.commander, this.commander.engine),
 			$tw: this.commander.$tw
 		}));
 		console.log(info.name, "complete:", this.params[0])

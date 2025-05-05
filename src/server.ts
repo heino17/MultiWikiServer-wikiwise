@@ -86,8 +86,10 @@ export interface SiteConfig extends MWSConfigConfig {
   storePath: string;
   /** 
    * The path prefix is a essentially folder mount point. 
-   * It starts with a slash, and ends without a slash. 
-   * If there is not a prefix, it is an empty string. 
+   * 
+   * It starts with a slash, and ends without a slash (`"/dev"`). 
+   * 
+   * If there is not a prefix, it is an empty string (`""`). 
    */
   pathPrefix: string;
 }

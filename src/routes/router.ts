@@ -4,7 +4,7 @@ import RootRoute from ".";
 import * as z from "zod";
 import { createStrictAwaitProxy, JsonValue, truthy, Z2 } from "../utils";
 import { Route, rootRoute, RouteOptAny, RouteMatch, } from "../utils";
-import { MWSConfigConfig } from "../server";
+import { MWSConfigConfig, SiteConfig } from "../server";
 import { setupDevServer } from "../setupDevServer";
 import { Commander } from "../commander";
 import { CacheState, startupCache } from "./cache";
@@ -73,30 +73,41 @@ export class Router {
   }
 
 
-  pathPrefix: string = "";
+
   enableBrowserCache: boolean = true;
   enableGzip: boolean = false;
   csrfDisable: boolean = false;
 
+  siteConfig: SiteConfig;
+  get pathPrefix() {
+    return this.siteConfig.pathPrefix;
+  }
+
   public engine: Commander["engine"];
   private SessionManager: Commander["SessionManager"];
+  public PasswordService: Commander["PasswordService"];
+
+  fieldModules: Commander["$tw"]["Tiddler"]["fieldModules"];
+  AttachmentService: Commander["AttachmentService"];
 
   constructor(
     private rootRoute: rootRoute,
-    private commander: Commander,
+    commander: Commander,
     private tiddlerCache: CacheState,
   ) {
     this.engine = commander.engine;
     this.SessionManager = commander.SessionManager;
-    this.pathPrefix = commander.siteConfig.pathPrefix;
-
+    this.siteConfig = commander.siteConfig;
+    this.PasswordService = commander.PasswordService;
+    this.fieldModules = commander.$tw.Tiddler.fieldModules;
+    this.AttachmentService = commander.AttachmentService;
   }
 
   handleIncomingRequest(
     req: http.IncomingMessage | http2.Http2ServerRequest,
     res: http.ServerResponse | http2.Http2ServerResponse
   ) {
-    
+
     const [ok, err, streamer] = function (this: Router) {
       try {
         return [true, undefined, new Streamer(req, res, this)] as const;
@@ -144,7 +155,7 @@ export class Router {
         routePath,
         bodyFormat,
         authUser,
-        this.commander,
+        this,
         this.tiddlerCache,
       ) as statetype
     );

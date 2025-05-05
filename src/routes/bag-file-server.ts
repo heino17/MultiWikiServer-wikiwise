@@ -14,7 +14,13 @@ export class TiddlerServer extends TiddlerStore {
     protected state: StateObject,
     prisma: PrismaTxnClient
   ) {
-    super(state.commander, prisma);
+    const router = state.router;
+    super(
+      router.fieldModules,
+      new router.AttachmentService(router.siteConfig, prisma),
+      router.siteConfig,
+      prisma
+    );
   }
 
   private toTiddlyWebJson(info: { bag_name: string; tiddler_id: number; tiddler: TiddlerFields }) {

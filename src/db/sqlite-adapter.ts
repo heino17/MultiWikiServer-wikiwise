@@ -14,6 +14,7 @@ export class SqliteAdapter {
   adapter!: SqlMigrationAwareDriverAdapterFactory;
   async init() {
     const libsql = await this.adapter.connect();
+    // await libsql.executeRaw({ sql: "PRAGMA journal_mode=WAL;", args: [], argTypes: [] });
 
     if (process.env.RUN_OLD_MWS_DB_SETUP_FOR_TESTING) {
       await libsql.executeScript(await readFile(dist_resolve(

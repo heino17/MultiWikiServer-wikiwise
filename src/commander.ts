@@ -10,7 +10,7 @@ import * as attacher from "./services/attachments";
 import { PasswordService } from "./services/PasswordService";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { ITXClientDenyList } from "@prisma/client/runtime/library";
-import { TW } from "tiddlywiki";
+import { TiddlerFieldModule, TW } from "tiddlywiki";
 import { dist_resolve } from "./utils";
 import * as commander from "commander";
 import { commands, listen as listen_command, divider } from "./commands";
@@ -72,14 +72,14 @@ export interface CommandInfo {
 
 // move the startup logic into a separate class
 class StartupCommander {
-
+  fieldModules;
   constructor(
     public config: MWSConfig,
     public $tw: TW,
     public PasswordService: PasswordService,
   ) {
 
-
+    this.fieldModules = $tw.Tiddler.fieldModules;
 
     if (config.config?.pathPrefix) {
       ok(config.config.pathPrefix.startsWith("/"), "pathPrefix must start with a slash");
@@ -205,7 +205,6 @@ export class Commander extends StartupCommander {
     // but this just makes it a little bit harder for the listeners to be read.
     // this can be replaced, but it only recieves the listeners via closure.
     this.create_mws_listen = (params: string[]) => {
-      console.log(listeners);
       return new listen_command.Command(params, this, listeners, onListenersCreated);
     };
   }
@@ -350,7 +349,6 @@ export class Commander extends StartupCommander {
     // Parse named parameters if required
     // const paramsIfMandetory = params;
     if (typeof params === "string") { this.callback(params); return; }
-    console.log(params);
 
     new Promise<any>(async (resolve) => {
       const { Command, info } = command!;
