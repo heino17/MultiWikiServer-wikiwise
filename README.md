@@ -12,6 +12,7 @@ Multiple users, multiple wikis for TiddlyWiki.
 - Plugins can add routes and hooks.
 - Abstractions everywhere, allowing flexibility.
 - The source code is fully typed and easy to navigate.
+- Admin endpoints can also be called from the CLI.
 
 ## How to run
 
