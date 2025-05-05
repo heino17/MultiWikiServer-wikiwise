@@ -24,7 +24,7 @@
     "node": ">14"
   },
   "scripts": {
-    "docs": "tiddlywiki +plugins/tiddlywiki/tiddlyweb +plugins/tiddlywiki/filesystem editions/mws-docs --listen",
+    "docs": "ENABLE_DOCS_ROUTE=1 npm start",
     "lint:fix": "exit 1 && eslint . --fix",
     "lint": "exit 1 && eslint .",
     "jsc": "tsc -p jsconfig.json --noEmit",
@@ -34,7 +34,7 @@
     "prisma": "npm run gen:client && npm run gen:sql",
     "prisma:studio": "DATABASE_URL=file:../editions/mws/store/database.sqlite prisma studio",
     "certs": "(cd runtime-config && bash localhost_certs.sh)",
-    "start": "SKIPDTS=1 npm run build && node mws.dev.mjs init-store && node mws.dev.mjs listen",
+    "start": "SKIPDTS=1 npm run build && node mws.dev.mjs",
     "build": "npm run tsc && tsup",
     "install-android": "GYP_DEFINES=\"android_ndk_path=''\" npm install",
     "postinstall": "env-cmd -e prisma-env prisma generate",
