@@ -1,4 +1,0 @@
-- SQLite
-- MariaDB (formerly MySQL)
-- PostgreSQL
-- Microsoft SQL Server
