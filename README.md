@@ -50,15 +50,15 @@ If there are any database changes, MWS should pick them up and apply them. The c
 If you want to work on the project, 
 
 - `git clone https://github.com/TiddlyWiki/MultiWikiServer`
+- `cd MultiWikiServer`
 - `npm install` or `npm run install-android`
 - `cd react-user-mgmt`
 - `npm install`
 - `cd ..`
-- `npm run certs` - if you want https
+- `npm run certs` - if you want https (unix only)
 - `npm start` - this runs the build and test every time, but it's pretty fast
 
+The development wiki will be active at http://localhost:8080/dev
+
 You can change the listeners as explained in the mws.dev.mjs file.
-
-
-
 
