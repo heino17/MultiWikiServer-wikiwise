@@ -124,7 +124,7 @@ export class DataChecks {
       // allow unowned for any user (conditional for anon reads)
       (user_id || allowAnon) && { acl: { none: {} }, owner_id: null },
       // allow owner for user 
-      user_id && { owner_id: user_id },
+      user_id && { owner_id: { equals: user_id, not: null } },
       // allow acl for user 
       user_id && role_ids?.length && {
         acl: {
