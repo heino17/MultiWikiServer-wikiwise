@@ -16,6 +16,8 @@ Multiple users, multiple wikis for TiddlyWiki.
 
 Most of these features are still in development. 
 
+The security model is not ready for prime time. Do not use it to protect feelings or intellectual property. Or anything else. 
+
 ## How to run
 
 The init command creates a new folder and installs what you need to get started. 

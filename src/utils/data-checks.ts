@@ -134,15 +134,6 @@ export class DataChecks {
           }
         }
       },
-      user_id && role_ids?.length && {
-        acl: {
-          some: {
-            permission: { in: checkPerms },
-            role_id: { in: role_ids },
-          }
-        }
-      },
-
     ] satisfies (Prisma.RecipesWhereInput | Prisma.BagsWhereInput | undefined | null | false | 0)[]
     ).filter(truthy)
   }
