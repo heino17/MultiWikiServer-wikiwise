@@ -1,9 +1,7 @@
 import { StrictMode, Suspense, useEffect } from 'react';
-import './styles/index.css';
-import './styles/login.css';
 import { createRoot } from 'react-dom/client';
 import Login from './components/Login/Login';
-import { Frame } from './components/Frame/Frame';
+import { PageRoot } from './components/Frame/Frame';
 import { DataLoader, getIndexJson, IndexJsonContext } from './helpers/utils';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
@@ -34,7 +32,7 @@ export const App = DataLoader(async () => {
         <CssBaseline enableColorScheme />
         <IndexJsonContext.Provider value={[indexJson, refresh]}>
           <ErrorBoundary fallback={null} > 
-            {route === "/login" ? <Login /> : <Frame />}
+            {route === "/login" ? <Login /> : <PageRoot />}
           </ErrorBoundary>
         </IndexJsonContext.Provider>
       </ThemeProvider>

@@ -19,7 +19,7 @@ const Header: React.FC<HeaderProps> = ({
   userIsAdmin,
   userId,
 }) => {
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
 
   const navigateTo = (path: string) => {
     window.location.href = pathPrefix + path;
@@ -37,6 +37,7 @@ const Header: React.FC<HeaderProps> = ({
     navigateTo(`/admin/users/${userId}`)
   };
 
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const handleLogout = async () => {
     setIsLoggingOut(true);
     await sessionRequest.logout(undefined);

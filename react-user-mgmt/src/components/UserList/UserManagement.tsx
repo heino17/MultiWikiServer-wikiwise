@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { DataLoader, serverRequest, useIndexJson } from '../../helpers/utils';
-import { Card, CardContent, CardHeader, Container, Stack } from '@mui/material';
+import { Card, CardContent, CardHeader, Container, List, ListItemButton, ListItemText, Stack } from '@mui/material';
 import { useCreateUserForm } from './useCreateUserForm';
 
 
@@ -28,32 +28,20 @@ export const UserManagement = DataLoader(async () => {
   return (
     <Container maxWidth="lg">
       <Stack direction="row" width="100%" spacing={2} marginBlockStart={4}>
-        <Card sx={{ flexGrow: 1 }}><CardContent>{userList.map((user) => (
-
-          <a
-            key={user.user_id}
-            href={`admin/users/${user.user_id}`}
-            className="mws-user-item"
-          >
-            <div className="mws-user-info">
-              <span className="mws-user-name">
-                {user.username}
-              </span>
-              <span className="mws-user-email">
-                {user.email}
-              </span>
-            </div>
-            <div className="mws-user-details">
-              <span className="mws-user-created">
-                Created: {user.created_at.slice(0, 10)}
-              </span>
-              <span className="mws-user-last-login">
-                Last Login: {user.last_login?.slice(0, 10) || 'Never'}
-              </span>
-            </div>
-          </a>
-
-        ))}</CardContent></Card>
+        <Card sx={{ flexGrow: 1 }}>
+          <CardContent>
+            <List>
+              {userList.map((user) => (
+                <ListItemButton href={`admin/users/${user.user_id}`}>
+                  <ListItemText
+                    primary={<Stack direction="row" justifyContent="space-between"><span>{user.username}</span><span>Created: {user.created_at.slice(0, 10)}</span></Stack>}
+                    secondary={<Stack direction="row" justifyContent="space-between"><span>{user.email}</span><span>Last Login: {user.last_login?.slice(0, 10) || 'Never'}</span></Stack>}
+                  />
+                </ListItemButton>
+              ))}
+            </List>
+          </CardContent>
+        </Card>
         <Card sx={{ width: "20rem" }}>
           <CardHeader title="Add New User" />
           <CardContent>

@@ -96,8 +96,8 @@ const ManageUser = DataLoader(async (props: { userID: string }) => {
   return (
     <>
 
-      <div className="mws-main-wrapper">
-        <Card className="mws-user-profile-container">
+      <Stack direction="row" alignItems="space-between" justifyContent="space-between" spacing={2}>
+        <Card sx={{ flexGrow: 1, borderRadius: 6 }}>
           <Stack sx={{ bgcolor: theme.palette.primary.main }} direction="row" justifyContent="start">
             <IconButton
               size="large"
@@ -158,14 +158,16 @@ const ManageUser = DataLoader(async (props: { userID: string }) => {
         </Card>
 
         {(userIsAdmin || isCurrentUserProfile) && (
-          <Card className="mws-user-profile-management">
-            <h2>Manage User</h2>
-            {userIsAdmin && profileFormMarkup}
-            <h2>Change Password</h2>
-            {passwordFormMarkup}
+          <Card sx={{ flexGrow: 1, borderRadius: 6 }}>
+            <CardContent>
+              <h2>Manage User</h2>
+              {userIsAdmin && profileFormMarkup}
+              <h2>Change Password</h2>
+              {passwordFormMarkup}
+            </CardContent>
           </Card>
         )}
-      </div>
+      </Stack>
 
     </>
   );
