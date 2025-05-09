@@ -104,7 +104,7 @@ export const useACLEditForm = createDialogForm({
           console.log(form.value);
 
           if (value.type === "bag") {
-            serverRequest.bag_acl_update({
+            await serverRequest.bag_acl_update({
               bag_name: value.name,
               acl: form.value.map(e => e.role_id && e.permission && ({
                 role_id: e.role_id,

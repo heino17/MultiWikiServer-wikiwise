@@ -129,6 +129,7 @@ export function SelectField<V>({
   sx?: SxProps<Theme>
   control: forms.AbstractControl<V[]>,
   options: { value: V, label: string }[]
+  helperText?: string;
 }>): ReactNode;
 export function SelectField<V>({
   title, required, multiple, sx, control, options
@@ -139,6 +140,7 @@ export function SelectField<V>({
   sx?: SxProps<Theme>
   control: forms.AbstractControl<V>,
   options: { value: V, label: string }[]
+  helperText?: string;
 }>): ReactNode;
 export function SelectField<V>({
   title, required, multiple, sx, control, options
@@ -149,9 +151,10 @@ export function SelectField<V>({
   sx?: SxProps<Theme>
   control: forms.AbstractControl<V | null>,
   options: { value: V, label: string }[]
+  helperText?: string;
 }>): ReactNode;
 export function SelectField<V>({
-  title, required, multiple, sx, control, options
+  title, required, multiple, sx, control, options, helperText
 }: PropsWithChildren<{
   title?: string,
   required?: boolean
@@ -159,6 +162,7 @@ export function SelectField<V>({
   sx?: SxProps<Theme>
   control: forms.AbstractControl<any>,
   options: { value: V, label: string }[]
+  helperText?: string;
 }>) {
   const html_id = useId();
   useObservable(control.events);

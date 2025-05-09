@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useIndexJson } from '../../helpers/utils';
-import { Checkbox, FormControlLabel } from "@mui/material";
+import { Checkbox, FormControlLabel, FormHelperText } from "@mui/material";
 import * as forms from "angular-forms-only";
 import { SelectField, useObservable } from '../../helpers';
 
@@ -12,7 +12,11 @@ export const sortBagNames = (a: string, b: string) =>
 
 
 
-export function OwnerSelection({ isCreate, control }: { isCreate: boolean; control: forms.FormControl<number | null>; }): React.ReactNode {
+export function OwnerSelection({ isCreate, control, helperText }: {
+  isCreate: boolean;
+  control: forms.FormControl<number | null>;
+  helperText?: string;
+}): React.ReactNode {
   const [indexJson] = useIndexJson();
   useObservable(control.valueChanges);
 
@@ -27,7 +31,7 @@ export function OwnerSelection({ isCreate, control }: { isCreate: boolean; contr
   // the user's admin status changes, and they would probably refresh the page anyway
   if (!indexJson.isAdmin || !indexJson.userListAdmin) return null;
 
-  if (isCreate) return (
+  if (isCreate) return (<>
     <FormControlLabel
       label="Admin option: Make yourself the owner."
       control={<Checkbox
@@ -36,15 +40,18 @@ export function OwnerSelection({ isCreate, control }: { isCreate: boolean; contr
         disabled={control.disabled}
       />}
     />
-  );
+    {helperText && <FormHelperText>{helperText}</FormHelperText>}
+  </>);
 
-  if (ownerOptions) return (
+  if (ownerOptions) return (<>
     <SelectField
       title="Owner"
       control={control}
       options={ownerOptions}
+      helperText={helperText}
     />
-  );
+    {helperText && <FormHelperText>{helperText}</FormHelperText>}
+  </>);
 
 }
 

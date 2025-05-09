@@ -78,7 +78,12 @@ export class RecipeManager {
           }
         },
       },
-      where: isAdmin ? undefined : { recipe_bags: { every: { bag: { OR } } } }
+      where: isAdmin ? undefined : {
+        OR: [
+          { recipe_bags: { every: { bag: { OR } } } },
+          { owner_id: { equals: user_id, not: null } }
+        ]
+      }
     });
 
     const userListUser = !isAdmin && await prisma.users.findMany({
@@ -178,7 +183,7 @@ export class RecipeManager {
 
     const { isAdmin, user_id } = user;
 
-    const OR = this.checks.getWhereACL({ permission: "ADMIN", user_id, });
+    const OR = isAdmin ? undefined : this.checks.getWhereACL({ permission: "ADMIN", user_id, });
 
     const bags = new Map(
       await prisma.bags.findMany({
@@ -189,15 +194,13 @@ export class RecipeManager {
     const missing = bag_names.filter(e => !bags.has(e.bag_name));
     if (missing.length) throw "Some bags not found: " + JSON.stringify(missing);
 
-    const bagsAcl = new Map(
-      await prisma.bags.findMany({
-        where: { bag_name: { in: bag_names.map(e => e.bag_name) }, OR },
-      }).then(bags => bags.map(bag => [bag.bag_name as string, bag]))
-    );
+    const bagsAcl = new Map((await prisma.bags.findMany({
+      where: { bag_name: { in: bag_names.map(e => e.bag_name) }, OR },
+    })).map(bag => [bag.bag_name as string, bag]));
 
     const createBags = bag_names.map((bag, position) => ({
       bag_id: bags.get(bag.bag_name)!.bag_id,
-      with_acl: bagsAcl && bagsAcl.has(bag.bag_name) && bag.with_acl,
+      with_acl: bagsAcl.has(bag.bag_name) && bag.with_acl,
       position,
     }));
 

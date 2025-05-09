@@ -59,7 +59,7 @@ export const useCreateUserForm = createDialogForm({
       validators: [forms.Validators.required, forms.Validators.minLength(4)],
     }),
   }),
-  render: ({ form, indexJson: [indexJson], onReset: onRefresh }) => {
+  render: ({ form, indexJson: [indexJson, refreshIndex], onReset: onRefresh }, refreshUsers: () => void) => {
     return <>
       <FormTextField
         key="username"
@@ -118,6 +118,8 @@ export const useCreateUserForm = createDialogForm({
           await createNewPassword({ user_id, password });
 
           onRefresh();
+          refreshUsers();
+          refreshIndex();
 
           return "User added successfully";
         }}

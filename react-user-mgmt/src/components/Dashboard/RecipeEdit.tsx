@@ -29,10 +29,19 @@ export interface Recipe {
 export const useRecipeEditForm = createDialogForm({
   create: (value: Recipe | null) => {
     const form = new forms.FormGroup({
-      recipe_name: new forms.FormControl(value?.recipe_name ?? "", { nonNullable: true, validators: [forms.Validators.required] }),
-      description: new forms.FormControl(value?.description ?? "", { nonNullable: true, validators: [forms.Validators.required] }),
-      owner_id: new forms.FormControl<number | null>(value?.owner_id ?? null, { nonNullable: true }),
-      bag_names: new forms.FormArray<ReturnType<typeof RecipeBagRow>>(!value ? [] : value.bag_names.map(e => RecipeBagRow(e)), { validators: [forms.Validators.required] }),
+      recipe_name: new forms.FormControl(value?.recipe_name ?? "", {
+        nonNullable: true, validators: [forms.Validators.required]
+      }),
+      description: new forms.FormControl(value?.description ?? "", {
+        nonNullable: true, validators: [forms.Validators.required]
+      }),
+      owner_id: new forms.FormControl<number | null>(value?.owner_id ?? null, {
+        nonNullable: true
+      }),
+      bag_names: new forms.FormArray<ReturnType<typeof RecipeBagRow>>(
+        !value ? [] : value.bag_names.map(e => RecipeBagRow(e)), {
+        validators: [forms.Validators.required]
+      }),
     });
     if (value) form.controls.recipe_name.disable();
     return form;
@@ -41,6 +50,7 @@ export const useRecipeEditForm = createDialogForm({
     const isCreate = value === null;
     const theme = useTheme();
     const isAdmin = indexJson.isAdmin;
+    console.log(recipeForm);
     return <>
       {!isCreate && <h2>Recipe: {value?.recipe_name}</h2>}
       {isCreate && <TextField
@@ -55,7 +65,10 @@ export const useRecipeEditForm = createDialogForm({
         value={recipeForm.controls.description.value}
         onChange={onChange(recipeForm.controls.description)}
       />
-      <OwnerSelection isCreate={isCreate} control={recipeForm.controls.owner_id} />
+      <OwnerSelection
+        isCreate={isCreate}
+        control={recipeForm.controls.owner_id}
+      />
       <Stack direction="row" spacing={2} justifyContent="space-between">
         <h2>Bags</h2>
         <IconButton sx={{ color: theme.palette.primary.main }}
@@ -206,7 +219,7 @@ function RecipeBagRowComponent({ bag_names, bagRow, onMoveDown, onMoveUp, onRemo
           disabled={bagRow.value.bag_name?.startsWith("$:/")}
           checkedIcon={<WithACL />}
           icon={<WithoutACL />}
-          defaultChecked={!bagRow.value.bag_name?.startsWith("$:/")}
+          defaultChecked={bagRow.value.with_acl}
           color="primary"
           title="With ACL"
           value={bagRow.value.with_acl}
