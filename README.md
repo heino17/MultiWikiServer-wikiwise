@@ -1,5 +1,9 @@
 # MultiWikiServer
 
+**This is not ready for primetime. Do not use it to protect feelings or intellectual property.**
+
+*You really shouldn't be using it to store anything important yet. It is still in the VERY early stages of development and we don't even have proper tests verifying the security mechanisms yet. So please try it out, kick the tires, import your multi-gigabyte wikis and play around with it, but don't actually store anything you want to keep. We'll hopefully get there soon, but even the database schema itself is still in flux as we figure out what the best layout is for all the stuff we have planned.*
+
 Multiple users, multiple wikis for TiddlyWiki.
 
 - Bag & Recipe system for storing tiddlers.
