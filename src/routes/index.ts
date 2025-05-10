@@ -43,7 +43,7 @@ export default async function RootRoute(root: rootRoute, config: SiteConfig) {
     });
 
 
-  await importEsbuild(root);
+
 }
 async function importDir(root: rootRoute, folder: string) {
   await Promise.all(readdirSync(`src/routes/${folder}`).map(async (item) => {
@@ -58,7 +58,7 @@ async function importDir(root: rootRoute, folder: string) {
   }));
 }
 
-async function importEsbuild(root: rootRoute) {
+export async function importEsbuild(root: rootRoute) {
   // "build": "tsc -b; esbuild main=src/main.tsx 
   // --outdir=public --bundle --target=es2020 
   // --platform=browser --jsx=automatic"

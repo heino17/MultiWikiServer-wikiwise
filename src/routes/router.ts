@@ -1,6 +1,6 @@
 import { STREAM_ENDED, Streamer, SYMBOL_IGNORE_ERROR } from "../streamer";
 import { StateObject } from "../StateObject";
-import RootRoute from ".";
+import RootRoute, { importEsbuild } from ".";
 import * as z from "zod";
 import { createStrictAwaitProxy, JsonValue, truthy, Z2 } from "../utils";
 import { Route, rootRoute, RouteOptAny, RouteMatch, } from "../utils";
@@ -67,7 +67,9 @@ export class Router {
 
     await RootRoute(rootRoute, commander.siteConfig);
 
-    const cache = await startupCache(commander);
+    const cache = await startupCache(rootRoute, commander);
+
+    await importEsbuild(rootRoute);
 
     return new Router(rootRoute, commander, cache);
   }

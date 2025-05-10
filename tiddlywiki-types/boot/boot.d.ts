@@ -68,6 +68,7 @@ declare module "tiddlywiki" {
     log(str: string): void;
     logMessages?: string[];
     argv: string[];
+    excludeRegExp: RegExp;
     remainingStartupModules?: StartupModule[];
     executedStartupModules?: Record<string, boolean>;
     disabledStartupModules?: string[];
