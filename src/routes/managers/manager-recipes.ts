@@ -33,8 +33,8 @@ export class RecipeManager {
   checks: DataChecks;
 
   constructor(private config: SiteConfig) {
-    const { allowAnonReads, allowAnonWrites } = config;
-    this.checks = new DataChecks({ allowAnonReads, allowAnonWrites })
+
+    this.checks = new DataChecks(config)
   }
 
   index_json = zodManage(z => z.undefined(), async (state, prisma) => {

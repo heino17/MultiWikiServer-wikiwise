@@ -1,14 +1,13 @@
 import { Prisma } from "@prisma/client";
 import { truthy } from "./utils";
 import { ok } from "node:assert";
+import { SiteConfig } from "../server";
 
 
 export class DataChecks {
-  allowAnonReads;
-  allowAnonWrites;
-  constructor(options: { allowAnonReads?: boolean, allowAnonWrites?: boolean }) {
-    this.allowAnonReads = options.allowAnonReads;
-    this.allowAnonWrites = options.allowAnonWrites;
+
+  constructor(private config: SiteConfig) {
+
   }
 
   okTiddlerFields(tiddlerFields: Record<string, any>) {
@@ -111,18 +110,16 @@ export class DataChecks {
     user_id?: number,
     role_ids?: number[],
   }) {
-    const { allowAnonReads, allowAnonWrites } = this;
-    const anonRead = allowAnonReads && permission === "READ";
-    const anonWrite = allowAnonWrites && permission === "WRITE";
-    const allowAnon = anonRead || anonWrite;
+    // const { allowAnonReads, allowAnonWrites } = this;
+    // const anonRead = allowAnonReads && permission === "READ";
+    // const anonWrite = allowAnonWrites && permission === "WRITE";
+    // const allowAnon = anonRead || anonWrite;
     const allperms = ["READ", "WRITE", "ADMIN"] as const;
     const index = allperms.indexOf(permission);
     if (index === -1) throw new Error("Invalid permission");
     const checkPerms = allperms.slice(index);
 
     return ([
-      // allow unowned for any user (conditional for anon reads)
-      (user_id) && { acl: { none: {} }, owner_id: null },
       // allow owner for user 
       user_id && { owner_id: { equals: user_id, not: null } },
       // allow acl for user 
