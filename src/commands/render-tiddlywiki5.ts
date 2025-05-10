@@ -25,8 +25,8 @@ export const info: CommandInfo = {
 export class Command {
 
   constructor(
-    public params: string[], 
-    public commander: Commander, 
+    public params: string[],
+    public commander: Commander,
     public callback: (err?: any) => void
   ) {
 
@@ -35,12 +35,13 @@ export class Command {
 
     const result = this.commander.$tw.wiki.renderTiddler("text/plain", "$:/core/templates/tiddlywiki5.html", {
       variables: {
-        saveTiddlerFilter: `
-          $:/boot/boot.css
-          $:/boot/boot.js
-          $:/boot/bootprefix.js
+        // the boot and library tiddlers get rendered into the page
+        // this list gets saved in the store array
+        // we have to render at least one tiddler
+        saveTiddlerFilter: this.commander.siteConfig.enablePluginCache ? `
+          $:/temp/nothing
+        ` : `
           $:/core
-          $:/library/sjcl.js
           $:/plugins/tiddlywiki/tiddlyweb
           $:/plugins/tiddlywiki/multiwikiclient
           $:/themes/tiddlywiki/snowwhite

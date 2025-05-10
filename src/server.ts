@@ -74,6 +74,7 @@ export interface MWSConfigConfig {
   readonly enableBrowserCache?: boolean
   /** The path prefix must start with a slash, and end without a slash */
   readonly pathPrefix?: string;
+  readonly enablePluginCache?: boolean;
 }
 
 

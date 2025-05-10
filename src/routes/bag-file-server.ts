@@ -223,7 +223,7 @@ export class TiddlerServer extends TiddlerStore {
     }
 
     // const bagTiddlers = await this.getRecipeTiddlersByBag(recipe_name);
-    const bagTiddlers = await this.prisma.recipe_bags.findMany({
+    const bags = await this.prisma.recipe_bags.findMany({
       where: { recipe: { recipe_name } },
       select: {
         position: true,
@@ -232,48 +232,60 @@ export class TiddlerServer extends TiddlerStore {
             bag_id: true,
             bag_name: true,
             is_plugin: true,
-            tiddlers: {
-              select: {
-                title: true,
-                tiddler_id: true,
-                is_deleted: true,
-                attachment_hash: true,
-                fields: true,
-              },
-              where: {
-                is_deleted: false,
-              },
-            }
           }
         }
       },
     });
 
-    bagTiddlers.sort((a, b) => a.position - b.position);
 
-    // const recipeTiddlers = await this.getRecipeTiddlers(recipe_name);
-    const recipeTiddlers = Array.from(new Map(bagTiddlers.flatMap(bag =>
-      bag.bag.tiddlers.map(tiddler => [tiddler.title, { bag: bag.bag, tiddler }])
-    )).values());
+
+    const lastTiddlerId = await this.prisma.tiddlers.aggregate({
+      _max: { tiddler_id: true },
+      where: { bag_id: { in: bags.map(e => e.bag.bag_id) } }
+    });
 
     const template = readFileSync(resolve(this.state.config.wikiPath, "tiddlywiki5.html"), "utf8");
     const hash = createHash('md5');
     // Put everything into the hash that could change and invalidate the data that
-    // the browser already stored. The headers the data and the encoding.
+    // the browser already stored.
+    // the rendered template
     hash.update(template);
-    hash.update(recipeTiddlers.map(e => e.tiddler.tiddler_id).join("|"));
+    // the bag names
+    hash.update(bags.map(e => e.bag.bag_name).join(","));
+    // the latest tiddler id in those bags
+    hash.update(`${lastTiddlerId._max.tiddler_id}`);
     const contentDigest = hash.digest("hex");
 
+    if ('"' + contentDigest + '"' === state.headers["if-none-match"])
+      return state.sendEmpty(304, { "x-reason": "if-none-match" });
 
     state.writeHead(200, {
       "Content-Type": "text/html",
       "Etag": '"' + contentDigest + '"',
-      "Cache-Control": "max-age=0, must-revalidate",
+      // TODO: WHY IS THIS DISABLED???
+      "Cache-Control": "max-age=1000, must-revalidate",
     });
 
     if (state.method === "HEAD") return state.end();
     // Get the tiddlers in the recipe
     // Render the template
+
+    // it is recommended to add <link rel="preload" to the header since these cannot be deferred
+    // <link rel="preload" href="main.js" as="script" />
+
+    // and recommended to specify the hashes for each file in their script tag. 
+    // <script
+    //   src="https://example.com/example-framework.js"
+    //   integrity="sha384-oqVuAfXRKap7fdgcCY5uykM6+R9GqQ8K/uxy9rx7HNQlGYl1kPzQho1wx4JwY8wC"
+    //   crossorigin="anonymous"></script>
+
+    // this needs to be added to the tiddlywiki file before the script tags
+    // $tw = Object.create(null);
+    // $tw.preloadTiddlers = $tw.preloadTiddlers || [];
+    // $tw.preloadTiddler = function(fields) {
+    //   $tw.preloadTiddlers.push(fields);
+    // };
+
 
     // Splice in our tiddlers
     var marker = `<` + `script class="tiddlywiki-tiddler-store" type="application/json">[`,
@@ -289,18 +301,118 @@ export class TiddlerServer extends TiddlerStore {
       state.write(JSON.stringify(tiddlerFields).replace(/</g, "\\u003c"));
       state.write(",\n");
     }
-    state.write(template.substring(0, markerPos + marker.length));
+    state.write(template.substring(0, markerPos));
+    if (state.config.enablePluginCache) {
 
+      const preloadMarkup = `
+        ${"<"}script>
+        window.$tw = window.$tw || Object.create(null);
+        $tw.preloadTiddlers = $tw.preloadTiddlers || [];
+        $tw.preloadTiddler = function(fields) {
+          $tw.preloadTiddlers.push(fields);
+        };
+        ${"</"}script>
+      `;
+
+      state.write(preloadMarkup);
+      const pluginMarkup = (plugin: string, hash: string) => `
+        <script
+          src="${state.config.pathPrefix}/$cache/${plugin}/plugin.js"
+          integrity="${hash}"
+          crossorigin="anonymous"></script>
+      `;
+
+      const plugins = [...new Set([
+        "$:/core",
+        "$:/plugins/tiddlywiki/multiwikiclient",
+        "$:/plugins/tiddlywiki/tiddlyweb",
+        "$:/themes/tiddlywiki/snowwhite",
+        "$:/themes/tiddlywiki/vanilla",
+        ...bags.map(e => e.bag.bag_name)
+      ]).values()]
+        .filter(e => state.tiddlerCache.tiddlerFiles.has(e))
+        .map(e => pluginMarkup(
+          state.tiddlerCache.tiddlerFiles.get(e)!,
+          state.tiddlerCache.tiddlerHashes.get(e)!
+        ))
+      state.write(plugins.join("\n"));
+    }
+    state.write(marker);
+
+    const bagOrder = new Map(bags.map(e => [e.bag.bag_id, e.position]));
+    const bagIDs = bags.filter(e => !state.tiddlerCache.tiddlerFiles.has(e.bag.bag_name)).map(e => e.bag.bag_id)
+    await this.serveStoreTiddlers(bagIDs, bagOrder, writeTiddler);
+
+    writeTiddler({
+      title: "$:/config/multiwikiclient/recipe",
+      text: recipe_name
+    });
+    // get the latest tiddler id in the database. It doesn't have to be filtered.
+
+    writeTiddler({
+      title: "$:/state/multiwikiclient/recipe/last_tiddler_id",
+      text: (lastTiddlerId._max.tiddler_id ?? 0).toString()
+    });
+
+    writeTiddler({
+      title: "$:/config/multiwikiclient/host",
+      text: "$protocol$//$host$" + this.state.config.pathPrefix + "/",
+    });
+
+    state.write(template.substring(markerPos + marker.length))
+    // Finish response
+    return state.end();
+  }
+
+
+  private async serveStoreTiddlers(
+    bagKeys: number[],
+    bagOrder: Map<number, number>,
+    writeTiddler: (tiddlerFields: Record<string, string>) => void
+  ) {
+
+    const bagTiddlers = await this.prisma.bags.findMany({
+      where: { bag_id: { in: bagKeys } },
+      select: {
+        bag_id: true,
+        bag_name: true,
+        is_plugin: true,
+        description: true,
+        owner_id: true,
+        tiddlers: {
+          select: {
+            title: true,
+            tiddler_id: true,
+            is_deleted: true,
+            attachment_hash: true,
+            fields: true,
+          },
+          where: {
+            is_deleted: false,
+            bag: { is_plugin: false }
+          },
+        }
+      }
+    });
+
+
+    if (!bagTiddlers.every(e => bagOrder.has(e.bag_id))) {
+      console.log(bagTiddlers.map(e => e.bag_id));
+      console.log(bagOrder);
+      throw new Error("Bags missing from bag order");
+    }
+    bagTiddlers.sort((a, b) => bagOrder.get(b.bag_id)! - bagOrder.get(a.bag_id)!);
+    // this determines which bag takes precedence
+    const recipeTiddlers = Array.from(new Map(bagTiddlers.flatMap(bag => bag.tiddlers.map(tiddler => [tiddler.title, { bag, tiddler }])
+    )).values());
 
     const
-      bagInfo: Record<string, string> = {},
-      revisionInfo: Record<string, string> = {};
+      bagInfo: Record<string, string> = {}, revisionInfo: Record<string, string> = {};
 
     for (const recipeTiddlerInfo of recipeTiddlers) {
       // var result = await this.getRecipeTiddler(recipeTiddlerInfo.title, recipe_name);
       // const { title, bag_id, tiddler_id } = recipeTiddlerInfo;
       // var result = await this.getBagTiddler({ title, bag_id });
-
       const { title, tiddler_id, attachment_hash, fields } = recipeTiddlerInfo.tiddler;
       const { bag_name } = recipeTiddlerInfo.bag;
 
@@ -328,25 +440,5 @@ export class TiddlerServer extends TiddlerStore {
       text: JSON.stringify(revisionInfo),
       type: "application/json"
     });
-    writeTiddler({
-      title: "$:/config/multiwikiclient/recipe",
-      text: recipe_name
-    });
-    // get the latest tiddler id in the database. It doesn't have to be filtered.
-    const lastTiddlerId = await this.prisma.tiddlers.aggregate({ _max: { tiddler_id: true } });
-    writeTiddler({
-      title: "$:/state/multiwikiclient/recipe/last_tiddler_id",
-      text: (lastTiddlerId._max.tiddler_id ?? 0).toString()
-    });
-
-    writeTiddler({
-      title: "$:/config/multiwikiclient/host",
-      text: "$protocol$//$host$" + this.state.config.pathPrefix + "/",
-    });
-
-    state.write(template.substring(markerPos + marker.length))
-    // Finish response
-    return state.end();
   }
-
 }

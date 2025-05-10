@@ -5,17 +5,18 @@ import { STREAM_ENDED } from "../streamer";
 
 export function DocsRoute(parent: rootRoute, config: SiteConfig) {
   const wikiRouter = new TWRouter(config);
+  console.log("The mws-docs tiddlywiki is being served at " + config.pathPrefix + "/mws-docs");
   parent.defineRoute({
     method: ["OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE"],
     bodyFormat: "stream",
-    path: /^\/mws(\/|$)/,
+    path: /^\/mwsp-docs(\/|$)/,
     pathParams: []
   }, async (state) => {
-    if (state.urlInfo.pathname === "/mws") throw state.redirect("/mws/");
+    if (state.urlInfo.pathname === "/mws-docs") throw state.redirect("/mws-docs/");
     // @ts-expect-error because streamer is private
     const { req, res } = state.streamer;
     // regardless, this has to end with a slash
-    if (req.url === "/mws") req.url = "/mws/";
+    if (req.url === "/mws-docs") req.url = "/mws-docs/";
     // options not required
     wikiRouter.twserver.requestHandler(req, res, {} as any);
     return new Promise((r, c) => res.on("finish", r).on("error", c));

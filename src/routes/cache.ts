@@ -1,5 +1,5 @@
 import { ok } from "assert";
-import { truthy, ZodAssert } from "../utils";
+import { dist_resolve, truthy, ZodAssert } from "../utils";
 import { Commander } from "../commander";
 import * as fs from "fs";
 import * as path from "path";
@@ -25,7 +25,7 @@ export async function startupCache(rootRoute: rootRoute, commander: Commander) {
 
   // we only need the client since we don't load plugins server-side
 
-  const hashes = await importTW5(path.join($tw.boot.corePath, ".."), commander.cachePath, "client", $tw);
+  const { tiddlerFiles, tiddlerHashes } = await importTW5(path.join($tw.boot.corePath, ".."), commander.cachePath, "client", $tw);
 
   rootRoute.defineRoute({
     method: ["GET", "HEAD"],
@@ -44,7 +44,7 @@ export async function startupCache(rootRoute: rootRoute, commander: Commander) {
 
   })
 
-  return { tiddlerFileCache, tiddlerMemoryCache, hashes };
+  return { tiddlerFileCache, tiddlerMemoryCache, tiddlerFiles, tiddlerHashes };
 }
 
 
@@ -67,7 +67,16 @@ async function importTW5(twFolder: string, cacheFolder: string, type: string, $t
       'languages'
     ].flatMap(readLevel),
     'core'
-  ].map(e => path.join(twFolder, e));
+  ].map(e => {
+    const oldPath = path.join(twFolder, e);
+    const relativePluginPath = path.normalize(path.relative(twFolder, oldPath));
+    return [oldPath, relativePluginPath] as const;
+  });
+
+  plugins.push([
+    dist_resolve("../plugins/client"),
+    "plugins/mws/client"
+  ] as const);
 
   // plugins.forEach(oldPath => {
   //   console.log(oldPath);
@@ -87,7 +96,7 @@ async function importTW5(twFolder: string, cacheFolder: string, type: string, $t
   //   src="https://example.com/example-framework.js"
   //   integrity="sha384-oqVuAfXRKap7fdgcCY5uykM6+R9GqQ8K/uxy9rx7HNQlGYl1kPzQho1wx4JwY8wC"
   //   crossorigin="anonymous"></script>
-  
+
   // this needs to be added to the tiddlywiki file before the script tags
   // $tw = Object.create(null);
   // $tw.preloadTiddlers = $tw.preloadTiddlers || [];
@@ -96,13 +105,14 @@ async function importTW5(twFolder: string, cacheFolder: string, type: string, $t
   // };
 
   const hashes: any = {};
+  const tiddlerFiles = new Map<string, string>();
+  const tiddlerHashes = new Map<string, string>();
 
-  plugins.forEach(oldPath => {
+  plugins.forEach(([oldPath, relativePluginPath]) => {
     const plugin = $tw.loadPluginFolder(oldPath);
-    const relativePluginPath = path.normalize(path.relative(twFolder, oldPath));
     const newPath = path.join(cacheFolder, relativePluginPath);
     fs.mkdirSync(newPath, { recursive: true });
-    if (plugin) {
+    if (plugin && plugin.title) {
       // need to compare sizes of various configurations
       plugin.text = JSON.stringify(JSON.parse(plugin.text as string));
       if (type === "server") {
@@ -113,7 +123,8 @@ async function importTW5(twFolder: string, cacheFolder: string, type: string, $t
         let js = Buffer.from(`$tw.preloadTiddler(${JSON.stringify(plugin)});`, "utf8");
         let hash = crypto.createHash("sha384").update(js).digest("base64");
         fs.writeFileSync(path.join(newPath, "plugin.js"), js);
-        hashes[relativePluginPath] = "sha384-" + hash;
+        tiddlerFiles.set(plugin.title, relativePluginPath);
+        tiddlerHashes.set(plugin.title, "sha384-" + hash);
       }
     } else {
       console.log("Info: No plugin found at", oldPath);
@@ -122,7 +133,7 @@ async function importTW5(twFolder: string, cacheFolder: string, type: string, $t
 
   fs.writeFileSync(path.join(cacheFolder, "hashes.json"), JSON.stringify(hashes, null, 2));
 
-  return hashes;
+  return { tiddlerFiles, tiddlerHashes };
 
 }
 

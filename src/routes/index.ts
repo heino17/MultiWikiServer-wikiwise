@@ -4,7 +4,7 @@ import { ZodAssert } from "../utils";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { ManagerRoutes } from "./managers";
 import { TiddlerRouter } from "./managers/router-tiddlers";
-import { DocsRoute } from "./tw-test";
+import { DocsRoute } from "./tw-routes";
 
 declare global {
   const ENABLE_UNSAFE_PRISMA_ROUTE: any;
