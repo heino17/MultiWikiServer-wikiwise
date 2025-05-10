@@ -118,7 +118,8 @@ class StartupCommander {
       contentTypeInfo: $tw.config.contentTypeInfo,
       storePath: this.storePath,
       pathPrefix: config.config?.pathPrefix ?? "",
-      saveLargeTextToFileSystem: undefined as never
+      saveLargeTextToFileSystem: undefined as never,
+      enablePluginCache: config.config?.enablePluginCache ?? false,
     };
 
     this.SessionManager = config.SessionManager || sessions.SessionManager;

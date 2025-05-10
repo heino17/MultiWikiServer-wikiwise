@@ -389,7 +389,6 @@ export class TiddlerServer extends TiddlerStore {
           },
           where: {
             is_deleted: false,
-            bag: { is_plugin: false }
           },
         }
       }

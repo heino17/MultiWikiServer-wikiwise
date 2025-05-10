@@ -12,6 +12,7 @@ import { dirname, resolve } from "node:path";
 declare global {
   type PrismaTxnClient = Omit<Commander["engine"], "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">
   type ART<T extends (...args: any) => any> = Awaited<ReturnType<T>>
+  type Complete<T> = { [K in keyof T]-?: T[K] }
   /** 
    * This primarily makes sure that positional arguments are used correctly
    * (so you can't switch a title and bag_name around).

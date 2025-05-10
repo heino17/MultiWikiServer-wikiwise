@@ -78,7 +78,7 @@ export interface MWSConfigConfig {
 }
 
 
-export interface SiteConfig extends MWSConfigConfig {
+export interface SiteConfig extends Complete<MWSConfigConfig> {
   wikiPath: string;
   attachmentSizeLimit: number;
   attachmentsEnabled: boolean;

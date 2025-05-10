@@ -9,23 +9,12 @@ import { TW } from "tiddlywiki";
 export async function startupCache(rootRoute: rootRoute, commander: Commander) {
   const $tw = commander.$tw;
 
-  const bootTiddlers = $tw.loadTiddlersFromPath($tw.boot.bootPath).flatMap(file => file.tiddlers);
-  const coreTiddler = $tw.loadPluginFolder($tw.boot.corePath);
-  ok(coreTiddler);
-
-  // map ( title -> content )
-  const tiddlerMemoryCache = new Map<string, string>([
-    ...bootTiddlers.map(e => e.title && [e.title, JSON.stringify(e)] as const).filter(truthy),
-    [coreTiddler.title as string, JSON.stringify(coreTiddler)] as const,
-  ]);
-
-  // map ( title -> hash )
-  // tiddler cache files are named [hash].json
-  const tiddlerFileCache = new Map<string, string>();
-
   // we only need the client since we don't load plugins server-side
+  console.log(commander.siteConfig.enablePluginCache);
 
-  const { tiddlerFiles, tiddlerHashes } = await importTW5(path.join($tw.boot.corePath, ".."), commander.cachePath, "client", $tw);
+  const { tiddlerFiles, tiddlerHashes } = commander.siteConfig.enablePluginCache
+    ? await importTW5(path.join($tw.boot.corePath, ".."), commander.cachePath, "client", $tw)
+    : { tiddlerFiles: new Map(), tiddlerHashes: new Map() };
 
   rootRoute.defineRoute({
     method: ["GET", "HEAD"],
@@ -44,7 +33,7 @@ export async function startupCache(rootRoute: rootRoute, commander: Commander) {
 
   })
 
-  return { tiddlerFileCache, tiddlerMemoryCache, tiddlerFiles, tiddlerHashes };
+  return { tiddlerFiles, tiddlerHashes };
 }
 
 
