@@ -3,7 +3,7 @@ import * as http2 from 'node:http2';
 import send from 'send';
 import { Readable } from 'stream';
 import { IncomingMessage, ServerResponse, IncomingHttpHeaders as NodeIncomingHeaders, OutgoingHttpHeaders } from 'node:http';
-import { is } from './utils';
+import { is, UserError } from './utils';
 import { createReadStream } from 'node:fs';
 import { Writable } from 'node:stream';
 
@@ -142,8 +142,14 @@ export class Streamer {
     if (error === STREAM_ENDED) return;
     const tag = this.urlInfo.href;
     console.error(tag, error);
-    if (!this.headersSent)
+    if (!this.headersSent) {
       this.sendEmpty(500, { "x-reason": "Internal Server Error (catcher)" });
+      // if (error instanceof UserError) {
+      //   this.sendString(400, { "x-reason": "Client Error (catcher)" }, error.message, "utf8")
+      // } else {
+        
+      // }
+    }
   }
 
   checkHeadersSentBy(setError: boolean) {

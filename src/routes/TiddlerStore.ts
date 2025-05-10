@@ -268,6 +268,7 @@ export class TiddlerStore {
   ) {
     const { title } = incomingTiddlerFields;
     const currentBag = await this.getRecipeBagWithTiddler({ recipe_name, title });
+
     const existing_attachment_hash = currentBag && await this.prisma.tiddlers.findFirst({
       where: { title, bag: { bag_name: currentBag.bag.bag_name } },
       select: { attachment_hash: true }
@@ -435,7 +436,7 @@ export class TiddlerStore {
         recipe_bags: {
           // we're saving to the top most bag
           where: { position: 0 },
-          select: { bag: { select: { bag_id: true, bag_name: true } } },
+          select: { bag: { select: { bag_id: true, bag_name: true, is_plugin: true } } },
         }
       }
     });
@@ -445,6 +446,9 @@ export class TiddlerStore {
     const bag_name = recipe.recipe_bags[0]?.bag.bag_name;
 
     if (!bag_name) throw new UserError("Recipe has no bag at position 0");
+
+    if (recipe.recipe_bags[0]?.bag.is_plugin)
+      throw new UserError("Saving to plugin bags is not currently supported. Please use a normal bag. This error occurs if a plugin bag is at the top of the recipe.\n")
 
     // Save the tiddler to the specified bag
     var { tiddler_id } = await this.saveBagTiddlerFields(tiddlerFields, bag_name, attachment_hash);

@@ -131,8 +131,8 @@ export class DataChecks {
           }
         }
       },
-      { bag_id: { equals: 0, not: 0 } } // dud to make sure that at least one condition exists
-    ] satisfies (Prisma.RecipesWhereInput | Prisma.BagsWhereInput | undefined | null | false | 0)[]
+      { owner_id: { equals: null, not: null } } // dud to make sure that at least one condition exists
+    ] satisfies ((Prisma.RecipesWhereInput & Prisma.BagsWhereInput) | undefined | null | false | 0)[]
     ).filter(truthy)
   }
 

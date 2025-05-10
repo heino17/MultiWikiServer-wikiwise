@@ -27,5 +27,5 @@ startServer({
   passwordMasterKeyFile: "./runtime-config/localpass.key",
   listeners,
   wikiPath: "./editions/mws",
-  config: { pathPrefix: "/dev", enablePluginCache: true }
+  config: { pathPrefix: "/dev", enablePluginCache: false }
 }).catch(console.log);

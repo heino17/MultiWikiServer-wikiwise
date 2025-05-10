@@ -81,8 +81,8 @@ export class RecipeManager {
       where: isAdmin ? undefined : {
         OR: [
           { recipe_bags: { every: { bag: { OR } } } },
-          { owner_id: { equals: user_id, not: null } }
-        ]
+          user_id && { owner_id: { equals: user_id, not: null } }
+        ].filter(e => e)
       }
     });
 

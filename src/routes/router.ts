@@ -435,8 +435,10 @@ export const registerZodRoutes = (root: rootRoute, router: any, keys: string[]) 
         if (error === STREAM_ENDED) {
           return error;
         } else if (typeof error === "string") {
+          console.log(error);
           return state.sendString(400, { "x-reason": "zod-handler" }, error, "utf8");
         } else if (error instanceof Error && error.name === "UserError") {
+          console.log(error.stack);
           return state.sendString(400, { "x-reason": "user-error" }, error.message, "utf8");
         } else {
           throw error;
