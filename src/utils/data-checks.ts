@@ -122,7 +122,7 @@ export class DataChecks {
 
     return ([
       // allow unowned for any user (conditional for anon reads)
-      (user_id || allowAnon) && { acl: { none: {} }, owner_id: null },
+      (user_id) && { acl: { none: {} }, owner_id: null },
       // allow owner for user 
       user_id && { owner_id: { equals: user_id, not: null } },
       // allow acl for user 
@@ -134,6 +134,7 @@ export class DataChecks {
           }
         }
       },
+      { bag_id: { equals: 0, not: 0 } } // dud to make sure that at least one condition exists
     ] satisfies (Prisma.RecipesWhereInput | Prisma.BagsWhereInput | undefined | null | false | 0)[]
     ).filter(truthy)
   }

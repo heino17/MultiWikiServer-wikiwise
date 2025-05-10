@@ -89,6 +89,8 @@ export class Router {
   private SessionManager: Commander["SessionManager"];
   public PasswordService: Commander["PasswordService"];
 
+  versions;
+
   fieldModules: Commander["$tw"]["Tiddler"]["fieldModules"];
   AttachmentService: Commander["AttachmentService"];
 
@@ -103,6 +105,7 @@ export class Router {
     this.PasswordService = commander.PasswordService;
     this.fieldModules = commander.$tw.Tiddler.fieldModules;
     this.AttachmentService = commander.AttachmentService;
+    this.versions = commander.versions;
   }
 
   handleIncomingRequest(

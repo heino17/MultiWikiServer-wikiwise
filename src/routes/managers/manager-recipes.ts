@@ -108,6 +108,7 @@ export class RecipeManager {
       isLoggedIn: state.user.isLoggedIn,
       allowAnonReads: state.config.allowAnonReads,
       allowAnonWrites: state.config.allowAnonWrites,
+      versions: state.router.versions,
     }
   });
 

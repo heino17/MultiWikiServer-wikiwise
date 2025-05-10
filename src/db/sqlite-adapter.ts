@@ -14,7 +14,6 @@ export class SqliteAdapter {
   adapter!: SqlMigrationAwareDriverAdapterFactory;
   async init() {
     const libsql = await this.adapter.connect();
-    // await libsql.executeRaw({ sql: "PRAGMA journal_mode=WAL;", args: [], argTypes: [] });
 
     if (process.env.RUN_OLD_MWS_DB_SETUP_FOR_TESTING) {
       await libsql.executeScript(await readFile(dist_resolve(
@@ -29,7 +28,6 @@ export class SqliteAdapter {
     }).then(e => e?.rows as [string][] | undefined);
 
     const hasExisting = !!tables?.length;
-
 
     const hasMigrationsTable = !!tables?.length && !!tables?.some((e) => e[0] === "_prisma_migrations");
     if (!hasMigrationsTable) await this.createMigrationsTable(libsql);

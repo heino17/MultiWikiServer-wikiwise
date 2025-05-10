@@ -83,7 +83,6 @@ export class StateObject<
     this.config = router.siteConfig;
     this.PasswordService = router.PasswordService;
 
-
     this.readMultipartData = readMultipartData.bind(this);
     this.sendResponse = sendResponse.bind(undefined, this.config, this);
 

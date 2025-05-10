@@ -196,13 +196,21 @@ export function PageRoot() {
           anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
         >
           <MenuItem onClick={handleClickProfile}>
-            <ListItemIcon ><Avatar sx={{ width: 24, height: 24 }} /></ListItemIcon>Profile
+            <ListItemIcon ><Avatar sx={{ width: 24, height: 24 }} /></ListItemIcon>
+            {indexJson.username}
           </MenuItem>
-          <MenuItem onClick={handleClose}>
+          {/* <MenuItem onClick={handleClose}>
             <ListItemIcon><Settings fontSize="small" /></ListItemIcon>Settings
-          </MenuItem>
+          </MenuItem> */}
           <MenuItem onClick={handleLogout}>
             <ListItemIcon><Logout fontSize="small" /></ListItemIcon>Logout
+          </MenuItem>
+          <Divider/>
+          <MenuItem disabled>
+            TW5: {indexJson.versions.tiddlywiki}
+          </MenuItem>
+          <MenuItem disabled>
+            MWS: {indexJson.versions.mws}
           </MenuItem>
         </Menu>
       </> : <Button color="inherit" onClick={() => {

@@ -16,6 +16,13 @@ import * as commander from "commander";
 import { commands, listen as listen_command, divider } from "./commands";
 import { ok } from "node:assert";
 import { SqliteAdapter } from "./db/sqlite-adapter";
+
+
+import pkg from "../package.json";
+
+
+
+
 export interface $TW {
   utils: any;
   wiki: any;
@@ -73,6 +80,7 @@ export interface CommandInfo {
 // move the startup logic into a separate class
 class StartupCommander {
   fieldModules;
+  versions;
   constructor(
     public config: MWSConfig,
     public $tw: TW,
@@ -127,6 +135,11 @@ class StartupCommander {
 
     this.adapter = new SqliteAdapter(this.databasePath);
     this.engine = new PrismaClient({ log: ["info", "warn"], adapter: this.adapter.adapter, });
+
+    this.versions = {
+      tiddlywiki: $tw.packageInfo.version,
+      mws: pkg.version,
+    }
 
   }
 
