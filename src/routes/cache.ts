@@ -10,7 +10,7 @@ export async function startupCache(rootRoute: rootRoute, commander: Commander) {
   const $tw = commander.$tw;
 
   // we only need the client since we don't load plugins server-side
-  console.log(commander.siteConfig.enablePluginCache);
+  // console.log(commander.siteConfig.enablePluginCache);
 
   const { tiddlerFiles, tiddlerHashes } = commander.siteConfig.enablePluginCache
     ? await importTW5(path.join($tw.boot.corePath, ".."), commander.cachePath, "client", $tw)

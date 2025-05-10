@@ -65,6 +65,7 @@ export class StateObject<
   private engine: Commander["engine"];
   public config: SiteConfig;
   public PasswordService: PasswordService;
+  get pathPrefix() { return this.config.pathPrefix; }
 
   constructor(
     streamer: Streamer,
@@ -81,7 +82,7 @@ export class StateObject<
     this.engine = router.engine;
     this.config = router.siteConfig;
     this.PasswordService = router.PasswordService;
-    
+
 
     this.readMultipartData = readMultipartData.bind(this);
     this.sendResponse = sendResponse.bind(undefined, this.config, this);
@@ -106,7 +107,7 @@ export class StateObject<
 
 
   }
-  
+
   okUser() {
     if (!this.user.isLoggedIn) throw "User not authenticated";
   }
