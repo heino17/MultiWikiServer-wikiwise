@@ -5,7 +5,7 @@ import { createReadStream, createWriteStream, fstat, readFileSync } from "fs";
 import sjcl from "sjcl";
 import { createHash } from "crypto";
 import { TiddlerFields } from "../services/attachments";
-import { UserError } from "../utils";
+import { truthy, UserError } from "../utils";
 
 
 export class TiddlerServer extends TiddlerStore {
@@ -222,26 +222,35 @@ export class TiddlerServer extends TiddlerStore {
       return state.sendEmpty(404);
     }
 
-    // const bagTiddlers = await this.getRecipeTiddlersByBag(recipe_name);
-    const bags = await this.prisma.recipe_bags.findMany({
-      where: { recipe: { recipe_name } },
-      select: {
-        position: true,
-        bag: {
+    const recipe = await this.prisma.recipes.findUnique({
+      where: { recipe_name },
+      include: {
+        recipe_bags: {
           select: {
-            bag_id: true,
-            bag_name: true,
-            is_plugin: true,
-          }
+            position: true,
+            bag: {
+              select: {
+                bag_id: true,
+                bag_name: true,
+                is_plugin: true,
+              }
+            }
+          },
         }
-      },
+      }
     });
 
+    // Check request is valid
+    if (!recipe) {
+      return state.sendEmpty(404);
+    }
 
+    const plugin_names = Array.isArray(recipe.plugin_names) ? recipe.plugin_names : [];
+    console.log(plugin_names);
 
     const lastTiddlerId = await this.prisma.tiddlers.aggregate({
       _max: { revision_id: true },
-      where: { bag_id: { in: bags.map(e => e.bag.bag_id) } }
+      where: { bag_id: { in: recipe.recipe_bags.map(e => e.bag.bag_id) } }
     });
 
     const template = readFileSync(resolve(this.state.config.wikiPath, "tiddlywiki5.html"), "utf8");
@@ -251,7 +260,9 @@ export class TiddlerServer extends TiddlerStore {
     // the rendered template
     hash.update(template);
     // the bag names
-    hash.update(bags.map(e => e.bag.bag_name).join(","));
+    hash.update(recipe.recipe_bags.map(e => e.bag.bag_name).join(","));
+    // the plugin names
+    hash.update(plugin_names.join(","));
     // the latest tiddler id in those bags
     hash.update(`${lastTiddlerId._max.revision_id}`);
     const contentDigest = hash.digest("hex");
@@ -304,6 +315,14 @@ export class TiddlerServer extends TiddlerStore {
     state.write(template.substring(0, markerPos));
     if (state.config.enableExternalPlugins) {
 
+      const { cacheFolder, pluginFiles, filePlugins } = state.tiddlerCache;
+
+      const plugin_names = Array.isArray(recipe.plugin_names) ? recipe.plugin_names : [];
+
+      const plugins1 = plugin_names.map(e => filePlugins.get(e as any)).filter(truthy);
+
+      console.log(plugins1);
+
       const preloadMarkup = `
         ${"<"}script>
         window.$tw = window.$tw || Object.create(null);
@@ -328,12 +347,12 @@ export class TiddlerServer extends TiddlerStore {
         "$:/plugins/tiddlywiki/tiddlyweb",
         "$:/themes/tiddlywiki/snowwhite",
         "$:/themes/tiddlywiki/vanilla",
-        ...bags.map(e => e.bag.bag_name)
+        ...plugins1,
       ]).values()]
-        .filter(e => state.tiddlerCache.tiddlerFiles.has(e))
+        .filter(e => state.tiddlerCache.pluginFiles.has(e))
         .map(e => pluginMarkup(
-          state.tiddlerCache.tiddlerFiles.get(e)!,
-          state.tiddlerCache.tiddlerHashes.get(e)!
+          state.tiddlerCache.pluginFiles.get(e)!,
+          state.tiddlerCache.pluginHashes.get(e)!
         ))
       state.write(plugins.join("\n"));
       state.write(marker);
@@ -342,7 +361,13 @@ export class TiddlerServer extends TiddlerStore {
 
       state.write(marker);
 
-      const { cacheFolder, tiddlerFiles } = state.tiddlerCache;
+      const { cacheFolder, pluginFiles, filePlugins } = state.tiddlerCache;
+
+      const plugin_names = Array.isArray(recipe.plugin_names) ? recipe.plugin_names : [];
+
+      const plugins1 = plugin_names.map(e => filePlugins.get(e as any)).filter(truthy);
+
+      console.log(plugins1);
 
       const plugins = [...new Set([
         "$:/core",
@@ -350,10 +375,10 @@ export class TiddlerServer extends TiddlerStore {
         "$:/plugins/tiddlywiki/tiddlyweb",
         "$:/themes/tiddlywiki/snowwhite",
         "$:/themes/tiddlywiki/vanilla",
-        ...bags.map(e => e.bag.bag_name)
+        ...plugins1
       ]).values()]
-        .filter(e => tiddlerFiles.has(e))
-        .map(e => tiddlerFiles.get(e)!);
+        .filter(e => pluginFiles.has(e))
+        .map(e => pluginFiles.get(e)!);
 
       const fileStreams = plugins.map(plugin =>
         createReadStream(join(cacheFolder, plugin, "plugin.json"))
@@ -369,8 +394,8 @@ export class TiddlerServer extends TiddlerStore {
 
 
 
-    const bagOrder = new Map(bags.map(e => [e.bag.bag_id, e.position]));
-    const bagIDs = bags.filter(e => !state.tiddlerCache.tiddlerFiles.has(e.bag.bag_name)).map(e => e.bag.bag_id)
+    const bagOrder = new Map(recipe.recipe_bags.map(e => [e.bag.bag_id, e.position]));
+    const bagIDs = recipe.recipe_bags.filter(e => !state.tiddlerCache.pluginFiles.has(e.bag.bag_name)).map(e => e.bag.bag_id)
     await this.serveStoreTiddlers(bagIDs, bagOrder, writeTiddler);
 
     writeTiddler({

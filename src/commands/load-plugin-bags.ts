@@ -28,13 +28,14 @@ export class Command {
 
 	}
 	async execute() {
-		console.time(`${info.name} complete`);
-		await loadPluginBags(
-			this.$tw,
-			TiddlerStore.fromCommander(this.commander, this.commander.engine),
-			this.commander.engine
-		);
-		console.timeEnd(`${info.name} complete`);
+		console.log("load-plugin-bags is no longer used.")
+		// console.time(`${info.name} complete`);
+		// await loadPluginBags(
+		// 	this.$tw,
+		// 	TiddlerStore.fromCommander(this.commander, this.commander.engine),
+		// 	this.commander.engine
+		// );
+		// console.timeEnd(`${info.name} complete`);
 	}
 }
 

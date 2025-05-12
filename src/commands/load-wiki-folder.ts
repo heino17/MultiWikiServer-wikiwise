@@ -15,6 +15,10 @@ import { Commander, CommandInfo } from "../commander";
 import { TiddlerStore } from "../routes/TiddlerStore";
 import { TiddlerFields } from "../services/attachments";
 import { Prisma, PrismaClient } from "@prisma/client";
+import * as path from "path";
+import * as fs from "fs";
+import { TW } from "tiddlywiki";
+import { truthy } from "../utils";
 
 export const info: CommandInfo = {
 	name: "load-wiki-folder",
@@ -59,10 +63,6 @@ export class Command {
 }
 
 
-// Function to convert a plugin name to a bag name
-function makePluginBagName(type: string, publisher: string | undefined, name: string) {
-	return "$:/" + type + "/" + (publisher ? publisher + "/" : "") + name;
-}
 
 // Copy TiddlyWiki core editions
 function loadWikiFolder({ $tw, store, ...options }: {
@@ -72,47 +72,20 @@ function loadWikiFolder({ $tw, store, ...options }: {
 	recipeName: PrismaField<"Recipes", "recipe_name">,
 	recipeDescription: PrismaField<"Recipes", "description">,
 	store: TiddlerStore,
-	$tw: any
+	$tw: TW
 }) {
-	const path = require("path"),
-		fs = require("fs");
-	// Read the tiddlywiki.info file
-	const wikiInfoPath = path.resolve(options.wikiPath, $tw.config.wikiInfo);
-	let wikiInfo;
-	if (fs.existsSync(wikiInfoPath)) {
-		wikiInfo = $tw.utils.parseJSONSafe(fs.readFileSync(wikiInfoPath, "utf8"), function () { return null; });
-	}
-	if (!wikiInfo) return [];
+	const pluginNamesTW5: string[] = [];
+	const tiddlersFromPath = loadWikiTiddlers($tw, options.wikiPath, [], pluginNamesTW5);
 	// Add plugins to the recipe list
 	const recipeList = [];
-	const processPlugins = function (type: string, plugins: string[]) {
-		$tw.utils.each(plugins, function (pluginName: string) {
-			const parts = pluginName.split("/");
-			let publisher, name;
-			if (parts.length === 2) {
-				publisher = parts[0];
-				name = parts[1];
-			} else {
-				name = parts[0];
-			}
-			recipeList.push({ bag_name: makePluginBagName(type, publisher, name as string), with_acl: false });
-		});
-	};
-	processPlugins("plugins", wikiInfo.plugins);
-	processPlugins("themes", wikiInfo.themes);
-	processPlugins("languages", wikiInfo.languages);
 	// Create the recipe
 	recipeList.push({
 		bag_name: options.bagName,
 		with_acl: true as PrismaField<"Recipe_bags", "with_acl">,
 	});
-	recipeList.reverse()
+	recipeList.reverse();
 
-
-	const tiddler_files_path = path.resolve(options.wikiPath, $tw.config.wikiTiddlersSubDir)
-	const tiddlersFromPath: TiddlerInfo[] = $tw.loadTiddlersFromPath(
-		resolve($tw.boot.corePath, $tw.config.editionsPath, tiddler_files_path)
-	);
+	console.log(pluginNamesTW5);
 
 	const is_plugin = false as PrismaField<"Bags", "is_plugin">;
 	return [
@@ -123,10 +96,91 @@ function loadWikiFolder({ $tw, store, ...options }: {
 			options.recipeName,
 			options.recipeDescription,
 			recipeList,
+			[...new Set(pluginNamesTW5).values()] //dedupe
 		),
 		// save the tiddlers (this will skip attachments)
 		...store.saveTiddlersFromPath_PrismaArray(tiddlersFromPath, options.bagName)
 	];
 
 }
-interface TiddlerInfo { tiddlers: TiddlerFields[], filepath: string, type: string, hasMetaFile: boolean }
+
+function loadWikiTiddlers($tw: TW, wikiPath: string, parentPaths: string[], pluginNamesTW5: string[]) {
+	// Read the tiddlywiki.info file
+	const wikiInfoPath = path.resolve(wikiPath, $tw.config.wikiInfo);
+	let wikiInfo: any;
+	if (fs.existsSync(wikiInfoPath)) {
+		wikiInfo = $tw.utils.parseJSONSafe(fs.readFileSync(wikiInfoPath, "utf8"), function () { return null; });
+	}
+	if (!wikiInfo) return [];
+
+	const tiddlersFromPath: { tiddlers: TiddlerFields[] }[] = [];
+
+	if (wikiInfo.includeWikis) {
+		parentPaths = parentPaths.slice(0);
+		parentPaths.push(wikiPath);
+		$tw.utils.each(wikiInfo.includeWikis, function (info) {
+			if (typeof info === "string") {
+				info = { path: info };
+			}
+			var resolvedIncludedWikiPath = path.resolve(wikiPath, info.path);
+			if (parentPaths.indexOf(resolvedIncludedWikiPath) === -1) {
+				tiddlersFromPath.push(...loadWikiTiddlers($tw, resolvedIncludedWikiPath, parentPaths, pluginNamesTW5));
+			} else {
+				$tw.utils.error("Cannot recursively include wiki " + resolvedIncludedWikiPath);
+			}
+		});
+	}
+
+
+	const twFolder = path.join($tw.boot.corePath, "..");
+	const extraPlugins: string[] = [];
+
+	const loadPlugins = (plugins: string[], libraryPath: any, envVar: any) => {
+		$tw.utils.each(plugins, function (pluginName: string) {
+			const pluginPaths = $tw.getLibraryItemSearchPaths(libraryPath, envVar);
+			const pluginPath = $tw.findLibraryItem(pluginName, pluginPaths);
+			if (!pluginPath) return;
+			const relPath = path.relative(twFolder, pluginPath);
+			if (relPath.startsWith("..")) extraPlugins.push(pluginPath);
+			else pluginNamesTW5.push(relPath);
+		});
+	}
+
+	loadPlugins(wikiInfo.plugins, $tw.config.pluginsPath, $tw.config.pluginsEnvVar);
+	loadPlugins(wikiInfo.themes, $tw.config.themesPath, $tw.config.themesEnvVar);
+	loadPlugins(wikiInfo.languages, $tw.config.languagesPath, $tw.config.languagesEnvVar);
+
+	const tiddler_files_path = path.resolve(wikiPath, $tw.config.wikiTiddlersSubDir);
+
+	tiddlersFromPath.push(...$tw.loadTiddlersFromPath(resolve(tiddler_files_path)) as any);
+
+	const loadWikiPlugins = (wikiPluginsPath: string) => {
+		if (fs.existsSync(wikiPluginsPath)) {
+			var pluginFolders = fs.readdirSync(wikiPluginsPath);
+			for (var t = 0; t < pluginFolders.length; t++) {
+				extraPlugins.push(path.resolve(wikiPluginsPath, "./" + pluginFolders[t]));
+			}
+		}
+	}
+
+	loadWikiPlugins(path.resolve(wikiPath, $tw.config.wikiPluginsSubDir));
+	loadWikiPlugins(path.resolve(wikiPath, $tw.config.wikiThemesSubDir));
+	loadWikiPlugins(path.resolve(wikiPath, $tw.config.wikiLanguagesSubDir));
+
+	extraPlugins.forEach((e) => {
+		const plugin = $tw.loadPluginFolder(e);
+		if (!plugin) {
+			console.log(`No plugin found at ${e}`);
+		} else if (!plugin.title) {
+			console.log(`Found a valid plugin at ${e} but it doesn't have a title.`);
+		} else {
+			console.log(`Loading plugin ${e} into bag since it isn't a TiddlyWiki plugin`);
+			tiddlersFromPath.push({ tiddlers: [plugin as TiddlerFields] });
+		}
+		return undefined;
+	});
+
+	return tiddlersFromPath;
+
+}
+

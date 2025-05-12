@@ -103,9 +103,10 @@ export class TiddlerStore {
     recipe_name: PrismaField<"Recipes", "recipe_name">,
     description: PrismaField<"Recipes", "description">,
     bags: { bag_name: PrismaField<"Bags", "bag_name">, with_acl: PrismaField<"Recipe_bags", "with_acl"> }[],
+    plugins: string[],
     { allowPrivilegedCharacters = false }: { allowPrivilegedCharacters?: boolean; } = {}
   ) {
-    const [recipe_, recipe_bags_] = this.upsertRecipe_PrismaArray(recipe_name, description, bags, { allowPrivilegedCharacters });
+    const [recipe_, recipe_bags_] = this.upsertRecipe_PrismaArray(recipe_name, description, bags, plugins, { allowPrivilegedCharacters });
     const recipe = await recipe_;
     await recipe_bags_;
     return recipe;
@@ -114,6 +115,7 @@ export class TiddlerStore {
     recipe_name: PrismaField<"Recipes", "recipe_name">,
     description: PrismaField<"Recipes", "description">,
     bags: { bag_name: PrismaField<"Bags", "bag_name">, with_acl: PrismaField<"Recipe_bags", "with_acl"> }[],
+    plugin_names: string[],
     { allowPrivilegedCharacters = false }: { allowPrivilegedCharacters?: boolean; } = {}
   ) {
 
@@ -124,8 +126,8 @@ export class TiddlerStore {
     return [
       this.prisma.recipes.upsert({
         where: { recipe_name },
-        update: { description, recipe_bags: { deleteMany: {} } },
-        create: { recipe_name, description },
+        update: { description, recipe_bags: { deleteMany: {} }, plugin_names },
+        create: { recipe_name, description, plugin_names },
         select: { recipe_id: true }
       }),
       this.prisma.recipes.update({

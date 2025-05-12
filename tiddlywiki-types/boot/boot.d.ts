@@ -29,9 +29,10 @@ declare module "tiddlywiki" {
     loadTiddlersFromPath(filepath: string, excludeRegExp?: RegExp): FileInfoTiddlers[];
     loadTiddlersFromSpecification(filepath: string, excludeRegExp?: RegExp): FileInfoTiddlers[];
     loadPluginFolder(filepath: string, excludeRegExp?: RegExp): TiddlerFields | null;
+    loadPlugins(plugins: string[], libraryPath: string, envVar?: string): void;
+    loadPlugin(name: string, paths: string[]): void;
     findLibraryItem(name: string, paths: string[]): string | null;
     getLibraryItemSearchPaths(libraryPath: string, envVar?: string): string[];
-    loadPlugins(plugins: string[], libraryPath: string, envVar?: string): void;
     loadWikiTiddlers(wikiPath: string, options?: WikiLoadOptions): any;
     loadTiddlersNode(): void;
     loadTiddlersBrowser(): void;

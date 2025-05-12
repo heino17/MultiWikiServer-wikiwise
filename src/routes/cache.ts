@@ -13,9 +13,10 @@ export async function startupCache(rootRoute: rootRoute, commander: Commander) {
   const $tw = commander.$tw;
 
   // we only need the client since we don't load plugins server-side
-  // console.log(commander.siteConfig.enablePluginCache);
+  const { tiddlerFiles: pluginFiles, tiddlerHashes: pluginHashes } =
+    await importTW5(path.join($tw.boot.corePath, ".."), commander.cachePath, "client", $tw);
 
-  const { tiddlerFiles, tiddlerHashes } = await importTW5(path.join($tw.boot.corePath, ".."), commander.cachePath, "client", $tw);
+  const filePlugins = new Map([...pluginFiles.entries()].map(e => e.reverse() as [string, string]));
 
   rootRoute.defineRoute({
     method: ["GET", "HEAD"],
@@ -36,7 +37,7 @@ export async function startupCache(rootRoute: rootRoute, commander: Commander) {
 
   })
 
-  return { tiddlerFiles, tiddlerHashes, cacheFolder: commander.cachePath, prefix, suffix };
+  return { pluginFiles, pluginHashes, filePlugins, cacheFolder: commander.cachePath, prefix, suffix };
 }
 
 

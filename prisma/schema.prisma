@@ -17,12 +17,14 @@ enum Permission {
 }
 
 model Recipes {
-  recipe_id   String        @id @default(uuid(7))
-  recipe_name String        @unique
-  description String
-  owner_id    String?
-  recipe_bags Recipe_bags[]
-  acl         RecipeAcl[]
+  recipe_id         String        @id @default(uuid(7))
+  recipe_name       String        @unique
+  description       String
+  owner_id          String?
+  plugin_names      Json?
+  skip_core_plugins Boolean?
+  recipe_bags       Recipe_bags[]
+  acl               RecipeAcl[]
 
   @@map("recipes")
 }
