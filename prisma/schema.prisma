@@ -81,7 +81,7 @@ model BagAcl {
 }
 
 model Tiddlers {
-  tiddler_id      Int      @id @default(autoincrement())
+  revision_id      Int      @id @default(autoincrement())
   bag_id          Int
   title           String
   is_deleted      Boolean
@@ -96,14 +96,14 @@ model Tiddlers {
 }
 
 model Fields {
-  tiddler_id  Int
+  revision_id  Int
   field_name  String
   field_value String
   // Deleting a referenced record (tiddler) will trigger the deletion of referencing record (field).
-  tiddler     Tiddlers @relation(fields: [tiddler_id], references: [tiddler_id], onDelete: Cascade)
+  tiddler     Tiddlers @relation(fields: [revision_id], references: [revision_id], onDelete: Cascade)
 
-  @@id([tiddler_id, field_name])
-  @@index([tiddler_id])
+  @@id([revision_id, field_name])
+  @@index([revision_id])
   @@map("fields")
 }
 

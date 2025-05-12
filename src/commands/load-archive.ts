@@ -157,13 +157,13 @@ class Archiver1 extends Archiver {
 				title: tiddler.title,
 				is_deleted: tiddler.is_deleted,
 				attachment_hash: tiddler.attachment_hash,
-				tiddler_id: tiddler.tiddler_id,
+				revision_id: tiddler.revision_id,
 			}))
 		});
 		await prisma.fields.createMany({
-			data: tiddlers.flatMap(({ tiddler_id, fields }) => Object.entries(fields)
+			data: tiddlers.flatMap(({ revision_id, fields }) => Object.entries(fields)
 				.map(([field_name, field_value]): Prisma.FieldsCreateManyInput =>
-					({ tiddler_id, field_name, field_value, })
+					({ revision_id, field_name, field_value, })
 				)
 			)
 		});
@@ -271,13 +271,13 @@ class Archiver2 extends Archiver {
 				title: tiddler.title,
 				is_deleted: tiddler.is_deleted,
 				attachment_hash: tiddler.attachment_hash,
-				tiddler_id: tiddler.tiddler_id,
+				revision_id: tiddler.revision_id,
 			}))
 		});
 		await prisma.fields.createMany({
-			data: tiddlers.flatMap(({ tiddler_id, fields }) => Object.entries(fields)
+			data: tiddlers.flatMap(({ revision_id, fields }) => Object.entries(fields)
 				.map(([field_name, field_value]): Prisma.FieldsCreateManyInput =>
-					({ tiddler_id, field_name, field_value, })
+					({ revision_id, field_name, field_value, })
 				)
 			)
 		});

@@ -23,7 +23,7 @@ export class TiddlerServer extends TiddlerStore {
     );
   }
 
-  private toTiddlyWebJson(info: { bag_name: string; tiddler_id: number; tiddler: TiddlerFields }) {
+  private toTiddlyWebJson(info: { bag_name: string; revision_id: number; tiddler: TiddlerFields }) {
     const output: any = { fields: {} };
     const knownFields = [
       "bag", "created", "creator", "modified", "modifier", "permissions", "recipe", "revision", "tags", "text", "title", "type", "uri"
@@ -38,7 +38,7 @@ export class TiddlerServer extends TiddlerStore {
     });
     output.type = info.tiddler.type || "text/vnd.tiddlywiki";
 
-    output.revision = `${info.tiddler_id}`;
+    output.revision = `${info.revision_id}`;
     output.bag = info.bag_name;
     return output;
   }
@@ -71,7 +71,7 @@ export class TiddlerServer extends TiddlerStore {
       return state.sendResponse(200, {
         "Etag": state.makeTiddlerEtag(tiddlerInfo),
         "Content-Type": "application/json",
-        "X-Revision-Number": tiddlerInfo.tiddler_id,
+        "X-Revision-Number": tiddlerInfo.revision_id,
         "X-Bag-Name": tiddlerInfo.bag_name,
       }, JSON.stringify(tiddlerInfo.tiddler), "utf8");
 
@@ -191,7 +191,7 @@ export class TiddlerServer extends TiddlerStore {
     return Array.from(new Map(bagTiddlers.flatMap(bag =>
       bag.tiddlers.map(tiddler => [tiddler.title, {
         title: tiddler.title,
-        tiddler_id: tiddler.tiddler_id,
+        revision_id: tiddler.revision_id,
         is_deleted: tiddler.is_deleted,
         is_plugin: false,
         bag_name: bag.bag_name,
@@ -199,17 +199,17 @@ export class TiddlerServer extends TiddlerStore {
       }])
     )).values());
 
-    //   SELECT title, tiddler_id, is_deleted, bag_name
+    //   SELECT title, revision_id, is_deleted, bag_name
     //   FROM (
-    //     SELECT t.title, t.tiddler_id, t.is_deleted, b.bag_name, MAX(rb.position) AS position
+    //     SELECT t.title, t.revision_id, t.is_deleted, b.bag_name, MAX(rb.position) AS position
     //     FROM bags AS b
     //     INNER JOIN recipe_bags AS rb ON b.bag_id = rb.bag_id
     //     INNER JOIN tiddlers AS t ON b.bag_id = t.bag_id
     //     WHERE rb.recipe_id = $recipe_id
     //     ${options.include_deleted ? "" : "AND t.is_deleted = FALSE"}
-    //     ${options.last_known_tiddler_id ? "AND tiddler_id > $last_known_tiddler_id" : ""}
+    //     ${options.last_known_revision_id ? "AND revision_id > $last_known_revision_id" : ""}
     //     GROUP BY t.title
-    //     ORDER BY t.title, tiddler_id DESC
+    //     ORDER BY t.title, revision_id DESC
     //     ${options.limit ? "LIMIT $limit" : ""}
     //   )
 
@@ -240,7 +240,7 @@ export class TiddlerServer extends TiddlerStore {
 
 
     const lastTiddlerId = await this.prisma.tiddlers.aggregate({
-      _max: { tiddler_id: true },
+      _max: { revision_id: true },
       where: { bag_id: { in: bags.map(e => e.bag.bag_id) } }
     });
 
@@ -253,7 +253,7 @@ export class TiddlerServer extends TiddlerStore {
     // the bag names
     hash.update(bags.map(e => e.bag.bag_name).join(","));
     // the latest tiddler id in those bags
-    hash.update(`${lastTiddlerId._max.tiddler_id}`);
+    hash.update(`${lastTiddlerId._max.revision_id}`);
     const contentDigest = hash.digest("hex");
 
     if ('"' + contentDigest + '"' === state.headers["if-none-match"])
@@ -350,8 +350,8 @@ export class TiddlerServer extends TiddlerStore {
     // get the latest tiddler id in the database. It doesn't have to be filtered.
 
     writeTiddler({
-      title: "$:/state/multiwikiclient/recipe/last_tiddler_id",
-      text: (lastTiddlerId._max.tiddler_id ?? 0).toString()
+      title: "$:/state/multiwikiclient/recipe/last_revision_id",
+      text: (lastTiddlerId._max.revision_id ?? 0).toString()
     });
 
     writeTiddler({
@@ -382,7 +382,7 @@ export class TiddlerServer extends TiddlerStore {
         tiddlers: {
           select: {
             title: true,
-            tiddler_id: true,
+            revision_id: true,
             is_deleted: true,
             attachment_hash: true,
             fields: true,
@@ -410,9 +410,9 @@ export class TiddlerServer extends TiddlerStore {
 
     for (const recipeTiddlerInfo of recipeTiddlers) {
       // var result = await this.getRecipeTiddler(recipeTiddlerInfo.title, recipe_name);
-      // const { title, bag_id, tiddler_id } = recipeTiddlerInfo;
+      // const { title, bag_id, revision_id } = recipeTiddlerInfo;
       // var result = await this.getBagTiddler({ title, bag_id });
-      const { title, tiddler_id, attachment_hash, fields } = recipeTiddlerInfo.tiddler;
+      const { title, revision_id, attachment_hash, fields } = recipeTiddlerInfo.tiddler;
       const { bag_name } = recipeTiddlerInfo.bag;
 
       const tiddler = Object.fromEntries([
@@ -421,11 +421,11 @@ export class TiddlerServer extends TiddlerStore {
       ]) as TiddlerFields;
 
       const tiddler2 = this.attachService.processOutgoingTiddler({
-        tiddler, tiddler_id, attachment_hash, bag_name
+        tiddler, revision_id, attachment_hash, bag_name
       });
 
       bagInfo[title] = bag_name;
-      revisionInfo[title] = tiddler_id.toString();
+      revisionInfo[title] = revision_id.toString();
       writeTiddler(tiddler2);
     }
 

@@ -92,8 +92,8 @@ export class Command {
 			const bagFile = `bags/${uriC(bagInfo.bag_name)}/meta.json`;
 			await fsp.writeFile(resolve(this.archivePath, bagFile), JSON.stringify({ ...bagInfo, tiddlers: undefined, }, null, "\t"));
 			for (const tiddler of bagInfo.tiddlers) {
-				// console.log(bagInfo.bag_name, tiddler.title, tiddler.tiddler_id);
-				const tiddlerFile = `bags/${uriC(bagInfo.bag_name)}/tiddlers/${tiddler.tiddler_id}.json`;
+				// console.log(bagInfo.bag_name, tiddler.title, tiddler.revision_id);
+				const tiddlerFile = `bags/${uriC(bagInfo.bag_name)}/tiddlers/${tiddler.revision_id}.json`;
 				await fsp.writeFile(resolve(this.archivePath, tiddlerFile), JSON.stringify(tiddler, null, "\t"));
 			}
 		}));
