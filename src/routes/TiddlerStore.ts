@@ -652,7 +652,7 @@ export class TiddlerStore {
     options: {
       // how do you limit a list of unique titles?
       // limit?: number, 
-      last_known_revision_id?: number,
+      last_known_revision_id?: PrismaField<"Tiddlers", "revision_id">,
       include_deleted?: boolean,
     } = {}
   ) {

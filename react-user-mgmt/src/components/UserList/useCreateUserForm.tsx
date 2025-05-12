@@ -47,7 +47,7 @@ export const useCreateUserForm = createDialogForm({
       nonNullable: true,
       validators: [forms.Validators.required, forms.Validators.email],
     }),
-    role_ids: new forms.FormControl<number[]>([], {
+    role_ids: new forms.FormControl<string[]>([], {
       nonNullable: true,
     }),
     password: new forms.FormControl<string>("", {

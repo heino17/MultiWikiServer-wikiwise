@@ -81,19 +81,19 @@ export class SessionManager {
     const sessionId = streamer.cookies.getAll("session") as PrismaField<"Sessions", "session_id">[];
     const session = sessionId && await router.engine.sessions.findFirst({
       where: { session_id: { in: sessionId } },
-      select: { session_id: true, user: { select: { user_id: true, username: true, roles: { select: { role_id: true } } } } }
+      select: { session_id: true, user: { select: { user_id: true, username: true, roles: { select: { role_id: true, role_name: true } } } } }
     });
 
     if (sessionId && session) return {
       user_id: session.user.user_id,
       username: session.user.username,
-      isAdmin: session.user.roles.some(e => e.role_id === 1),
+      isAdmin: session.user.roles.some(e => e.role_name === "ADMIN"),
       role_ids: session.user.roles.map(e => e.role_id),
       sessionId: session.session_id,
       isLoggedIn: true,
     };
     else return {
-      user_id: 0 as PrismaField<"Users", "user_id">,
+      user_id: "" as PrismaField<"Users", "user_id">,
       username: "(anon)" as PrismaField<"Users", "username">,
       isAdmin: false,
       role_ids: [] as PrismaField<"Roles", "role_id">[],

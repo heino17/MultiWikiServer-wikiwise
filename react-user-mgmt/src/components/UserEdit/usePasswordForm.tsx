@@ -44,14 +44,15 @@ export const usePasswordForm = createDialogForm({
     useEffect(() => { if (value !== user) update(user); }, [user, value, update]);
 
     useEffect(() => {
-      if (indexJson.isAdmin) {
+      if (!user) return;
+      if (indexJson.user_id !== user.user_id) {
         form.controls.username.disable();
         form.controls.password.disable();
       } else {
         form.controls.username.enable();
         form.controls.password.enable();
       }
-    }, [indexJson, form]);
+    }, [indexJson, form, user]);
 
     const mismatch = form.controls.confirmPassword.dirty
       && form.controls.newPassword.value !== form.controls.confirmPassword.value;
@@ -133,11 +134,11 @@ export const usePasswordForm = createDialogForm({
 
 
 export function PasswordChangeSubmitButton({ complete, setComplete, user_id }: {
-  complete: boolean, 
+  complete: boolean,
   setComplete: (complete: boolean) => void
-  user_id?: number;
+  user_id?: string;
 }) {
-  const { form, onClose, onReset, indexJson: [indexJson] } = useFormDialogForm();
+  const { form, indexJson: [indexJson] } = useFormDialogForm();
   useObservable(form.events);
   const [submitResult, setSubmitResult] = useState<{ ok: boolean, message: string } | null>(null);
 

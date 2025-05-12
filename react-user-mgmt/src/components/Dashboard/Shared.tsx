@@ -14,7 +14,7 @@ export const sortBagNames = (a: string, b: string) =>
 
 export function OwnerSelection({ isCreate, control, helperText }: {
   isCreate: boolean;
-  control: forms.FormControl<number | null>;
+  control: forms.FormControl<string | null>;
   helperText?: string;
 }): React.ReactNode {
   const [indexJson] = useIndexJson();

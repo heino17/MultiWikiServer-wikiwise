@@ -7,15 +7,8 @@ generator client {
   // prisma 7 will remove the need for native node files, everything will be js and wasm
   provider        = "prisma-client-js"
   previewFeatures = ["relationJoins", "driverAdapters"]
-  binaryTargets = []
+  binaryTargets   = []
 }
-
-// generator zod {
-//   provider                  = "zod-prisma-types"
-//   output                    = "./generated/zod-prisma"
-//   useMultipleFiles          = false
-//   createRelationValuesTypes = true
-// }
 
 enum Permission {
   READ
@@ -24,10 +17,10 @@ enum Permission {
 }
 
 model Recipes {
-  recipe_id   Int           @id @default(autoincrement())
+  recipe_id   String        @id @default(uuid(7))
   recipe_name String        @unique
   description String
-  owner_id    Int?
+  owner_id    String?
   recipe_bags Recipe_bags[]
   acl         RecipeAcl[]
 
@@ -36,17 +29,17 @@ model Recipes {
 
 model RecipeAcl {
   acl_id     Int        @id @default(autoincrement())
-  role_id    Int
+  role_id    String
   permission Permission
-  recipe    Recipes   @relation(fields: [recipe_id], references: [recipe_id], onDelete: Cascade)
-  recipe_id  Int
+  recipe     Recipes    @relation(fields: [recipe_id], references: [recipe_id], onDelete: Cascade)
+  recipe_id  String
 
   @@map("recipe_acl")
 }
 
 model Recipe_bags {
-  recipe_id Int
-  bag_id    Int
+  recipe_id String
+  bag_id    String
   position  Int
   with_acl  Boolean
   bag       Bags    @relation(fields: [bag_id], references: [bag_id], onDelete: Cascade)
@@ -58,11 +51,11 @@ model Recipe_bags {
 }
 
 model Bags {
-  bag_id      Int           @id @default(autoincrement())
+  bag_id      String        @id @default(uuid(7))
   bag_name    String        @unique
   description String
   is_plugin   Boolean
-  owner_id    Int?
+  owner_id    String?
   recipe_bags Recipe_bags[]
   tiddlers    Tiddlers[]
   acl         BagAcl[]
@@ -72,17 +65,21 @@ model Bags {
 
 model BagAcl {
   acl_id     Int        @id @default(autoincrement())
-  bag_id     Int
+  bag_id     String
   bag        Bags       @relation(fields: [bag_id], references: [bag_id], onDelete: Cascade)
-  role_id    Int
+  role_id    String
   permission Permission
 
   @@map("bag_acl")
 }
 
 model Tiddlers {
-  revision_id      Int      @id @default(autoincrement())
-  bag_id          Int
+  // A tiddler ID is not actually required for the server currently.
+  // If we add one in the future it would have a different purpose than this field does
+  // this field is the revision id: despite originally being named tiddler_id, 
+  // it changed for each revision. So renaming it made the most sense. 
+  revision_id     String   @id @default(uuid(7))
+  bag_id          String
   title           String
   is_deleted      Boolean
   attachment_hash String?
@@ -96,7 +93,7 @@ model Tiddlers {
 }
 
 model Fields {
-  revision_id  Int
+  revision_id String
   field_name  String
   field_value String
   // Deleting a referenced record (tiddler) will trigger the deletion of referencing record (field).
@@ -118,8 +115,8 @@ model Groups {
 }
 
 model Roles {
-  role_id     Int         @id @default(autoincrement())
-  role_name   String      @unique()
+  role_id     String   @id @default(uuid(7))
+  role_name   String   @unique()
   description String?
   groups      Groups[]
   users       Users[]
@@ -128,7 +125,7 @@ model Roles {
 }
 
 model Users {
-  user_id    Int        @id @default(autoincrement())
+  user_id    String     @id @default(uuid(7))
   username   String     @unique
   email      String     @unique
   password   String
@@ -146,7 +143,7 @@ model Sessions {
   created_at    DateTime @default(now())
   last_accessed DateTime
   session_key   String?
-  user_id       Int
+  user_id       String
   user          Users    @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("sessions")

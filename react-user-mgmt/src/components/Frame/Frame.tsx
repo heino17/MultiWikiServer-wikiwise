@@ -117,7 +117,7 @@ export function PageRoot() {
     [/^\/admin\/bags$/, () => <Bags title='Bags' />, "Bags"],
     [/^\/admin\/client-plugins$/, () => <Bags title="Plugins" />, "Plugins"],
     [/^\/admin\/users\/?$/, () => <UserManagement />, "User Management"],
-    [/^\/admin\/users\/(\d+)$/, ([, user_id]) => <ManageUser userID={user_id} />, "Manage User"],
+    [/^\/admin\/users\/(.*)$/, ([, user_id]) => <ManageUser userID={user_id} />, "Manage User"],
     [/^\/admin\/roles$/, () => <UsersScreen />, "Roles"],
   ];
   const route = location.pathname.slice(pathPrefix.length);

@@ -26,7 +26,7 @@ import { useRecipeEditForm } from './RecipeEdit';
 export function Recipes() {
   const [{ getBag, getBagName, getBagDesc, hasBagAclAccess, hasRecipeAclAccess, ...indexJson }, refresh] = useIndexJson();
 
-  const getOwner = useCallback((owner_id: number | null): string => {
+  const getOwner = useCallback((owner_id: string | null): string => {
     if (owner_id === null) return "System";
     return (indexJson.userListAdmin || indexJson.userListUser || [])
       .find(e => e.user_id === owner_id)?.username ?? "Unknown";
@@ -176,7 +176,7 @@ export function Bags({ title }: {
     }
   }, [title, indexJson.bagList]);
 
-  const getOwner = useCallback((owner_id: number | null): string => {
+  const getOwner = useCallback((owner_id: string | null): string => {
     if (owner_id === null) return "System";
     return (indexJson.userListAdmin || indexJson.userListUser || [])
       .find(e => e.user_id === owner_id)?.username ?? "Unknown";

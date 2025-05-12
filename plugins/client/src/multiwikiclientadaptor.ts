@@ -381,7 +381,7 @@ class MultiWikiClientAdaptor {
 			/**
 			 * @param {{ title: string; revision_id: number; is_deleted: boolean; bag_name: string; }} tiddlerInfo 
 			 */
-			function (tiddlerInfo) {
+			function (tiddlerInfo: { title: string; revision_id: number; is_deleted: boolean; bag_name: string; }) {
 				if (tiddlerInfo.revision_id > self.last_known_revision_id) {
 					self.last_known_revision_id = tiddlerInfo.revision_id;
 				}

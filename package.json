@@ -26,6 +26,7 @@
     "start": "node scripts.mjs start",
     "certs": "(cd runtime-config && bash localhost_certs.sh)",
     "tsc": "tsc -p tsconfig.json --skipLibCheck",
+    "tsc-client": "(cd react-user-mgmt && npm run tsc)",
     "build": "npm run tsc && tsup && node mws.dev.mjs --client-build",
     "install-android": "GYP_DEFINES=\"android_ndk_path=''\" npm install",
     "postinstall": "node scripts.mjs prisma:generate",

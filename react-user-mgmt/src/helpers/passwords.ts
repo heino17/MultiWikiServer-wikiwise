@@ -51,7 +51,7 @@ async function generateSessionSignature(sessionKey: string, session_id: string &
   return signature;
 }
 
-export async function createNewPassword({ user_id, password }: { user_id: number, password: string }) {
+export async function createNewPassword({ user_id, password }: { user_id: string, password: string }) {
 
   const opaque = await import("@serenity-kit/opaque");
 
@@ -77,7 +77,7 @@ export async function createNewPassword({ user_id, password }: { user_id: number
 
 }
 
-export async function changeExistingPasswordAdmin({ user_id, newPassword }: { user_id: number, newPassword: string }) {
+export async function changeExistingPasswordAdmin({ user_id, newPassword }: { user_id: string, newPassword: string }) {
   const opaque = await import("@serenity-kit/opaque");
 
   await opaque.ready;

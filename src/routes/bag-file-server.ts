@@ -366,8 +366,8 @@ export class TiddlerServer extends TiddlerStore {
 
 
   private async serveStoreTiddlers(
-    bagKeys: number[],
-    bagOrder: Map<number, number>,
+    bagKeys: string[],
+    bagOrder: Map<string, number>,
     writeTiddler: (tiddlerFields: Record<string, string>) => void
   ) {
 

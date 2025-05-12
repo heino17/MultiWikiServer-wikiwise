@@ -144,7 +144,7 @@ export class TiddlerRouter {
 
       const { recipe_name } = state.pathParams;
       const include_deleted = state.queryParams.include_deleted?.[0] === "true";
-      const last_known_revision_id = +(state.queryParams.last_known_revision_id?.[0] ?? 0) || undefined;
+      const last_known_revision_id = state.queryParams.last_known_revision_id?.[0];
 
       await state.assertRecipeACL(recipe_name, false);
 

@@ -34,13 +34,13 @@ export class Command {
 
 				await prisma.roles.createMany({
 					data: [
-						{ role_id: 1, role_name: "ADMIN", description: "System Administrator" },
-						{ role_id: 2, role_name: "USER", description: "Basic User" },
+						{ role_name: "ADMIN", description: "System Administrator" },
+						{ role_name: "USER", description: "Basic User" },
 					]
 				});
 
 				const user = await prisma.users.create({
-					data: { username: "admin", email: "", password: "", roles: { connect: { role_id: 1 } } },
+					data: { username: "admin", email: "", password: "", roles: { connect: { role_name: "ADMIN" } } },
 					select: { user_id: true }
 				});
 
