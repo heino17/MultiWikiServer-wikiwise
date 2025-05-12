@@ -84,11 +84,12 @@ export class DataChecks {
     const OR = this.getWhereACL({ permission, user_id, role_ids });
 
     return ([
-      // all system bags are allowed to be read by any user
+      // all plugin bags are allowed to be read by any user
       permission === "READ" && { is_plugin: true },
       ...OR,
       // admin permission doesn't get inherited 
       permission === "ADMIN" ? undefined : {
+        is_plugin: false, //prevents plugin bags from using inherited permissions
         recipe_bags: {
           some: {
             // check if we're in position 0 (for write) or any position (for read)
