@@ -59,6 +59,25 @@ export class SqliteAdapter {
       }).then(e => e.rows.map(e => e[0]))
     );
 
+    // this checks the migration path and 
+    if (applied_migrations.size && !applied_migrations.has("20250406213424_init")) {
+      console.log("Unknown migrations have been found in the database.");
+      console.log("There is no way to guarentee the integrity of the database under these conditions.");
+      console.log("The only way I know of that you could be seeing this message is if you installed this verion of MWS in a project either from the PR branch or from a newer version of MWS.");
+      console.log("Please revert back to the version you had installed before.");
+      console.log("The sqlite database can be opened manually with any third-party SQLite tool to retrieve your data. If you do this, make sure you keep all the files in the store folder together, as they are all an integral part of your sqlite database and deleting any of them manually is very likely to cause data loss.");
+      process.exit();
+    } else {
+      console.log([
+        "=======================================================================================",
+        "This version of MWS is no longer supported. It is an alpha version",
+        "and you shouldn't be using it in production anyway. Please export any",
+        "wikis you want to keep by opening them and downloading them as single-file",
+        "wikis by clicking on the cloud status icon and then 'save snapshot for offline use'.",
+        "=======================================================================================",
+      ].join("\n"))
+    }
+
     const migrations = await readdir(dist_resolve("../prisma/migrations"));
     migrations.sort();
 
