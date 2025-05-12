@@ -127,7 +127,7 @@ class StartupCommander {
       storePath: this.storePath,
       pathPrefix: config.config?.pathPrefix ?? "",
       saveLargeTextToFileSystem: undefined as never,
-      enablePluginCache: config.config?.enablePluginCache ?? false,
+      enableExternalPlugins: config.config?.enableExternalPlugins ?? false,
     };
 
     this.SessionManager = config.SessionManager || sessions.SessionManager;

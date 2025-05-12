@@ -38,7 +38,7 @@ export class Command {
         // the boot and library tiddlers get rendered into the page
         // this list gets saved in the store array
         // we have to render at least one tiddler
-        saveTiddlerFilter: this.commander.siteConfig.enablePluginCache ? `
+        saveTiddlerFilter: /* this.commander.siteConfig.enableExternalPlugins */ true ? `
           $:/temp/nothing
         ` : `
           $:/core

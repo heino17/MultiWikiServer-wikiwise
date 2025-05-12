@@ -1,7 +1,7 @@
 import { StateObject } from "../StateObject";
 import { TiddlerStore } from "./TiddlerStore";
-import { resolve } from "path";
-import { createWriteStream, readFileSync } from "fs";
+import { join, resolve } from "path";
+import { createReadStream, createWriteStream, fstat, readFileSync } from "fs";
 import sjcl from "sjcl";
 import { createHash } from "crypto";
 import { TiddlerFields } from "../services/attachments";
@@ -302,7 +302,7 @@ export class TiddlerServer extends TiddlerStore {
       state.write(",\n");
     }
     state.write(template.substring(0, markerPos));
-    if (state.config.enablePluginCache) {
+    if (state.config.enableExternalPlugins) {
 
       const preloadMarkup = `
         ${"<"}script>
@@ -336,8 +336,38 @@ export class TiddlerServer extends TiddlerStore {
           state.tiddlerCache.tiddlerHashes.get(e)!
         ))
       state.write(plugins.join("\n"));
+      state.write(marker);
+
+    } else {
+
+      state.write(marker);
+
+      const { cacheFolder, tiddlerFiles } = state.tiddlerCache;
+
+      const plugins = [...new Set([
+        "$:/core",
+        "$:/plugins/tiddlywiki/multiwikiclient",
+        "$:/plugins/tiddlywiki/tiddlyweb",
+        "$:/themes/tiddlywiki/snowwhite",
+        "$:/themes/tiddlywiki/vanilla",
+        ...bags.map(e => e.bag.bag_name)
+      ]).values()]
+        .filter(e => tiddlerFiles.has(e))
+        .map(e => tiddlerFiles.get(e)!);
+
+      const fileStreams = plugins.map(plugin =>
+        createReadStream(join(cacheFolder, plugin, "plugin.json"))
+      );
+
+      for (let i = 0; i < fileStreams.length; i++) {
+        state.write("\n");
+        await state.pipeFrom(fileStreams[i]!);
+        state.write(",");
+      }
+
     }
-    state.write(marker);
+
+
 
     const bagOrder = new Map(bags.map(e => [e.bag.bag_id, e.position]));
     const bagIDs = bags.filter(e => !state.tiddlerCache.tiddlerFiles.has(e.bag.bag_name)).map(e => e.bag.bag_id)
@@ -402,7 +432,8 @@ export class TiddlerServer extends TiddlerStore {
     }
     bagTiddlers.sort((a, b) => bagOrder.get(b.bag_id)! - bagOrder.get(a.bag_id)!);
     // this determines which bag takes precedence
-    const recipeTiddlers = Array.from(new Map(bagTiddlers.flatMap(bag => bag.tiddlers.map(tiddler => [tiddler.title, { bag, tiddler }])
+    const recipeTiddlers = Array.from(new Map(bagTiddlers.flatMap(bag =>
+      bag.tiddlers.map(tiddler => [tiddler.title, { bag, tiddler }])
     )).values());
 
     const

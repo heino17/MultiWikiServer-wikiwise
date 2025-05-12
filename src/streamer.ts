@@ -1,6 +1,6 @@
 import "./global";
 import * as http2 from 'node:http2';
-import send from 'send';
+import send from './send.js';
 import { Readable } from 'stream';
 import { IncomingMessage, ServerResponse, IncomingHttpHeaders as NodeIncomingHeaders, OutgoingHttpHeaders } from 'node:http';
 import { is, UserError } from './utils';
@@ -147,7 +147,7 @@ export class Streamer {
       // if (error instanceof UserError) {
       //   this.sendString(400, { "x-reason": "Client Error (catcher)" }, error.message, "utf8")
       // } else {
-        
+
       // }
     }
   }
@@ -227,8 +227,15 @@ export class Streamer {
       this.res.end();
     else
       stream.pipe(this.res);
+
     return STREAM_ENDED;
   }
+
+  async pipeFrom(stream: Readable) {
+    stream.pipe(this.res, { end: false });
+    return new Promise<void>((r, c) => stream.on("end", r).on("error", c));
+  }
+
   // I'm not sure if there's a use case for this
   private sendFD(status: number, headers: OutgoingHttpHeaders, options: {
     fd: number;
@@ -276,28 +283,32 @@ export class Streamer {
     index?: string | boolean | string[] | undefined,
     on404?: () => Promise<typeof STREAM_ENDED>;
     onDir?: () => Promise<typeof STREAM_ENDED>;
+    prefix?: Buffer;
+    suffix?: Buffer;
   }) {
 
     // the headers and status have to be set on the response object before piping the stream
     this.res.statusCode = status;
     this.toHeadersMap(headers).forEach((v, k) => { this.res.appendHeader(k, v); });
 
-    const { root, reqpath, offset, length } = options;
+    const { root, reqpath, offset, length, prefix, suffix } = options;
 
     if (process.env.DEBUG?.split(",").includes("send")) {
       console.error("sendFile", root, reqpath, status, headers);
     }
 
-    const stream = send(this.req, reqpath, {
+    const sender = send(this.req, reqpath, {
       dotfiles: "ignore",
       index: false,
       root,
       start: offset,
       end: length && length - 1,
+      prefix,
+      suffix,
     });
     return new Promise<typeof STREAM_ENDED>((resolve, reject) => {
 
-      stream.on("error", (err) => Promise.resolve().then(async (): Promise<typeof STREAM_ENDED> => {
+      sender.on("error", (err) => Promise.resolve().then(async (): Promise<typeof STREAM_ENDED> => {
         if (err === 404 || err?.statusCode === 404) {
           return (await options.on404?.()) ?? this.sendEmpty(404);
         } else {
@@ -306,17 +317,17 @@ export class Streamer {
         }
       }).then(resolve, reject));
 
-      stream.on("directory", () => Promise.resolve().then(async (): Promise<typeof STREAM_ENDED> => {
+      sender.on("directory", () => Promise.resolve().then(async (): Promise<typeof STREAM_ENDED> => {
         return (await options.onDir?.())
           ?? this.sendEmpty(404, { "x-reason": "Directory listing not allowed" })
       }).then(resolve, reject));
 
-      stream.on("end", () => {
+      sender.on("end", () => {
         resolve(STREAM_ENDED);
       })
 
       this.checkHeadersSentBy(true);
-      stream.pipe(this.res);
+      sender.pipe(this.res);
     });
   }
 
@@ -402,6 +413,13 @@ export class StreamerState {
   write
   end
 
+  /** 
+   * this will pipe from the specified stream, but will not end the 
+   * response when the input stream ends. Input stream errors will be 
+   * caught and reject the promise.
+   */
+  pipeFrom;
+
   /** sends a status and plain text string body */
   sendSimple(status: number, msg: string): typeof STREAM_ENDED {
     return this.sendString(status, {
@@ -425,6 +443,7 @@ export class StreamerState {
     this.sendBuffer = this.streamer.sendBuffer.bind(this.streamer);
     this.sendStream = this.streamer.sendStream.bind(this.streamer);
     this.sendFile = this.streamer.sendFile.bind(this.streamer);
+    this.pipeFrom = this.streamer.pipeFrom.bind(this.streamer);
     this.setHeader = this.streamer.setHeader.bind(this.streamer);
     this.writeHead = this.streamer.writeHead.bind(this.streamer);
     this.write = this.streamer.write.bind(this.streamer);
