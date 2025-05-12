@@ -67,6 +67,8 @@ If there are any database changes, MWS should pick them up and apply them. The c
 
 ### Development
 
+While I'm working on the new v0.1.0 version, the repo does not contain the necessary files to create the database, since they're constantly changing. I'll commit those files once I publish 0.1.0. 
+
 If you want to work on the project, 
 
 - `git clone https://github.com/TiddlyWiki/MultiWikiServer`
