@@ -246,7 +246,6 @@ export class TiddlerServer extends TiddlerStore {
     }
 
     const plugin_names = Array.isArray(recipe.plugin_names) ? recipe.plugin_names : [];
-    console.log(plugin_names);
 
     const lastTiddlerId = await this.prisma.tiddlers.aggregate({
       _max: { revision_id: true },
@@ -313,17 +312,36 @@ export class TiddlerServer extends TiddlerStore {
       state.write(",\n");
     }
     state.write(template.substring(0, markerPos));
+
+    const { cacheFolder, pluginFiles, filePlugins } = state.tiddlerCache;
+
+    const cachePlugins = new Map(plugin_names.map(e => [e, filePlugins.get(e as any)] as const));
+
+    cachePlugins.forEach((v, k) => {
+      if (!v) console.log("Could not find the plugin title for the path " + k);
+    });
+
+    const plugins = [
+      ...new Set([
+        ...(!recipe.skip_core_plugins) ? [
+          "$:/core",
+          "$:/plugins/tiddlywiki/multiwikiclient",
+          "$:/plugins/tiddlywiki/tiddlyweb",
+          "$:/themes/tiddlywiki/snowwhite",
+          "$:/themes/tiddlywiki/vanilla",
+        ] : [],
+        ...cachePlugins.values() as MapIterator<string>,
+      ]).values()
+    ];
+
+    plugins.forEach(e => {
+      if (!state.tiddlerCache.pluginFiles.has(e))
+        console.log(`Recipe ${recipe_name} uses unknown plugin ${e}`);
+    });
+
     if (state.config.enableExternalPlugins) {
 
-      const { cacheFolder, pluginFiles, filePlugins } = state.tiddlerCache;
-
-      const plugin_names = Array.isArray(recipe.plugin_names) ? recipe.plugin_names : [];
-
-      const plugins1 = plugin_names.map(e => filePlugins.get(e as any)).filter(truthy);
-
-      console.log(plugins1);
-
-      const preloadMarkup = `
+      state.write(`
         ${"<"}script>
         window.$tw = window.$tw || Object.create(null);
         $tw.preloadTiddlers = $tw.preloadTiddlers || [];
@@ -331,57 +349,23 @@ export class TiddlerServer extends TiddlerStore {
           $tw.preloadTiddlers.push(fields);
         };
         ${"</"}script>
-      `;
+      `);
 
-      state.write(preloadMarkup);
-      const pluginMarkup = (plugin: string, hash: string) => `
-        <script
-          src="${state.config.pathPrefix}/$cache/${plugin}/plugin.js"
-          integrity="${hash}"
-          crossorigin="anonymous"></script>
-      `;
+      state.write(plugins.map(e => {
+        const plugin = state.tiddlerCache.pluginFiles.get(e)!;
+        const hash = state.tiddlerCache.pluginHashes.get(e)!;
+        return `<script src="${state.config.pathPrefix}/$cache/${plugin}/plugin.js" `
+          + ` integrity="${hash}" crossorigin="anonymous"></script>`;
+      }).join("\n"));
 
-      const plugins = [...new Set([
-        "$:/core",
-        "$:/plugins/tiddlywiki/multiwikiclient",
-        "$:/plugins/tiddlywiki/tiddlyweb",
-        "$:/themes/tiddlywiki/snowwhite",
-        "$:/themes/tiddlywiki/vanilla",
-        ...plugins1,
-      ]).values()]
-        .filter(e => state.tiddlerCache.pluginFiles.has(e))
-        .map(e => pluginMarkup(
-          state.tiddlerCache.pluginFiles.get(e)!,
-          state.tiddlerCache.pluginHashes.get(e)!
-        ))
-      state.write(plugins.join("\n"));
       state.write(marker);
 
     } else {
 
       state.write(marker);
 
-      const { cacheFolder, pluginFiles, filePlugins } = state.tiddlerCache;
-
-      const plugin_names = Array.isArray(recipe.plugin_names) ? recipe.plugin_names : [];
-
-      const plugins1 = plugin_names.map(e => filePlugins.get(e as any)).filter(truthy);
-
-      console.log(plugins1);
-
-      const plugins = [...new Set([
-        "$:/core",
-        "$:/plugins/tiddlywiki/multiwikiclient",
-        "$:/plugins/tiddlywiki/tiddlyweb",
-        "$:/themes/tiddlywiki/snowwhite",
-        "$:/themes/tiddlywiki/vanilla",
-        ...plugins1
-      ]).values()]
-        .filter(e => pluginFiles.has(e))
-        .map(e => pluginFiles.get(e)!);
-
-      const fileStreams = plugins.map(plugin =>
-        createReadStream(join(cacheFolder, plugin, "plugin.json"))
+      const fileStreams = plugins.map(e =>
+        createReadStream(join(cacheFolder, pluginFiles.get(e)!, "plugin.json"))
       );
 
       for (let i = 0; i < fileStreams.length; i++) {
@@ -426,6 +410,10 @@ export class TiddlerServer extends TiddlerStore {
     writeTiddler: (tiddlerFields: Record<string, string>) => void
   ) {
 
+    // NOTES: 
+    // there is no point in use Prisma's distinct option, as it happens in memory.
+    // we also cannot use orderBy across a oneToMany relationship
+
     const bagTiddlers = await this.prisma.bags.findMany({
       where: { bag_id: { in: bagKeys } },
       select: {
@@ -449,12 +437,12 @@ export class TiddlerServer extends TiddlerStore {
       }
     });
 
-
     if (!bagTiddlers.every(e => bagOrder.has(e.bag_id))) {
       console.log(bagTiddlers.map(e => e.bag_id));
       console.log(bagOrder);
       throw new Error("Bags missing from bag order");
     }
+
     bagTiddlers.sort((a, b) => bagOrder.get(b.bag_id)! - bagOrder.get(a.bag_id)!);
     // this determines which bag takes precedence
     const recipeTiddlers = Array.from(new Map(bagTiddlers.flatMap(bag =>

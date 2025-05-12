@@ -5,7 +5,6 @@
 - wiki index 304 response may have invalid headers
 - add the tiddlywiki version to the tiddler cache URLs
 - implement `plugin_names` and `skip_core_plugins` fields in client
-- improve wiki index handling of both fields and skip the plugin title step
 
 ## Readme
 

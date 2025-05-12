@@ -85,8 +85,6 @@ function loadWikiFolder({ $tw, store, ...options }: {
 	});
 	recipeList.reverse();
 
-	console.log(pluginNamesTW5);
-
 	const is_plugin = false as PrismaField<"Bags", "is_plugin">;
 	return [
 		// create the bag
@@ -96,7 +94,7 @@ function loadWikiFolder({ $tw, store, ...options }: {
 			options.recipeName,
 			options.recipeDescription,
 			recipeList,
-			[...new Set(pluginNamesTW5).values()] //dedupe
+			[...new Set(pluginNamesTW5).values()].map(e => `tiddlywiki/${e}`)
 		),
 		// save the tiddlers (this will skip attachments)
 		...store.saveTiddlersFromPath_PrismaArray(tiddlersFromPath, options.bagName)

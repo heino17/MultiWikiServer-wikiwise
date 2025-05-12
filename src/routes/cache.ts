@@ -13,8 +13,12 @@ export async function startupCache(rootRoute: rootRoute, commander: Commander) {
   const $tw = commander.$tw;
 
   // we only need the client since we don't load plugins server-side
-  const { tiddlerFiles: pluginFiles, tiddlerHashes: pluginHashes } =
-    await importTW5(path.join($tw.boot.corePath, ".."), commander.cachePath, "client", $tw);
+  const { tiddlerFiles: pluginFiles, tiddlerHashes: pluginHashes } = await importPlugins(
+    path.join($tw.boot.corePath, ".."),
+    commander.cachePath,
+    "client",
+    $tw,
+  );
 
   const filePlugins = new Map([...pluginFiles.entries()].map(e => e.reverse() as [string, string]));
 
@@ -24,9 +28,7 @@ export async function startupCache(rootRoute: rootRoute, commander: Commander) {
     bodyFormat: "ignore",
     pathParams: ["plugin"]
   }, async state => {
-    ZodAssert.pathParams(state, z => ({
-      plugin: z.string()
-    }))
+    ZodAssert.pathParams(state, z => ({ plugin: z.string() }));
     // console.log("serving plugin", state.pathParams.plugin)
     return state.sendFile(200, {}, {
       root: commander.cachePath,
@@ -43,7 +45,7 @@ export async function startupCache(rootRoute: rootRoute, commander: Commander) {
 
 
 
-async function importTW5(twFolder: string, cacheFolder: string, type: string, $tw: TW) {
+async function importPlugins(twFolder: string, cacheFolder: string, type: string, $tw: TW) {
 
 
   const readLevel = (d: string) => {
@@ -62,13 +64,13 @@ async function importTW5(twFolder: string, cacheFolder: string, type: string, $t
     'core'
   ].map(e => {
     const oldPath = path.join(twFolder, e);
-    const relativePluginPath = path.normalize(path.relative(twFolder, oldPath));
+    const relativePluginPath = path.join("tiddlywiki", path.relative(twFolder, oldPath));
     return [oldPath, relativePluginPath] as const;
   });
 
   plugins.push([
     dist_resolve("../plugins/client"),
-    "plugins/mws/client"
+    "mws/plugins/client"
   ] as const);
 
   // plugins.forEach(oldPath => {
@@ -115,7 +117,8 @@ async function importTW5(twFolder: string, cacheFolder: string, type: string, $t
           if (process.env.ENABLE_DEV_SERVER)
             console.log(`DEV: Tiddler ${plugin.title} field ${e} was not a string`)
         }
-      })
+      });
+
       if (type === "server") {
         plugin.tiddlers = JSON.parse(plugin.text).tiddlers;
         delete plugin.text;
