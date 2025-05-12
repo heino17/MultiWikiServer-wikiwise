@@ -15,9 +15,14 @@ export class SqliteAdapter {
   async init() {
     const libsql = await this.adapter.connect();
 
-    if (process.env.RUN_OLD_MWS_DB_SETUP_FOR_TESTING) {
+    // this is used to test the upgrade path
+    if (process.env.RUN_FIRST_MWS_DB_SETUP_FOR_TESTING_0_0) {
       await libsql.executeScript(await readFile(dist_resolve(
-        "../prisma/migrations/20250406213424_init/migration.sql"
+        "../prisma-20250406/migrations/20250406213424_init/migration.sql"
+      ), "utf8"));
+    } else if (process.env.RUN_FIRST_MWS_DB_SETUP_FOR_TESTING_0_1) {
+      await libsql.executeScript(await readFile(dist_resolve(
+        "../prisma/migrations/20250512135531_init/migration.sql"
       ), "utf8"));
     }
 
@@ -30,8 +35,53 @@ export class SqliteAdapter {
     const hasExisting = !!tables?.length;
 
     const hasMigrationsTable = !!tables?.length && !!tables?.some((e) => e[0] === "_prisma_migrations");
+
+    if (hasExisting && !hasMigrationsTable) {
+      console.log("Your database already contains tables. This is not supported.");
+      console.log("If you expected this database to be empty, then make sure you specified the right database!");
+      console.log("If this database is from the multi-wiki-support branch, you cannot use it with @tiddlywiki/mws.");
+      console.log("If you upgraded from an old version of @tiddlwiki/mws 0.0.x, please install the latest 0.0 version instead.");
+      process.exit(1);
+    }
+
     if (!hasMigrationsTable) await this.createMigrationsTable(libsql);
-    await this.checkMigrationsTable(libsql, hasExisting && !hasMigrationsTable);
+
+    const applied_migrations = new Set(
+      await libsql.queryRaw({
+        sql: `Select migration_name from _prisma_migrations`,
+        args: [],
+        argTypes: [],
+      }).then(e => e.rows.map(e => e[0] as string))
+    );
+
+    if (applied_migrations.has("20250406213424_init")) {
+      console.log([
+        "=======================================================================================",
+        "This version of MWS is no longer supported. It is an alpha version",
+        "and you shouldn't be using it in production anyway. Please export any",
+        "wikis you want to keep by opening them and downloading them as single-file",
+        "wikis by clicking on the cloud status icon and then 'save snapshot for offline use'.",
+        "",
+        "To return to a usable version of this wiki, you may run ",
+        "",
+        "npm install @tiddlywiki/mws@0.0",
+        "=======================================================================================",
+      ].join("\n"))
+      await this.checkMigrationsTable(libsql, hasExisting && !hasMigrationsTable, applied_migrations, "prisma-20250406", "20250406213424_init");
+      console.log("Your database is updated to the final version for 0.0.x");
+      console.log("This database is for a previous version of MWS. We will now exit to prevent data loss.");
+      console.log("=======================================================================================");
+      process.exit(1);
+    } else if (!applied_migrations.size || applied_migrations.has("20250512135531_init")) {
+      await this.checkMigrationsTable(libsql, hasExisting && !hasMigrationsTable, applied_migrations, "prisma", "20250512135531_init");
+    } else {
+      console.log("Unknown migrations have been found in the database.");
+      console.log("There is no way to guarentee the integrity of the database under these conditions.");
+      console.log("The only way I know of that you could be seeing this message is if you installed this verion of MWS in a project either from the PR branch or from a newer version of MWS.");
+      console.log("Please revert back to the version you had installed before.");
+      console.log("The sqlite database can be opened manually with any third-party SQLite tool to retrieve your data. If you do this, make sure you keep all the files in the store folder together, as they are all an integral part of your sqlite database and deleting any of them manually is very likely to cause data loss.");
+      process.exit(1);
+    }
 
     await libsql.dispose();
   }
@@ -49,36 +99,18 @@ export class SqliteAdapter {
       ')',
     )
   }
-  async checkMigrationsTable(libsql: SqlDriverAdapter, migrateExisting: boolean) {
 
-    const applied_migrations = new Set(
-      await libsql.queryRaw({
-        sql: `Select migration_name from _prisma_migrations`,
-        args: [],
-        argTypes: [],
-      }).then(e => e.rows.map(e => e[0]))
-    );
 
-    // this checks the migration path and 
-    if (applied_migrations.size && !applied_migrations.has("20250406213424_init")) {
-      console.log("Unknown migrations have been found in the database.");
-      console.log("There is no way to guarentee the integrity of the database under these conditions.");
-      console.log("The only way I know of that you could be seeing this message is if you installed this verion of MWS in a project either from the PR branch or from a newer version of MWS.");
-      console.log("Please revert back to the version you had installed before.");
-      console.log("The sqlite database can be opened manually with any third-party SQLite tool to retrieve your data. If you do this, make sure you keep all the files in the store folder together, as they are all an integral part of your sqlite database and deleting any of them manually is very likely to cause data loss.");
-      process.exit();
-    } else {
-      console.log([
-        "=======================================================================================",
-        "This version of MWS is no longer supported. It is an alpha version",
-        "and you shouldn't be using it in production anyway. Please export any",
-        "wikis you want to keep by opening them and downloading them as single-file",
-        "wikis by clicking on the cloud status icon and then 'save snapshot for offline use'.",
-        "=======================================================================================",
-      ].join("\n"))
-    }
+  // prisma/migrations/20250508171144_init/migration.sql
+  async checkMigrationsTable(
+    libsql: SqlDriverAdapter,
+    migrateExisting: boolean,
+    applied_migrations: Set<string>,
+    prismaFolder: string,
+    initMigration: string
+  ) {
 
-    const migrations = await readdir(dist_resolve("../prisma/migrations"));
+    const migrations = await readdir(dist_resolve("../" + prismaFolder + "/migrations"));
     migrations.sort();
 
     const new_migrations = migrations.filter(m => !applied_migrations.has(m) && m !== "migration_lock.toml");
@@ -91,12 +123,12 @@ export class SqliteAdapter {
     console.log("New migrations found", new_migrations);
 
     for (const migration of new_migrations) {
-      const migration_path = dist_resolve(`../prisma/migrations/${migration}/migration.sql`);
+      const migration_path = dist_resolve(`../${prismaFolder}/migrations/${migration}/migration.sql`);
       if (!existsSync(migration_path)) continue;
 
       const fileContent = await readFile(migration_path, 'utf-8');
       // this is the hard-coded name of the first migration.
-      if (migrateExisting && migration === "20250406213424_init") {
+      if (migrateExisting && migration === initMigration) {
         console.log("Existing migration", migration, "is already applied");
       } else {
         console.log("Applying migration", migration);
@@ -114,4 +146,6 @@ export class SqliteAdapter {
     }
     console.log("Migrations applied", new_migrations);
   }
+
 }
+
