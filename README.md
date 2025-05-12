@@ -1,5 +1,14 @@
 # MultiWikiServer
 
+## Dev-0.1 Notes
+
+- wiki index 304 response may have invalid headers
+- add the tiddlywiki version to the tiddler cache URLs
+- implement `plugin_names` and `skip_core_plugins` fields in client
+- improve wiki index handling of both fields and skip the plugin title step
+
+## Readme
+
 **Developers:** This branch is not in a working state. Please see the note at the end of this page.
 
 **This is not ready for primetime. Do not use it to protect feelings or intellectual property.**
