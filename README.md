@@ -4,6 +4,20 @@
 
 *You really shouldn't be using it to store anything important yet. It is still in the VERY early stages of development and we don't even have proper tests verifying the security mechanisms yet. So please try it out, kick the tires, import your multi-gigabyte wikis and play around with it, but don't actually store anything you want to keep. We'll hopefully get there soon, but even the database schema itself is still in flux as we figure out what the best layout is for all the stuff we have planned.*
 
+We are working on version 0.1.0. It's not recommended to install 0.0.x anymore as it is completely incompatible with version 0.1.x. 
+
+The best way to save your information is to open each wiki and click the cloud status icon, then click "save snapshot for offline use". 
+
+You can also use the command `npm start -- --save-archive archive-folder` and then load that archive into version 0.1.x. 0.1.x will make a best-case attempt to load all of the bags from your archive. For the most part this should work fine and everything should be imported correctly. The importer will attempt a fix if it finds any incompatible recipes. 
+
+### Breaking changes to the archive
+
+- Specifically, if you have modified a TiddlyWiki plugin and then saved the modified plugin back to its plugin bag, this will be lost. TiddlyWiki plugins will no longer be served via plugin bags. 
+- Any other tiddlers in the plugin bags will be preserved in a new plugin bag with a temporary name, and the recipe will be updated to import the corresponding TiddlyWiki plugin according to the new system. 
+- Plugin bags will no longer be writable in recipes. Instead, plugin bags will be modified by opening them directly in a virtual recipe containing only that bag so that the contents can be modified as desired. 
+
+-----
+
 Multiple users, multiple wikis for TiddlyWiki.
 
 - Bag & Recipe system for storing tiddlers.
