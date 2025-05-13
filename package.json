@@ -49,6 +49,7 @@
     "prisma": "6.6.0",
     "prisma-json-types-generator": "^3.3.1",
     "source-map-support": "^0.5.21",
+    "try": "^1.0.0-beta.5",
     "zod": "^3.24.2",
     "zod-validation-error": "^3.4.1"
   },

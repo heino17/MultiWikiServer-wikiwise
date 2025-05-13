@@ -1,9 +1,9 @@
-import "./global";
+import "../global";
 import * as http2 from 'node:http2';
 import send from './send.js';
 import { Readable } from 'stream';
 import { IncomingMessage, ServerResponse, IncomingHttpHeaders as NodeIncomingHeaders, OutgoingHttpHeaders } from 'node:http';
-import { is, UserError } from './utils';
+import { is, UserError } from '../utils';
 import { createReadStream } from 'node:fs';
 import { Writable } from 'node:stream';
 
@@ -483,5 +483,5 @@ export class StreamerState {
 }
 
 
-import { AllowedMethod, AllowedMethods, Router } from './routes/router';
+import { AllowedMethod, AllowedMethods, Router } from '../router';
 

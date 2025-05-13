@@ -51,6 +51,7 @@ type TiddlerCache = ART<typeof startupCache>;
 /** Pre command server setup */
 export class ServerState {
   static async make(wikiPath: string) {
+    /** The $tw instance needs to be disposable once commands are complete. */
     const $tw = await bootTiddlyWiki(wikiPath);
     const passwordService = await createPasswordService(readPasswordMasterKey(wikiPath));
     const cache = await startupCache($tw, path.resolve(wikiPath, "cache"))
@@ -60,6 +61,7 @@ export class ServerState {
 
   constructor(
     wikiPath: string,
+    /** The $tw instance needs to be disposable once commands are complete. */
     $tw: TW,
     public PasswordService: PasswordService,
     public pluginCache: TiddlerCache,
@@ -72,9 +74,6 @@ export class ServerState {
 
     this.fieldModules = $tw.Tiddler.fieldModules;
     this.contentTypeInfo = $tw.config.contentTypeInfo;
-
-    mkdirSync(this.storePath, { recursive: true });
-    mkdirSync(this.cachePath, { recursive: true });
 
     if (!existsSync(this.databasePath)) this.setupRequired = true;
 
@@ -95,6 +94,9 @@ export class ServerState {
   }
 
   async init() {
+    mkdirSync(this.storePath, { recursive: true });
+    mkdirSync(this.cachePath, { recursive: true });
+
     await this.adapter.init();
     this.setupRequired = false;
     const users = await this.engine.users.count();

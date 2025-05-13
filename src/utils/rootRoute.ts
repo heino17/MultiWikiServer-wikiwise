@@ -1,6 +1,6 @@
-import { StateObject } from "../StateObject";
+import { StateObject } from "../routes/StateObject";
 import * as z from "zod";
-import { AllowedMethod, BodyFormat } from "../routes/router";
+import { AllowedMethod, BodyFormat } from "../router";
 
 
 export interface RouteOptAny extends RouteOptBase<BodyFormat, AllowedMethod[], string[]> { }

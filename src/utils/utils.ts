@@ -1,6 +1,6 @@
 import { IncomingHttpHeaders, OutgoingHttpHeaders } from "node:http";
-import { Streamer } from "../streamer";
-import { StateObject } from '../StateObject';
+import { Streamer } from "../listen/streamer";
+import { StateObject } from '../routes/StateObject';
 import { createHash } from "node:crypto";
 import * as zlib from "node:zlib";
 import { ok } from "node:assert";

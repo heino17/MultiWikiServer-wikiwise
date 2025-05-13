@@ -1,11 +1,11 @@
-import "./routes/router";
-import "./StateObject";
-import "./streamer";
+import "./router";
+import "./routes/StateObject";
+import "./listen/streamer";
 import "./global";
 import * as opaque from "@serenity-kit/opaque";
 import { existsSync } from 'node:fs';
 import { Commander, ServerState } from "./commander";
-import { startListeners } from "./listeners";
+import { startListeners } from "./listen/listeners";
 
 async function startServer() {
 

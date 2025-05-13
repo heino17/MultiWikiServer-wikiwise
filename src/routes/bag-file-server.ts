@@ -1,4 +1,4 @@
-import { StateObject } from "../StateObject";
+import { StateObject } from "./StateObject";
 import { TiddlerStore } from "./TiddlerStore";
 import { join, resolve } from "path";
 import { createReadStream, createWriteStream, fstat, readFileSync } from "fs";

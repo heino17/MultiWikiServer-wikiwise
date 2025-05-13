@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { Commander } from "./commander";
+import { Commander } from "../commander";
 import { z } from "zod";
-import { Router } from "./routes/router";
+import { Router } from "../router";
 import { ok } from "node:assert";
 import { createServer, IncomingMessage, Server, ServerResponse } from "node:http";
 import { createSecureServer, Http2SecureServer, Http2ServerRequest, Http2ServerResponse } from "node:http2";

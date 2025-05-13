@@ -1,7 +1,7 @@
 import { resolve } from "path";
 import type { Commander, CommandInfo } from "../commander";
-import { Router } from "../routes/router";
-import { esbuildStartup, setupDevServer } from "../setupDevServer";
+import { Router } from "../router";
+import { esbuildStartup, setupDevServer } from "../listen/setupDevServer";
 import { writeFileSync } from "fs";
 
 export const info: CommandInfo = {

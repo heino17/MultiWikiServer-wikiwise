@@ -1,18 +1,20 @@
-import { STREAM_ENDED, Streamer, SYMBOL_IGNORE_ERROR } from "../streamer";
-import { StateObject } from "../StateObject";
-import RootRoute, { importEsbuild } from ".";
+import { STREAM_ENDED, Streamer, SYMBOL_IGNORE_ERROR } from "./listen/streamer";
+import { StateObject } from "./routes/StateObject";
+import RootRoute, { importEsbuild } from "./routes";
 import * as z from "zod";
-import { createStrictAwaitProxy, JsonValue, truthy, Z2 } from "../utils";
-import { Route, rootRoute, RouteOptAny, RouteMatch, } from "../utils";
-import { setupDevServer } from "../setupDevServer";
-import { Commander, ServerState, SiteConfig } from "../commander";
-import { CacheState, registerCacheRoutes, startupCache } from "./cache";
+import { createStrictAwaitProxy, JsonValue, truthy, Z2 } from "./utils";
+import { Route, rootRoute, RouteOptAny, RouteMatch, } from "./utils";
+import { setupDevServer } from "./listen/setupDevServer";
+import { Commander, ServerState, SiteConfig } from "./commander";
+import { CacheState, registerCacheRoutes, startupCache } from "./routes/cache";
 import * as http from "http";
 import * as http2 from "http2";
-import { SessionManager } from "../services/sessions";
-import { Listener } from "../listeners";
+import { SessionManager } from "./services/sessions";
+import { Listener } from "./listen/listeners";
 import { fromError } from 'zod-validation-error';
+import { t as try_ } from "try";
 export { RouteMatch, Route, rootRoute };
+
 
 export const AllowedMethods = [...["GET", "HEAD", "OPTIONS", "POST", "PUT", "DELETE"] as const];
 export type AllowedMethod = typeof AllowedMethods[number];
@@ -103,16 +105,10 @@ export class Router {
     options: Listener
   ) {
 
-    const [ok, err, streamer] = function (this: Router) {
-      try {
-        return [true, undefined, new Streamer(
-          req, res, options.prefix,
-          !!(options.key && options.cert || options.secure)
-        )] as const;
-      } catch (e) {
-        return [false, e, undefined] as const;
-      }
-    }.call(this);
+    const [ok, err, streamer] = try_(() => new Streamer(
+      req, res, options.prefix,
+      !!(options.key && options.cert || options.secure)
+    ));
 
     if (!ok) {
       if (err === STREAM_ENDED) return;
@@ -124,10 +120,6 @@ export class Router {
   }
 
   async handle(streamer: Streamer) {
-
-    if (streamer.expectSecure) {
-      streamer.appendHeader("Strict-Transport-Security", "max-age=60");
-    }
 
     if (!this.csrfDisable
       && ["POST", "PUT", "DELETE"].includes(streamer.method)

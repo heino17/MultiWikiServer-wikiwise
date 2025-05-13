@@ -1,4 +1,4 @@
-import type { rootRoute as _rootRoute, Router } from "./routes/router";
+import type { rootRoute as _rootRoute, Router } from "./router";
 import * as path from "path";
 import * as fs from "fs";
 import type { Prisma } from "@prisma/client";
@@ -54,7 +54,8 @@ declare global {
 
   type ACLPermissionName = "READ" | "WRITE" | "ADMIN";
 
-  type rootRoute = _rootRoute;
+  interface rootRoute extends _rootRoute { }
+
   type ZodAssert = typeof ZodAssert;
 
 }
@@ -167,89 +168,3 @@ declare global {
   });
 };
 
-
-class _Result<OK extends boolean, T> {
-  constructor(
-    public ok: OK,
-    public error: OK extends true ? undefined : unknown,
-    public value: OK extends true ? T : undefined
-  ) { }
-  get [Symbol.iterator]() { return [this.ok, this.error, this.value] }
-  static ok<T>(value: T) {
-    return new _Result(true, undefined, value)
-  }
-  static error(error: unknown) {
-    return new _Result(false, error, undefined)
-  }
-
-  /**
-   * @example
-   * // const result = try something();
-   * const result = Result.try_(() => {
-   *   something();
-   * });
-   */
-  static try_<T, This>(callback: (this: This) => T, thisarg: This) {
-    try {
-      return _Result.ok(callback.apply(thisarg));
-    } catch (e) {
-      return _Result.error(e);
-    }
-  }
-
-}
-//https://github.com/arthurfiorette/proposal-try-operator
-declare global {
-  const TryResult: typeof _Result;
-  interface Promise<T> {
-    try: () => Promise<_Result<true, T> | _Result<false, T>>;
-  }
-}
-(global as any).Result = _Result;
-Promise.prototype.try = function <T>(this: Promise<T>) {
-  return this.then(_Result.ok, _Result.error);
-}
-
-interface $TW {
-  loadTiddlersFromPath: any;
-  loadPluginFolder: any;
-  getLibraryItemSearchPaths: any;
-  wiki: never;
-  utils: {
-    // [x: string]: any;
-    /** Use Object.assign instead */
-    extend: never
-    /** Use Array.isArray instead */
-    isArray: never
-    /** use prismaField with a parse- option or z.uriComponent if possible */
-    decodeURIComponentSafe: never;
-    /**
-     * 
-    ```js
-    $tw.utils.stringifyDate = function(value) {
-      return value.getUTCFullYear() +
-          $tw.utils.pad(value.getUTCMonth() + 1) +
-          $tw.utils.pad(value.getUTCDate()) +
-          $tw.utils.pad(value.getUTCHours()) +
-          $tw.utils.pad(value.getUTCMinutes()) +
-          $tw.utils.pad(value.getUTCSeconds()) +
-          $tw.utils.pad(value.getUTCMilliseconds(),3);
-    };
-    ```
-     */
-    stringifyDate: never;
-    // parseJSONSafe(str: string, defaultJSON?: any): any;
-    // /** `return parseFloat(str) || 0;` */
-    // parseNumber(string: string): number;
-    // /** `return parseFloat(str) || 0;` */
-    // parseNumber(string: string | null): number;
-  };
-  boot: any;
-  config: any;
-  node: any;
-  hooks: any;
-  sjcl: any;
-  Wiki: { new(): Wiki };
-  Tiddler: { new(fields: Record<string, any>): Tiddler };
-
-}

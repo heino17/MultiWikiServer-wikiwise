@@ -1,4 +1,4 @@
-import { rootRoute } from "./router";
+import { rootRoute } from "../router";
 import { TiddlyWiki } from "tiddlywiki";
 import { basename } from "path";
 import EventEmitter from "events";
