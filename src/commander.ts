@@ -1,27 +1,19 @@
 
-import { SiteConfig } from "./routes/router";
 import * as path from "node:path";
-
-import { MWSConfig } from "./server";
 import { Prisma, PrismaClient } from "@prisma/client";
-
-import * as sessions from "./services/sessions";
-import * as attacher from "./services/attachments";
-import { PasswordService } from "./services/PasswordService";
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { ITXClientDenyList } from "@prisma/client/runtime/library";
-import { TiddlerFieldModule, TW } from "tiddlywiki";
+import { TW } from "tiddlywiki";
 import { dist_resolve } from "./utils";
 import * as commander from "commander";
-import { commands, listen as listen_command, divider } from "./commands";
-import { ok } from "node:assert";
+import { commands } from "./commands";
 import { SqliteAdapter } from "./db/sqlite-adapter";
-
+import * as opaque from "@serenity-kit/opaque";
 
 import pkg from "../package.json";
-import { CacheState } from "./routes/cache";
-
-
+import { startupCache } from "./routes/cache";
+import { createPasswordService } from "./services/PasswordService";
+import { bootTiddlyWiki } from "./tiddlywiki";
 
 
 export interface $TW {
@@ -38,6 +30,134 @@ export interface $TW {
       stringify?: (value: any) => string;
     }>;
   }
+}
+
+function readPasswordMasterKey(wikiPath: string) {
+  const passwordKeyFile = path.join(wikiPath, "passwords.key");
+  if (typeof passwordKeyFile === "string"
+    && passwordKeyFile
+    && !existsSync(passwordKeyFile)) {
+    writeFileSync(passwordKeyFile, opaque.server.createSetup());
+    console.log("Password master key created at", passwordKeyFile);
+  }
+
+  const passwordMasterKey = readFileSync(passwordKeyFile, "utf8").trim();
+  return passwordMasterKey;
+}
+
+type PasswordService = ART<typeof createPasswordService>;
+type TiddlerCache = ART<typeof startupCache>;
+
+/** Pre command server setup */
+export class ServerState {
+  static async make(wikiPath: string) {
+    const $tw = await bootTiddlyWiki(wikiPath);
+    const passwordService = await createPasswordService(readPasswordMasterKey(wikiPath));
+    const cache = await startupCache($tw, path.resolve(wikiPath, "cache"))
+    const config = new ServerState(wikiPath, $tw, passwordService, cache);
+    return { $tw, config };
+  }
+
+  constructor(
+    wikiPath: string,
+    $tw: TW,
+    public PasswordService: PasswordService,
+    public pluginCache: TiddlerCache,
+  ) {
+
+    this.wikiPath = wikiPath;
+    this.storePath = path.resolve(this.wikiPath, "store");
+    this.cachePath = path.resolve(this.wikiPath, "cache");
+    this.databasePath = path.resolve(this.storePath, "database.sqlite");
+
+    this.fieldModules = $tw.Tiddler.fieldModules;
+    this.contentTypeInfo = $tw.config.contentTypeInfo;
+
+    mkdirSync(this.storePath, { recursive: true });
+    mkdirSync(this.cachePath, { recursive: true });
+
+    if (!existsSync(this.databasePath)) this.setupRequired = true;
+
+    this.enableBrowserCache = true;
+    this.enableGzip = true;
+    this.attachmentsEnabled = false;
+    this.attachmentSizeLimit = 100 * 1024;
+
+    this.enableExternalPlugins = !!process.env.ENABLE_EXTERNAL_PLUGINS
+    this.enableDevServer = !!process.env.ENABLE_DEV_SERVER
+
+
+    this.adapter = new SqliteAdapter(this.databasePath);
+    this.engine = new PrismaClient({ log: ["info", "warn"], adapter: this.adapter.adapter });
+
+    this.versions = { tw5: $tw.packageInfo.version, mws: pkg.version };
+
+  }
+
+  async init() {
+    await this.adapter.init();
+    this.setupRequired = false;
+    const users = await this.engine.users.count();
+    if (!users) { this.setupRequired = true; }
+  }
+
+
+  $transaction<R>(
+    fn: (prisma: Omit<ServerState["engine"], ITXClientDenyList>) => Promise<R>,
+    options?: {
+      maxWait?: number,
+      timeout?: number,
+      isolationLevel?: Prisma.TransactionIsolationLevel
+    }
+  ): Promise<R> {
+    // $transaction doesn't have the client extensions types,
+    // but should have them available (were they not just types).
+    return this.engine.$transaction(fn as (prisma: any) => Promise<any>, options);
+  }
+
+
+  fieldModules
+
+  wikiPath
+  storePath
+  cachePath
+  databasePath
+
+  versions
+
+  setupRequired = false;
+
+  enableBrowserCache
+  enableGzip
+  attachmentsEnabled
+  attachmentSizeLimit
+  enableExternalPlugins
+  enableDevServer
+
+
+  contentTypeInfo: Record<string, {
+    encoding: string;
+    extension: string | string[];
+    flags?: string[];
+    deserializerType?: string;
+  }>;
+
+  adapter!: SqliteAdapter;
+  engine!: PrismaClient<Prisma.PrismaClientOptions, never, {
+    result: {
+      // this types every output field with PrismaField
+      [T in Uncapitalize<Prisma.ModelName>]: {
+        [K in keyof PrismaPayloadScalars<Capitalize<T>>]: () => {
+          compute: () => PrismaField<Capitalize<T>, K>
+        }
+      }
+    },
+    client: {},
+    model: {},
+    query: {},
+  }>;
+
+
 }
 
 
@@ -78,139 +198,29 @@ export interface CommandInfo {
   // mandatoryParameters?: string[];
 }
 
-// move the startup logic into a separate class
-class StartupCommander {
-  fieldModules;
-  versions;
-  constructor(
-    public config: MWSConfig,
-    public $tw: TW,
-    public PasswordService: PasswordService,
-  ) {
+export interface SiteConfig {
+  /** If true, allow users that aren't logged in to read. */
+  readonly allowAnonReads?: boolean
+  /** If true, allow users that aren't logged in to write. */
+  readonly allowAnonWrites?: boolean
+  /** If true, recipes will allow access to a user who does not have read access to all its bags. */
+  readonly allowUnreadableBags?: boolean
 
-    this.fieldModules = $tw.Tiddler.fieldModules;
-
-    if (config.config?.pathPrefix) {
-      ok(config.config.pathPrefix.startsWith("/"), "pathPrefix must start with a slash");
-      ok(!config.config.pathPrefix.endsWith("/"), "pathPrefix must not end with a slash");
-    }
-
-    // console.log(config.wikiPath);
-    // this is already resolved to the cwd.
-    this.wikiPath = config.wikiPath;
-    this.storePath = path.resolve(this.wikiPath, "store");
-    this.databasePath = path.resolve(this.storePath, "database.sqlite");
-    this.outputPath = path.resolve($tw.boot.wikiPath, $tw.config.wikiOutputSubDir);
-    this.cachePath = path.resolve(this.wikiPath, "cache");
-
-    if (!existsSync(this.storePath)) {
-      mkdirSync(this.storePath, { recursive: true });
-      this.setupRequired = true;
-    }
-
-    // using the libsql adapter because for some reason prisma was 
-    // freezing when loading the system bag favicons.
-    // the libsql adapter has an additional advantage of letting us specify pragma 
-    // and also gives us more control over connections. 
-
-
-
-    this.siteConfig = {
-      wikiPath: this.wikiPath,
-      allowAnonReads: !!config.config?.allowAnonReads,
-      allowAnonWrites: !!config.config?.allowAnonWrites,
-      allowUnreadableBags: !!config.config?.allowUnreadableBags,
-      attachmentsEnabled: !!config.config?.saveLargeTextToFileSystem,
-      attachmentSizeLimit: config.config?.saveLargeTextToFileSystem ?? 0,
-      enableBrowserCache: !!config.config?.enableBrowserCache,
-      enableGzip: !!config.config?.enableGzip,
-      contentTypeInfo: $tw.config.contentTypeInfo,
-      storePath: this.storePath,
-      pathPrefix: config.config?.pathPrefix ?? "",
-      saveLargeTextToFileSystem: undefined as never,
-      enableExternalPlugins: config.config?.enableExternalPlugins ?? false,
-    };
-
-    this.SessionManager = config.SessionManager || sessions.SessionManager;
-    this.AttachmentService = config.AttachmentService || attacher.AttachmentService;
-
-    this.adapter = new SqliteAdapter(this.databasePath);
-    this.engine = new PrismaClient({ log: ["info", "warn"], adapter: this.adapter.adapter, });
-
-    this.versions = {
-      tiddlywiki: $tw.packageInfo.version,
-      mws: pkg.version,
-    }
-
-  }
-
-  async init() {
-    await this.adapter.init();
-    this.setupRequired = false;
-    const users = await this.engine.users.count();
-    if (!users) { this.setupRequired = true; }
-    else {
-      const checkBags = await this.engine.bags.findMany({
-        where: { bag_name: { startsWith: "$:/" } },
-        select: { bag_name: true, tiddlers: { select: { title: true } } }
-      });
-      checkBags.forEach(e => {
-        e.tiddlers.forEach(f => {
-          if (f.title as string !== e.bag_name as string) {
-            if (e.bag_name === "$:/plugins/tiddlywiki/codemirror-fullscreen-editing"
-              && f.title === "$:/plugins/tiddlywiki/codemirror-fullscreen"
-            ) return;
-            console.log(`The bag ${e.bag_name} has a tiddler ${f.title}, in the future this will be unsupported. This can occur if the top bag in a recipe is one of the system bags (starting with $:/)`)
-          }
-        })
-      })
-    }
-  }
+  readonly enableGzip?: boolean
+  readonly enableBrowserCache?: boolean
 
   wikiPath: string;
   storePath: string;
-  databasePath: string;
-  cachePath: string;
 
-  adapter!: SqliteAdapter;
-  engine!: PrismaClient<Prisma.PrismaClientOptions, never, {
-    result: {
-      // this types every output field with PrismaField
-      [T in Uncapitalize<Prisma.ModelName>]: {
-        [K in keyof PrismaPayloadScalars<Capitalize<T>>]: () => {
-          compute: () => PrismaField<Capitalize<T>, K>
-        }
-      }
-    },
-    client: {},
-    model: {},
-    query: {},
-  }>;
+  attachmentSizeLimit: number;
+  attachmentsEnabled: boolean;
 
-  $transaction<R>(
-    fn: (prisma: Omit<Commander["engine"], ITXClientDenyList>) => Promise<R>,
-    options?: {
-      maxWait?: number,
-      timeout?: number,
-      isolationLevel?: Prisma.TransactionIsolationLevel
-    }
-  ): Promise<R> {
-    // $transaction doesn't have the client extensions types,
-    // but should have them available (were they not just types).
-    return this.engine.$transaction(fn as (prisma: any) => Promise<any>, options);
-  }
+  contentTypeInfo: Record<string, any>;
 
+  enableExternalPlugins: boolean;
 
-  siteConfig: SiteConfig;
-
-
-  SessionManager: typeof sessions.SessionManager;
-  AttachmentService: typeof attacher.AttachmentService;
-
-  /** Signals that database setup is required. May be set to false by any qualified setup command. */
-  setupRequired: boolean = true;
-  outputPath: string;
 }
+
 /**
 Parse a sequence of commands
   commandTokens: an array of command string tokens
@@ -218,69 +228,14 @@ Parse a sequence of commands
   streams: {output:, error:}, each of which has a write(string) method
   callback: a callback invoked as callback(err) where err is null if there was no error
 */
-export class Commander extends StartupCommander {
-
+export class Commander {
   constructor(
-    config: MWSConfig,
-    $tw: TW,
-    PasswordService: PasswordService,
-    public tiddlerCache: CacheState,
+    public config: ServerState,
+    public $tw: TW,
   ) {
-    super(config, $tw, PasswordService);
-    this.nextToken = 0;
-    this.verbose = false;
-
-    const { listeners, onListenersCreated } = config;
-    config.listeners = [];
-    config.onListenersCreated = undefined;
-    // there's nothing that can't be hacked in a Node process,
-    // but this just makes it a little bit harder for the listeners to be read.
-    // this can be replaced, but it only recieves the listeners via closure.
-    this.create_mws_listen = (params: string[]) => {
-      return new listen_command.Command(params, this, listeners, onListenersCreated);
-    };
-  }
-  program!: commander.Command;
-
-  async init() {
-    await super.init();
-
-    this.program = new commander.Command();
-    const pkg = JSON.parse(readFileSync(dist_resolve("../package.json"), "utf-8"));
-
-    this.program
-      .name("mws")
-      .description(pkg.description)
-      .version(pkg.version)
-      .enablePositionalOptions()
-      .passThroughOptions()
-      .showHelpAfterError()
-
-    Object.keys(commands).forEach((key) => {
-      const c = commands[key]!;
-      if (c.info.internal) return;
-      if (c.info.name === "help") return;
-      const command = this.program.command(c.info.name);
-      command.description(c.info.description);
-      c.info.arguments.forEach(([name, description]) => {
-        command.argument(name, description);
-      });
-      c.info.options?.forEach(([name, description]) => {
-        command.option(name, description);
-      });
-
-      command.action((...args) => {
-        const command2 = args.pop();
-        const options = args.pop();
-        // TODO: options should become named parameters
-        this.addCommandTokens(["--" + command2.name(), ...args]);
-      });
-    });
-
 
   }
 
-  create_mws_listen;
   /** 
    * The promise of the current execution. 
    * It is created and returned by execute, 
@@ -292,14 +247,14 @@ export class Commander extends StartupCommander {
   promise!: Promise<void>;
   private callback!: (err?: any) => void;
 
-
   commandTokens!: string[];
-  nextToken
-  verbose
+  nextToken = 0;
+  verbose = false;
 
-  static initCommands(moduleType?: string) {
-    if (moduleType) throw new Error("moduleType is not implemented");
+  log(err: string) {
+    console.log("\x1b[1;31m" + "Error: " + err + "\x1b[0m");
   }
+
   /*
   Add a string of tokens to the command queue
   */
@@ -307,26 +262,8 @@ export class Commander extends StartupCommander {
     if (this.verbose) console.log("Commander addCommandTokens", params);
     this.commandTokens.splice(this.nextToken, 0, ...params);
   }
-  /*
-  Execute the sequence of commands and invoke a callback on completion
-  */
-  execute(commandTokens: string[]) {
-    console.log("Commander", commandTokens);
-    this.setPromise();
-    this.commandTokens = [];
-    switch (commandTokens[0]) {
-      // internal dev commands
-      case "--client-build":
-        this.commandTokens.push(...commandTokens); break;
-      default:
-        this.program.parse(commandTokens, { from: 'user' }); break;
-    }
 
-    this.executeNextCommand();
-    return this.promise;
-  }
-  executeInternal(commandTokens: string[]) {
-    console.log("Commander", commandTokens);
+  execute(commandTokens: string[]) {
     this.setPromise();
     this.commandTokens = commandTokens;
     this.executeNextCommand();
@@ -335,7 +272,7 @@ export class Commander extends StartupCommander {
   setPromise() {
     this.promise = new Promise<void>((resolve, reject) => {
       this.callback = (err: any) => {
-        if (err) this.$tw.utils.error("Error: " + err);
+        if (err) this.log(err);
         err ? reject(err) : resolve();
       };
     });
@@ -374,10 +311,6 @@ export class Commander extends StartupCommander {
     const params = this.commandTokens.slice(this.nextToken, nextCommand === -1 ? undefined : nextCommand);
     this.nextToken = nextCommand === -1 ? this.commandTokens.length : nextCommand;
 
-    if (commandName !== divider.info.name)
-      console.log("Commander executing", commandName, params);
-
-
     // Parse named parameters if required
     // const paramsIfMandetory = params;
     if (typeof params === "string") { this.callback(params); return; }
@@ -385,9 +318,7 @@ export class Commander extends StartupCommander {
     new Promise<any>(async (resolve) => {
       const { Command, info } = command!;
       try {
-        c = info.name === listen_command.info.name
-          ? this.create_mws_listen(params)
-          : new Command(params, this, info.synchronous ? undefined : resolve);
+        c = new Command(params, this, info.synchronous ? undefined : resolve);
         err = await c.execute();
         if (err || info.synchronous) resolve(err);
       } catch (e) {
@@ -430,5 +361,96 @@ export class Commander extends StartupCommander {
       return paramsByName;
     }
   }
+
+
+  getHelpInfo() {
+
+    const program = new commander.Command();
+    const pkg = JSON.parse(readFileSync(dist_resolve("../package.json"), "utf-8"));
+
+    const mainHelp = "Usage: mws [options] [commands]\n\n" + program
+      .name("mws")
+      .description(pkg.description
+        + "\n\n"
+        + "MWS commands operate on the current folder you are in."
+      )
+      .option("--listen [options...]", "listener options, cannot be specified alongside commands (multiple --listen allowed)")
+      .configureHelp({ helpWidth: 100 })
+      .helpOption(false)
+      .enablePositionalOptions()
+      .passThroughOptions()
+      .helpInformation()
+      .split("\n").slice(2).join("\n");
+
+    const listenHelp = program.command("--listen")
+      .option("--host=<string>", "the host string, passed directly to NodeJS")
+      .option("--port=<number>", "the port number, defaults to env.PORT, or 8080. \n"
+        + "Use 0 to let Node find a random port.")
+      .option("--prefix=<string>", "the URL pathname this listener is mounted at, "
+        + "must begin with a slash")
+      .option("--key=<string>", "HTTPS private key, relative to current directory")
+      .option("--cert=<string>", "HTTPS public certificate, relative to current directory")
+      .option("--secure=<boolean>", "Treat listener as HTTPS (useful in case the listener is behind a "
+        + "reverse proxy with SSL termination)."
+      )
+      .action(() => { })
+      .helpOption(false)
+      .configureHelp({
+        styleOptionTerm(str: string) {
+          if (str.startsWith("--")) return str.slice(2);
+          return str;
+        },
+        helpWidth: 90
+      })
+      .helpInformation()
+      .split('\n').slice(3).map(e => "    " + e).join('\n')
+
+    const lines = [];
+    lines.push(mainHelp);
+    lines.push(listenHelp);
+    lines.push("Commands:")
+
+
+    lines.push(
+      Object.keys(commands)
+        .map(key => {
+          const c = commands[key]!;
+          if (c.info.internal) return;
+          if (c.info.name === "help") return;
+          const command = program.command(c.info.name);
+          command.description(c.info.description);
+          c.info.arguments.forEach(([name, description]) => {
+            command.argument(name, description);
+          });
+          c.info.options?.forEach(([name, description]) => {
+            command.option("--" + name + "=<string>", description);
+          });
+
+          command.action((...args) => { });
+          command.helpOption(false);
+          command.configureHelp({
+            styleOptionTerm(str: string) {
+              if (str.startsWith("--")) return str.slice(2);
+              return str;
+            },
+            helpWidth: 90
+          });
+          const lines: string[] = [];
+          lines.push(c.info.description);
+          lines.push("");
+          lines.push(`Usage:  --${c.info.name} ${c.info.arguments.map(e => `<${e[0]}>`).join(" ")} ${c.info.options?.length ? "[options]" : ""}`);
+          lines.push(command.helpInformation().split('\n').slice(3).join('\n'));
+          return lines.join("\n");
+        })
+        .filter(e => e)
+        .map(e => "─".repeat(100) + "\n" + e)
+        .join("\n")
+    );
+
+
+
+    return lines.join("\n");
+  }
+
 }
 

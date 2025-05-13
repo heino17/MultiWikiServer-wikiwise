@@ -1,8 +1,7 @@
 import { resolve } from "path";
-import { CommandInfo, Commander } from "../commander";
+import type { CommandInfo } from "../commander";
+import { BaseCommand } from "../utils/BaseCommand";
 import { TiddlerStore } from "../routes/TiddlerStore";
-import { SiteConfig } from "../routes/router";
-import { TiddlerFields } from "../services/attachments";
 
 export const info: CommandInfo = {
 	name: "load-tiddlers",
@@ -14,23 +13,21 @@ export const info: CommandInfo = {
 	synchronous: true
 };
 
-export class Command {
-	get $tw() { return this.commander.$tw; }
-	config: SiteConfig;
+export class Command extends BaseCommand {
+
 	tiddlersPath: string;
 	bagName: PrismaField<"Bags", "bag_name">;
-	constructor(
-		public params: string[],
-		public commander: Commander,
-		public callback: (err?: any) => void
-	) {
-		this.config = this.commander.siteConfig;
+
+	constructor(...args: ConstructorParameters<typeof BaseCommand>) {
+		super(...args);
 		this.tiddlersPath = resolve(this.params[0] as string);
 		this.bagName = this.params[1] as PrismaField<"Bags", "bag_name">;
 	}
+
 	async execute() {
+
 		if (this.params.length < 2) return "Missing pathname and/or bag name";
-		await this.commander.$transaction(async (prisma) => {
+		await this.config.$transaction(async (prisma) => {
 			const store = TiddlerStore.fromCommander(this.commander, prisma);
 			var tiddlersFromPath = this.$tw.loadTiddlersFromPath(this.tiddlersPath);
 			//@ts-ignore

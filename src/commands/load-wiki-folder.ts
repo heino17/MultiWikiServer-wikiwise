@@ -11,10 +11,10 @@ Command to create and load a bag for the specified core editions
 
 
 import { resolve } from "path";
-import { Commander, CommandInfo } from "../commander";
+import { BaseCommand } from "../utils/BaseCommand";
+import type { CommandInfo } from "../commander";
 import { TiddlerStore } from "../routes/TiddlerStore";
 import { TiddlerFields } from "../services/attachments";
-import { Prisma, PrismaClient } from "@prisma/client";
 import * as path from "path";
 import * as fs from "fs";
 import { TW } from "tiddlywiki";
@@ -34,14 +34,9 @@ export const info: CommandInfo = {
 	synchronous: true
 };
 // tiddlywiki --load ./mywiki.html --savewikifolder ./mywikifolder
-export class Command {
-	constructor(
-		public params: string[],
-		public commander: Commander,
-		public callback: (err?: any) => void
-	) {
+export class Command extends BaseCommand {
 
-	}
+
 	async execute() {
 
 		// Check parameters
@@ -49,21 +44,38 @@ export class Command {
 			return "Missing parameters for --mws-load-wiki-folder command";
 		}
 
-		await this.commander.engine.$transaction(loadWikiFolder({
+		await this.config.engine.$transaction(loadWikiFolder({
 			wikiPath: this.params[0] as string,
 			bagName: this.params[1] as PrismaField<"Bags", "bag_name">,
 			bagDescription: this.params[2] as PrismaField<"Bags", "description">,
 			recipeName: this.params[3] as PrismaField<"Recipes", "recipe_name">,
 			recipeDescription: this.params[4] as PrismaField<"Recipes", "description">,
-			store: TiddlerStore.fromCommander(this.commander, this.commander.engine),
+			store: TiddlerStore.fromCommander(this.commander, this.config.engine),
 			$tw: this.commander.$tw,
-			cache: this.commander.tiddlerCache
+			cache: this.config.pluginCache
 		}));
 		console.log(info.name, "complete:", this.params[0])
 		return null;
 	}
-}
 
+
+	async test() {
+		const checkBags = await this.config.engine.bags.findMany({
+			where: { bag_name: { startsWith: "$:/" } },
+			select: { bag_name: true, tiddlers: { select: { title: true } } }
+		});
+		checkBags.forEach(e => {
+			e.tiddlers.forEach(f => {
+				if (f.title as string !== e.bag_name as string) {
+					if (e.bag_name === "$:/plugins/tiddlywiki/codemirror-fullscreen-editing"
+						&& f.title === "$:/plugins/tiddlywiki/codemirror-fullscreen"
+					) return;
+					console.log(`The bag ${e.bag_name} has a tiddler ${f.title}, in the future this will be unsupported. This can occur if the top bag in a recipe is one of the system bags (starting with $:/)`)
+				}
+			});
+		});
+	}
+}
 
 
 // Copy TiddlyWiki core editions
@@ -96,7 +108,7 @@ function loadWikiFolder({ $tw, store, cache, ...options }: {
 	}));
 
 	plugins.forEach(e => {
-		if(!e.plugin) console.log(`Folder ${options.wikiPath} missing ${e.folder}.`)
+		if (!e.plugin) console.log(`Folder ${options.wikiPath} missing ${e.folder}.`)
 	});
 
 	return [

@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { truthy } from "./utils";
 import { ok } from "node:assert";
-import { SiteConfig } from "../server";
+import { SiteConfig } from "../commander";
 
 
 export class DataChecks {

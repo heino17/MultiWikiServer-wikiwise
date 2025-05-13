@@ -1,33 +1,24 @@
 import { resolve } from "node:path";
 
-import { Commander, CommandInfo } from "../commander";
-import { TiddlerStore } from "../routes/TiddlerStore";
-import { readFileSync } from "node:fs";
+import type { CommandInfo } from "../commander";
+import { BaseCommand } from "../utils/BaseCommand";
 import { dist_require_resolve, dist_resolve } from "../utils";
 
 export const info: CommandInfo = {
 	name: "init-store",
-	description: "Initialize the MWS Store",
+	description: "Initialize the MWS data folder",
 	arguments: [],
 	synchronous: true,
 };
 
 
-export class Command {
+export class Command extends BaseCommand {
 
-	get $tw() { return this.commander.$tw; }
-	constructor(
-		public params: string[],
-		public commander: Commander,
-		public callback: (err?: any) => void
-	) {
-
-	}
 	async execute() {
 
-		if (!this.commander.setupRequired) return;
+		if (!this.config.setupRequired) return;
 
-		await this.commander.$transaction(async (prisma) => {
+		await this.config.$transaction(async (prisma) => {
 			const userCount = await prisma.users.count();
 
 			if (!userCount) {
@@ -44,7 +35,7 @@ export class Command {
 					select: { user_id: true }
 				});
 
-				const password = await this.commander.PasswordService.PasswordCreation(user.user_id.toString(), "1234");
+				const password = await this.config.PasswordService.PasswordCreation(user.user_id.toString(), "1234");
 
 				await prisma.users.update({
 					where: { user_id: user.user_id },
@@ -73,7 +64,7 @@ export class Command {
 			"--divider",
 		]);
 
-		this.commander.setupRequired = false;
+		this.config.setupRequired = false;
 	}
 }
 

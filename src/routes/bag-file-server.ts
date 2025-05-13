@@ -4,7 +4,7 @@ import { join, resolve } from "path";
 import { createReadStream, createWriteStream, fstat, readFileSync } from "fs";
 import sjcl from "sjcl";
 import { createHash } from "crypto";
-import { TiddlerFields } from "../services/attachments";
+import { AttachmentService, TiddlerFields } from "../services/attachments";
 import { truthy, UserError } from "../utils";
 
 
@@ -17,8 +17,9 @@ export class TiddlerServer extends TiddlerStore {
     const router = state.router;
     super(
       router.fieldModules,
-      new router.AttachmentService(router.siteConfig, prisma),
-      router.siteConfig,
+      new AttachmentService(router.siteConfig, prisma),
+      router.siteConfig.storePath,
+      router.siteConfig.contentTypeInfo,
       prisma
     );
   }
@@ -250,7 +251,7 @@ export class TiddlerServer extends TiddlerStore {
       where: { bag_id: { in: recipe.recipe_bags.map(e => e.bag.bag_id) } }
     });
 
-    const template = readFileSync(resolve(this.state.config.wikiPath, "tiddlywiki5.html"), "utf8");
+    const template = readFileSync(resolve(this.state.config.cachePath, "tiddlywiki5.html"), "utf8");
     const hash = createHash('md5');
     // Put everything into the hash that could change and invalidate the data that
     // the browser already stored.
@@ -343,7 +344,7 @@ export class TiddlerServer extends TiddlerStore {
       state.write(plugins.map(e => {
         const plugin = state.tiddlerCache.pluginFiles.get(e)!;
         const hash = state.tiddlerCache.pluginHashes.get(e)!;
-        return `<script src="${state.config.pathPrefix}/$cache/${plugin}/plugin.js" `
+        return `<script src="${state.pathPrefix}/$cache/${plugin}/plugin.js" `
           + ` integrity="${hash}" crossorigin="anonymous"></script>`;
       }).join("\n"));
 
@@ -384,7 +385,7 @@ export class TiddlerServer extends TiddlerStore {
 
     writeTiddler({
       title: "$:/config/multiwikiclient/host",
-      text: "$protocol$//$host$" + this.state.config.pathPrefix + "/",
+      text: "$protocol$//$host$" + this.state.pathPrefix + "/",
     });
 
     state.write(template.substring(markerPos + marker.length))

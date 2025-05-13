@@ -1,4 +1,5 @@
-import type { SessionManagerMap } from "../../../src/server";
+
+import type { SessionManagerMap } from "../../../src/services/sessions";
 import { serverRequest } from "./utils";
 const LOGIN_FAILED = 'Login failed. Please check your credentials.';
 

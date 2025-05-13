@@ -49,8 +49,8 @@ export class TiddlerRouter {
         username,
         isLoggedIn: state.user.isLoggedIn,
         isReadOnly: !canWrite,
-        allowAnonReads: state.config.allowAnonReads,
-        allowAnonWrites: state.config.allowAnonWrites,
+        allowAnonReads: false,
+        allowAnonWrites: false,
       };
     }
   );

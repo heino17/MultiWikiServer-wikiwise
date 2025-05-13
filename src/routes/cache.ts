@@ -1,11 +1,9 @@
-import { ok } from "assert";
-import { dist_resolve, truthy, ZodAssert } from "../utils";
-import { Commander } from "../commander";
+import { dist_resolve, ZodAssert } from "../utils";
 import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
 import { TW } from "tiddlywiki";
-import { SiteConfig } from "../server";
+import { SiteConfig } from "../commander";
 
 const prefix = Buffer.from(`$tw.preloadTiddler(`, "utf8");
 const suffix = Buffer.from(`);`, "utf8");
@@ -30,6 +28,26 @@ export async function startupCache($tw: TW, cachePath: string) {
     "$:/themes/tiddlywiki/vanilla",
   ];
 
+  const result = $tw.wiki.renderTiddler("text/plain", "$:/core/templates/tiddlywiki5.html", {
+    variables: {
+      // the boot and library tiddlers get rendered into the page
+      // this list gets saved in the store array
+      // we have to render at least one tiddler
+      saveTiddlerFilter: /* this.commander.siteConfig.enableExternalPlugins */ true ? `
+          $:/temp/nothing
+        ` : `
+          $:/core
+          $:/plugins/tiddlywiki/tiddlyweb
+          $:/plugins/tiddlywiki/multiwikiclient
+          $:/themes/tiddlywiki/snowwhite
+          $:/themes/tiddlywiki/vanilla
+        `
+    }
+  });
+
+  const filepath = path.resolve(cachePath, "tiddlywiki5.html")
+
+  fs.writeFileSync(filepath, result);
 
   return { pluginFiles, pluginHashes, filePlugins, corePlugins, cacheFolder: cachePath, prefix, suffix };
 }

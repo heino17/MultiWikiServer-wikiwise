@@ -1,4 +1,5 @@
-import { Commander, CommandInfo } from "../commander";
+import type { CommandInfo } from "../commander";
+import { BaseCommand } from "../utils/BaseCommand";
 import { TiddlerStore } from "../routes/TiddlerStore";
 
 export const info: CommandInfo = {
@@ -12,15 +13,9 @@ export const info: CommandInfo = {
 	synchronous: true
 };
 
-export class Command {
+export class Command extends BaseCommand {
 
-	constructor(
-		public params: string[],
-		public commander: Commander,
-		public callback: (err?: any) => void
-	) {
 
-	}
 	async execute() {
 
 		if (this.params.length < 3) throw "Missing parameters";
@@ -29,7 +24,7 @@ export class Command {
 			tiddlerTitle = this.params[1] as PrismaField<"Tiddlers", "title">,
 			tiddlerText = this.params[2] as string;
 
-		await this.commander.$transaction(async (prisma) => {
+		await this.config.$transaction(async (prisma) => {
 			const store = TiddlerStore.fromCommander(this.commander, prisma);
 			await store.saveBagTiddler({ title: tiddlerTitle, text: tiddlerText }, bagName);
 		});

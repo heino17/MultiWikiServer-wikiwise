@@ -1,4 +1,4 @@
-import { AuthStateRouteACL, StateObject } from "../StateObject";
+import { StateObject } from "../StateObject";
 import * as z from "zod";
 import { AllowedMethod, BodyFormat } from "../routes/router";
 
@@ -82,14 +82,14 @@ export interface RouteDef<P extends ParentTuple, PA extends string[]> extends Ro
   defineRoute: <R, PA extends string[],
     // T extends DetermineRouteOptions<P, [...PA]>
     T extends (P extends [BodyFormat, AllowedMethod[], any, any]
-    ?
-    RouteOptBase<P[0], P[1], [...PA]> & { bodyFormat?: undefined; }
-    :
-    P extends [undefined, AllowedMethod[], any, any]
-    ?
-    | { [K in BodyFormat]: RouteOptBase<K, P[1], [...PA]> & { bodyFormat: K; }; }[BodyFormat]
-    | RouteOptBase<BodyFormat, P[1], [...PA]> & { bodyFormat?: undefined; }
-    : never) 
+      ?
+      RouteOptBase<P[0], P[1], [...PA]> & { bodyFormat?: undefined; }
+      :
+      P extends [undefined, AllowedMethod[], any, any]
+      ?
+      | { [K in BodyFormat]: RouteOptBase<K, P[1], [...PA]> & { bodyFormat: K; }; }[BodyFormat]
+      | RouteOptBase<BodyFormat, P[1], [...PA]> & { bodyFormat?: undefined; }
+      : never)
   > (
     route: T,
     handler: (

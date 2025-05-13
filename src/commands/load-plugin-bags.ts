@@ -1,10 +1,10 @@
 import { resolve } from "node:path";
 
-import { Commander, CommandInfo } from "../commander";
+import type { Commander, CommandInfo } from "../commander";
 import { TiddlerStore } from "../routes/TiddlerStore";
 import { TiddlerFields } from "../services/attachments";
-import { truthy, tryParseJSON } from "../utils";
-import { Prisma, PrismaClient, PrismaPromise } from "@prisma/client";
+import { truthy } from "../utils";
+import { PrismaClient, PrismaPromise } from "@prisma/client";
 
 export const info: CommandInfo = {
 	name: "load-plugin-bags",

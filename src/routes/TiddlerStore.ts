@@ -1,9 +1,6 @@
-import * as fs from "fs";
-import * as path from "path";
-import { Router, SiteConfig } from "./router";
 import { AttachmentService, TiddlerFields } from "../services/attachments";
 import { ok } from "assert";
-import { Commander } from "../commander";
+import { Commander, SiteConfig } from "../commander";
 import { FileInfoTiddlers, TiddlerFieldModule } from "tiddlywiki";
 import { UserError } from "../utils";
 
@@ -37,24 +34,22 @@ store/
 export class TiddlerStore {
   static fromCommander(commander: Commander, prisma: PrismaTxnClient) {
     return new TiddlerStore(
-      commander.$tw.Tiddler.fieldModules,
-      new commander.AttachmentService(commander.siteConfig, prisma),
-      commander.siteConfig,
+      commander.config.fieldModules,
+      new AttachmentService(commander.config, prisma),
+      commander.config.storePath,
+      commander.config.contentTypeInfo,
       prisma
     );
   }
 
-
-  storePath: string;
-
   constructor(
     public fieldModules: Record<string, TiddlerFieldModule>,
     public attachService: AttachmentService,
-    public siteConfig: SiteConfig,
+    public storePath: string,
+    public contentTypeInfo: Record<string, any>,
     public prisma: PrismaTxnClient
   ) {
 
-    this.storePath = this.siteConfig.storePath;
   }
 
   /*
@@ -409,7 +404,7 @@ export class TiddlerStore {
       stream._read = () => {
         // Push data
         const type = tiddlerInfo.tiddler.type || "text/plain";
-        stream.push(tiddlerInfo.tiddler.text || "", (this.siteConfig.contentTypeInfo[type] || { encoding: "utf8" }).encoding);
+        stream.push(tiddlerInfo.tiddler.text || "", (this.contentTypeInfo[type] || { encoding: "utf8" }).encoding);
         // Push null to indicate the end of the stream
         stream.push(null);
       };

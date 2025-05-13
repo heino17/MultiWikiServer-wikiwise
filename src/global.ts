@@ -4,7 +4,7 @@ import * as fs from "fs";
 import type { Prisma } from "@prisma/client";
 import type { ZodAssert } from "./utils";
 import { Tiddler, Wiki } from "tiddlywiki";
-import { Commander } from "./commander";
+import { Commander, ServerState } from "./commander";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 
@@ -16,9 +16,10 @@ declare global {
 }
 
 declare global {
-  type PrismaTxnClient = Omit<Commander["engine"], "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">
+  type PrismaTxnClient = Omit<ServerState["engine"], "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">
   type ART<T extends (...args: any) => any> = Awaited<ReturnType<T>>
   type Complete<T> = { [K in keyof T]-?: T[K] }
+  interface ObjectConstructor { keys<T>(t: T): (string & keyof T)[]; }
   /** 
    * This primarily makes sure that positional arguments are used correctly
    * (so you can't switch a title and bag_name around).

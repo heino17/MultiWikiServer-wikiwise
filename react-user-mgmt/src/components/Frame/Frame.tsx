@@ -207,7 +207,7 @@ export function PageRoot() {
           </MenuItem>
           <Divider/>
           <MenuItem disabled>
-            TW5: {indexJson.versions.tiddlywiki}
+            TW5: {indexJson.versions.tw5}
           </MenuItem>
           <MenuItem disabled>
             MWS: {indexJson.versions.mws}

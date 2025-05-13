@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 import * as zlib from "node:zlib";
 import { ok } from "node:assert";
 import { promisify } from "node:util";
-import { SiteConfig } from "../routes/router";
+import { SiteConfig } from "../commander";
 import * as path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";

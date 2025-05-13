@@ -4,16 +4,14 @@ import RootRoute, { importEsbuild } from ".";
 import * as z from "zod";
 import { createStrictAwaitProxy, JsonValue, truthy, Z2 } from "../utils";
 import { Route, rootRoute, RouteOptAny, RouteMatch, } from "../utils";
-import { MWSConfigConfig, SiteConfig } from "../server";
 import { setupDevServer } from "../setupDevServer";
-import { Commander } from "../commander";
+import { Commander, ServerState, SiteConfig } from "../commander";
 import { CacheState, registerCacheRoutes, startupCache } from "./cache";
 import * as http from "http";
 import * as http2 from "http2";
-
-// this should have been in server
-export { SiteConfig } from "../server";
-
+import { SessionManager } from "../services/sessions";
+import { Listener } from "../listeners";
+import { fromError } from 'zod-validation-error';
 export { RouteMatch, Route, rootRoute };
 
 export const AllowedMethods = [...["GET", "HEAD", "OPTIONS", "POST", "PUT", "DELETE"] as const];
@@ -49,11 +47,10 @@ const zodTransformJSON = (arg: string, ctx: z.RefinementCtx) => {
 export class Router {
 
   static async makeRouter(
-    commander: Commander,
-    enableDevServer: boolean
+    config: ServerState
   ) {
 
-    const sendDevServer = await setupDevServer(enableDevServer, commander.siteConfig.pathPrefix);
+    const sendDevServer = await setupDevServer(config);
 
     const rootRoute = defineRoute(ROOT_ROUTE, {
       method: AllowedMethods,
@@ -63,15 +60,15 @@ export class Router {
       state.sendDevServer = sendDevServer.bind(undefined, state);
     });
 
-    await commander.SessionManager.defineRoutes(rootRoute);
+    await SessionManager.defineRoutes(rootRoute);
 
-    await RootRoute(rootRoute, commander.siteConfig);
+    await RootRoute(rootRoute, config);
 
-    await registerCacheRoutes(rootRoute, commander.siteConfig);
+    await registerCacheRoutes(rootRoute, config);
 
     await importEsbuild(rootRoute);
 
-    return new Router(rootRoute, commander);
+    return new Router(rootRoute, config);
   }
 
 
@@ -80,44 +77,38 @@ export class Router {
   enableGzip: boolean = false;
   csrfDisable: boolean = false;
 
-  siteConfig: SiteConfig;
-  get pathPrefix() {
-    return this.siteConfig.pathPrefix;
-  }
-
-  public engine: Commander["engine"];
-  private SessionManager: Commander["SessionManager"];
-  public PasswordService: Commander["PasswordService"];
-
-  versions;
+  get siteConfig() { return this.config; }
+  public engine: ServerState["engine"];
+  public PasswordService: ServerState["PasswordService"];
 
   fieldModules: Commander["$tw"]["Tiddler"]["fieldModules"];
-  AttachmentService: Commander["AttachmentService"];
 
+  versions;
   private tiddlerCache: CacheState;
 
   constructor(
     private rootRoute: rootRoute,
-    commander: Commander,
+    private config: ServerState,
   ) {
-    this.engine = commander.engine;
-    this.SessionManager = commander.SessionManager;
-    this.siteConfig = commander.siteConfig;
-    this.PasswordService = commander.PasswordService;
-    this.fieldModules = commander.$tw.Tiddler.fieldModules;
-    this.AttachmentService = commander.AttachmentService;
-    this.versions = commander.versions;
-    this.tiddlerCache = commander.tiddlerCache;
+    this.engine = config.engine;
+    this.PasswordService = config.PasswordService;
+    this.fieldModules = config.fieldModules;
+    this.versions = config.versions;
+    this.tiddlerCache = config.pluginCache;
   }
 
   handleIncomingRequest(
     req: http.IncomingMessage | http2.Http2ServerRequest,
-    res: http.ServerResponse | http2.Http2ServerResponse
+    res: http.ServerResponse | http2.Http2ServerResponse,
+    options: Listener
   ) {
 
     const [ok, err, streamer] = function (this: Router) {
       try {
-        return [true, undefined, new Streamer(req, res, this)] as const;
+        return [true, undefined, new Streamer(
+          req, res, options.prefix,
+          !!(options.key && options.cert || options.secure)
+        )] as const;
       } catch (e) {
         return [false, e, undefined] as const;
       }
@@ -134,6 +125,9 @@ export class Router {
 
   async handle(streamer: Streamer) {
 
+    if (streamer.expectSecure) {
+      streamer.appendHeader("Strict-Transport-Security", "max-age=60");
+    }
 
     if (!this.csrfDisable
       && ["POST", "PUT", "DELETE"].includes(streamer.method)
@@ -142,7 +136,7 @@ export class Router {
       throw streamer.sendString(400, { "x-reason": "x-requested-with missing" },
         `'X-Requested-With' header required`, "utf8");
 
-    const authUser = await this.SessionManager.parseIncomingRequest(streamer, this);
+    const authUser = await SessionManager.parseIncomingRequest(streamer, this);
 
     /** This should always have a length of at least 1 because of the root route. */
     const routePath = this.findRoute(streamer);
@@ -187,7 +181,7 @@ export class Router {
       if (state.bodyFormat === "json") {
         // make sure this parses as valid data
         const { success, data } = z.string().transform(zodTransformJSON).safeParse(state.data);
-        if (!success) return state.sendEmpty(400, {});
+        if (!success) return state.sendEmpty(400, { "x-reason": "json" });
         state.data = data;
       }
     } else if (state.bodyFormat === "www-form-urlencoded-urlsearchparams"
@@ -421,13 +415,15 @@ export const registerZodRoutes = (root: rootRoute, router: any, keys: string[]) 
       const pathCheck = Z2.object(zodPathParams(Z2)).safeParse(state.pathParams);
       if (!pathCheck.success) {
         console.log(pathCheck.error);
-        throw state.sendEmpty(400, { "x-reason": "zod-path" });
+        throw state.sendString(400, { "x-reason": "zod-path" },
+          fromError(pathCheck.error).toString(), "utf8");
       }
 
       const inputCheck = zodRequest(Z2).safeParse(state.data);
       if (!inputCheck.success) {
         console.log(inputCheck.error);
-        throw state.sendEmpty(400, { "x-reason": "zod-request" });
+        throw state.sendString(400, { "x-reason": "zod-request" },
+          fromError(inputCheck.error).toString(), "utf8");
       }
 
       const [good, error, res] = await inner(state)
@@ -437,10 +433,8 @@ export const registerZodRoutes = (root: rootRoute, router: any, keys: string[]) 
         if (error === STREAM_ENDED) {
           return error;
         } else if (typeof error === "string") {
-          console.log(error);
           return state.sendString(400, { "x-reason": "zod-handler" }, error, "utf8");
         } else if (error instanceof Error && error.name === "UserError") {
-          console.log(error.stack);
           return state.sendString(400, { "x-reason": "user-error" }, error.message, "utf8");
         } else {
           throw error;

@@ -1,4 +1,4 @@
-import { Commander, CommandInfo } from "../commander";
+import type { Commander, CommandInfo } from "../commander";
 
 export const info: CommandInfo = {
   name: "divider",

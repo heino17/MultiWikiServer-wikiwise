@@ -2,21 +2,15 @@ import { Readable } from 'stream';
 import { filterAsync, mapAsync, readMultipartData, sendResponse } from './utils';
 import { STREAM_ENDED, Streamer, StreamerState } from './streamer';
 import { PassThrough } from 'node:stream';
-import { AllowedMethod, BodyFormat, RouteMatch, Router, SiteConfig } from './routes/router';
+import { AllowedMethod, BodyFormat, RouteMatch, Router } from './routes/router';
 import * as z from 'zod';
 import { AuthUser } from './services/sessions';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { Types } from '@prisma/client/runtime/library';
 import { DataChecks } from './utils';
 import { setupDevServer } from "./setupDevServer";
-import { Commander } from './commander';
+import { Commander, ServerState, SiteConfig } from './commander';
 import { PasswordService } from './services/PasswordService';
-
-export interface AuthStateRouteACL {
-
-}
-
-
 
 // This class abstracts the request/response cycle into a single object.
 // It hides most of the details from the routes, allowing us to easily change the underlying server implementation.
@@ -62,10 +56,9 @@ export class StateObject<
   queryParams: Record<string, string[] | undefined>;
 
 
-  private engine: Commander["engine"];
-  public config: SiteConfig;
+  private engine: ServerState["engine"];
+  public config: ServerState;
   public PasswordService: PasswordService;
-  get pathPrefix() { return this.config.pathPrefix; }
 
   constructor(
     streamer: Streamer,
@@ -82,6 +75,7 @@ export class StateObject<
     this.engine = router.engine;
     this.config = router.siteConfig;
     this.PasswordService = router.PasswordService;
+
 
     this.readMultipartData = readMultipartData.bind(this);
     this.sendResponse = sendResponse.bind(undefined, this.config, this);
@@ -124,7 +118,7 @@ export class StateObject<
     return await this.engine.$transaction(prisma => fn(prisma as PrismaTxnClient));
   }
 
-  $transactionTuple<P extends Prisma.PrismaPromise<any>[]>(arg: (prisma: Commander["engine"]) => [...P], options?: { isolationLevel?: Prisma.TransactionIsolationLevel }): Promise<Types.Utils.UnwrapTuple<P>> {
+  $transactionTuple<P extends Prisma.PrismaPromise<any>[]>(arg: (prisma: ServerState["engine"]) => [...P], options?: { isolationLevel?: Prisma.TransactionIsolationLevel }): Promise<Types.Utils.UnwrapTuple<P>> {
     return this.engine.$transaction(arg(this.engine), options);
   }
 
@@ -147,6 +141,7 @@ export class StateObject<
    *
    * Sends a **302** status code and **Location** header to the client.
    * 
+   * This will add the path prefix to the redirect path
    * 
    * - **301 Moved Permanently:** The resource has been permanently moved to a new URL.
    * - **302 Found:** The resource is temporarily located at a different URL.
@@ -154,8 +149,8 @@ export class StateObject<
    * - **307 Temporary Redirect:** The resource is temporarily located at a different URL; the same HTTP method should be used.
    * - **308 Permanent Redirect:** The resource has permanently moved; the client should use the new URL in future requests.
    */
-  redirect(location: string, pushLocation?: boolean): typeof STREAM_ENDED {
-    return this.sendEmpty(302, { 'Location': this.config.pathPrefix + location });
+  redirect(location: string): typeof STREAM_ENDED {
+    return this.sendEmpty(302, { 'Location': this.pathPrefix + location });
   }
 
   sendSSE(retryMilliseconds?: number) {
@@ -244,7 +239,7 @@ export class StateObject<
       isAdmin ? prisma.$queryRaw`SELECT 1` : needWrite ? prisma.recipes.findUnique({
         select: { recipe_id: true },
         where: { recipe_name, recipe_bags: { some: { position: 0, bag: { OR: write } } } }
-      }) : prisma.$queryRaw`SELECT 1`,
+      }) : prisma.$queryRaw`SELECT 2`,
     ]);
 
     return { recipe, canRead, canWrite };
@@ -283,7 +278,7 @@ export class StateObject<
       isAdmin ? prisma.$queryRaw`SELECT 1` : needWrite ? prisma.bags.findUnique({
         select: { bag_id: true },
         where: { bag_name, OR: write }
-      }) : prisma.$queryRaw`SELECT 1`,
+      }) : prisma.$queryRaw`SELECT 2`,
     ]);
     return { bag, canRead, canWrite };
   }

@@ -1,5 +1,5 @@
 import { resolve } from "path";
-import { Commander, CommandInfo } from "../commander";
+import type { Commander, CommandInfo } from "../commander";
 import { Router } from "../routes/router";
 import { esbuildStartup, setupDevServer } from "../setupDevServer";
 import { writeFileSync } from "fs";
@@ -22,11 +22,8 @@ export class Command {
     if (this.params.length) throw `${info.name}: No parameters allowed. This is a no-op command.`;
   }
   async execute() {
-    if (!this.commander.config.enableDevServer) throw "Dev server is not enabled. Please set enableDevServer to true in the config file.";
 
     const { ctx, port, rootdir } = await esbuildStartup();
-
-
     ctx.dispose();
   }
 }

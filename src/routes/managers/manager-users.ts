@@ -1,5 +1,6 @@
-import { assertSignature } from "../../server";
-import { registerZodRoutes, SiteConfig, zodManage, RouterKeyMap, RouterRouteMap } from "../router";
+import { SiteConfig } from "../../commander";
+import { assertSignature } from "../../services/sessions";
+import { registerZodRoutes, zodManage, RouterKeyMap, RouterRouteMap } from "../router";
 
 export const UserKeyMap: RouterKeyMap<UserManager, true> = {
   user_edit_data: true,
@@ -17,8 +18,10 @@ export type UserManagerMap = RouterRouteMap<UserManager>;
 
 export class UserManager {
   static defineRoutes(root: rootRoute, config: SiteConfig) {
-    registerZodRoutes(root, new UserManager(), Object.keys(UserKeyMap));
+    registerZodRoutes(root, new UserManager(config), Object.keys(UserKeyMap));
   }
+
+  constructor(private config: SiteConfig) { }
 
   user_edit_data = zodManage(z => z.object({
     user_id: z.prismaField("Users", "user_id", "string")
@@ -209,7 +212,7 @@ export class UserManager {
 
     state.okUser();
 
-    
+
     const roles = await prisma.roles.findMany({
       where: { role_name: { in: ["ADMIN", "USER"] } }
     });

@@ -1,5 +1,6 @@
 
-import { Commander, CommandInfo } from "../commander";
+import type { Commander, CommandInfo } from "../commander";
+import { BaseCommand } from "../utils/BaseCommand";
 import { TiddlerStore } from "../routes/TiddlerStore";
 import { join, resolve } from "path";
 import { Prisma } from "@prisma/client";
@@ -19,16 +20,8 @@ export const info: CommandInfo = {
 	],
 	synchronous: true
 };
-export class Command {
+export class Command extends BaseCommand {
 
-	constructor(
-		public params: string[],
-		public commander: Commander,
-		public callback: (err?: any) => void
-	) {
-
-
-	}
 
 	async execute() {
 		if (this.params.length < 1) throw "Missing pathname";
@@ -43,13 +36,13 @@ export class Command {
 				throw new Error("Archive formats before version 2 are no longer supported.")
 				break;
 			case 2:
-				await new Archiver2(this.commander).loadArchive(archivePath);
+				await new Archiver2(this.commander.config).loadArchive(archivePath);
 				break;
 			default:
 				throw new Error(`Unsupported archive version ${index.version}`);
 		}
 
-		this.commander.setupRequired = false;
+		this.config.setupRequired = false;
 
 	}
 
@@ -155,7 +148,7 @@ export interface Archiver2Saves {
 }
 
 class Archiver2 {
-	constructor(public commander: Commander) { }
+	constructor(public config: Commander["config"]) { }
 
 	/** This generates UUIDv7 keys since version 2 used integers */
 	getNewUUIDv7(map: Map<any, string>, oldkey: any): string {
@@ -179,7 +172,7 @@ class Archiver2 {
 
 
 	async loadArchive(archivePath: string) {
-		await this.commander.$transaction(async (prisma) => {
+		await this.config.$transaction(async (prisma) => {
 			const roles: Awaited<ReturnType<Archiver2Saves["getRoles"]>> = JSON.parse(await fsp.readFile(resolve(archivePath, "roles.json"), "utf8"));
 			await prisma.roles.createMany({
 				data: roles.map((e): Prisma.RolesCreateManyInput => ({

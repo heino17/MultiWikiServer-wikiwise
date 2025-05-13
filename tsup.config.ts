@@ -12,6 +12,7 @@ export default defineConfig({
     "@prisma/adapter-better-sqlite3",
     "@serenity-kit/opaque",
     "env-cmd",
+    "zod-to-ts"
   ],
   tsconfig: "tsconfig.json",
   keepNames: true,

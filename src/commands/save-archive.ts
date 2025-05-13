@@ -1,14 +1,5 @@
-/*\
-title: $:/plugins/tiddlywiki/multiwikiserver/commands/mws-save-archive.js
-type: application/javascript
-module-type: command
-
-Command to load an archive of recipes, bags and tiddlers to a directory
-
-\*/
-
-import { writeFileSync } from "fs";
-import { Commander, CommandInfo } from "../commander";
+import type { CommandInfo } from "../commander";
+import { BaseCommand } from "../utils/BaseCommand";
 import { TiddlerStore } from "../routes/TiddlerStore";
 import { resolve } from "path";
 import * as _fsp from "fs/promises";
@@ -23,21 +14,15 @@ export const info: CommandInfo = {
 	],
 	synchronous: true
 };
-export class Command {
-	get $tw() { return this.commander.$tw as { utils: any }; }
+export class Command extends BaseCommand {
+
 	get archivePath() { return this.params[0] as string; }
 	store?: TiddlerStore;
-	constructor(
-		public params: string[],
-		public commander: Commander,
-		public callback: (err?: any) => void
-	) {
 
-	}
 	async execute() {
 		// Check parameters
 		if (this.params.length < 1) throw "Missing pathname";
-		await this.commander.$transaction(async (prisma) => {
+		await this.config.$transaction(async (prisma) => {
 			this.store = TiddlerStore.fromCommander(this.commander, prisma);
 			await this.saveArchive();
 			this.store = undefined;
@@ -75,25 +60,21 @@ export class Command {
 
 	async saveArchive() {
 		if (!this.store) throw new Error("Store not initialized");
-		const uriC = encodeURIComponent;
 		await fsp.mkdir(resolve(this.archivePath, "recipes"), { recursive: true });
 		const recipes = await this.getRecipes();
 		for (const recipeInfo of recipes) {
-			// console.log(`Recipe ${recipeInfo.recipe_name}`);
-			const recipeFile = `recipes/${uriC(recipeInfo.recipe_name)}.json`;
+			const recipeFile = `recipes/${recipeInfo.recipe_id}.json`;
 			await fsp.writeFile(resolve(this.archivePath, recipeFile), JSON.stringify(recipeInfo, null, "\t"));
 		}
 		await fsp.mkdir(resolve(this.archivePath, "bags"), { recursive: true });
 		const bags = await this.getBags();
 		await Promise.all(bags.map(async bagInfo => {
-			const tiddlersFolder = `bags/${uriC(bagInfo.bag_name)}/tiddlers`;
+			const tiddlersFolder = `bags/${bagInfo.bag_id}/tiddlers`;
 			await fsp.mkdir(resolve(this.archivePath, tiddlersFolder), { recursive: true });
-			// console.log(`Bag ${bagInfo.bag_name}`);
-			const bagFile = `bags/${uriC(bagInfo.bag_name)}/meta.json`;
+			const bagFile = `bags/${bagInfo.bag_id}/meta.json`;
 			await fsp.writeFile(resolve(this.archivePath, bagFile), JSON.stringify({ ...bagInfo, tiddlers: undefined, }, null, "\t"));
 			for (const tiddler of bagInfo.tiddlers) {
-				// console.log(bagInfo.bag_name, tiddler.title, tiddler.revision_id);
-				const tiddlerFile = `bags/${uriC(bagInfo.bag_name)}/tiddlers/${tiddler.revision_id}.json`;
+				const tiddlerFile = `bags/${bagInfo.bag_id}/tiddlers/${tiddler.revision_id}.json`;
 				await fsp.writeFile(resolve(this.archivePath, tiddlerFile), JSON.stringify(tiddler, null, "\t"));
 			}
 		}));
@@ -105,7 +86,7 @@ export class Command {
 		await fsp.writeFile(resolve(this.archivePath, "roles.json"), JSON.stringify(roles, null, "\t"));
 
 		await fsp.writeFile(resolve(this.archivePath, "index.json"), JSON.stringify({
-			version: 2,
+			version: 3,
 			comment: "The version is an internal identifier for the archive format. It is not the same as the version of TiddlyWiki or MWS.",
 		}, null, "\t"));
 		// Version 1: 
