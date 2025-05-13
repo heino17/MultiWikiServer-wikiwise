@@ -24,7 +24,7 @@ export function DocsRoute(rootRoute: rootRoute, mountPath: string, singleFile: b
     "+plugins/tiddlywiki/tiddlyweb",
     "+plugins/tiddlywiki/filesystem",
     // relative to the cwd
-    "./editions/mws-docs",
+    "../mws-docs",
   ];
 
   const hooks = new EventEmitter();

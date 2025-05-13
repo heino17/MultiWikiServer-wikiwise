@@ -1,0 +1,3 @@
+Server Plugins are a concept which has yet to be built but essentially involves subscribing to events and then taking (or not taking) a series of defined actions in response to the event. 
+
+For instance, on server startup, all plugins are asked to register any client plugins they may have. They would probably do this by adding that data to the tiddler cache, or returning the corresponding key-value pairs.

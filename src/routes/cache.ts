@@ -98,7 +98,7 @@ async function importPlugins(twFolder: string, cacheFolder: string, type: string
 
   plugins.push([
     dist_resolve("../plugins/client"),
-    "mws/plugins/client"
+    "tiddlywiki/plugins/mws/client"
   ] as const);
 
   // plugins.forEach(oldPath => {
@@ -164,7 +164,7 @@ async function importPlugins(twFolder: string, cacheFolder: string, type: string
     }
   });
 
-  fs.writeFileSync(path.join(cacheFolder, "hashes.json"), JSON.stringify(hashes, null, 2));
+  fs.writeFileSync(path.join(cacheFolder, "tiddlywiki-plugins.json"), JSON.stringify(hashes, null, 2));
 
   return { tiddlerFiles, tiddlerHashes };
 
