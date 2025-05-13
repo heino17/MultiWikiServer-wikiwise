@@ -229,12 +229,14 @@ class Archiver2 {
 	private async restoreRecipe(file: string, prisma: PrismaTxnClient) {
 		type RecipeInfo = Awaited<ReturnType<Archiver2Saves["getRecipes"]>>[number];
 		const recipeInfo: RecipeInfo = JSON.parse(await fsp.readFile(file, "utf8"));
+		// recipeInfo.recipe_bags.filter(e => e.bag_id)
 		await prisma.recipes.create({
 			data: {
 				recipe_id: this.recipe_key(recipeInfo.recipe_id),
 				recipe_name: recipeInfo.recipe_name,
 				description: recipeInfo.description,
 				owner_id: this.user_key(recipeInfo.owner_id),
+				plugin_names: [],
 				acl: {
 					createMany: {
 						data: recipeInfo.acl.map(e => ({
@@ -252,13 +254,14 @@ class Archiver2 {
 							with_acl: e.with_acl,
 						}))
 					}
-				}
+				},
 			}
 		});
 	}
 	private async restoreBag(folder: string, prisma: PrismaTxnClient) {
 		type BagInfo = Awaited<ReturnType<Archiver2Saves["getBags"]>>[number];
 		const bagInfo: BagInfo = JSON.parse(await fsp.readFile(join(folder, "meta.json"), "utf8"));
+
 		await prisma.bags.create({
 			data: {
 				bag_id: this.bag_key(bagInfo.bag_id),

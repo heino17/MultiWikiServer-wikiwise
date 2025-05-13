@@ -12,7 +12,8 @@ export const sortBagNames = (a: string, b: string) =>
 
 
 
-export function OwnerSelection({ isCreate, control, helperText }: {
+export function OwnerSelection({ isCreate, control, helperText, type }: {
+  type: "bag" | "recipe"
   isCreate: boolean;
   control: forms.FormControl<string | null>;
   helperText?: string;
@@ -35,11 +36,13 @@ export function OwnerSelection({ isCreate, control, helperText }: {
     <FormControlLabel
       label="Admin option: Make yourself the owner."
       control={<Checkbox
-        value={control.value}
+        checked={!!control.value}
         onChange={(event) => control.setValue(event.target.checked ? indexJson.user_id! : null)}
         disabled={control.disabled}
       />}
     />
+    {!!control.value && <FormHelperText>The {type} will be owned by you.</FormHelperText>}
+    {!control.value && <FormHelperText>The {type} will be unowned.</FormHelperText>}
     {helperText && <FormHelperText>{helperText}</FormHelperText>}
   </>);
 

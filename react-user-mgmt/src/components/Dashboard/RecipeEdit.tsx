@@ -1,7 +1,7 @@
 import React, { PropsWithChildren, useCallback, useMemo } from 'react';
-import { IndexJson, ok, Refresher, serverRequest, useIndexJson } from '../../helpers';
+import { IndexJson, ok, Refresher, SelectField, serverRequest, useIndexJson } from '../../helpers';
 import {
-  Autocomplete, Checkbox, DialogContent, DialogTitle, FormControlLabel, IconButton, Stack, TextField,
+  Autocomplete, Checkbox, DialogContent, DialogTitle, Divider, FormControlLabel, FormHelperText, IconButton, Stack, TextField,
   useMediaQuery, useTheme
 
 } from "@mui/material";
@@ -16,7 +16,7 @@ import ArrowDownward from '@mui/icons-material/ArrowDownward';
 
 import * as forms from "angular-forms-only";
 import { EventEmitter, useObservable } from '../../helpers';
-import { onChange, OwnerSelection, sortBagNames } from './Shared';
+import { onChange, onChecked, OwnerSelection, sortBagNames } from './Shared';
 import { createDialogForm, FormDialogSubmitButton, useFormDialogForm } from '../../forms';
 
 export interface Recipe {
@@ -24,6 +24,9 @@ export interface Recipe {
   description: string;
   owner_id?: string | null;
   bag_names: { bag_name: string, with_acl: boolean }[];
+  plugin_names: string[];
+  skip_required_plugins: boolean;
+  skip_core: boolean;
 }
 
 export const useRecipeEditForm = createDialogForm({
@@ -42,6 +45,15 @@ export const useRecipeEditForm = createDialogForm({
         !value ? [] : value.bag_names.map(e => RecipeBagRow(e)), {
         validators: [forms.Validators.required]
       }),
+      plugin_names: new forms.FormControl<string[]>(value?.plugin_names ?? [], {
+        nonNullable: true, validators: [],
+      }),
+      skip_required_plugins: new forms.FormControl<boolean>(value?.skip_required_plugins ?? false, {
+        nonNullable: true,
+      }),
+      skip_core: new forms.FormControl<boolean>(value?.skip_core ?? false, {
+        nonNullable: true,
+      }),
     });
     if (value) form.controls.recipe_name.disable();
     return form;
@@ -50,7 +62,6 @@ export const useRecipeEditForm = createDialogForm({
     const isCreate = value === null;
     const theme = useTheme();
     const isAdmin = indexJson.isAdmin;
-    console.log(recipeForm);
     return <>
       {!isCreate && <h2>Recipe: {value?.recipe_name}</h2>}
       {isCreate && <TextField
@@ -66,6 +77,7 @@ export const useRecipeEditForm = createDialogForm({
         onChange={onChange(recipeForm.controls.description)}
       />
       <OwnerSelection
+        type="recipe"
         isCreate={isCreate}
         control={recipeForm.controls.owner_id}
       />
@@ -100,6 +112,46 @@ export const useRecipeEditForm = createDialogForm({
             recipeForm.controls.bag_names.markAsDirty();
           } : undefined} />
       ))}
+      <h2>Client Plugins</h2>
+      <SelectField
+        title="Roles"
+        multiple
+        control={recipeForm.controls.plugin_names}
+        options={indexJson.clientPlugins.map(e => ({ value: e, label: e }))}
+      />
+      <Divider />
+      <Stack direction="column" justifyContent="stretch" alignItems="stretch" spacing={0}>
+        <h2>Required Plugins</h2>
+        <p>These plugins are always included even if no other client plugins are set.</p>
+        <ul>{indexJson.corePlugins.map(e => <li>{e}</li>)}</ul>
+        <p>The plugins are required for the wiki to save properly. The themes are provided as a default fallback in case nothing else is availabe.</p>
+        <Stack direction="row" alignItems="center">
+          <Checkbox
+            checked={recipeForm.controls.skip_required_plugins.value}
+            onChange={onChecked(recipeForm.controls.skip_required_plugins)}
+            disabled={recipeForm.controls.skip_required_plugins.disabled}
+          />
+          <span>Skip Required Plugins</span>
+        </Stack>
+        <FormHelperText sx={{ marginBlock: 0 }}>Don't include required plugins.</FormHelperText>
+      </Stack>
+      <Divider />
+      <Stack direction="column" justifyContent="stretch" alignItems="stretch" spacing={0}>
+        <h2>TiddlyWiki Core</h2>
+        <p>
+          The TiddlyWiki core is the heart of your wiki. Obviously the only reason
+          to disable this is if you want to write a completely new core from scratch.
+        </p>
+        <Stack direction="row" alignItems="center">
+          <Checkbox
+            checked={recipeForm.controls.skip_core.value}
+            onChange={onChecked(recipeForm.controls.skip_core)}
+            disabled={recipeForm.controls.skip_core.disabled}
+          />
+          <span>Skip The Core!</span>
+        </Stack>
+        <FormHelperText sx={{ marginBlock: 0 }}>Don't include the core.</FormHelperText>
+      </Stack>
       <FormDialogSubmitButton
         onSubmit={async () => {
           const formData = recipeForm.value;
@@ -112,9 +164,13 @@ export const useRecipeEditForm = createDialogForm({
           if (recipeForm.invalid) { console.log(recipeForm.errors); throw recipeForm.errors; }
 
           const recipe_name = isCreate ? formData.recipe_name : value.recipe_name;
+        
           ok(recipe_name);
           ok(formData.description);
           ok(formData.bag_names);
+          ok(formData.plugin_names);
+          
+          const { plugin_names, skip_required_plugins = false, skip_core = false } = formData;
 
           const { recipe_id } = await serverRequest.recipe_upsert({
             recipe_name,
@@ -123,6 +179,9 @@ export const useRecipeEditForm = createDialogForm({
             bag_names: formData.bag_names.map(({ bag_name, with_acl = false }) =>
               (ok(bag_name), { bag_name, with_acl })
             ),
+            plugin_names,
+            skip_required_plugins,
+            skip_core,
             isCreate,
           });
 
@@ -145,24 +204,6 @@ export const useRecipeEditForm = createDialogForm({
 
 
 
-const RecipeForm = (
-  value: IndexJson["recipeList"][number] | null,
-  indexJson: IndexJson,
-  disableOwnerID: boolean
-) => {
-  const form = new forms.FormGroup({
-    recipe_name: new forms.FormControl(value?.recipe_name ?? "", { nonNullable: true, validators: [forms.Validators.required] }),
-    description: new forms.FormControl(value?.description ?? "", { nonNullable: true, validators: [forms.Validators.required] }),
-    owner_id: new forms.FormControl<string | null>(value?.owner_id ?? null, { nonNullable: true }),
-    bag_names: new forms.FormArray<ReturnType<typeof RecipeBagRow>>(!value ? [] : value.recipe_bags.map(rb => {
-      const bag = indexJson.getBag(rb.bag_id);
-      return RecipeBagRow({ bag_name: bag?.bag_name ?? "", with_acl: rb.with_acl });
-    }), { validators: [forms.Validators.required] }),
-  });
-  if (disableOwnerID) form.controls.owner_id.disable();
-  if (value) form.controls.recipe_name.disable();
-  return form;
-};
 interface RecipeBagRow {
   bag_name: string;
   with_acl: boolean;
@@ -172,25 +213,6 @@ const RecipeBagRow = (value: RecipeBagRow) => new forms.FormGroup({
   with_acl: new forms.FormControl(value.with_acl, { nonNullable: true }),
 });
 
-
-function RecipeFormComponent() {
-  const theme = useTheme();
-  const [indexJson, globalRefresh] = useIndexJson();
-  const { isAdmin = false } = indexJson;
-  const { form: recipeForm, value } = useFormDialogForm<IndexJson["recipeList"][number], ReturnType<typeof RecipeForm>>();
-  const isCreate = value === null;
-
-  return (<>
-    <DialogTitle>
-      {isCreate ? "Create new recipe" : "Update recipe"}
-    </DialogTitle>
-    <DialogContent>
-      {recipeForm && <Stack direction="column" spacing={2} alignItems="stretch" width="100%" paddingBlock={2}>
-
-      </Stack >}
-    </DialogContent>
-  </>)
-}
 
 function RecipeBagRowComponent({ bag_names, bagRow, onMoveDown, onMoveUp, onRemove }: {
   bag_names: string[],

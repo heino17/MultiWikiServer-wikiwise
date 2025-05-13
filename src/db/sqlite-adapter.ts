@@ -6,7 +6,7 @@ import { dist_resolve } from "../utils";
 import { createHash, randomUUID } from "crypto";
 import { existsSync } from "fs";
 const INIT_0_0 = "20250406213424_init";
-const INIT_0_1 = "20250512181701_init";
+const INIT_0_1 = "20250513012507_init";
 
 export class SqliteAdapter {
   constructor(private databasePath: string) {

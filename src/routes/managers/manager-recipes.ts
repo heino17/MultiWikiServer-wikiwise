@@ -6,7 +6,6 @@ import { AuthUser } from "../../services/sessions";
 
 
 export const RecipeKeyMap: RouterKeyMap<RecipeManager, true> = {
-  index_json: true,
 
   bag_create: true,
   bag_update: true,
@@ -37,86 +36,14 @@ export class RecipeManager {
     this.checks = new DataChecks(config)
   }
 
-  index_json = zodManage(z => z.undefined(), async (state, prisma) => {
-
-    const { isAdmin, user_id, username, role_ids } = state.user;
-
-    const OR = this.checks.getBagWhereACL({ permission: "READ", user_id, role_ids });
-
-    const bagList = await prisma.bags.findMany({
-      include: {
-        _count: isAdmin ? undefined : {
-          select: {
-            acl: {
-              where: {
-                permission: "ADMIN",
-                role_id: { in: role_ids }
-              }
-            }
-          }
-        },
-        acl: true,
-      },
-      where: isAdmin ? undefined : { OR }
-    });
-
-    const recipeList = await prisma.recipes.findMany({
-      include: {
-        recipe_bags: {
-          select: { bag_id: true, position: true, with_acl: true, },
-          orderBy: { position: "asc" }
-        },
-        acl: true,
-        _count: isAdmin ? undefined : {
-          select: {
-            acl: {
-              where: {
-                permission: "ADMIN",
-                role_id: { in: role_ids }
-              }
-            }
-          }
-        },
-      },
-      where: isAdmin ? undefined : {
-        OR: [
-          { recipe_bags: { every: { bag: { OR } } } },
-          user_id && { owner_id: { equals: user_id, not: null } }
-        ].filter(e => e)
-      }
-    });
-
-    const userListUser = !isAdmin && await prisma.users.findMany({
-      select: { user_id: true, username: true }
-    });
-
-    const userListAdmin = !!isAdmin && await prisma.users.findMany({
-      select: { user_id: true, username: true, email: true, roles: true, last_login: true, created_at: true }
-    });
-
-    const roleList = await prisma.roles.findMany();
-
-    return {
-      bagList,
-      recipeList,
-      isAdmin,
-      user_id,
-      userListUser,
-      userListAdmin,
-      roleList,
-      username,
-      isLoggedIn: state.user.isLoggedIn,
-      allowAnonReads: state.config.allowAnonReads,
-      allowAnonWrites: state.config.allowAnonWrites,
-      versions: state.router.versions,
-    }
-  });
-
   recipe_create = zodManage(z => z.object({
     recipe_name: z.string(),
     description: z.string(),
     bag_names: z.array(z.object({ bag_name: z.string(), with_acl: z.boolean() })),
+    plugin_names: z.string().array(),
     owner_id: z.prismaField("Recipes", "owner_id", "string", true).optional(),
+    skip_required_plugins: z.prismaField("Recipes", "skip_required_plugins", "boolean"),
+    skip_core: z.prismaField("Recipes", "skip_core", "boolean"),
     isCreate: z.literal(true).default(true),
   }), async (state, prisma) => {
     return await this.recipeCreateOrUpdate(state.data, prisma, state.user);
@@ -125,7 +52,10 @@ export class RecipeManager {
     recipe_name: z.string(),
     description: z.string(),
     bag_names: z.array(z.object({ bag_name: z.string(), with_acl: z.boolean() })),
+    plugin_names: z.string().array(),
     owner_id: z.prismaField("Recipes", "owner_id", "string", true).optional(),
+    skip_required_plugins: z.prismaField("Recipes", "skip_required_plugins", "boolean"),
+    skip_core: z.prismaField("Recipes", "skip_core", "boolean"),
     isCreate: z.literal(false).default(false),
   }), async (state, prisma) => {
     return await this.recipeCreateOrUpdate(state.data, prisma, state.user);
@@ -135,7 +65,10 @@ export class RecipeManager {
     recipe_name: z.string(),
     description: z.string(),
     bag_names: z.array(z.object({ bag_name: z.string(), with_acl: z.boolean() })),
+    plugin_names: z.string().array(),
     owner_id: z.prismaField("Recipes", "owner_id", "string", true).optional(),
+    skip_required_plugins: z.prismaField("Recipes", "skip_required_plugins", "boolean"),
+    skip_core: z.prismaField("Recipes", "skip_core", "boolean"),
     isCreate: z.boolean(),
   }), async (state, prisma) => {
     return await this.recipeCreateOrUpdate(state.data, prisma, state.user);
@@ -171,11 +104,14 @@ export class RecipeManager {
     return await this.bagCreateOrUpdate(state.data, prisma, state.user);
   });
 
-  async recipeCreateOrUpdate({ bag_names, description, owner_id, recipe_name, isCreate }: {
+  async recipeCreateOrUpdate({ bag_names, description, owner_id, recipe_name, isCreate, plugin_names, skip_core, skip_required_plugins }: {
     recipe_name: string,
     description: string,
     bag_names: { bag_name: string, with_acl: boolean }[],
     owner_id?: PrismaField<"Recipes", "owner_id"> | null,
+    plugin_names: PrismaJson.Recipes_plugin_names,
+    skip_required_plugins: PrismaField<"Recipes", "skip_required_plugins">,
+    skip_core: PrismaField<"Recipes", "skip_core">,
     isCreate: boolean,
   }, prisma: PrismaTxnClient, user: AuthUser) {
     const existing = await prisma.recipes.findUnique({ where: { recipe_name }, });
@@ -211,9 +147,9 @@ export class RecipeManager {
         data: {
           description,
           owner_id: isAdmin ? owner_id : undefined,
-          recipe_bags: {
-            deleteMany: {},
-          }
+          skip_core,
+          skip_required_plugins,
+          recipe_bags: { deleteMany: {}, }
         }
       });
       await prisma.recipes.update({
@@ -232,7 +168,10 @@ export class RecipeManager {
           recipe_name,
           description,
           recipe_bags: { create: createBags },
-          owner_id: isAdmin ? owner_id : user_id
+          plugin_names,
+          owner_id: isAdmin ? owner_id : user_id,
+          skip_core,
+          skip_required_plugins
         },
       });
     }

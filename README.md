@@ -4,7 +4,7 @@
 
 - wiki index 304 response may have invalid headers
 - add the tiddlywiki version to the tiddler cache URLs
-- implement `plugin_names` and `skip_core_plugins` fields in client
+- update load-archive to make a best attempt at loading the archive, as outlined below
 
 ## Readme
 

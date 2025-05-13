@@ -34,7 +34,8 @@
     "test:pack": "(git clean -dfx tests && npm pack --pack-destination tests && cd tests && npm install && npm install ./tiddlywiki-mws-$npm_package_version.tgz --no-save && npm test)",
     "test": "(git clean -dfx tests && cd tests && npm install .. --no-save && npm test)",
     "fulltest": "mv node_modules node_modules_old; npm run test:pack; mv node_modules_old node_modules",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "prisma:migrate": "DATABASE_URL=file:test.sqlite npx prisma migrate dev"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "6.7.0-dev.48",
@@ -46,6 +47,7 @@
     "@types/sjcl": "^1.0.34",
     "@types/tiddlywiki": "file:tiddlywiki-types",
     "prisma": "6.6.0",
+    "prisma-json-types-generator": "^3.3.1",
     "source-map-support": "^0.5.21",
     "zod": "^3.24.2"
   },

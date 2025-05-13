@@ -10,6 +10,12 @@ import { dirname, resolve } from "node:path";
 
 
 declare global {
+  namespace PrismaJson {
+    type Recipes_plugin_names = string[];
+  }
+}
+
+declare global {
   type PrismaTxnClient = Omit<Commander["engine"], "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">
   type ART<T extends (...args: any) => any> = Awaited<ReturnType<T>>
   type Complete<T> = { [K in keyof T]-?: T[K] }

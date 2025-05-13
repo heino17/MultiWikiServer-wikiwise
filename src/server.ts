@@ -11,6 +11,7 @@ import { Commander } from "./commander";
 import { ListenerBase } from "./commands/listen";
 import { createPasswordService } from "./services/PasswordService";
 import { resolve } from "node:path";
+import { startupCache } from "./routes/cache";
 
 export * from "./services/sessions";
 
@@ -144,11 +145,11 @@ export default async function startServer(config: MWSConfig) {
 
   config.wikiPath = resolve(config.wikiPath);
 
-  const commander = new Commander(
-    config,
-    await bootTiddlyWiki(config.wikiPath),
-    await createPasswordService(passwordMasterKey)
-  );
+  const $tw = await bootTiddlyWiki(config.wikiPath);
+  const cache = await startupCache($tw, resolve(config.wikiPath, "cache"));
+  const passSrvc = await createPasswordService(passwordMasterKey);
+
+  const commander = new Commander(config, $tw, passSrvc, cache);
 
   await commander.init();
   const cli = process.argv.slice(2);

@@ -4,7 +4,7 @@ import React, { ReactNode, useCallback, useId, useMemo, useState } from "react";
 import { FieldValues, useForm, UseFormRegisterReturn } from "react-hook-form";
 import { proxy } from "./prisma-proxy";
 import { z } from "zod";
-import type { RecipeManagerMap, UserManagerMap } from "../../../src/routes/managers";
+import type { RecipeManagerMap, StatusManagerMap, UserManagerMap } from "../../../src/routes/managers";
 import { Button, ButtonProps } from "@mui/material";
 
 
@@ -87,6 +87,7 @@ declare global {
   const pathPrefix: string;
 }
 
+function postManager<K extends keyof StatusManagerMap>(key: K): StatusManagerMap[K]
 function postManager<K extends keyof RecipeManagerMap>(key: K): RecipeManagerMap[K]
 function postManager<K extends keyof UserManagerMap>(key: K): UserManagerMap[K]
 function postManager(key: string) {
@@ -105,12 +106,14 @@ function postManager(key: string) {
 
 }
 
-interface ManagerMap extends RecipeManagerMap, UserManagerMap {
+interface ManagerMap extends RecipeManagerMap, UserManagerMap, StatusManagerMap {
   prisma: typeof proxy;
 }
 
 
 export const serverRequest: ManagerMap = {
+  index_json: postManager("index_json"),
+
   user_edit_data: postManager("user_edit_data"),
   user_list: postManager("user_list"),
   user_create: postManager("user_create"),
@@ -118,7 +121,6 @@ export const serverRequest: ManagerMap = {
   user_update: postManager("user_update"),
   user_update_password: postManager("user_update_password"),
 
-  index_json: postManager("index_json"),
   recipe_create: postManager("recipe_create"),
   recipe_update: postManager("recipe_update"),
   recipe_upsert: postManager("recipe_upsert"),

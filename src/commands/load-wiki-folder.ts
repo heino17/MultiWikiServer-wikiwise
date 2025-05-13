@@ -19,6 +19,7 @@ import * as path from "path";
 import * as fs from "fs";
 import { TW } from "tiddlywiki";
 import { truthy } from "../utils";
+import { CacheState } from "../routes/cache";
 
 export const info: CommandInfo = {
 	name: "load-wiki-folder",
@@ -55,7 +56,8 @@ export class Command {
 			recipeName: this.params[3] as PrismaField<"Recipes", "recipe_name">,
 			recipeDescription: this.params[4] as PrismaField<"Recipes", "description">,
 			store: TiddlerStore.fromCommander(this.commander, this.commander.engine),
-			$tw: this.commander.$tw
+			$tw: this.commander.$tw,
+			cache: this.commander.tiddlerCache
 		}));
 		console.log(info.name, "complete:", this.params[0])
 		return null;
@@ -65,14 +67,15 @@ export class Command {
 
 
 // Copy TiddlyWiki core editions
-function loadWikiFolder({ $tw, store, ...options }: {
+function loadWikiFolder({ $tw, store, cache, ...options }: {
 	wikiPath: string,
 	bagName: PrismaField<"Bags", "bag_name">,
 	bagDescription: PrismaField<"Bags", "description">,
 	recipeName: PrismaField<"Recipes", "recipe_name">,
 	recipeDescription: PrismaField<"Recipes", "description">,
 	store: TiddlerStore,
-	$tw: TW
+	$tw: TW,
+	cache: CacheState,
 }) {
 	const pluginNamesTW5: string[] = [];
 	const tiddlersFromPath = loadWikiTiddlers($tw, options.wikiPath, [], pluginNamesTW5);
@@ -86,6 +89,16 @@ function loadWikiFolder({ $tw, store, ...options }: {
 	recipeList.reverse();
 
 	const is_plugin = false as PrismaField<"Bags", "is_plugin">;
+
+	const plugins = pluginNamesTW5.map(e => ({
+		plugin: cache.filePlugins.get(path.join("tiddlywiki", e)),
+		folder: e,
+	}));
+
+	plugins.forEach(e => {
+		if(!e.plugin) console.log(`Folder ${options.wikiPath} missing ${e.folder}.`)
+	});
+
 	return [
 		// create the bag
 		store.upsertBag_PrismaPromise(options.bagName, options.bagDescription, is_plugin),
@@ -94,7 +107,7 @@ function loadWikiFolder({ $tw, store, ...options }: {
 			options.recipeName,
 			options.recipeDescription,
 			recipeList,
-			[...new Set(pluginNamesTW5).values()].map(e => `tiddlywiki/${e}`)
+			plugins.map(e => e.plugin).filter(truthy)
 		),
 		// save the tiddlers (this will skip attachments)
 		...store.saveTiddlersFromPath_PrismaArray(tiddlersFromPath, options.bagName)

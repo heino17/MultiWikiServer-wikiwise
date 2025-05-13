@@ -19,6 +19,7 @@ import { SqliteAdapter } from "./db/sqlite-adapter";
 
 
 import pkg from "../package.json";
+import { CacheState } from "./routes/cache";
 
 
 
@@ -223,6 +224,7 @@ export class Commander extends StartupCommander {
     config: MWSConfig,
     $tw: TW,
     PasswordService: PasswordService,
+    public tiddlerCache: CacheState,
   ) {
     super(config, $tw, PasswordService);
     this.nextToken = 0;

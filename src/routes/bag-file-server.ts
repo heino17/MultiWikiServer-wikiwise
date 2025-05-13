@@ -245,8 +245,6 @@ export class TiddlerServer extends TiddlerStore {
       return state.sendEmpty(404);
     }
 
-    const plugin_names = Array.isArray(recipe.plugin_names) ? recipe.plugin_names : [];
-
     const lastTiddlerId = await this.prisma.tiddlers.aggregate({
       _max: { revision_id: true },
       where: { bag_id: { in: recipe.recipe_bags.map(e => e.bag.bag_id) } }
@@ -261,7 +259,7 @@ export class TiddlerServer extends TiddlerStore {
     // the bag names
     hash.update(recipe.recipe_bags.map(e => e.bag.bag_name).join(","));
     // the plugin names
-    hash.update(plugin_names.join(","));
+    hash.update(recipe.plugin_names.join(","));
     // the latest tiddler id in those bags
     hash.update(`${lastTiddlerId._max.revision_id}`);
     const contentDigest = hash.digest("hex");
@@ -313,26 +311,17 @@ export class TiddlerServer extends TiddlerStore {
     }
     state.write(template.substring(0, markerPos));
 
-    const { cacheFolder, pluginFiles, filePlugins } = state.tiddlerCache;
-
-    const cachePlugins = new Map(plugin_names.map(e => [e, filePlugins.get(e as any)] as const));
-
-    cachePlugins.forEach((v, k) => {
-      if (!v) console.log("Could not find the plugin title for the path " + k);
-    });
+    const { cacheFolder, pluginFiles, corePlugins } = state.tiddlerCache;
 
     const plugins = [
       ...new Set([
-        ...(!recipe.skip_core_plugins) ? [
-          "$:/core",
-          "$:/plugins/tiddlywiki/multiwikiclient",
-          "$:/plugins/tiddlywiki/tiddlyweb",
-          "$:/themes/tiddlywiki/snowwhite",
-          "$:/themes/tiddlywiki/vanilla",
-        ] : [],
-        ...cachePlugins.values() as MapIterator<string>,
+        ...(!recipe.skip_required_plugins) ? corePlugins : [],
+        ...(!recipe.skip_core) ? ["$:/core"] : [],
+        ...recipe.plugin_names,
       ]).values()
     ];
+
+    console.log(plugins);
 
     plugins.forEach(e => {
       if (!state.tiddlerCache.pluginFiles.has(e))

@@ -5,22 +5,36 @@ import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
 import { TW } from "tiddlywiki";
+import { SiteConfig } from "../server";
 
 const prefix = Buffer.from(`$tw.preloadTiddler(`, "utf8");
 const suffix = Buffer.from(`);`, "utf8");
 
-export async function startupCache(rootRoute: rootRoute, commander: Commander) {
-  const $tw = commander.$tw;
+export async function startupCache($tw: TW, cachePath: string) {
+
 
   // we only need the client since we don't load plugins server-side
   const { tiddlerFiles: pluginFiles, tiddlerHashes: pluginHashes } = await importPlugins(
     path.join($tw.boot.corePath, ".."),
-    commander.cachePath,
+    cachePath,
     "client",
     $tw,
   );
 
   const filePlugins = new Map([...pluginFiles.entries()].map(e => e.reverse() as [string, string]));
+
+  const corePlugins = [
+    "$:/plugins/tiddlywiki/multiwikiclient",
+    "$:/plugins/tiddlywiki/tiddlyweb",
+    "$:/themes/tiddlywiki/snowwhite",
+    "$:/themes/tiddlywiki/vanilla",
+  ];
+
+
+  return { pluginFiles, pluginHashes, filePlugins, corePlugins, cacheFolder: cachePath, prefix, suffix };
+}
+
+export async function registerCacheRoutes(rootRoute: rootRoute, config: SiteConfig) {
 
   rootRoute.defineRoute({
     method: ["GET", "HEAD"],
@@ -31,18 +45,14 @@ export async function startupCache(rootRoute: rootRoute, commander: Commander) {
     ZodAssert.pathParams(state, z => ({ plugin: z.string() }));
     // console.log("serving plugin", state.pathParams.plugin)
     return state.sendFile(200, {}, {
-      root: commander.cachePath,
+      root: path.join(config.wikiPath, "cache"),
       reqpath: state.pathParams.plugin + "/plugin.json",
       prefix,
       suffix,
     });
 
   })
-
-  return { pluginFiles, pluginHashes, filePlugins, cacheFolder: commander.cachePath, prefix, suffix };
 }
-
-
 
 
 async function importPlugins(twFolder: string, cacheFolder: string, type: string, $tw: TW) {

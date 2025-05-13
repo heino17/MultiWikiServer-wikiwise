@@ -51,7 +51,11 @@ export const useBagEditForm = createDialogForm({
           disabled={bagForm.controls.is_plugin.disabled}
         />}
       />
-      <OwnerSelection isCreate={isCreate} control={bagForm.controls.owner_id} />
+      <OwnerSelection
+        type="bag"
+        isCreate={isCreate}
+        control={bagForm.controls.owner_id}
+      />
       <FormDialogSubmitButton
         onSubmit={async () => {
 

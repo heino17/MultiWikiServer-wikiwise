@@ -7,7 +7,7 @@ import { Route, rootRoute, RouteOptAny, RouteMatch, } from "../utils";
 import { MWSConfigConfig, SiteConfig } from "../server";
 import { setupDevServer } from "../setupDevServer";
 import { Commander } from "../commander";
-import { CacheState, startupCache } from "./cache";
+import { CacheState, registerCacheRoutes, startupCache } from "./cache";
 import * as http from "http";
 import * as http2 from "http2";
 
@@ -67,11 +67,11 @@ export class Router {
 
     await RootRoute(rootRoute, commander.siteConfig);
 
-    const cache = await startupCache(rootRoute, commander);
+    await registerCacheRoutes(rootRoute, commander.siteConfig);
 
     await importEsbuild(rootRoute);
 
-    return new Router(rootRoute, commander, cache);
+    return new Router(rootRoute, commander);
   }
 
 
@@ -94,10 +94,11 @@ export class Router {
   fieldModules: Commander["$tw"]["Tiddler"]["fieldModules"];
   AttachmentService: Commander["AttachmentService"];
 
+  private tiddlerCache: CacheState;
+
   constructor(
     private rootRoute: rootRoute,
     commander: Commander,
-    private tiddlerCache: CacheState,
   ) {
     this.engine = commander.engine;
     this.SessionManager = commander.SessionManager;
@@ -106,6 +107,7 @@ export class Router {
     this.fieldModules = commander.$tw.Tiddler.fieldModules;
     this.AttachmentService = commander.AttachmentService;
     this.versions = commander.versions;
+    this.tiddlerCache = commander.tiddlerCache;
   }
 
   handleIncomingRequest(

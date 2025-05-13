@@ -3,6 +3,7 @@ import { EventEmitter, IndexJson, MissingFavicon, useIndexJson } from '../../hel
 import {
   Avatar, Button, Card, CardActions, CardContent, Divider, IconButton, Link, List, ListItem, ListItemAvatar, ListItemButton,
   ListItemText, Stack,
+  Tooltip,
   useTheme
 } from "@mui/material";
 import ACLIcon from '@mui/icons-material/AdminPanelSettings';
@@ -14,6 +15,9 @@ import ExpandMore from '@mui/icons-material/ExpandMore';
 import WithACL from '@mui/icons-material/GppGood';
 import WithoutACL from '@mui/icons-material/GppBadOutlined';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
+import ExtensionOffIcon from '@mui/icons-material/ExtensionOff';
+import TuneIcon from '@mui/icons-material/Tune';
+import DeveloperModeIcon from '@mui/icons-material/DeveloperMode';
 
 import { useEventEmitter } from '../../helpers';
 
@@ -44,10 +48,17 @@ export function Recipes() {
           <h1>Recipes</h1>
           <List>
             {indexJson.recipeList.map((recipe) => {
-              const bagsReadable = recipe.recipe_bags.every(bag => !!getBag(bag.bag_id))
+              const bagsReadable = recipe.recipe_bags.every(bag => !!getBag(bag.bag_id));
+              const requiredDisabled = recipe.skip_required_plugins;
+              const coreDisabled = recipe.skip_core;
               return (<>
 
                 <ListItemButton key={recipe.recipe_name} disableRipple>
+                  {coreDisabled && <Tooltip title="Core Disabled">
+                    <IconButton>
+                      <DeveloperModeIcon color="error" fontSize='large' />
+                    </IconButton>
+                  </Tooltip>}
                   <ListItemAvatar>
                     {bagsReadable ? (
                       <Avatar src={`recipes/${encodeURIComponent(recipe.recipe_name)}/tiddlers/%24%3A%2Ffavicon.ico`}>
@@ -70,6 +81,13 @@ export function Recipes() {
                     </Stack>}
                   />
                   <Stack direction="row" spacing={1}>
+
+                    {requiredDisabled && <Tooltip title="Required Plugins Disabled">
+                      <IconButton>
+                        <ExtensionOffIcon />
+                      </IconButton>
+                    </Tooltip>}
+
                     <IconButton
                       edge="end"
                       aria-label="edit recipe"
