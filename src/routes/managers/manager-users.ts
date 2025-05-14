@@ -1,6 +1,7 @@
 import { SiteConfig } from "../../commander";
 import { assertSignature } from "../../services/sessions";
 import { registerZodRoutes, zodManage, RouterKeyMap, RouterRouteMap } from "../../router";
+import { STREAM_ENDED } from "../../listen/streamer";
 
 export const UserKeyMap: RouterKeyMap<UserManager, true> = {
   user_edit_data: true,
@@ -14,11 +15,17 @@ export const UserKeyMap: RouterKeyMap<UserManager, true> = {
 }
 
 export type UserManagerMap = RouterRouteMap<UserManager>;
+declare const root: rootRoute;
+
+// class RoutesClass { test = zodManage(z => z.any(), async e => null) }
+// const RoutesKeyMap: RouterKeyMap<RoutesClass, true> = { test: true }
+// registerZodRoutes(root, new RoutesClass(), Object.keys(RoutesKeyMap));
 
 
 export class UserManager {
   static defineRoutes(root: rootRoute, config: SiteConfig) {
     registerZodRoutes(root, new UserManager(config), Object.keys(UserKeyMap));
+
   }
 
   constructor(private config: SiteConfig) { }

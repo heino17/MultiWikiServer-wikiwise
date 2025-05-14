@@ -1,0 +1,8 @@
+created: 20250513222435866
+modified: 20250513222701838
+title: Allowed Methods
+type: text/vnd.tiddlywiki
+
+`OPTIONS, GET, HEAD, POST, PUT, DELETE`
+
+HTTP allows any methods so I have no idea why I should only allow these. We could really go all out. 

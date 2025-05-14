@@ -39,7 +39,7 @@ export class StatusManager {
     const OR = this.checks.getBagWhereACL({ permission: "READ", user_id, role_ids });
 
     const clientPlugins = [...state.tiddlerCache.pluginFiles.keys()];
-    const corePlugins = state.tiddlerCache.corePlugins;
+    const corePlugins = state.tiddlerCache.requiredPlugins;
 
     const bagList = await prisma.bags.findMany({
       include: {

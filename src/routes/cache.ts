@@ -12,16 +12,12 @@ export async function startupCache($tw: TW, cachePath: string) {
 
 
   // we only need the client since we don't load plugins server-side
-  const { tiddlerFiles: pluginFiles, tiddlerHashes: pluginHashes } = await importPlugins(
-    path.join($tw.boot.corePath, ".."),
-    cachePath,
-    "client",
-    $tw,
-  );
+  const { tiddlerFiles: pluginFiles, tiddlerHashes: pluginHashes } =
+    await importPlugins(path.join($tw.boot.corePath, ".."), cachePath, "client", $tw,);
 
   const filePlugins = new Map([...pluginFiles.entries()].map(e => e.reverse() as [string, string]));
 
-  const corePlugins = [
+  const requiredPlugins = [
     "$:/plugins/tiddlywiki/multiwikiclient",
     "$:/plugins/tiddlywiki/tiddlyweb",
     "$:/themes/tiddlywiki/snowwhite",
@@ -33,15 +29,7 @@ export async function startupCache($tw: TW, cachePath: string) {
       // the boot and library tiddlers get rendered into the page
       // this list gets saved in the store array
       // we have to render at least one tiddler
-      saveTiddlerFilter: /* this.commander.siteConfig.enableExternalPlugins */ true ? `
-          $:/temp/nothing
-        ` : `
-          $:/core
-          $:/plugins/tiddlywiki/tiddlyweb
-          $:/plugins/tiddlywiki/multiwikiclient
-          $:/themes/tiddlywiki/snowwhite
-          $:/themes/tiddlywiki/vanilla
-        `
+      saveTiddlerFilter: "$:/temp/nothing"
     }
   });
 
@@ -49,7 +37,11 @@ export async function startupCache($tw: TW, cachePath: string) {
 
   fs.writeFileSync(filepath, result);
 
-  return { pluginFiles, pluginHashes, filePlugins, corePlugins, cacheFolder: cachePath, prefix, suffix };
+  return {
+    pluginFiles, pluginHashes, filePlugins,
+    requiredPlugins, cachePath,
+    prefix, suffix,
+  };
 }
 
 export async function registerCacheRoutes(rootRoute: rootRoute, config: SiteConfig) {
@@ -127,7 +119,7 @@ async function importPlugins(twFolder: string, cacheFolder: string, type: string
   //   $tw.preloadTiddlers.push(fields);
   // };
 
-  const hashes: any = {};
+  const pluginsList: any[] = [];
   const tiddlerFiles = new Map<string, string>();
   const tiddlerHashes = new Map<string, string>();
 
@@ -158,13 +150,14 @@ async function importPlugins(twFolder: string, cacheFolder: string, type: string
         fs.writeFileSync(path.join(newPath, "plugin.json"), json);
         tiddlerFiles.set(plugin.title, relativePluginPath);
         tiddlerHashes.set(plugin.title, "sha384-" + hash);
+        pluginsList.push({ title: plugin.title, path: relativePluginPath, hash });
       }
     } else {
       console.log("Info: No plugin found at", oldPath);
     }
   });
 
-  fs.writeFileSync(path.join(cacheFolder, "tiddlywiki-plugins.json"), JSON.stringify(hashes, null, 2));
+  fs.writeFileSync(path.join(cacheFolder, "tiddlywiki-plugins.json"), JSON.stringify(pluginsList, null, 2));
 
   return { tiddlerFiles, tiddlerHashes };
 

@@ -1,11 +1,10 @@
 import { StateObject } from "./StateObject";
 import { TiddlerStore } from "./TiddlerStore";
 import { join, resolve } from "path";
-import { createReadStream, createWriteStream, fstat, readFileSync } from "fs";
+import { createReadStream, createWriteStream, readFileSync } from "fs";
 import sjcl from "sjcl";
 import { createHash } from "crypto";
 import { AttachmentService, TiddlerFields } from "../services/attachments";
-import { truthy, UserError } from "../utils";
 
 
 export class TiddlerServer extends TiddlerStore {
@@ -312,11 +311,11 @@ export class TiddlerServer extends TiddlerStore {
     }
     state.write(template.substring(0, markerPos));
 
-    const { cacheFolder, pluginFiles, corePlugins } = state.tiddlerCache;
+    const { cachePath, pluginFiles, requiredPlugins } = state.tiddlerCache;
 
     const plugins = [
       ...new Set([
-        ...(!recipe.skip_required_plugins) ? corePlugins : [],
+        ...(!recipe.skip_required_plugins) ? requiredPlugins : [],
         ...(!recipe.skip_core) ? ["$:/core"] : [],
         ...recipe.plugin_names,
       ]).values()
@@ -355,7 +354,7 @@ export class TiddlerServer extends TiddlerStore {
       state.write(marker);
 
       const fileStreams = plugins.map(e =>
-        createReadStream(join(cacheFolder, pluginFiles.get(e)!, "plugin.json"))
+        createReadStream(join(cachePath, pluginFiles.get(e)!, "plugin.json"))
       );
 
       for (let i = 0; i < fileStreams.length; i++) {

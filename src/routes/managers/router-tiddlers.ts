@@ -253,7 +253,6 @@ export class TiddlerRouter {
       title: z.prismaField("Tiddlers", "title", "string", false),
     }).and(z.record(z.string())),
     async (state) => {
-
       await state.assertRecipeACL(state.pathParams.recipe_name, true);
 
       const recipe_name = state.pathParams.recipe_name;

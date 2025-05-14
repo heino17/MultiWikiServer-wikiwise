@@ -299,4 +299,21 @@ class Archiver2 {
 			)
 		});
 	}
+	
+	async test() {
+		const checkBags = await this.config.engine.bags.findMany({
+			where: { bag_name: { startsWith: "$:/" } },
+			select: { bag_name: true, tiddlers: { select: { title: true } } }
+		});
+		checkBags.forEach(e => {
+			e.tiddlers.forEach(f => {
+				if (f.title as string !== e.bag_name as string) {
+					if (e.bag_name === "$:/plugins/tiddlywiki/codemirror-fullscreen-editing"
+						&& f.title === "$:/plugins/tiddlywiki/codemirror-fullscreen"
+					) return;
+					console.log(`The bag ${e.bag_name} has a tiddler ${f.title}, in the future this will be unsupported. This can occur if the top bag in a recipe is one of the system bags (starting with $:/)`)
+				}
+			});
+		});
+	}
 }

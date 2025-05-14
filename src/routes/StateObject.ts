@@ -35,7 +35,7 @@ export class StateObject<
     B extends "string" ? string :
     B extends "buffer" ? Buffer :
     B extends "www-form-urlencoded-urlsearchparams" ? URLSearchParams :
-    B extends "stream" ? Readable :
+    B extends "stream" ? undefined :
     B extends "ignore" ? undefined :
     D;
   /** 
