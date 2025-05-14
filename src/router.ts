@@ -14,6 +14,8 @@ import { Listener } from "./listen/listeners";
 import { fromError } from 'zod-validation-error';
 import { t as try_ } from "try";
 export { RouteMatch, Route, rootRoute };
+import Debug from "debug";
+const debug = Debug("mws:router");
 
 
 export const AllowedMethods = [...["GET", "HEAD", "OPTIONS", "POST", "PUT", "DELETE"] as const];
@@ -179,9 +181,7 @@ export class Router {
     } else if (state.bodyFormat === "www-form-urlencoded-urlsearchparams"
       || state.bodyFormat === "www-form-urlencoded") {
       const data = state.data = new URLSearchParams((await state.readBody()).toString("utf8"));
-      if (state.bodyFormat === "www-form-urlencoded") {
-        state.data = Object.fromEntries(data);
-      }
+      if (state.bodyFormat === "www-form-urlencoded") state.data = Object.fromEntries(data);
     } else if (state.bodyFormat === "buffer") {
       state.data = await state.readBody();
     } else {
@@ -223,8 +223,9 @@ export class Router {
 
       // Try to match the path.
       const match = potentialRoute.path.exec(testPath);
-
+      
       if (match) {
+        debug.extend("matching")(potentialRoute.path.source, testPath, match?.[0]);
         // The matched portion of the path.
         const matchedPortion = match[0];
         // Remove the matched portion from the testPath.
@@ -291,6 +292,8 @@ function defineRoute(
   (route as any).defineRoute = (...args: [any, any]) => defineRoute(route, ...args);
 
   (route as Route).handler = handler;
+
+  debug.extend("defining")(route.method, route.path.source);
 
   return route as any; // this is usually ignored except for the root route.
 }

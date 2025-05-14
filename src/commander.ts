@@ -14,6 +14,7 @@ import pkg from "../package.json";
 import { startupCache } from "./routes/cache";
 import { createPasswordService } from "./services/PasswordService";
 import { bootTiddlyWiki } from "./tiddlywiki";
+import Debug from "debug";
 
 
 export interface $TW {
@@ -87,7 +88,13 @@ export class ServerState {
 
 
     this.adapter = new SqliteAdapter(this.databasePath);
-    this.engine = new PrismaClient({ log: ["info", "warn"], adapter: this.adapter.adapter });
+    this.engine = new PrismaClient({
+      log: [
+        ...Debug.enabled("prisma:query") ? ["query" as const] : [],
+        "info", "warn"
+      ],
+      adapter: this.adapter.adapter
+    });
 
     this.versions = { tw5: $tw.packageInfo.version, mws: pkg.version };
 
