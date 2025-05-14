@@ -58,7 +58,7 @@
     "send": "^1.1.0",
     "sjcl": "^1.0.8",
     "source-map-support": "^0.5.21",
-    "support-colors": "^0.0.1-security",
+    "supports-color": "^10.0.0",
     "tiddlywiki": "^5.1.22",
     "try": "^1.0.0-beta.5",
     "tsup": "^8.4.0",
