@@ -8,17 +8,19 @@ import * as manager from "./manager";
 import * as tests_complete from "./tests-complete";
 import * as mws_client_build from "./build-client";
 import * as help from "./help";
+import * as listen from "./listen";
 import type { CommandInfo } from "../commander";
 
 export { divider };
 
 export const commands: Record<string, { info: CommandInfo, Command: any }> = {
-  [load_plugin_bags.info.name]: load_plugin_bags,
   [load_wiki_folder.info.name]: load_wiki_folder,
-  [save_archive.info.name]: save_archive,
   [load_archive.info.name]: load_archive,
+  [save_archive.info.name]: save_archive,
   [init_store.info.name]: init_store,
   [manager.info.name]: manager,
+  [listen.info.name]: listen,
+  
 
   [help.info.name]: help,
   [divider.info.name]: divider,

@@ -7,7 +7,7 @@ import { createHash } from "crypto";
 import { STREAM_ENDED } from "./streamer";
 import { readFile } from "fs/promises";
 import { writeFileSync } from "fs";
-import { ServerState } from "../commander";
+import { ServerState } from "../ServerState";
 
 class ExtString {
   constructor(private str: string) {

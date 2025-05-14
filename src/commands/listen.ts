@@ -1,0 +1,69 @@
+import type { CommandInfo } from "../commander";
+import { BaseCommand } from "../utils";
+import * as commander from "commander";
+
+
+
+export const info: CommandInfo = {
+  name: "listen",
+  description: "Listen for web requests. ",
+  arguments: [],
+  options: [
+    ["allow-hosts <host...>", "Allowed host headers. This does not change CORS behavior."],
+    ["subdomains", "domain.com/wiki/ becomes wiki.domain.com"],
+    ["require-https", "The server will do everything it can to redirect HTTP to HTTPS. "
+      + "Setting this without an HTTPS endpoint to redirect to can make the site unreachable. "
+      + "The login form will refuse to login from http URLs and will attempt to redirect if possible. "
+      + "If the x-forward-proto header is available, it will be used as well. "
+    ],
+    ["listener <key=val...>", "Listen for web requests. Multiple listeners are allowed. "
+      + "You may specify multiple --listener options, one for each listener you want to start in NodeJS. "
+      + "All requests are funneled into one request stream. "
+    ]
+  ],
+  synchronous: true,
+  getHelp() {
+    return [
+      "",
+      "The listener options are: ",
+      "    host=<string>          the host string, passed directly to NodeJS [default: localhost]",
+      "",
+      "    port=<number>          the port number                     [default: env.PORT or 8080]",
+      "                           Use 0 to let Node find a random port. ",
+      "",
+      "    prefix=<string>        the URL pathname this listener is mounted at, ",
+      "                           must begin with a slash ",
+      "",
+      "    key=<string>           HTTPS private key, relative to current directory ",
+      "    cert=<string>          HTTPS public certificate, relative to current directory ",
+      "",
+      "    secure=<boolean>       Treat listener as HTTPS (useful in case the listener is behind",
+      "                           a reverse proxy with SSL termination). Specifying this without",
+      "                           HTTPS will definitely cause problems with login cookies.",
+      "",
+      "    redirect=<number>      Redirect to an https URL at the specified port. Generally ",
+      "                           intended to redirect 80 to 443. Always specify the public port",
+      "                           not the listener port as the value here.",
+      "",
+      "Examples: ",
+      "    Listen on two reverse-proxy ports, redirecting the insecure one. ",
+      "    $  mws listen \\",
+      "       --listener port=8443 secure=true \\",
+      "       --listener port=8080 redirect=443",
+      "",
+      "    Listen on a single reverse-proxy port, but attempt to detect insecure requests.",
+      "    $  mws listen \\",
+      "       --require-https \\",
+      "       --listener port=8443 secure=true \\",
+
+    ].join("\n");
+
+  }
+};
+
+
+export class Command extends BaseCommand {
+  async execute() {
+
+  }
+}

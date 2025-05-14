@@ -25,7 +25,9 @@ export const info: CommandInfo = {
 	name: "load-wiki-folder",
 	description: "Load a TiddlyWiki folder into a bag",
 	arguments: [
-		["path", "Path to the TiddlyWiki5 plugins folder"],
+		["path", "Path to the folder containing a tiddlywiki.info file"],
+	],
+	options: [
 		["bag-name", "Name of the bag to load tiddlers into"],
 		["bag-description", "Description of the bag"],
 		["recipe-name", "Name of the recipe to create"],

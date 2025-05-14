@@ -9,7 +9,8 @@ import { Prisma, PrismaClient } from '@prisma/client';
 import { Types } from '@prisma/client/runtime/library';
 import { DataChecks } from '../utils';
 import { setupDevServer } from "../listen/setupDevServer";
-import { Commander, ServerState, SiteConfig } from '../commander';
+import { Commander, SiteConfig } from '../commander';
+import { ServerState } from "../ServerState";
 import { PasswordService } from '../services/PasswordService';
 
 // This class abstracts the request/response cycle into a single object.
