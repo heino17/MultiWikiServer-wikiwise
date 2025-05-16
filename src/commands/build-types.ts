@@ -1,4 +1,5 @@
-import type { Commander, CommandInfo } from "../commander";
+import type { Commander } from "../commander";
+import type { CommandInfo } from "../utils/BaseCommand";
 
 import { UserKeyMap, UserManager } from "../routes/managers/manager-users";
 import { RecipeKeyMap, RecipeManager } from "../routes/managers/manager-recipes";
@@ -9,7 +10,6 @@ export const info: CommandInfo = {
   name: "build-types",
   description: "Output endpoint types to a JSON file so we don't have to include it in the runtime.",
   arguments: [],
-  synchronous: true,
   internal: true,
 };
 

@@ -1,23 +1,18 @@
-import type { Commander, CommandInfo } from "../commander";
+import type { Commander } from "../commander";
+import type { CommandInfo } from "../utils/BaseCommand";
+import { BaseCommand } from "../utils";
 
 export const info: CommandInfo = {
   name: "divider",
   description: "A no-op command to delimit param concatenation.",
   arguments: [],
-  synchronous: true,
   internal: true,
 };
 
+ 
+export class Command extends BaseCommand {
 
-export class Command {
-
-  constructor(
-    public params: string[],
-    public commander: Commander,
-  ) {
+  async execute() {
     if (this.params.length) throw `${info.name}: No parameters allowed. This is a no-op command.`;
-  }
-  execute() {
-    // Do nothing
   }
 }

@@ -1,5 +1,6 @@
 
-import type { Commander, CommandInfo } from "../commander";
+import type { Commander } from "../commander";
+import type { CommandInfo } from "../utils/BaseCommand";
 import { BaseCommand } from "../utils/BaseCommand";
 import { TiddlerStore } from "../routes/TiddlerStore";
 import { join, resolve } from "path";
@@ -18,7 +19,6 @@ export const info: CommandInfo = {
 	arguments: [
 		["archivePath", "Path to the archive to load"],
 	],
-	synchronous: true
 };
 export class Command extends BaseCommand {
 
@@ -36,7 +36,7 @@ export class Command extends BaseCommand {
 				throw new Error("Archive formats before version 2 are no longer supported.")
 				break;
 			case 2:
-				await new Archiver2(this.commander.config).loadArchive(archivePath);
+				await new Archiver2(this.config).loadArchive(archivePath);
 				break;
 			default:
 				throw new Error(`Unsupported archive version ${index.version}`);

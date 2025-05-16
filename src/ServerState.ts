@@ -11,6 +11,8 @@ import { createPasswordService } from "./services/PasswordService";
 import { bootTiddlyWiki } from "./tiddlywiki";
 import * as opaque from "@serenity-kit/opaque";
 
+export type SiteConfig = ServerState;
+
 /** Pre command server setup */
 
 export class ServerState {

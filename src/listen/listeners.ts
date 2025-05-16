@@ -1,54 +1,15 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { Commander } from "../commander";
-import { z } from "zod";
 import { Router } from "../router";
 import { ok } from "node:assert";
 import { createServer, IncomingMessage, Server, ServerResponse } from "node:http";
 import { createSecureServer, Http2SecureServer, Http2ServerRequest, Http2ServerResponse } from "node:http2";
-import { fromError } from 'zod-validation-error';
+import { ListenerRaw } from '../commands/listen';
+import { SiteConfig } from '../ServerState';
 
-async function parseListeners(cli: string[]) {
-  const listeners = [];
-  let cur: any = undefined;
 
-  for (let i = 0; i < cli.length; i++) {
-    if (cli[i] === "--listen") {
-      if (cur) listeners.push(cur);
-      cur = {};
-    } else if (cli[i]!.startsWith("--")) {
-      throw `The arg "${cli[i]}" at ${i} starts with a double-dash. The listen command cannot be used with other commands. Commands start with a double dash (--listen).`
-    } else {
-      if (!cur) throw "found parameters before --listen";
-      const div = cli[i]!.indexOf("=");
-      if (div === -1) throw `The arg "${cli[i]}" at ${i} does not have an equals sign`
-      const key = cli[i]!.slice(0, div);
-      const val = cli[i]!.slice(div + 1);
-      cur[key] = val;
-    }
-  }
-  if (cur) listeners.push(cur);
+export async function startListeners(listeners: ListenerRaw[], config: SiteConfig) {
 
-  const listenerCheck = z.object({
-    port: z.string().optional(),
-    host: z.string().optional(),
-    prefix: z.string().optional(),
-    key: z.string().optional(),
-    cert: z.string().optional(),
-    secure: z.enum(["true", "false"]).transform(e => e === "true").optional()
-  }).strict().array().safeParse(listeners);
-  if (!listenerCheck.success) {
-    console.log(fromError(listenerCheck.error).toString());
-    process.exit();
-  }
-
-  return listenerCheck.data;
-
-}
-
-export async function startListeners(cli: string[], commander: Commander) {
-  const listeners = await parseListeners(cli);
-
-  await commander.execute(["--init-store"]);
+  
 
   const router = await Router.makeRouter(
     commander.config,
@@ -70,14 +31,7 @@ export async function startListeners(cli: string[], commander: Commander) {
   });
 }
 
-interface ListenerRaw {
-  port?: string | undefined;
-  host?: string | undefined;
-  prefix?: string | undefined;
-  key?: string | undefined;
-  cert?: string | undefined;
-  secure?: boolean | undefined;
-}
+
 
 export interface Listener extends ListenerRaw {
   prefix: string;

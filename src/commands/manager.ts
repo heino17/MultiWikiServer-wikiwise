@@ -1,4 +1,6 @@
-import type { Commander, CommandInfo } from "../commander";
+import type { Commander } from "../commander";
+import type { CommandInfo } from "../utils/BaseCommand";
+import { BaseCommand } from "../utils";
 
 
 export const info: CommandInfo = {
@@ -13,19 +15,13 @@ export const info: CommandInfo = {
       "help: print options for the specified endpoint"
     ]
   ],
-  synchronous: true,
   internal: false,
 };
 
 
-export class Command {
+export class Command extends BaseCommand {
 
-  constructor(
-    public params: string[],
-    public commander: Commander,
-  ) {
-    // if (this.params.length) throw `${info.name}: No parameters allowed. This is a no-op command.`;
-  }
+
   async execute() {
     throw "The manager command is not implemented yet.";
   }

@@ -1,14 +1,14 @@
 import { resolve } from "node:path";
 
-import type { CommandInfo } from "../commander";
+import type { CommandInfo } from "../utils/BaseCommand";
 import { BaseCommand } from "../utils/BaseCommand";
 import { dist_require_resolve, dist_resolve } from "../utils";
+import { Command as LoadWikiFolderCommand } from "./load-wiki-folder";
 
 export const info: CommandInfo = {
 	name: "init-store",
 	description: "Initialize the MWS data folder",
 	arguments: [],
-	synchronous: true,
 };
 
 
@@ -47,8 +47,14 @@ export class Command extends BaseCommand {
 		});
 		// should give us the path to boot.js
 		const tweditions = resolve(dist_require_resolve("tiddlywiki"), "../../editions");
+
+		await new LoadWikiFolderCommand([dist_resolve("../editions/mws-docs")], {
+			"bag-name": "mws-docs",
+		}, this.config, this.$tw).execute();
+
+
 		this.commander.addCommandTokens([
-			"--load-plugin-bags",
+			// "--load-plugin-bags",
 			"--load-wiki-folder", dist_resolve("../editions/mws-docs"),
 			"mws-docs", "MWS Documentation from https://mws.tiddlywiki.com",
 			"mws-docs", "MWS Documentation from https://mws.tiddlywiki.com",

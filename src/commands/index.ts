@@ -9,24 +9,31 @@ import * as tests_complete from "./tests-complete";
 import * as mws_client_build from "./build-client";
 import * as help from "./help";
 import * as listen from "./listen";
-import type { CommandInfo } from "../commander";
+import * as tw5_commander from "./commander";
+import type { Commander } from "../commander";
+import type { CommandInfo } from "../utils/BaseCommand";
+import { BaseCommand } from "../utils";
 
 export { divider };
 
-export const commands: Record<string, { info: CommandInfo, Command: any }> = {
-  [load_wiki_folder.info.name]: load_wiki_folder,
-  [load_archive.info.name]: load_archive,
-  [save_archive.info.name]: save_archive,
-  [init_store.info.name]: init_store,
-  [manager.info.name]: manager,
-  [listen.info.name]: listen,
-  
-
-  [help.info.name]: help,
-  [divider.info.name]: divider,
-  [tests_complete.info.name]: tests_complete,
-  [mws_client_build.info.name]: mws_client_build,
-};
+export const commands = {
+  load_wiki_folder,
+  load_archive,
+  save_archive,
+  init_store,
+  manager,
+  listen,
+  tw5_commander,
+  help,
+  divider,
+  tests_complete,
+  mws_client_build,
+} as const satisfies Record<string, {
+  info: CommandInfo,
+  Command: {
+    new(...args: ConstructorParameters<typeof BaseCommand<any, any>>): BaseCommand<any, any>
+  }
+}>;
 
 
 

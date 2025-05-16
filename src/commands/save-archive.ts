@@ -1,4 +1,4 @@
-import type { CommandInfo } from "../commander";
+import type { CommandInfo } from "../utils/BaseCommand";
 import { BaseCommand } from "../utils/BaseCommand";
 import { TiddlerStore } from "../routes/TiddlerStore";
 import { resolve } from "path";
@@ -12,7 +12,6 @@ export const info: CommandInfo = {
 	arguments: [
 		["path", "Path to the directory to save the archive"],
 	],
-	synchronous: true
 };
 export class Command extends BaseCommand {
 
@@ -23,7 +22,7 @@ export class Command extends BaseCommand {
 		// Check parameters
 		if (this.params.length < 1) throw "Missing pathname";
 		await this.config.$transaction(async (prisma) => {
-			this.store = TiddlerStore.fromCommander(this.commander, prisma);
+			this.store = TiddlerStore.fromConfig(this.config, prisma);
 			await this.saveArchive();
 			this.store = undefined;
 		});

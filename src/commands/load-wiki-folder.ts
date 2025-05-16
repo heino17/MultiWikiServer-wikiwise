@@ -12,7 +12,7 @@ Command to create and load a bag for the specified core editions
 
 import { resolve } from "path";
 import { BaseCommand } from "../utils/BaseCommand";
-import type { CommandInfo } from "../commander";
+import type { CommandInfo } from "../utils/BaseCommand";
 import { TiddlerStore } from "../routes/TiddlerStore";
 import { TiddlerFields } from "../services/attachments";
 import * as path from "path";
@@ -28,12 +28,11 @@ export const info: CommandInfo = {
 		["path", "Path to the folder containing a tiddlywiki.info file"],
 	],
 	options: [
-		["bag-name", "Name of the bag to load tiddlers into"],
-		["bag-description", "Description of the bag"],
-		["recipe-name", "Name of the recipe to create"],
-		["recipe-description", "Description of the recipe"],
+		["bag-name <string>", "Name of the bag to load tiddlers into"],
+		["bag-description <string>", "Description of the bag"],
+		["recipe-name <string>", "Name of the recipe to create"],
+		["recipe-description <string>", "Description of the recipe"],
 	],
-	synchronous: true
 };
 // tiddlywiki --load ./mywiki.html --savewikifolder ./mywikifolder
 export class Command extends BaseCommand {
@@ -52,8 +51,8 @@ export class Command extends BaseCommand {
 			bagDescription: this.params[2] as PrismaField<"Bags", "description">,
 			recipeName: this.params[3] as PrismaField<"Recipes", "recipe_name">,
 			recipeDescription: this.params[4] as PrismaField<"Recipes", "description">,
-			store: TiddlerStore.fromCommander(this.commander, this.config.engine),
-			$tw: this.commander.$tw,
+			store: TiddlerStore.fromConfig(this.config, this.config.engine),
+			$tw: this.$tw,
 			cache: this.config.pluginCache
 		}));
 		console.log(info.name, "complete:", this.params[0])

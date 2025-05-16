@@ -9,66 +9,28 @@ import { commands } from "./commands";
 import { ServerState } from "./ServerState";
 export const pkg = JSON.parse(readFileSync(dist_resolve("../package.json"), "utf-8"));
 
-export interface CommandInfo {
-  name: string;
-  description: string;
-  arguments: [string, string][];
-  options?: [string, string][];
-  internal?: boolean;
-  getHelp?: () => string;
-  /** 
-   * @default false
-   * 
-   * @description
-   * 
-   * - Regardless of the value of `synchronous`, the execute method is always awaited.
-   * - Let `result` be any value thrown by the constructor or returned or thrown by the execute method. 
-   * ```
-   * synchronous: false
-   * ```
-   * - `result` is awaited (if result is not then-able, this has no effect).
-   * - If `result` is truthy, the command is failed without waiting for the callback.
-   * - If `result` is falsy, the command waits for the callback result.
-   * - The callback value is NOT awaited. 
-   * - if the callback value is truthy, the command is failed.
-   * - if the callback value is falsy, the command is completed.
-   * ```
-   * synchronous: true
-   * ```
-   * - `result` is awaited (if result is not then-able, this has no effect).
-   * - If `result` is truthy, the command is failed.
-   * - If `result` is falsy, the command is completed.
-   * 
-   * - The callback is not available if `synchronous` is true. 
-   * 
-   */
-  synchronous?: boolean;
-  // namedParameterMode?: boolean;
-  // mandatoryParameters?: string[];
-}
+// export interface SiteConfig {
+//   /** If true, allow users that aren't logged in to read. */
+//   readonly allowAnonReads?: boolean
+//   /** If true, allow users that aren't logged in to write. */
+//   readonly allowAnonWrites?: boolean
+//   /** If true, recipes will allow access to a user who does not have read access to all its bags. */
+//   readonly allowUnreadableBags?: boolean
 
-export interface SiteConfig {
-  /** If true, allow users that aren't logged in to read. */
-  readonly allowAnonReads?: boolean
-  /** If true, allow users that aren't logged in to write. */
-  readonly allowAnonWrites?: boolean
-  /** If true, recipes will allow access to a user who does not have read access to all its bags. */
-  readonly allowUnreadableBags?: boolean
+//   readonly enableGzip?: boolean
+//   readonly enableBrowserCache?: boolean
 
-  readonly enableGzip?: boolean
-  readonly enableBrowserCache?: boolean
+//   wikiPath: string;
+//   storePath: string;
 
-  wikiPath: string;
-  storePath: string;
+//   attachmentSizeLimit: number;
+//   attachmentsEnabled: boolean;
 
-  attachmentSizeLimit: number;
-  attachmentsEnabled: boolean;
+//   contentTypeInfo: Record<string, any>;
 
-  contentTypeInfo: Record<string, any>;
+//   enableExternalPlugins: boolean;
 
-  enableExternalPlugins: boolean;
-
-}
+// }
 
 /**
 Parse a sequence of commands

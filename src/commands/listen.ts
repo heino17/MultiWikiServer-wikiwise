@@ -1,7 +1,9 @@
-import type { CommandInfo } from "../commander";
+import type { CommandInfo } from "../utils/BaseCommand";
 import { BaseCommand } from "../utils";
-import * as commander from "commander";
-
+import { z } from "zod";
+import { fromError } from "zod-validation-error";
+import { startListeners } from "../listen/listeners";
+import { Command as InitStoreCommand } from "../commands/init-store"
 
 
 export const info: CommandInfo = {
@@ -9,19 +11,22 @@ export const info: CommandInfo = {
   description: "Listen for web requests. ",
   arguments: [],
   options: [
-    ["allow-hosts <host...>", "Allowed host headers. This does not change CORS behavior."],
-    ["subdomains", "domain.com/wiki/ becomes wiki.domain.com"],
+    ["allow-hosts <host...>", "Allowed host headers. This does not change CORS behavior. At least 1 is required."],
+    ["subdomains", "Change root paths to subdomains, (so domain.com/wiki/ becomes wiki.domain.com). "
+      + "Listener prefix is ignored. "
+    ],
+    // ["no-subdomains", "Do not change root paths to subdomains. This is the default."],
+    // ["root-path-map [root=map]", "Change root paths: \n/$cache, /$api, /wiki, /admin "],
     ["require-https", "The server will do everything it can to redirect HTTP to HTTPS. "
       + "Setting this without an HTTPS endpoint to redirect to can make the site unreachable. "
       + "The login form will refuse to login from http URLs and will attempt to redirect if possible. "
       + "If the x-forward-proto header is available, it will be used as well. "
     ],
-    ["listener <key=val...>", "Listen for web requests. Multiple listeners are allowed. "
+    ["listener [key=val...]", "Listen for web requests. Multiple listeners are allowed. "
       + "You may specify multiple --listener options, one for each listener you want to start in NodeJS. "
       + "All requests are funneled into one request stream. "
-    ]
+    ],
   ],
-  synchronous: true,
   getHelp() {
     return [
       "",
@@ -62,8 +67,40 @@ export const info: CommandInfo = {
 };
 
 
-export class Command extends BaseCommand {
-  async execute() {
 
+export type ListenerRaw = {
+  [key in
+  | "port"
+  | "host"
+  | "prefix"
+  | "key"
+  | "cert"
+  | "secure"
+  | "redirect"
+  ]?: string | undefined
+};
+
+export class Command extends BaseCommand<[], {
+  listener: ListenerRaw[];
+  allow_hosts: string[];
+  subdomains: boolean;
+  require_https: boolean;
+}> {
+  async execute() {
+    const listenerCheck = z.object({
+      port: z.string().optional(),
+      host: z.string().optional(),
+      prefix: z.string().optional(),
+      key: z.string().optional(),
+      cert: z.string().optional(),
+      secure: z.enum(["true", "false"]).optional()
+    }).strict().array().safeParse(this.options.listener);
+
+    if (!listenerCheck.success) {
+      console.log(fromError(listenerCheck.error).toString());
+      process.exit();
+    }
+
+    await startListeners(listenerCheck.data, this.config);
   }
 }

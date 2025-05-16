@@ -1,17 +1,28 @@
-import type { Commander } from "../commander";
+import { TW } from "tiddlywiki";
+import { ServerState } from "../ServerState";
+import * as commander from "commander";
 
 
+export abstract class BaseCommand<P extends string[] = string[], O extends object = object> {
 
-export abstract class BaseCommand {
-  get $tw() { return this.commander.$tw; }
-  config;
   constructor(
-    public params: string[],
-    public commander: Commander,
-    public callback: (err?: any) => void
+    public params: P,
+    public options: O,
+    public config: ServerState,
+    public $tw: TW,
   ) {
-    this.config = commander.config;
+
   }
 
   abstract execute(): Promise<any>;
 }
+export interface CommandInfo {
+  name: string;
+  description: string;
+  arguments: [string, string][];
+  options?: [string, string][];
+  internal?: boolean;
+  getHelp?: () => string;
+  command?(program: commander.Command): commander.Command;
+}
+

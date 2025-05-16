@@ -1,4 +1,4 @@
-import type { CommandInfo } from "../commander";
+import type { CommandInfo } from "../utils/BaseCommand";
 import { BaseCommand } from "../utils/BaseCommand";
 import { TiddlerStore } from "../routes/TiddlerStore";
 
@@ -10,7 +10,6 @@ export const info: CommandInfo = {
 		["tiddler-title", "Title of the tiddler to save"],
 		["tiddler-text", "Text of the tiddler to save"],
 	],
-	synchronous: true
 };
 
 export class Command extends BaseCommand {
@@ -25,7 +24,7 @@ export class Command extends BaseCommand {
 			tiddlerText = this.params[2] as string;
 
 		await this.config.$transaction(async (prisma) => {
-			const store = TiddlerStore.fromCommander(this.commander, prisma);
+			const store = TiddlerStore.fromConfig(this.config, prisma);
 			await store.saveBagTiddler({ title: tiddlerTitle, text: tiddlerText }, bagName);
 		});
 

@@ -1,22 +1,16 @@
-import type { Commander, CommandInfo } from "../commander";
+import type { CommandInfo } from "../utils/BaseCommand";
+import { BaseCommand } from "../utils";
 
 export const info: CommandInfo = {
   name: "help",
   description: "Print this help message",
   arguments: [],
-  synchronous: true,
 };
 
 
-export class Command {
+export class Command extends BaseCommand {
 
-  constructor(
-    public params: string[],
-    public commander: Commander,
-  ) {
-    // if (this.params.length) throw `${info.name}: No parameters allowed.`;
-  }
   async execute() {
-    console.log(this.commander.getHelpInfo());
+    // console.log(this.commander.getHelpInfo());
   }
 }

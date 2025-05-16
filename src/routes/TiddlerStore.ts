@@ -32,12 +32,12 @@ store/
 
 */
 export class TiddlerStore {
-  static fromCommander(commander: Commander, prisma: PrismaTxnClient) {
+  static fromConfig(config: SiteConfig, prisma: PrismaTxnClient) {
     return new TiddlerStore(
-      commander.config.fieldModules,
-      new AttachmentService(commander.config, prisma),
-      commander.config.storePath,
-      commander.config.contentTypeInfo,
+      config.fieldModules,
+      new AttachmentService(config, prisma),
+      config.storePath,
+      config.contentTypeInfo,
       prisma
     );
   }

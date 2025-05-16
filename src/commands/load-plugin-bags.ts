@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 
-import type { Commander, CommandInfo } from "../commander";
+import type { Commander } from "../commander";
+import type { CommandInfo } from "../utils/BaseCommand";
 import { TiddlerStore } from "../routes/TiddlerStore";
 import { TiddlerFields } from "../services/attachments";
 import { truthy } from "../utils";
@@ -12,8 +13,6 @@ export const info: CommandInfo = {
 	arguments: [
 		["path", "Path to the TiddlyWiki5 plugins folder"],
 	],
-	synchronous: true,
-
 };
 
 
