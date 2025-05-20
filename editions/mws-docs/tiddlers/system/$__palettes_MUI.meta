@@ -1,6 +1,7 @@
 created: 20250513234253113
 modified: 20250514011241673
-name: MUI System
+name: Material UI
+description: Responsive colors adapted from Material UI.
 tags: $:/tags/Palette
 title: $:/palettes/MUI
 type: application/x-tiddler-dictionary

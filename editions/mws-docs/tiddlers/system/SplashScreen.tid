@@ -31,6 +31,27 @@ type: text/vnd.tiddlywiki
 	<<box-shadow "2px 2px 10px rgba(0, 0, 0, 0.5)">>
 }
 
+
+
+@media(prefers-color-scheme:dark){
+  :root {
+    --page-background: #21121b;
+    color: white;
+    fill: white;
+  }
+	a {
+		color: #42a5f5;
+	}
+}
+
+@media(prefers-color-scheme:light){
+  :root {
+    --page-background: #eddee7;
+    color: black;
+    fill: black;
+  }
+}
+
 html body.tc-body {
 	background: <<colour page-background>>;
 }

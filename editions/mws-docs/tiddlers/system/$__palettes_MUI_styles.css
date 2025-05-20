@@ -1,0 +1,567 @@
+/*\
+created: 20250513234032612
+modified: 20250514012443594
+tags: $:/tags/Stylesheet
+title: $:/palettes/MUI/styles
+description: Colors reflecting the MWS admin UI, responsive to system settings.
+type: text/css
+
+\*/
+/* ======================================================================== */
+/* Material‑inspired CSS Custom Properties                                   */
+/* ------------------------------------------------------------------------ */
+/* This file provides light‑mode defaults on :root and dark‑mode overrides   */
+/* inside @media (prefers-color-scheme: dark).                               */
+/* Colors come from the default MUI v5 palette (blue, purple, red, orange,  */
+/* lightBlue, green, grey) plus sensible tweaks for contrast.               */
+/* ======================================================================== */
+
+:root {
+  /* --------------------------------------------------------------------- */
+  /* Palette primitives (light mode)                                       */
+  /* --------------------------------------------------------------------- */
+  --color-primary-light: #42a5f5;
+  /* blue 400 */
+  --color-primary: #1976d2;
+  /* blue 700 */
+  --color-primary-dark: #1565c0;
+  /* blue 800 */
+  --color-primary-background: #bbdefb;
+  /* blue 100 */
+
+  /* --color-secondary-light: #ba68c8; */
+  --color-secondary-light: var(--color-mws-300);
+  --color-secondary: var(--color-mws-500);
+  --color-secondary-dark: var(--color-mws-700);
+  --color-secondary-background: var(--color-mws-100);
+  --color-secondary-foreground: var(--color-mws-800);
+  /* purple 300 */
+  /* --color-secondary: #9c27b0; */
+  /* purple 500 */
+  /* --color-secondary-dark: #7b1fa2; */
+  /* purple 700 */
+  /* --color-secondary-background: #e1bee7; */
+  /* purple 100 */
+
+  /* function getDefaultSecondary(mode = 'light') {
+    if (mode === 'dark') {
+      return {
+        main: purple[200],
+        light: purple[50],
+        dark: purple[400]
+      };
+    }
+    return {
+      main: purple[500],
+      light: purple[300],
+      dark: purple[700]
+    };
+  } */
+
+  --color-inline-highlight: #fff59d;
+  /* yellow 300 */
+
+  --color-error-50: #ffebee;
+  /* error 50 */
+  --color-error-light: #ef5350;
+  /* red 400 */
+  --color-error: #d32f2f;
+  /* red 700 */
+  --color-error-dark: #c62828;
+  /* red 800 */
+
+  --color-warning-50: #fff8e1;
+  /* warning 50 */
+  --color-warning-light: #ffb74d;
+  /* orange 300 */
+  --color-warning: #ed6c02;
+  /* orange ~800 */
+  --color-warning-dark: #e65100;
+  /* orange 900 */
+
+  --color-info-50: #e3f2fd;
+  /* info 50 */
+  --color-info-light: #4fc3f7;
+  /* lightBlue 300 */
+  --color-info: #0288d1;
+  /* lightBlue 700 */
+  --color-info-dark: #01579b;
+  /* lightBlue 900 */
+
+
+  --color-success-50: #e8f5e9;
+  /* success 50 */
+  --color-success-light: #81c784;
+  /* green 300 */
+  --color-success: #2e7d32;
+  /* green 800 */
+  --color-success-dark: #1b5e20;
+  /* green 900 */
+
+
+
+
+
+  --color-grey-0: #ffffff;
+  --color-grey-50: #fafafa;
+  --color-grey-100: #f5f5f5;
+  --color-grey-200: #eeeeee;
+  --color-grey-300: #e0e0e0;
+  --color-grey-400: #bdbdbd;
+  --color-grey-500: #9e9e9e;
+  --color-grey-600: #757575;
+  --color-grey-700: #616161;
+  --color-grey-800: #424242;
+  --color-grey-900: #212121;
+
+  /* 
+
+    The MWS color scheme was extracted from the page background.
+
+    hsl(322deg 29% 50% / 20%); over black is #21121b - the dark background
+    hsl(322deg 29% 50% / 20%); over white is #eddee7 - the light background
+    hsl(322deg 29% 50% / 100%); is #a45b89
+
+    This was entered into https://m2.material.io/inline-tools/color/
+
+    From there it is then used as the secondary color, 
+    using the same pattern as the primary color.
+
+  */
+
+  --color-mws-50: #f2e6ed;
+  --color-mws-100: #e0c1d4;
+  --color-mws-200: #cc9ab9;
+  --color-mws-300: #b5759d;
+  --color-mws-400: #a45b89;
+  --color-mws-500: #934778;
+  --color-mws-600: #884172;
+  --color-mws-700: #793a69;
+  --color-mws-800: #6a345f;
+  --color-mws-900: #542851;
+
+  --page-background: #eddee7;
+
+  /* --------------------------------------------------------------------- */
+  /* Typography                                                            */
+  /* --------------------------------------------------------------------- */
+  --foreground: var(--color-grey-900);
+  /* text.primary */
+  --muted-foreground: var(--color-grey-700);
+  /* text.secondary */
+  --very-muted-foreground: var(--color-grey-500);
+  /* text.disabled */
+
+  /* --------------------------------------------------------------------- */
+  /* Core surfaces                                                          */
+  /* --------------------------------------------------------------------- */
+  --background: var(--color-grey-50);
+  /* background.default */
+
+
+  /* --------------------------------------------------------------------- */
+  /* Alerts & Warnings                                                     */
+  /* --------------------------------------------------------------------- */
+  --alert-background: var(--color-warning-50);
+  /* warning 50 */
+  --alert-border: var(--color-warning-light);
+  /* subtle outline */
+  --alert-highlight: var(--color-warning);
+  /* main accent */
+  --alert-muted-foreground: var(--muted-foreground);
+
+  /* --------------------------------------------------------------------- */
+  /* Primary accent                                                        */
+  /* --------------------------------------------------------------------- */
+  --primary: var(--color-primary);
+
+  /* --------------------------------------------------------------------- */
+  /* Blockquotes                                                           */
+  /* --------------------------------------------------------------------- */
+  --blockquote-bar: var(--color-primary-light);
+
+  /* --------------------------------------------------------------------- */
+  /* Buttons                                                               */
+  /* --------------------------------------------------------------------- */
+  --button-background: var(--background);
+  --button-foreground: var(--foreground);
+  /* contrastText on primary */
+  --button-border: var(--very-muted-foreground);
+
+  /* --------------------------------------------------------------------- */
+  /* Code & Pre                                                            */
+  /* --------------------------------------------------------------------- */
+  --code-background: var(--color-grey-100);
+  --code-border: var(--color-grey-300);
+  --code-foreground: var(--color-error);
+  --pre-background: var(--code-background);
+  --pre-border: var(--code-border);
+
+  /* --------------------------------------------------------------------- */
+  /* Diff highlighting                                                     */
+  /* --------------------------------------------------------------------- */
+  --diff-delete-background: var(--color-error-50);
+  --diff-delete-foreground: var(--color-error-dark);
+  --diff-equal-background: var(--color-warning-50);
+  --diff-equal-foreground: var(--color-warning-dark);
+  --diff-insert-background: var(--color-success-50);
+  --diff-insert-foreground: var(--color-success-dark);
+  --diff-invisible-background: transparent;
+  --diff-invisible-foreground: var(--very-muted-foreground);
+
+  /* --------------------------------------------------------------------- */
+  /* Drag & Drop                                                           */
+  /* --------------------------------------------------------------------- */
+  --dragger-background: var(--color-grey-200);
+  --dragger-foreground: var(--color-grey-700);
+  --dirty-indicator: var(--color-warning);
+
+  /* --------------------------------------------------------------------- */
+  /* Download / Upload progress                                            */
+  /* --------------------------------------------------------------------- */
+  --download-background: var(--color-primary-light);
+  --download-foreground: var(--color-grey-0);
+
+  /* --------------------------------------------------------------------- */
+  /* Dropdowns                                                             */
+  /* --------------------------------------------------------------------- */
+  --dropdown-background: var(--background);
+  --dropdown-border: var(--color-grey-300);
+  --dropdown-tab-background-selected: var(--color-primary-light);
+  --dropdown-tab-background: var(--color-grey-100);
+
+  /* --------------------------------------------------------------------- */
+  /* Drop‑zone                                                             */
+  /* --------------------------------------------------------------------- */
+  --dropzone-background: var(--color-info-light);
+
+  /* --------------------------------------------------------------------- */
+  /* External links                                                        */
+  /* --------------------------------------------------------------------- */
+  --external-link-background: transparent;
+  --external-link-foreground: var(--primary);
+  --external-link-background-hover: var(--color-primary-light);
+  --external-link-foreground-hover: var(--color-grey-0);
+  --external-link-background-visited: transparent;
+  --external-link-foreground-visited: var(--color-secondary-dark);
+
+  /* --------------------------------------------------------------------- */
+  /* Footnotes                                                             */
+  /* --------------------------------------------------------------------- */
+  --footnote-target-background: var(--color-info-light);
+
+  /* --------------------------------------------------------------------- */
+  /* Inline highlight                                                      */
+  /* --------------------------------------------------------------------- */
+  --highlight-background: var(--color-inline-highlight);
+  --highlight-foreground: var(--color-grey-900);
+
+  /* --------------------------------------------------------------------- */
+  /* Messages (info)                                                       */
+  /* --------------------------------------------------------------------- */
+  --message-background: var(--color-info-50);
+  --message-border: var(--color-info-light);
+  --message-foreground: var(--color-info);
+
+  /* --------------------------------------------------------------------- */
+  /* Modals                                                                */
+  /* --------------------------------------------------------------------- */
+  --modal-backdrop: rgba(0, 0, 0, 0.32);
+  --modal-background: var(--background);
+  --modal-border: var(--color-grey-300);
+  --modal-footer-background: var(--color-grey-100);
+  --modal-footer-border: var(--modal-border);
+  --modal-header-border: var(--modal-border);
+
+  /* --------------------------------------------------------------------- */
+  /* Network Activity spinner / bar                                        */
+  /* --------------------------------------------------------------------- */
+  --network-activity-foreground: var(--color-success);
+
+  /* --------------------------------------------------------------------- */
+  /* Notifications (secondary accent)                                      */
+  /* --------------------------------------------------------------------- */
+  --notification-background: var(--color-secondary-background);
+  --notification-border: var(--color-secondary-light);
+
+  /* --------------------------------------------------------------------- */
+  /* Selection                                                             */
+  /* --------------------------------------------------------------------- */
+
+  --selection-background: var(--color-primary-background);
+  --selection-foreground: var(--foreground);
+
+  /* --------------------------------------------------------------------- */
+  /* <select> tags                                                         */
+  /* --------------------------------------------------------------------- */
+  --select-tag-background: var(--background);
+  --select-tag-foreground: var(--foreground);
+
+  /* --------------------------------------------------------------------- */
+  /* Sidebar                                                               */
+  /* --------------------------------------------------------------------- */
+  --sidebar-button-foreground: var(--button-foreground);
+  --sidebar-controls-foreground: var(--muted-foreground);
+  --sidebar-controls-foreground-hover: var(--foreground);
+  --sidebar-foreground-shadow: rgba(0, 0, 0, 0.08);
+  --sidebar-foreground: var(--muted-foreground);
+  --sidebar-muted-foreground-hover: var(--foreground);
+  --sidebar-muted-foreground: var(--muted-foreground);
+  --sidebar-tab-background-selected: var(--background);
+  --sidebar-tab-background: var(--color-grey-100);
+  --sidebar-tab-border-selected: var(--color-primary);
+  --sidebar-tab-border: var(--color-grey-300);
+  --sidebar-tab-divider: var(--sidebar-tab-border);
+  --sidebar-tab-foreground-selected: var(--primary);
+  --sidebar-tab-foreground: var(--muted-foreground);
+  --sidebar-tiddler-link-foreground-hover: var(--primary);
+  --sidebar-tiddler-link-foreground: var(--muted-foreground);
+
+  /* --------------------------------------------------------------------- */
+  /* Site title                                                            */
+  /* --------------------------------------------------------------------- */
+  --site-title-foreground: var(--tiddler-title-foreground);
+
+  /* --------------------------------------------------------------------- */
+  /* Stability badges                                                      */
+  /* --------------------------------------------------------------------- */
+  --stability-stable: var(--color-success);
+  --stability-experimental: var(--color-warning);
+  --stability-deprecated: var(--color-error);
+  --stability-legacy: var(--color-grey-500);
+
+  /* --------------------------------------------------------------------- */
+  /* Static alert icon / text (inherits alert palette)                     */
+  /* --------------------------------------------------------------------- */
+  --static-alert-foreground: var(--alert-highlight);
+
+  /* --------------------------------------------------------------------- */
+  /* Tabs                                                                  */
+  /* --------------------------------------------------------------------- */
+  --tab-background-selected: var(--background);
+  --tab-background: var(--color-grey-100);
+  --tab-border-selected: var(--color-primary);
+  --tab-border: var(--color-grey-300);
+  --tab-divider: var(--tab-border);
+  --tab-foreground-selected: var(--primary);
+  --tab-foreground: var(--muted-foreground);
+
+  /* --------------------------------------------------------------------- */
+  /* Tables                                                                */
+  /* --------------------------------------------------------------------- */
+  --table-border: var(--color-grey-300);
+  --table-footer-background: var(--color-grey-100);
+  --table-header-background: var(--color-grey-100);
+
+  /* --------------------------------------------------------------------- */
+  /* Tags                                                                  */
+  /* --------------------------------------------------------------------- */
+  --tag-background: var(--color-grey-200);
+  --tag-foreground: var(--foreground);
+
+  /* --------------------------------------------------------------------- */
+  /* Testcase accent ramp (primary hue)                                    */
+  /* --------------------------------------------------------------------- */
+  --testcase-accent-level-1: var(--color-primary-light);
+  --testcase-accent-level-2: var(--color-primary);
+  --testcase-accent-level-3: var(--color-primary-dark);
+
+  /* --------------------------------------------------------------------- */
+  /* Tiddlers                                                              */
+  /* --------------------------------------------------------------------- */
+  --tiddler-background: var(--background);
+  --tiddler-border: var(--color-grey-300);
+  --tiddler-controls-foreground: var(--muted-foreground);
+  --tiddler-controls-foreground-hover: var(--primary);
+  --tiddler-controls-foreground-selected: var(--primary);
+  --tiddler-editor-background: var(--color-grey-100);
+  --tiddler-editor-border-image: none;
+  --tiddler-editor-border: var(--color-grey-300);
+  --tiddler-editor-fields-even: var(--color-grey-100);
+  --tiddler-editor-fields-odd: var(--background);
+  --tiddler-info-background: var(--color-grey-50);
+  --tiddler-info-border: var(--color-grey-300);
+  --tiddler-info-tab-background: var(--color-grey-100);
+  --tiddler-link-background: var(--background);
+  --tiddler-link-foreground: var(--primary);
+  --tiddler-subtitle-foreground: var(--muted-foreground);
+  --tiddler-title-foreground: var(--color-secondary-foreground);
+
+  /* --------------------------------------------------------------------- */
+  /* Toolbar actions                                                       */
+  /* --------------------------------------------------------------------- */
+
+  --toolbar-new-button: var(--color-primary);
+  --toolbar-options-button: var(--color-primary);
+  --toolbar-save-button: var(--color-success);
+  --toolbar-info-button: var(--color-primary);
+  --toolbar-edit-button: var(--color-warning);
+  --toolbar-close-button: var(--color-error);
+  --toolbar-delete-button: var(--color-error);
+  --toolbar-cancel-button: var(--color-warning);
+  --toolbar-done-button: var(--color-success);
+
+  /* --------------------------------------------------------------------- */
+  /* Misc                                                                  */
+  /* --------------------------------------------------------------------- */
+  --untagged-background: var(--color-grey-50);
+
+  /* --------------------------------------------------------------------- */
+  /* Wiki list                                                             */
+  /* --------------------------------------------------------------------- */
+  --wikilist-background: var(--background);
+  --wikilist-item: var(--color-grey-50);
+  --wikilist-info: var(--muted-foreground);
+  --wikilist-title: var(--foreground);
+  --wikilist-title-svg: var(--primary);
+  --wikilist-url: var(--color-secondary);
+  --wikilist-button-open: var(--color-primary);
+  --wikilist-button-open-hover: var(--color-primary-dark);
+  --wikilist-button-reveal: var(--color-info);
+  --wikilist-button-reveal-hover: var(--color-info-dark);
+  --wikilist-button-remove: var(--color-error);
+  --wikilist-button-remove-hover: var(--color-error-dark);
+  --wikilist-toolbar-background: var(--color-grey-100);
+  --wikilist-toolbar-foreground: var(--foreground);
+  --wikilist-droplink-dragover: var(--color-primary-light);
+  --wikilist-button-background: var(--color-grey-100);
+  --wikilist-button-foreground: var(--primary);
+}
+
+/* ======================================================================== */
+/* Dark‑mode overrides                                                      */
+/* ======================================================================== */
+@media (prefers-color-scheme: dark) {
+  :root {
+
+    /* Palette primitives (dark) */
+    --color-primary-light: #e3f2fd;
+    /* blue 50 */
+    --color-primary: #90caf9;
+    /* blue 200 */
+    --color-primary-dark: #42a5f5;
+    /* blue 400 */
+    --color-primary-background: #0d47a1;
+    /* blue 900 */
+
+    --color-secondary-light: var(--color-mws-50);
+    --color-secondary: var(--color-mws-200);
+    --color-secondary-dark: var(--color-mws-400);
+    --color-secondary-background: var(--color-mws-900);
+    --color-secondary-foreground: var(--color-mws-200);
+
+
+    --color-error-50: hsl(355, 6.70%, 32.40%);
+    /* error 50 */
+    --color-error-light: #ef9a9a;
+    /* red 300 */
+    --color-error: #f44336;
+    /* red 500 */
+    --color-error-dark: #e57373;
+    /* red 400 */
+
+    --color-warning-50: hsl(46, 6.70%, 32.40%);
+    /* warning 50 */
+    --color-warning-light: #ffcc80;
+    /* orange 300 */
+    --color-warning: #ffa000;
+    /* orange 700 */
+    --color-warning-dark: #ff8f00;
+    /* orange 800 */
+
+    --color-info-50: hsl(205, 6.70%, 32.40%);
+    /* info 50 */
+    --color-info-light: #4fc3f7;
+    /* lightBlue 300 */
+    --color-info: #29b6f6;
+    /* lightBlue 400 */
+    --color-info-dark: #0288d1;
+    /* lightBlue 700 */
+
+    --color-success-50: hsl(125, 6.70%, 32.40%);
+    /* success 50 */
+    --color-success-light: #66bb6a;
+    /* green 400 */
+    --color-success: #4caf50;
+    /* green 500 */
+    --color-success-dark: #43a047;
+    /* green 600 */
+
+
+
+    /* Greys flip for dark surfaces */
+    --color-grey-0: #000000;
+    --color-grey-50: #131313;
+    --color-grey-100: #212121;
+    --color-grey-200: #2f2f2f;
+    --color-grey-300: #424242;
+    --color-grey-400: #616161;
+    --color-grey-500: #757575;
+    --color-grey-600: #9e9e9e;
+    --color-grey-700: #bdbdbd;
+    --color-grey-800: #e0e0e0;
+    --color-grey-900: #eeeeee;
+
+
+    --page-background: #21121b;
+
+    --color-inline-highlight: hsl(53, 25.80%, 25.90%);
+    /* yellow 300 */
+
+  }
+}
+
+.tc-page-controls svg.tc-image-new-markdown-button {
+  fill: var(--toolbar-new-button);
+}
+
+.tc-improvement-banner {
+  background: var(--color-secondary-background);
+}
+
+.tc-editor-toolbar button {
+  background-color: var(--color-primary-background);
+  color: var(--button-forground);
+  fill: var(--button-forground);
+}
+
+html button {
+  border-style: solid;
+  border-width: thin;
+  border-radius: 4px;
+  padding-inline: 10px;
+  padding-block: 4px;
+}
+
+.tc-more-sidebar>.tc-tab-set>.tc-tab-buttons>button.tc-tab-selected {
+  background-color: var(--sidebar-tab-background-selected);
+  border-color: var(--sidebar-tab-border-selected);
+  border-style: solid;
+  border-width: thin;
+  appearance: none;
+}
+
+
+.tc-btn-boxed {
+  border: 1px solid var(--tiddler-controls-foreground);
+}
+
+
+.tc-btn-boxed:hover {
+  background: var(--muted-foreground);
+  color: var(--background);
+}
+
+html body.tc-body .tc-btn-boxed:hover svg {
+  fill: var(--background);
+}
+
+.tc-btn-rounded {
+  border: 1px solid var(--muted-foreground);
+  background: var(--muted-foreground);
+  color: var(--background);
+}
+
+html body.tc-body .tc-btn-rounded svg {
+  fill: var(--background);
+}
