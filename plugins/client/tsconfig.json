@@ -15,7 +15,8 @@
     "removeComments": false,
     "types": [
       "tw5-typed"
-    ]
+    ],
+    
   },
   "include": [
     "./src/**/*.ts"

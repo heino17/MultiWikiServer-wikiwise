@@ -186,7 +186,8 @@ export class TiddlerServer extends TiddlerStore {
     // Get the recipe name from the parameters
     const bagTiddlers = await this.getRecipeTiddlersByBag(recipe_name);
 
-    bagTiddlers.sort((a, b) => a.position - b.position);
+    // reverse order for Map, so 0 comes after 1 and overlays it
+    bagTiddlers.sort((a, b) => b.position - a.position);
 
     return Array.from(new Map(bagTiddlers.flatMap(bag =>
       bag.tiddlers.map(tiddler => [tiddler.title, {
@@ -434,6 +435,8 @@ export class TiddlerServer extends TiddlerStore {
 
     bagTiddlers.sort((a, b) => bagOrder.get(b.bag_id)! - bagOrder.get(a.bag_id)!);
     // this determines which bag takes precedence
+    // Map overwrites earlier entries with later entries,
+    // so the topmost bag comes last, i.e. the position numbers are in descending order.
     const recipeTiddlers = Array.from(new Map(bagTiddlers.flatMap(bag =>
       bag.tiddlers.map(tiddler => [tiddler.title, { bag, tiddler }])
     )).values());

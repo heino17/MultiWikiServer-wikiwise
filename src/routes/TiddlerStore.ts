@@ -257,26 +257,29 @@ export class TiddlerStore {
   /*
   Returns {revision_id:,bag_name:}
  
-  The critical difference here is that the tiddler gets saved to the top bag.
+  The tiddler gets saved to the bag at position 0.
   */
   async saveRecipeTiddler(
     incomingTiddlerFields: TiddlerFields,
     recipe_name: PrismaField<"Recipes", "recipe_name">
   ) {
-    const { title } = incomingTiddlerFields;
-    const currentBag = await this.getRecipeBagWithTiddler({ recipe_name, title });
+    // const { title } = incomingTiddlerFields;
+    // const currentBag = await this.getRecipeBagWithTiddler({ recipe_name, title });
 
-    const existing_attachment_hash = currentBag && await this.prisma.tiddlers.findFirst({
-      where: { title, bag: { bag_name: currentBag.bag.bag_name } },
-      select: { attachment_hash: true }
-    }).then(e => e?.attachment_hash ?? null);
+    // const existing_attachment_hash = currentBag && await this.prisma.tiddlers.findUnique({
+    //   where: { bag_id_title: { title, bag_id: currentBag.bag_id } },
+    //   select: { attachment_hash: true }
+    // }).then(e => e?.attachment_hash ?? null);
 
-    const { tiddlerFields, attachment_hash } = await this.attachService.processIncomingTiddler({
-      existing_attachment_hash,
-      existing_canonical_uri: incomingTiddlerFields._canonical_uri,
-      tiddlerFields: incomingTiddlerFields
-    });
-    return this.saveRecipeTiddlerFields(tiddlerFields, recipe_name, attachment_hash);
+    // const { tiddlerFields, attachment_hash } = await this.attachService.processIncomingTiddler({
+    //   existing_attachment_hash,
+    //   existing_canonical_uri: incomingTiddlerFields._canonical_uri,
+    //   tiddlerFields: incomingTiddlerFields
+    // });
+
+    // The tiddlywiki client saves binary tiddlers as base64-encoded text field
+    // so no special handling is required.
+    return this.saveRecipeTiddlerFields(incomingTiddlerFields, recipe_name, null);
   }
 
   /*
@@ -429,56 +432,34 @@ export class TiddlerStore {
 
     const recipe = await this.prisma.recipes.findUnique({
       where: { recipe_name },
-      include: {
+      select: {
+        recipe_id: true,
         recipe_bags: {
-          // we're saving to the top most bag
           where: { position: 0 },
-          select: { bag: { select: { bag_id: true, bag_name: true, is_plugin: true } } },
+          select: { bag: { select: { bag_name: true, is_plugin: true } } }
         }
       }
     });
 
     if (!recipe) throw new UserError("Recipe not found");
 
-    const bag_name = recipe.recipe_bags[0]?.bag.bag_name;
+    // the where clause selects only the bag at position 0, 
+    // not to be confused with index zero of the result array!
+    const bag = recipe.recipe_bags[0]?.bag;
 
-    if (!bag_name) throw new UserError("Recipe has no bag at position 0");
+    if (!bag) throw new UserError("Recipe has no bag at position 0");
 
-    if (recipe.recipe_bags[0]?.bag.is_plugin)
-      throw new UserError("Saving to plugin bags is not currently supported. Please use a normal bag. This error occurs if a plugin bag is at the top of the recipe.\n")
+    if (bag.is_plugin)
+      throw new UserError("Saving to plugin bags is not currently supported. "
+        + "Please use a normal bag at the top of the recipe. "
+        + "This error occurs if a plugin bag is at the top of the recipe.\n")
 
     // Save the tiddler to the specified bag
-    var { revision_id } = await this.saveBagTiddlerFields(tiddlerFields, bag_name, attachment_hash);
+    var { revision_id } = await this.saveBagTiddlerFields(
+      tiddlerFields, bag.bag_name, attachment_hash
+    );
 
-    return { revision_id, bag_name };
-    // 	// Find the topmost bag in the recipe
-    // 	var row = this.engine.runStatementGet(`
-    // 	SELECT b.bag_name
-    // 	FROM bags AS b
-    // 	JOIN (
-    // 		SELECT rb.bag_id
-    // 		FROM recipe_bags AS rb
-    // 		WHERE rb.recipe_id = (
-    // 			SELECT recipe_id
-    // 			FROM recipes
-    // 			WHERE recipe_name = $recipe_name
-    // 		)
-    // 		ORDER BY rb.position DESC
-    // 		LIMIT 1
-    // 	) AS selected_bag
-    // 	ON b.bag_id = selected_bag.bag_id
-    // `, {
-    // 		$recipe_name: recipe_name
-    // 	});
-    // 	if (!row) {
-    // 		return null;
-    // 	}
-    // 	// Save the tiddler to the topmost bag
-    // 	var info = this.saveBagTiddler(tiddlerFields, row.bag_name, attachment_hash);
-    // 	return {
-    // 		revision_id: info.revision_id,
-    // 		bag_name: row.bag_name
-    // 	};
+    return { revision_id, bag_name: bag.bag_name };
   }
 
   async saveBagTiddlerFields(
@@ -502,19 +483,16 @@ export class TiddlerStore {
       throw new Error("Tiddler must have a title");
     }
 
+    if (attachment_hash && tiddlerFields.text)
+      throw new Error("Do not set both the attachment_hash and the text field. It should be one or the other.")
+
     const deletion = this.prisma.tiddlers.deleteMany({
       where: { bag: { bag_name }, title }
     });
 
-    const encodeTiddlerFields = ([field_name, field_value]: [string, any]) => {
-      const fieldModule = this.fieldModules[field_name];
-      if (typeof field_value === "string") return [field_name, field_value];
-      if (fieldModule && fieldModule.stringify) field_value = fieldModule.stringify(field_value);
-      if (typeof field_value === "number") field_value = field_value.toString();
-      if (typeof field_value === "boolean") field_value = field_value ? "true" : "false";
-      if (typeof field_value === "undefined" || field_value === null) field_value = "";
-      return [field_name, field_value];
-    };
+    const fields = Object.entries(tiddlerFields);
+    if (!fields.every(e => e.every(f => typeof f === "string")))
+      throw new Error("All fields must be saved to the server as strings.")
 
     const creation = this.prisma.tiddlers.create({
       data: {
@@ -523,9 +501,7 @@ export class TiddlerStore {
         is_deleted: false,
         attachment_hash: attachment_hash || null,
         fields: {
-          create: Object.entries(tiddlerFields)
-            .map(encodeTiddlerFields)
-            .map(([field_name, field_value]) => ({ field_name, field_value }))
+          create: fields.map(([field_name, field_value]) => ({ field_name, field_value }))
         }
       },
       select: {
@@ -682,6 +658,7 @@ export class TiddlerStore {
       },
     });
 
+    bags.sort((a, b) => a.position - b.position);
 
     return bags.map(e => ({
       bag_id: e.bag.bag_id,

@@ -8,6 +8,7 @@ import { TiddlerServer } from "../bag-file-server";
 export const TiddlerKeyMap: RouterKeyMap<TiddlerRouter, true> = {
   handleCreateRecipeTiddler: true,
   handleDeleteRecipeTiddler: true,
+  handleGetBagStates: true,
   handleGetBagTiddler: true,
   handleGetBagTiddlerBlob: true,
   handleGetRecipeStatus: true,
@@ -23,6 +24,15 @@ export class TiddlerRouter {
   static defineRoutes = (root: rootRoute) => {
     registerZodRoutes(root, new TiddlerRouter(), Object.keys(TiddlerKeyMap));
   }
+
+  // lets start with the scenarios from the sync adapter
+  // 1. Status - The wiki status that gets sent to the TW5 client
+  // 2. tiddlers.json - gets a skinny list of the recipe bag state.
+  // 3. Save Tiddler - create or update a tiddler
+  // 4. Load Tiddler - load the data for a tiddler
+  // 5. Delete Tiddler - delete a tiddler
+  // 6. Wiki Index - the wiki client itself, with all the config 
+  //    from the recipe, and the initial tiddler state
 
   handleGetRecipeStatus = zodRoute(
     ["GET", "HEAD"],
@@ -101,32 +111,6 @@ export class TiddlerRouter {
 
     });
 
-  handleGetBagTiddlerBlob = zodRoute(
-    ["GET", "HEAD"],
-    "/bags/:bag_name/tiddlers/:title/blob",
-    z => ({
-      bag_name: z.prismaField("Bags", "bag_name", "string"),
-      title: z.prismaField("Tiddlers", "title", "string"),
-    }),
-    "ignore",
-    z => z.undefined(),
-    async (state) => {
-      const { bag_name, title } = state.pathParams;
-
-      await state.assertBagACL(bag_name, false);
-
-      const result = await state.$transaction(async prisma => {
-        const server = new TiddlerServer(state, prisma);
-        return await server.getBagTiddlerStream(title, bag_name);
-      });
-
-      if (!result) throw state.sendEmpty(404, { "x-reason": "no result" });
-
-      throw state.sendStream(200, {
-        Etag: state.makeTiddlerEtag(result),
-        "Content-Type": result.type
-      }, result.stream);
-    });
 
   handleListRecipeTiddlers = zodRoute(
     ["GET", "HEAD"],
@@ -160,6 +144,29 @@ export class TiddlerRouter {
     }
   )
 
+
+  handleGetBagStates = zodRoute(
+    ["GET", "HEAD"],
+    "/recipes/:recipe_name/bag-states",
+    z => ({
+      recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
+    }),
+    "ignore",
+    z => z.undefined(),
+    async (state) => {
+
+      const { recipe_name } = state.pathParams;
+      await state.assertRecipeACL(recipe_name, false);
+
+      const result = await state.$transaction(async prisma => {
+        const server = new TiddlerServer(state, prisma);
+        return await server.getRecipeTiddlersByBag(recipe_name);
+      });
+
+      return result;
+    }
+  )
+
   parseFields(input: string, ctype: string | undefined) {
 
     if (ctype?.startsWith("application/json"))
@@ -171,6 +178,8 @@ export class TiddlerRouter {
       // splitting the string is 1000x faster!
       // but I don't really trust getFieldStringBlock 
       // because it doesn't check for fields with colon names
+      // in fact, the behavior of the file system adapter when it 
+      // encounters invalid field names is just to use JSON anyway.
 
       const headerEnd = input.indexOf("\n\n");
       if (headerEnd === -1) return tryParseJSON<any>(input);
@@ -192,10 +201,7 @@ export class TiddlerRouter {
       title: z.prismaField("Tiddlers", "title", "string"),
     }),
     "string",
-    z => z.string(),
-    // z => z.object({
-    //   title: z.prismaField("Tiddlers", "title", "string", false),
-    // }).and(z.record(z.string())),
+    z => z.string(), // read the tiddler as a string
     async (state) => {
 
       const { recipe_name } = state.pathParams;
@@ -204,11 +210,16 @@ export class TiddlerRouter {
 
       const fields = this.parseFields(state.data, state.headers["content-type"]);
 
-      if (fields === undefined) throw state.sendEmpty(400, { "x-reason": "PUT tiddler expects a valid json or x-mws-tiddler body" })
+      if (fields === undefined)
+        throw state.sendEmpty(400, {
+          "x-reason": "PUT tiddler expects a valid json or x-mws-tiddler body"
+        });
 
       const { bag_name, revision_id } = await state.$transaction(async prisma => {
         const server = new TiddlerServer(state, prisma);
-        return await server.saveRecipeTiddler(fields, state.pathParams.recipe_name);
+        // The tiddlywiki client saves binary tiddlers as base64-encoded text field
+        // so no special handling is required.
+        return await server.saveRecipeTiddlerFields(fields, state.pathParams.recipe_name, null);
       });
 
       return { bag_name, revision_id };
@@ -264,6 +275,33 @@ export class TiddlerRouter {
         return { bag_name, results: await server.processIncomingStream(bag_name) };
       });
 
+    });
+
+  handleGetBagTiddlerBlob = zodRoute(
+    ["GET", "HEAD"],
+    "/bags/:bag_name/tiddlers/:title/blob",
+    z => ({
+      bag_name: z.prismaField("Bags", "bag_name", "string"),
+      title: z.prismaField("Tiddlers", "title", "string"),
+    }),
+    "ignore",
+    z => z.undefined(),
+    async (state) => {
+      const { bag_name, title } = state.pathParams;
+
+      await state.assertBagACL(bag_name, false);
+
+      const result = await state.$transaction(async prisma => {
+        const server = new TiddlerServer(state, prisma);
+        return await server.getBagTiddlerStream(title, bag_name);
+      });
+
+      if (!result) throw state.sendEmpty(404, { "x-reason": "no result" });
+
+      throw state.sendStream(200, {
+        Etag: state.makeTiddlerEtag(result),
+        "Content-Type": result.type
+      }, result.stream);
     });
 
   handleGetWikiIndex = zodRoute(

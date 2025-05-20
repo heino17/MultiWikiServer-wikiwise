@@ -18,8 +18,35 @@ previous operation to complete before sending a new one.
 
 // the blank line is important, and so is the following use strict
 "use strict";
-import type { Logger } from "$:/core/modules/utils/logger.js";
+
 import type { Syncer, Tiddler, ITiddlyWiki } from "tiddlywiki";
+import type { TiddlerRouter } from "../../../src/routes/managers/router-tiddlers";
+import type { ZodRoute } from "../../../src/router";
+
+
+declare class Logger {
+	constructor(componentName: any, options: any);
+	componentName: any;
+	colour: any;
+	enable: any;
+	save: any;
+	saveLimit: any;
+	saveBufferLogger: this;
+	buffer: string;
+	alertCount: number;
+	setSaveBuffer(logger: any): void;
+	log(...args: any[]): any;
+	getBuffer(): string;
+	table(value: any): void;
+	alert(...args: any[]): void;
+	clearAlerts(): void;
+}
+
+type TiddlerRouterResponse = {
+	[K in keyof TiddlerRouter]: TiddlerRouter[K] extends ZodRoute<infer M, infer B, infer P, infer T, infer R>
+	? { M: M, B: B, P: P, T: T, R: R }
+	: never
+}
 
 declare module 'tiddlywiki' {
 	export interface Syncer {
@@ -33,6 +60,90 @@ declare module 'tiddlywiki' {
 	interface ITiddlyWiki {
 		browserStorage: any;
 	}
+}
+
+type ServerStatusCallback = (
+	err: any,
+	/** 
+	 * $:/status/IsLoggedIn mostly appears alongside the username 
+	 * or other login-conditional behavior. 
+	 */
+	isLoggedIn?: boolean,
+	/**
+	 * $:/status/UserName is still used for things like drafts even if the 
+	 * user isn't logged in, although the username is less likely to be shown 
+	 * to the user. 
+	 */
+	username?: string,
+	/** 
+	 * $:/status/IsReadOnly puts the UI in readonly mode, 
+	 * but does not prevent automatic changes from attempting to save. 
+	 */
+	isReadOnly?: boolean,
+	/** 
+	 * $:/status/IsAnonymous does not appear anywhere in the TW5 repo! 
+	 * So it has no apparent purpose. 
+	 */
+	isAnonymous?: boolean
+) => void
+
+interface SyncAdaptor<AD> {
+	name?: string;
+
+	isReady?(): boolean;
+
+	getStatus?(
+		cb: ServerStatusCallback
+	): void;
+
+	getSkinnyTiddlers?(
+		cb: (err: any, tiddlerFields: Record<string, string>[]) => void
+	): void;
+	getUpdatedTiddlers?(
+		syncer: Syncer,
+		cb: (
+			err: any,
+			/** Arrays of titles that have been modified or deleted */
+			updates?: { modifications: string[], deletions: string[] }
+		) => void
+	): void;
+
+	/** 
+	 * used to override the default Syncer getTiddlerRevision behavior
+	 * of returning the revision field
+	 * 
+	 */
+	getTiddlerRevision?(title: string): string;
+	/** 
+	 * used to get the adapter info from a tiddler in situations
+	 * other than the saveTiddler callback
+	 */
+	getTiddlerInfo(tiddler: Tiddler): AD | undefined;
+
+	saveTiddler(
+		tiddler: any,
+		cb: (
+			err: any,
+			adaptorInfo?: AD,
+			revision?: string
+		) => void,
+		extra: { tiddlerInfo: SyncerTiddlerInfo<AD> }
+	): void;
+
+	setLoggerSaveBuffer?: (loggerForSaving: Logger) => void;
+	displayLoginPrompt?(syncer: Syncer): void;
+	login?(username: string, password: string, cb: (err: any) => void): void;
+	logout?(cb: (err: any) => void): any;
+}
+interface SyncerTiddlerInfo<AD> {
+	/** this comes from the wiki changeCount record */
+	changeCount: number;
+	/** Adapter info returned by the sync adapter */
+	adaptorInfo: AD;
+	/** Revision return by the sync adapter */
+	revision: string;
+	/** Timestamp set in the callback of the previous save */
+	timestampLastSaved: Date;
 }
 
 declare const $tw: any;
@@ -55,7 +166,12 @@ var SERVER_NOT_CONNECTED = "NOT CONNECTED",
 	SERVER_CONNECTED_SSE = "CONNECTED SSE",
 	SERVER_POLLING = "SERVER POLLING";
 
-class MultiWikiClientAdaptor {
+interface MWSAdaptorInfo {
+	bag: string
+}
+
+
+class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 	wiki;
 	host;
 	recipe;
@@ -114,6 +230,45 @@ class MultiWikiClientAdaptor {
 		}
 		return text;
 	}
+
+	async recipeRequest<KEY extends (string & keyof TiddlerRouterResponse)>(
+		options: Omit<HttpRequestOptions<"text">, "responseType"> & { key: KEY }
+	) {
+		if (!options.url.startsWith("/"))
+			throw new Error("The url does not start with a slash");
+
+		return await httpRequest({
+			...options,
+			responseType: "text",
+			url: this.host + "recipes/" + encodeURIComponent(this.recipe) + options.url,
+		}).then(result => {
+			// in theory, 403 and 404 should result in further action, 
+			// but in reality an error gets logged to console and that's it.
+			if (!result.ok) {
+				throw new Error(
+					`The server return a status code ${result.status} with the following reason: `
+					+ `${result.headers.get("x-reason") ?? "(no reason given)"}`
+				);
+			} else {
+				return result;
+			}
+		}).then(e => [true, void 0, {
+			...e,
+			/** this is undefined if status is not 200 */
+			responseJSON: e.status === 200 ? tryParseJSON(e.response) as TiddlerRouterResponse[KEY]["R"] : undefined
+		}] as const, e => [false, e, void 0] as const);
+
+		function tryParseJSON(data: string) {
+			try {
+				return JSON.parse(data);
+			} catch (e) {
+				console.error("Error parsing JSON, returning undefined", e);
+				return undefined;
+			}
+		}
+
+	}
+
 	getTiddlerInfo(tiddler: Tiddler) {
 		var title = tiddler.fields.title, revision = this.wiki.extractTiddlerDataItem(REVISION_STATE_TIDDLER, title), bag = this.wiki.extractTiddlerDataItem(BAG_STATE_TIDDLER, title);
 		if (revision && bag) {
@@ -141,104 +296,34 @@ class MultiWikiClientAdaptor {
 		this.wiki.setText(REVISION_STATE_TIDDLER, null, title, undefined, { suppressTimestamp: true });
 	}
 
-	httpRequest<RT extends "text" | "arraybuffer" | "json">(options: {
-		/** url to retrieve (must not contain `?` if GET or HEAD) */
-		url: string;
-		/** hashmap of headers to send */
-		headers?: Record<string, string>;
-		/** request method: GET, PUT, POST etc */
-		type?: string;
-		/** optional function invoked with (lengthComputable,loaded,total) */
-		progress?: (lengthComputable: boolean, loaded: number, total: number) => void;
-		/** name of the property to return as first argument of callback */
-		returnProp?: string;
-		responseType?: RT;
-		useDefaultHeaders?: boolean;
-		/** urlencoded string or hashmap of data to send. If type is GET or HEAD, this is appended to the URL as a query string */
-		data?: object | string;
-	}) {
-		type ResponseErr = [false, any, undefined];
-		type ResponseOk = [true, undefined, {
-			data:
-			"json" extends RT ? any :
-			"text" extends RT ? string :
-			"arraybuffer" extends RT ? ArrayBuffer :
-			unknown;
-			headers: Record<string, string>
-		}];
-		return (new Promise<ResponseErr | ResponseOk>((resolve) => {
-			$tw.utils.httpRequest({
-				...options,
-				responseType: options.responseType === "json" ? "text" : options.responseType,
-				callback: (err: any, data: any, request: XMLHttpRequest) => {
-					if (err) return resolve([false, err || new Error("Unknown error"), undefined]);
-
-					// Create a map of header names to values
-
-					const headers = {} as any;
-					request.getAllResponseHeaders()?.trim().split(/[\r\n]+/).forEach((line) => {
-						const parts = line.split(": ");
-						const header = parts.shift()?.toLowerCase();
-						const value = parts.join(": ");
-						if (header) headers[header] = value;
-					});
-					// Resolve the promise with the response data and headers
-					resolve([true, undefined, {
-						headers,
-						data: options.responseType === "json" ? $tw.utils.parseJSONSafe(data, () => undefined) : data,
-					}]);
-				},
-			});
-		}));
-	}
 	/*
 	Get the current status of the server connection
 	*/
-	async getStatus(callback: (
-		err: any,
-		isLoggedIn?: boolean,
-		username?: string,
-		isReadOnly?: boolean,
-		isAnonymous?: boolean,
-	) => void) {
-		interface UserAuthStatus {
-			isAdmin: boolean;
-			user_id: number;
-			username: string;
-			isLoggedIn: boolean;
-			isReadOnly: boolean;
-			allowAnonReads: boolean;
-			allowAnonWrites: boolean;
-		}
+	async getStatus(callback: ServerStatusCallback) {
 
-		const [ok, error, data] = await this.httpRequest({
-			url: this.host + "recipes/" + this.recipe + "/status",
-			type: "GET",
-			responseType: "json",
-			headers: {
-				'Content-Type': 'application/json',
-				"X-Requested-With": "TiddlyWiki"
-			},
+		const [ok, error, data] = await this.recipeRequest({
+			key: "handleGetRecipeStatus",
+			method: "GET",
+			url: "/status",
 		});
 		if (!ok) {
 			this.logger.log("Error getting status", error);
 			if (callback) callback(error);
 			return;
 		}
-		/** @type {Partial<UserAuthStatus>} */
-		const status = data.data;
+		const status = data.responseJSON;
 		if (callback) {
 			callback(
 				// Error
 				null,
 				// Is logged in
-				status.isLoggedIn ?? false,
+				status?.isLoggedIn ?? false,
 				// Username
-				status.username ?? "(anon)",
+				status?.username ?? "(anon)",
 				// Is read only
-				status.isReadOnly ?? true,
+				status?.isReadOnly ?? true,
 				// Is anonymous
-				!status.isLoggedIn,
+				!status?.isLoggedIn,
 			);
 		}
 	}
@@ -354,6 +439,7 @@ class MultiWikiClientAdaptor {
 
 		});
 	}
+
 	/*
 	Poll the server for changes. Options include:
   
@@ -362,36 +448,31 @@ class MultiWikiClientAdaptor {
 	async pollServer(options: {
 		callback: (err: any, changes?: { modifications: string[]; deletions: string[] }) => void;
 	}) {
+
 		var self = this;
-		const [ok, err, result] = await this.httpRequest({
-			url: this.host + "recipes/" + this.recipe + "/tiddlers.json",
-			data: {
-				last_known_revision_id: this.last_known_revision_id,
-				include_deleted: "true"
-			},
-			responseType: "json",
+
+		const [ok, err, result] = await this.recipeRequest({
+			key: "handleListRecipeTiddlers",
+			url: "/tiddlers.json",
+			method: "GET",
 		});
 
-		if (!ok) { return options.callback(err); }
-		const { data: tiddlerInfoArray = [] } = result;
+		if (!ok) return options.callback(err);
+
+		const tiddlerInfoArray = result.responseJSON ?? [];
 
 		var modifications: string[] = [], deletions: string[] = [];
 
-		$tw.utils.each(tiddlerInfoArray,
-			/**
-			 * @param {{ title: string; revision_id: number; is_deleted: boolean; bag_name: string; }} tiddlerInfo 
-			 */
-			function (tiddlerInfo: { title: string; revision_id: number; is_deleted: boolean; bag_name: string; }) {
-				if (tiddlerInfo.revision_id > self.last_known_revision_id) {
-					self.last_known_revision_id = tiddlerInfo.revision_id;
-				}
-				if (tiddlerInfo.is_deleted) {
-					deletions.push(tiddlerInfo.title);
-				} else {
-					modifications.push(tiddlerInfo.title);
-				}
+		tiddlerInfoArray.forEach(tiddlerInfo => {
+			if (tiddlerInfo.revision_id > self.last_known_revision_id) {
+				self.last_known_revision_id = tiddlerInfo.revision_id;
 			}
-		);
+			if (tiddlerInfo.is_deleted) {
+				deletions.push(tiddlerInfo.title);
+			} else {
+				modifications.push(tiddlerInfo.title);
+			}
+		});
 
 		// Invoke the callback with the results
 		options.callback(null, {
@@ -431,7 +512,11 @@ class MultiWikiClientAdaptor {
 	*/
 	async saveTiddler(
 		tiddler: Tiddler,
-		callback: (err: any, adaptorInfo?: { bag: string }, revision?: string) => void,
+		callback: (
+			err: any,
+			adaptorInfo?: MWSAdaptorInfo,
+			revision?: string
+		) => void,
 		options?: {}
 	) {
 		var self = this, title = tiddler.fields.title as string;
@@ -439,31 +524,43 @@ class MultiWikiClientAdaptor {
 			return callback(null);
 		}
 		self.outstandingRequests[title] = { type: "PUT" };
-		// TODO: not using getFieldStringBlock because what happens if a field name has a colon in it?
-		let body = JSON.stringify(tiddler.getFieldStrings({ exclude: ["text"] }));
+
+		// application/x-mws-tiddler
+		// The .tid file format does not support field names with colons. 
+		// Rather than trying to catch all the unsupported variations that may appear,
+		// we'll just use JSON to send it across the wire, since that is the official fallback format anyway.
+		// However, parsing a huge string value inside a JSON object is very slow,
+		// so we split off the text field and send it after the other fields. 
+
+		const fields = tiddler.getFieldStrings({});
+		const text = fields.text;
+		delete fields.text;
+		let body = JSON.stringify(fields);
+
 		if (tiddler.hasField("text")) {
-			if (typeof tiddler.fields.text !== "string" && tiddler.fields.text)
-				return callback(new Error("Error saving tiddler " + tiddler.fields.title + ": the text field is truthy but not a string"));
-			body += `\n\n${tiddler.fields.text}`
+			if (typeof text !== "string" && text)
+				return callback(new Error("Error saving tiddler " + fields.title + ": the text field is truthy but not a string"));
+			body += `\n\n${text}`
 		}
 
-		const [ok, err, result] = await this.httpRequest({
-			url: this.host + "recipes/" + encodeURIComponent(this.recipe) + "/tiddlers/" + encodeURIComponent(title),
-			type: "PUT",
-			headers: {
-				"Content-type": "application/x-mws-tiddler"
-			},
-			data: body,
-			responseType: "json",
+		type t = TiddlerRouterResponse["handleSaveRecipeTiddler"]
+		const [ok, err, result] = await this.recipeRequest({
+			key: "handleSaveRecipeTiddler",
+			url: "/tiddlers/" + encodeURIComponent(title),
+			method: "PUT",
+			requestBodyString: body,
 		});
 		delete self.outstandingRequests[title];
 		if (!ok) return callback(err);
-		const { headers, data } = result;
+
+		const data = result.responseJSON;
+		if (!data) return callback(null); // a 2xx response without a body is unlikely
 
 		//If Browser-Storage plugin is present, remove tiddler from local storage after successful sync to the server
 		if ($tw.browserStorage && $tw.browserStorage.isEnabled()) {
 			$tw.browserStorage.removeTiddlerFromLocalStorage(title);
 		}
+
 
 		// Save the details of the new revision of the tiddler
 		const revision = data.revision_id, bag_name = data.bag_name;
@@ -483,22 +580,25 @@ class MultiWikiClientAdaptor {
 	async loadTiddler(title: string, callback: (err: any, fields?: any) => void, options: any) {
 		var self = this;
 		self.outstandingRequests[title] = { type: "GET" };
-		const [ok, err, result] = await this.httpRequest({
-			url: this.host + "recipes/" + encodeURIComponent(this.recipe) + "/tiddlers/" + encodeURIComponent(title),
-		});
+		const [ok, err, result] = await this.recipeRequest({
+			key: "handleGetRecipeTiddler",
+			url: "/tiddlers/" + encodeURIComponent(title),
+			method: "GET",
+		})
 		delete self.outstandingRequests[title];
-		if (err === 404) {
-			return callback(null, null);
-		} else if (!ok) {
-			return callback(err);
-		}
-		const { data, headers } = result;
-		const revision = headers["x-revision-number"], bag_name = headers["x-bag-name"];
+		if (!ok) return callback(err);
+
+		const { responseJSON: data, headers } = result;
+		const revision = headers.get("x-revision-number") ?? "",
+			bag_name = headers.get("x-bag-name") ?? "";
+
+		if (!revision || !bag_name || !data) return callback(null, null);
+
 		// If there has been a more recent update from the server then enqueue a load of this tiddler
 		self.checkLastRecordedUpdate(title, revision);
 		// Invoke the callback
 		self.setTiddlerInfo(title, revision, bag_name);
-		callback(null, $tw.utils.parseJSONSafe(data));
+		callback(null, data);
 	}
 	/*
 	Delete a tiddler and invoke the callback with (err)
@@ -513,13 +613,16 @@ class MultiWikiClientAdaptor {
 		// if(!bag) { return callback(null, options.tiddlerInfo.adaptorInfo); }
 		self.outstandingRequests[title] = { type: "DELETE" };
 		// Issue HTTP request to delete the tiddler
-		const [ok, err, result] = await this.httpRequest({
-			url: this.host + "recipes/" + encodeURIComponent(this.recipe) + "/tiddlers/" + encodeURIComponent(title),
-			type: "DELETE",
+		const [ok, err, result] = await this.recipeRequest({
+			key: "handleDeleteRecipeTiddler",
+			url: "/tiddlers/" + encodeURIComponent(title),
+			method: "DELETE",
 		});
 		delete self.outstandingRequests[title];
-		if (!ok) { return callback(err); }
-		const { data } = result;
+		if (!ok) return callback(err);
+		const { responseJSON: data } = result;
+		if (!data) return callback(null);
+
 		const revision = data.revision_id, bag_name = data.bag_name;
 		// If there has been a more recent update from the server then enqueue a load of this tiddler
 		self.checkLastRecordedUpdate(title, revision);
@@ -533,3 +636,127 @@ class MultiWikiClientAdaptor {
 if ($tw.browser && document.location.protocol.startsWith("http")) {
 	exports.adaptorClass = MultiWikiClientAdaptor;
 }
+
+type ParamsInput = URLSearchParams | [string, string][] | object | string | undefined;
+
+interface HttpRequestOptions<TYPE extends "arraybuffer" | "blob" | "text"> {
+	/** The request METHOD. Maybe be anything except CONNECT, TRACE, or TRACK.  */
+	method: string;
+	/** The url may also contain query params. */
+	url: string;
+	/** The response types */
+	responseType: TYPE;
+	headers?: ParamsInput;
+	/** This is parsed separately from the url and appended to it. */
+	queryParams?: ParamsInput;
+	/** 
+	 * The string to send as the request body. Not valid for GET and HEAD.
+	 * 
+	 * For `application/x-www-form-urlencoded`, use `new URLSearchParams().toString()`.
+	 * 
+	 * For `application/json`, use `JSON.stringify()`
+	 */
+	requestBodyString?: string;
+	progress?: (event: ProgressEvent<EventTarget>) => void;
+}
+
+
+function httpRequest<TYPE extends "arraybuffer" | "blob" | "text">(options: HttpRequestOptions<TYPE>) {
+
+	options.method = options.method.toUpperCase();
+
+	if ((options.method === "GET" || options.method === "HEAD") && options.requestBodyString)
+		throw new Error("requestBodyString must be falsy if method is GET or HEAD");
+
+	function paramsInput(input: ParamsInput) {
+		if (!input) return new URLSearchParams();
+		if (input instanceof URLSearchParams) return input;
+		if (Array.isArray(input) || typeof input === "string") return new URLSearchParams(input);
+		return new URLSearchParams(Object.entries(input));
+	}
+
+	function normalizeHeaders(headers: URLSearchParams) {
+		[...headers.keys()].forEach(([k, v]) => {
+			const k2 = k.toLowerCase();
+			if (k2 !== k) {
+				headers.getAll(k).forEach(e => {
+					headers.append(k2, e);
+				})
+				headers.delete(k);
+				console.log(k, k2);
+			}
+		})
+	}
+
+	return new Promise<{
+		/** Shorthand to check if the response is in the 2xx range. */
+		ok: boolean;
+		status: number;
+		statusText: string;
+		headers: URLSearchParams;
+		response:
+		TYPE extends "arraybuffer" ? ArrayBuffer :
+		TYPE extends "blob" ? Blob :
+		TYPE extends "text" ? string :
+		never;
+	}>((resolve) => {
+		// if this throws sync'ly, the promise will reject.
+
+		const url = new URL(options.url, location.href);
+		const query = paramsInput(options.queryParams);
+		query.forEach((v, k) => { url.searchParams.append(k, v); });
+
+		const headers = paramsInput(options.headers);
+		normalizeHeaders(headers);
+
+		const request = new XMLHttpRequest();
+		request.responseType = options.responseType || "text";
+
+		request.open(options.method, options.url, true);
+
+
+		if (!headers.has("content-type"))
+			headers.set("content-type", "application/x-www-form-urlencoded; charset=UTF-8");
+
+		if (!headers.has("x-requested-with"))
+			headers.set("x-requested-with", "TiddlyWiki");
+
+		headers.set("accept", "application/json");
+
+
+		headers.forEach((v, k) => {
+			request.setRequestHeader(k, v);
+		});
+
+
+		request.onreadystatechange = function () {
+			if (this.readyState !== 4) return;
+
+			const headers = new URLSearchParams();
+			request.getAllResponseHeaders()?.trim().split(/[\r\n]+/).forEach((line) => {
+				const parts = line.split(": ");
+				const header = parts.shift()?.toLowerCase();
+				const value = parts.join(": ");
+				if (header) headers.append(header, value);
+			});
+			resolve({
+				ok: this.status >= 200 && this.status < 300,
+				status: this.status,
+				statusText: this.statusText,
+				response: this.response,
+				headers,
+			});
+
+		};
+
+		if (options.progress)
+			request.onprogress = options.progress;
+
+		request.send(options.requestBodyString);
+
+
+	});
+
+}
+
+
