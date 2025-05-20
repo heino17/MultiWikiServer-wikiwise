@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
 import { TW } from "tiddlywiki";
-import { SiteConfig } from "../commander";
+import { SiteConfig } from "../ServerState";
 
 const prefix = Buffer.from(`$tw.preloadTiddler(`, "utf8");
 const suffix = Buffer.from(`);`, "utf8");
@@ -29,7 +29,7 @@ export async function startupCache($tw: TW, cachePath: string) {
       // the boot and library tiddlers get rendered into the page
       // this list gets saved in the store array
       // we have to render at least one tiddler
-      saveTiddlerFilter: "$:/temp/nothing"
+      saveTiddlerFilter: "$:/SplashScreen"
     }
   });
 
