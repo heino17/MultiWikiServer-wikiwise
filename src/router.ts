@@ -135,8 +135,21 @@ export class Router {
 
     /** This should always have a length of at least 1 because of the root route. */
     const routePath = this.findRoute(streamer);
+
+    // we return 400 here, because if the request matches a route, then it is possible 
+    // that a resource could have existed at this address, 
+    // but if no route matches, any such question is irrelevant because the request
+    // was malformed and nothing can be inferred from returning 404. A resource could 
+    // have existed, if the request had been well-formed, but no such determination 
+    // could be made, because no handler was found which could satisfy this request. 
+    // this protects the semantic meaning of 404 as being the valid response of NOT FOUND
+    // to a valid request about a specific URL. We do not want the client to wrongfully
+    // conclude that a resource DOES NOT exist, because the fact that they're requesting
+    // a route with no handler points to a much more fundamental problem than just 
+    // no resource existing. The fact is that they did not even know how to ask the question,
+    // and simply telling them a resource does not exist is the wrong answer. 
     if (!routePath.length || routePath[routePath.length - 1]?.route.denyFinal)
-      return streamer.sendEmpty(404, { "x-reason": "no-route" });
+      return streamer.sendEmpty(400, { "x-reason": "no-route" });
 
     // Optionally output debug info
     console.log(streamer.method, streamer.url);

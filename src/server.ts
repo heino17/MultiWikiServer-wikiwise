@@ -25,7 +25,8 @@ export async function startServer() {
   if (!cmd) {
     return cmder.outputHelp();
   }
-  const cmdDef = commands[cmd];
+
+  const cmdDef = Object.values(commands).find(e => e.info.name === cmd);
   if (!cmdDef) {
     console.log(chalk.red.bold("Error: "), `Command "${cmd}" not found`);
     return cmder.outputHelp();

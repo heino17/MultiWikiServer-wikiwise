@@ -12,7 +12,7 @@ export async function startListeners(listeners: ListenerRaw[], config: SiteConfi
   
 
   const router = await Router.makeRouter(
-    commander.config,
+    config,
   ).catch(e => {
     console.log(e.stack);
     throw "Router failed to load";

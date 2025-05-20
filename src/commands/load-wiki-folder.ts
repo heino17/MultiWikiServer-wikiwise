@@ -35,22 +35,36 @@ export const info: CommandInfo = {
 	],
 };
 // tiddlywiki --load ./mywiki.html --savewikifolder ./mywikifolder
-export class Command extends BaseCommand {
+export class Command extends BaseCommand<[string], {
+	"bag-name"?: string;
+	"bag-description"?: string;
+	"recipe-name"?: string;
+	"recipe-description"?: string;
+}> {
 
 
 	async execute() {
 
 		// Check parameters
-		if (this.params.length < 5) {
+		if (this.params.length < 1) {
 			return "Missing parameters for --mws-load-wiki-folder command";
 		}
 
+		if (!this.options["bag-name"])
+			throw new Error("missing required option bag-name");
+		if (!this.options["bag-description"])
+			throw new Error("missing required option bag-description");
+		if (!this.options["recipe-name"])
+			throw new Error("missing required option recipe-name");
+		if (!this.options["recipe-description"])
+			throw new Error("missing required option recipe-description");
+
 		await this.config.engine.$transaction(loadWikiFolder({
-			wikiPath: this.params[0] as string,
-			bagName: this.params[1] as PrismaField<"Bags", "bag_name">,
-			bagDescription: this.params[2] as PrismaField<"Bags", "description">,
-			recipeName: this.params[3] as PrismaField<"Recipes", "recipe_name">,
-			recipeDescription: this.params[4] as PrismaField<"Recipes", "description">,
+			wikiPath: this.params[0],
+			bagName: this.options["bag-name"] as PrismaField<"Bags", "bag_name">,
+			bagDescription: this.options["bag-description"] as PrismaField<"Bags", "description">,
+			recipeName: this.options["recipe-name"] as PrismaField<"Recipes", "recipe_name">,
+			recipeDescription: this.options["recipe-description"] as PrismaField<"Recipes", "description">,
 			store: TiddlerStore.fromConfig(this.config, this.config.engine),
 			$tw: this.$tw,
 			cache: this.config.pluginCache

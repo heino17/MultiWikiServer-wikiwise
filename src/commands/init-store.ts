@@ -48,27 +48,27 @@ export class Command extends BaseCommand {
 		// should give us the path to boot.js
 		const tweditions = resolve(dist_require_resolve("tiddlywiki"), "../../editions");
 
-		await new LoadWikiFolderCommand([dist_resolve("../editions/mws-docs")], {
-			"bag-name": "mws-docs",
-		}, this.config, this.$tw).execute();
+		const runner = async ([path, bagName, bagDesc, recName, recDesc]: string[]) => {
+			await new LoadWikiFolderCommand([path!], {
+				"bag-name": bagName,
+				"bag-description": bagDesc,
+				"recipe-name": recName,
+				"recipe-description": recDesc,
+			}, this.config, this.$tw).execute();
+		}
 
-
-		this.commander.addCommandTokens([
-			// "--load-plugin-bags",
-			"--load-wiki-folder", dist_resolve("../editions/mws-docs"),
+		await runner([dist_resolve("../editions/mws-docs"),
 			"mws-docs", "MWS Documentation from https://mws.tiddlywiki.com",
-			"mws-docs", "MWS Documentation from https://mws.tiddlywiki.com",
-			"--load-wiki-folder", resolve(tweditions, "tw5.com"),
+			"mws-docs", "MWS Documentation from https://mws.tiddlywiki.com"]);
+		await runner([resolve(tweditions, "tw5.com"),
 			"docs", "TiddlyWiki Documentation from https://tiddlywiki.com",
-			"docs", "TiddlyWiki Documentation from https://tiddlywiki.com",
-			"--load-wiki-folder", resolve(tweditions, "dev"),
+			"docs", "TiddlyWiki Documentation from https://tiddlywiki.com"]);
+		await runner([resolve(tweditions, "dev"),
 			"dev", "TiddlyWiki Developer Documentation from https://tiddlywiki.com/dev",
-			"dev-docs", "TiddlyWiki Developer Documentation from https://tiddlywiki.com/dev",
-			"--load-wiki-folder", resolve(tweditions, "tour"),
+			"dev-docs", "TiddlyWiki Developer Documentation from https://tiddlywiki.com/dev"]);
+		await runner([resolve(tweditions, "tour"),
 			"tour", "TiddlyWiki Interactive Tour from https://tiddlywiki.com",
-			"tour", "TiddlyWiki Interactive Tour from https://tiddlywiki.com",
-			"--divider",
-		]);
+			"tour", "TiddlyWiki Interactive Tour from https://tiddlywiki.com"]);
 
 		this.config.setupRequired = false;
 	}

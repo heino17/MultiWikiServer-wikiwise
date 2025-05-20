@@ -77,6 +77,11 @@ export async function bootTiddlyWiki(wikiPath: string) {
   // this makes sure boot followed the node path
   ok(!$tw.boot.tasks.readBrowserTiddlers);
 
+  // grab library tiddlers from plugins and load them as regular tiddlers so they get rendered.
+  // we can safely do this because we only load our own plugins here.
+  const titles = $tw.wiki.filterTiddlers("[all[shadows]is[system]type[application/javascript]library[yes]]");
+  titles.forEach(title => { $tw.wiki.addTiddler($tw.wiki.getTiddler(title)!); })
+
   return $tw;
 
 }
