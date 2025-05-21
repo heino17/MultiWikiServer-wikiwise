@@ -1,7 +1,7 @@
 {
-	"title": "$:/plugins/tiddlywiki/multiwikiserver",
-	"name": "Multi Wiki Server",
-	"description": "Multiple Wiki Server Extension",
+	"title": "$:/plugins/mws/server",
+	"name": "MWS Startup Plugin",
+	"description": "MWS changes to TiddlyWiki used for rendering assets on startup.",
 	"list": "readme",
 	"dependents": [],
 	"stability": "STABILITY_1_EXPERIMENTAL"
