@@ -1,9 +1,8 @@
-import type { Commander } from "../commander";
 import type { CommandInfo } from "../utils/BaseCommand";
 
 import { UserKeyMap, UserManager } from "../routes/managers/manager-users";
 import { RecipeKeyMap, RecipeManager } from "../routes/managers/manager-recipes";
-import { is, Z2 } from "../utils";
+import { BaseCommand, is, Z2 } from "../utils";
 import { StatusKeyMap, StatusManager } from "../routes/managers";
 
 export const info: CommandInfo = {
@@ -14,29 +13,24 @@ export const info: CommandInfo = {
 };
 
 
-export class Command {
+export class Command extends BaseCommand<[], {}> {
 
-  constructor(
-    public params: string[],
-    public commander: Commander,
-  ) {
 
-  }
   async execute() {
     const { zodToTs, printNode } = await import('zod-to-ts').catch(e => {
       console.log("The NPM package 'zod-to-ts' cannot be found.");
       throw "The NPM package 'zod-to-ts' cannot be found.";
     });
-    this.getEndpoints().forEach(endpoint => {
+    this.getEndpoints().forEach(([key, endpoint]) => {
       const { node } = zodToTs(endpoint.zodRequest(Z2), 'User');
-      console.log("\ninterface", this.params[0], printNode(node));
+      console.log("\ninterface", key, printNode(node));
     });
   }
   getEndpoints() {
     return [
-      ...Object.keys(StatusKeyMap).map(e => new StatusManager(this.commander.config)[e]),
-      ...Object.keys(UserKeyMap).map(e => new UserManager(this.commander.config)[e]),
-      ...Object.keys(RecipeKeyMap).map(e => new RecipeManager(this.commander.config)[e]),
+      ...Object.keys(StatusKeyMap).map(e => [e,new StatusManager(this.config)[e]] as const),
+      ...Object.keys(UserKeyMap).map(e => [e,new UserManager(this.config)[e]] as const),
+      ...Object.keys(RecipeKeyMap).map(e => [e,new RecipeManager(this.config)[e]] as const),
     ];
   }
 }

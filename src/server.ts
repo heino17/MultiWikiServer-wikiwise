@@ -10,6 +10,7 @@ import chalk from "chalk";
 import { deepEqual } from "node:assert";
 import { ServerState } from "./ServerState";
 import opaque from "@serenity-kit/opaque";
+import { BaseCommand, CommandClass, CommandFile } from "./utils";
 
 export async function startServer() {
 
@@ -25,8 +26,8 @@ export async function startServer() {
   if (!cmd) {
     return cmder.outputHelp();
   }
-
-  const cmdDef = Object.values(commands).find(e => e.info.name === cmd);
+  // const cmdDef
+  const cmdDef: CommandFile | undefined = Object.values(commands).find(e => e.info.name === cmd);
   if (!cmdDef) {
     console.log(chalk.red.bold("Error: "), `Command "${cmd}" not found`);
     return cmder.outputHelp();

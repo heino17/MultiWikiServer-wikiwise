@@ -1,8 +1,8 @@
 import { AttachmentService, TiddlerFields } from "../services/attachments";
 import { ok } from "assert";
-import { Commander, SiteConfig } from "../commander";
 import { FileInfoTiddlers, TiddlerFieldModule } from "tiddlywiki";
 import { UserError } from "../utils";
+import { SiteConfig } from "../ServerState";
 
 /**
 

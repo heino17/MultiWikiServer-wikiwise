@@ -4,16 +4,19 @@ import Debug from "debug";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import * as path from "path";
 import { TW } from "tiddlywiki";
-import { pkg } from "./commander";
+import pkg from "../package.json";
 import { SqliteAdapter } from "./db/sqlite-adapter";
 import { startupCache } from "./routes/cache";
 import { createPasswordService } from "./services/PasswordService";
 import { bootTiddlyWiki } from "./tiddlywiki";
 import * as opaque from "@serenity-kit/opaque";
 
+/** This is an alias for ServerState in case we want to separate the two purposes. */
 export type SiteConfig = ServerState;
 
 /** Pre command server setup */
+
+const DEFAULT_CONTENT_TYPE = "application/octet-stream";
 
 export class ServerState {
   static async make(wikiPath: string) {
@@ -40,6 +43,8 @@ export class ServerState {
 
     this.fieldModules = $tw.Tiddler.fieldModules;
     this.contentTypeInfo = $tw.config.contentTypeInfo;
+    if (!this.contentTypeInfo[DEFAULT_CONTENT_TYPE])
+      throw new Error("The content type info for " + DEFAULT_CONTENT_TYPE + " cannot be found in TW5")
 
     if (!existsSync(this.databasePath)) this.setupRequired = true;
 
@@ -109,12 +114,11 @@ export class ServerState {
   enableDevServer;
 
 
-  contentTypeInfo: Record<string, {
-    encoding: string;
-    extension: string | string[];
-    flags?: string[];
-    deserializerType?: string;
-  }>;
+  contentTypeInfo: Record<string, ContentTypeInfo>;
+
+  getContentType(type: string): ContentTypeInfo {
+    return this.contentTypeInfo[type] || this.contentTypeInfo[DEFAULT_CONTENT_TYPE]!;
+  }
 
   adapter!: SqliteAdapter;
   engine!: PrismaClient<Prisma.PrismaClientOptions, never, {
@@ -147,4 +151,9 @@ export function readPasswordMasterKey(wikiPath: string) {
   return passwordMasterKey;
 }
 
-
+export type ContentTypeInfo = {
+  encoding: string;
+  extension: string | string[];
+  flags?: string[];
+  deserializerType?: string;
+};

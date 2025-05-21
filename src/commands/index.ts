@@ -1,4 +1,3 @@
-import * as load_plugin_bags from "./load-plugin-bags";
 import * as load_wiki_folder from "./load-wiki-folder";
 import * as save_archive from "./save-archive";
 import * as load_archive from "./load-archive";
@@ -9,8 +8,6 @@ import * as tests_complete from "./tests-complete";
 import * as mws_client_build from "./build-client";
 import * as help from "./help";
 import * as listen from "./listen";
-import * as tw5_commander from "./commander";
-import type { Commander } from "../commander";
 import type { CommandInfo } from "../utils/BaseCommand";
 import { BaseCommand } from "../utils";
 
@@ -23,7 +20,6 @@ export const commands = {
   init_store,
   manager,
   listen,
-  tw5_commander,
   help,
   divider,
   tests_complete,

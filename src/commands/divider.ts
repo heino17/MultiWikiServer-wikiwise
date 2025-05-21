@@ -1,4 +1,3 @@
-import type { Commander } from "../commander";
 import type { CommandInfo } from "../utils/BaseCommand";
 import { BaseCommand } from "../utils";
 

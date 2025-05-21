@@ -1,8 +1,8 @@
 import { tryParseJSON } from "../utils";
 import * as path from "path";
 import * as fs from "fs";
-import { SiteConfig } from "../commander";
 import sjcl from "sjcl";
+import { SiteConfig } from "../ServerState";
 export interface TiddlerFields extends Record<string, any> {
   title: PrismaField<"Tiddlers", "title">;
 }
@@ -16,22 +16,22 @@ Class to handle the attachments in the filing system
 The store folder looks like this:
 
 store/
-	inbox/ - files that are in the process of being uploaded via a multipart form upload
-		202402282125432742/
-			0
-			1
-			...
-		...
-	files/ - files that are the text content of large tiddlers
-		b7def178-79c4-4d88-b7a4-39763014a58b/
-			data.jpg - the extension is provided for convenience when directly inspecting the file system
-			meta.json - contains:
-				{
-					"filename": "data.jpg",
-					"type": "video/mp4",
-					"uploaded": "2024021821224823"
-				}
-	database.sql - The database file (managed by sql-tiddler-database.js)
+  inbox/ - files that are in the process of being uploaded via a multipart form upload
+    202402282125432742/
+      0
+      1
+      ...
+    ...
+  files/ - files that are the text content of large tiddlers
+    b7def178-79c4-4d88-b7a4-39763014a58b/
+      data.jpg - the extension is provided for convenience when directly inspecting the file system
+      meta.json - contains:
+        {
+          "filename": "data.jpg",
+          "type": "video/mp4",
+          "uploaded": "2024021821224823"
+        }
+  database.sql - The database file (managed by sql-tiddler-database.js)
 
 */
 
@@ -40,7 +40,7 @@ export class AttachmentService {
   constructor(
     protected config: SiteConfig,
     protected prisma: PrismaTxnClient,
-  ) { 
+  ) {
 
   }
 
@@ -149,13 +149,17 @@ export class AttachmentService {
     // Compute the content hash for naming the attachment
     const contentHash = sjcl.codec.hex.fromBits($tw.sjcl.hash.sha256.hash(options.text)).slice(0, 64).toString();
     // Choose the best file extension for the attachment given its type
-    const contentTypeInfo = this.config.contentTypeInfo[options.type] || this.config.contentTypeInfo["application/octet-stream"];
+    const contentTypeInfo = this.config.getContentType(options.type);
     // Creat the attachment directory
     const attachmentPath = path.resolve(this.config.storePath, "files", contentHash);
     createDirectory(attachmentPath);
     // Save the data file
     const dataFilename = "data" + contentTypeInfo.extension;
-    fs.writeFileSync(path.resolve(attachmentPath, dataFilename), options.text, contentTypeInfo.encoding);
+    fs.writeFileSync(
+      path.resolve(attachmentPath, dataFilename),
+      options.text,
+      contentTypeInfo.encoding as BufferEncoding
+    );
     // Save the meta.json file
     this.writeMetaFile(fs, path, attachmentPath, options, contentHash, dataFilename);
     return contentHash as PrismaField<"Tiddlers", "attachment_hash">;
@@ -176,12 +180,12 @@ export class AttachmentService {
   */
   async adoptAttachment({ incomingFilepath, type, hash, _canonical_uri }: {
     incomingFilepath: any;
-    type: string | number;
+    type: string;
     hash: any;
     _canonical_uri: any;
   }) {
     // Choose the best file extension for the attachment given its type
-    const contentTypeInfo = this.config.contentTypeInfo[type] || this.config.contentTypeInfo["application/octet-stream"];
+    const contentTypeInfo = this.config.getContentType(type);
     // Creat the attachment directory
     const attachmentPath = path.resolve(this.config.storePath, "files", hash);
     createDirectory(attachmentPath);

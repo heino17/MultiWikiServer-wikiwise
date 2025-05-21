@@ -1,6 +1,4 @@
-import type { Commander } from "../commander";
-import type { CommandInfo } from "../utils/BaseCommand";
-import { BaseCommand } from "../utils";
+import { BaseCommand, CommandInfo } from "../utils";
 
 
 export const info: CommandInfo = {

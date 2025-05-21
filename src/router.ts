@@ -5,7 +5,6 @@ import * as z from "zod";
 import { createStrictAwaitProxy, JsonValue, truthy, Z2 } from "./utils";
 import { Route, rootRoute, RouteOptAny, RouteMatch, } from "./utils";
 import { setupDevServer } from "./listen/setupDevServer";
-import { Commander, SiteConfig } from "./commander";
 import { ServerState } from "./ServerState";
 import { CacheState, registerCacheRoutes, startupCache } from "./routes/cache";
 import * as http from "http";
@@ -16,6 +15,7 @@ import { fromError } from 'zod-validation-error';
 import { t as try_ } from "try";
 export { RouteMatch, Route, rootRoute };
 import Debug from "debug";
+import { TW } from "tiddlywiki";
 const debug = Debug("mws:router");
 
 
@@ -86,7 +86,7 @@ export class Router {
   public engine: ServerState["engine"];
   public PasswordService: ServerState["PasswordService"];
 
-  fieldModules: Commander["$tw"]["Tiddler"]["fieldModules"];
+  fieldModules: TW["Tiddler"]["fieldModules"];
 
   versions;
   private tiddlerCache: CacheState;

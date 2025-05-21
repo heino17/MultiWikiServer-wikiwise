@@ -9,7 +9,6 @@ import { Prisma, PrismaClient } from '@prisma/client';
 import { Types } from '@prisma/client/runtime/library';
 import { DataChecks } from '../utils';
 import { setupDevServer } from "../listen/setupDevServer";
-import { Commander, SiteConfig } from '../commander';
 import { ServerState } from "../ServerState";
 import { PasswordService } from '../services/PasswordService';
 

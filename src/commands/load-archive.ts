@@ -1,5 +1,4 @@
 
-import type { Commander } from "../commander";
 import type { CommandInfo } from "../utils/BaseCommand";
 import { BaseCommand } from "../utils/BaseCommand";
 import { TiddlerStore } from "../routes/TiddlerStore";
@@ -11,6 +10,7 @@ import { createStrictAwaitProxy } from "../utils";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { existsSync } from "fs";
 import { v7 as uuidv7 } from "uuid";
+import { SiteConfig } from "../ServerState";
 const fsp = createStrictAwaitProxy(_fsp);
 
 export const info: CommandInfo = {
@@ -148,7 +148,7 @@ export interface Archiver2Saves {
 }
 
 class Archiver2 {
-	constructor(public config: Commander["config"]) { }
+	constructor(public config: SiteConfig) { }
 
 	/** This generates UUIDv7 keys since version 2 used integers */
 	getNewUUIDv7(map: Map<any, string>, oldkey: any): string {

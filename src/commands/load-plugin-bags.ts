@@ -1,10 +1,7 @@
 import { resolve } from "node:path";
-
-import type { Commander } from "../commander";
-import type { CommandInfo } from "../utils/BaseCommand";
 import { TiddlerStore } from "../routes/TiddlerStore";
 import { TiddlerFields } from "../services/attachments";
-import { truthy } from "../utils";
+import { BaseCommand, truthy, CommandInfo } from "../utils";
 import { PrismaClient, PrismaPromise } from "@prisma/client";
 
 export const info: CommandInfo = {
@@ -16,16 +13,9 @@ export const info: CommandInfo = {
 };
 
 
-export class Command {
+export class Command extends BaseCommand<[string]> {
 
-	get $tw() { return this.commander.$tw; }
-	constructor(
-		public params: string[],
-		public commander: Commander,
-		public callback: (err?: any) => void
-	) {
 
-	}
 	async execute() {
 		console.log("load-plugin-bags is no longer used.")
 		// console.time(`${info.name} complete`);

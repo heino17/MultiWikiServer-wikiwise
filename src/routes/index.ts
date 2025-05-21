@@ -5,7 +5,7 @@ import { Prisma, PrismaClient } from "@prisma/client";
 import { ManagerRoutes } from "./managers";
 import { TiddlerRouter } from "./managers/router-tiddlers";
 import { DocsRoute } from "./tw-routes";
-import { SiteConfig } from "../commander";
+import { SiteConfig } from "../ServerState";
 
 declare global {
   const ENABLE_UNSAFE_PRISMA_ROUTE: any;

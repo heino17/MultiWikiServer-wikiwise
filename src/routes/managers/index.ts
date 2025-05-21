@@ -1,9 +1,9 @@
 
-import { SiteConfig } from "../../commander";
 import { DataChecks } from "../../utils";
 import { RecipeManager } from "../managers/manager-recipes";
 import { UserManager } from "../managers/manager-users";
 import { registerZodRoutes, RouterKeyMap, RouterRouteMap, zodManage } from "../../router";
+import { SiteConfig } from "../../ServerState";
 
 export { UserManager, UserManagerMap } from "./manager-users";
 export { RecipeManager, RecipeManagerMap } from "./manager-recipes";
