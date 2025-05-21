@@ -42,7 +42,7 @@ export namespace ZodAssert {
    * Sends a 404 response instead of 400. 
   */
   export function pathParams<
-    T extends Exactly<{ [k in keyof S["pathParams"]]: z.ZodTypeAny; }, T>,
+    T extends Exactly<{ [k in keyof S["pathParams"]]: z.ZodType<any, any, string>; }, T>,
     S extends StateObject,
   >(
     state: S, schemaShape: (zod: Z2<"STRING">) => T,
@@ -69,7 +69,7 @@ export namespace ZodAssert {
    * 
    * You shouldn't make query params required unless you absolutely have to.
    */
-  export function queryParams<T extends Record<string, z.ZodTypeAny>, S extends StateObject>(
+  export function queryParams<T extends Record<string, z.ZodType<any, any, string[] | undefined>>, S extends StateObject>(
     state: S, schemaShape: (zod: Z2<"STRING">) => T,
     /** 
      * If the data does not match the schema, this function is called sync'ly with the zod error.
@@ -152,13 +152,6 @@ export interface Z2<T extends FieldTypeGroups> extends _zod {
   ): ZodEffects<any, PrismaField<Table, Field>, PrismaPayloadScalars<Table>[Field]>;
 
 
-  authUser(): z.ZodNullable<z.ZodObject<{
-    user_id: z.ZodNumber;
-    isAdmin: z.ZodBoolean;
-    username: z.ZodString;
-    sessionId: z.ZodNumber;
-  }>>;
-
 }
 
 export const _zodAssertAny = (
@@ -218,15 +211,11 @@ type FieldTypeBooleanSelector<T extends FieldTypeGroups> = T extends "STRING" ? 
 export const Z2 = makeZ2("any");
 
 
-function makeZ2<T extends FieldTypeGroups>(input: "data" | "pathParams" | "queryParams" | "any" | "response" | string): Z2<T> {
+function makeZ2<T extends FieldTypeGroups, I>(
+  input: "data" | "pathParams" | "queryParams" | "any" | "response" | string
+): Z2<T> {
   const z2 = Object.create(z);
   z2.prismaField = prismaField;
-  z2.authUser = () => z.object({
-    user_id: z.number(),
-    isAdmin: z.boolean(),
-    username: z.string(),
-    sessionId: z.number(),
-  }).nullable();
   return z2;
 }
 

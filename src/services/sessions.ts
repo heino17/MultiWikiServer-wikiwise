@@ -37,11 +37,18 @@ export const SessionKeyMap: RouterKeyMap<SessionManager, true> = {
 export function zodSession<P extends string, T extends z.ZodTypeAny, R extends JsonValue>(
   path: P,
   zodRequest: (z: Z2<"JSON">) => T,
-  inner: (state: ZodState<"POST", "json", Record<string, z.ZodTypeAny>, T>, prisma: PrismaTxnClient) => Promise<R>
+  inner: (state: ZodState<"POST", "json", Record<string, z.ZodTypeAny>, {}, T>, prisma: PrismaTxnClient) => Promise<R>
 ): ZodSessionRoute<P, T, R> {
   return {
-    ...zodRoute(["POST"], path, z => ({}), "json", zodRequest, async state => {
-      return state.$transaction(async (prisma) => await inner(state, prisma));
+    ...zodRoute({
+      method: ["POST"], path,
+      bodyFormat: "json",
+      zodPathParams: z => ({}),
+      zodQueryParams: z => ({}),
+      zodRequestBody: zodRequest,
+      inner: async (state) => {
+        return state.$transaction(async (prisma) => await inner(state, prisma));
+      }
     }),
     path,
   };
@@ -53,7 +60,7 @@ export interface ZodSessionRoute<
   R extends JsonValue
 > extends ZodAction<T, R> {
   path: P;
-  inner: (state: ZodState<"POST", "json", {}, T>) => Promise<R>,
+  inner: (state: ZodState<"POST", "json", {}, {}, T>) => Promise<R>,
 }
 
 export type RouterPathRouteMap<T> = {

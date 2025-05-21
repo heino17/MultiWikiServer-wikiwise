@@ -22,7 +22,7 @@ export class Command extends BaseCommand<[], {}> {
       throw "The NPM package 'zod-to-ts' cannot be found.";
     });
     this.getEndpoints().forEach(([key, endpoint]) => {
-      const { node } = zodToTs(endpoint.zodRequest(Z2), 'User');
+      const { node } = zodToTs(endpoint.zodRequestBody(Z2), 'User');
       console.log("\ninterface", key, printNode(node));
     });
   }

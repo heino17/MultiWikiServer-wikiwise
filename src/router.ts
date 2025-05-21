@@ -237,7 +237,7 @@ export class Router {
 
       // Try to match the path.
       const match = potentialRoute.path.exec(testPath);
-      
+
       if (match) {
         debug.extend("matching")(potentialRoute.path.source, testPath, match?.[0]);
         // The matched portion of the path.
@@ -316,7 +316,7 @@ function defineRoute(
 export interface ZodAction<T extends z.ZodTypeAny, R extends JsonValue> {
   // (state: StateObject): Promise<typeof STREAM_ENDED>;
   inner: (route: z.output<T>) => Promise<R>
-  zodRequest: (z: Z2<"JSON">) => T;
+  zodRequestBody: (z: Z2<"JSON">) => T;
   zodResponse?: (z: Z2<"JSON">) => z.ZodType<R>;
 }
 
@@ -324,6 +324,7 @@ export interface ZodRoute<
   M extends AllowedMethod,
   B extends BodyFormat,
   P extends Record<string, z.ZodTypeAny>,
+  Q extends Record<string, z.ZodTypeAny>,
   T extends z.ZodTypeAny,
   R extends JsonValue
 > extends ZodAction<T, R> {
@@ -331,16 +332,18 @@ export interface ZodRoute<
   method: M[];
   path: string;
   bodyFormat: B;
-  inner: (state: ZodState<M, B, P, T>) => Promise<R>,
+  inner: (state: ZodState<M, B, Q, P, T>) => Promise<R>,
 }
 
 export class ZodState<
   M extends AllowedMethod,
   B extends BodyFormat,
   P extends Record<string, z.ZodTypeAny>,
+  Q extends Record<string, z.ZodTypeAny>,
   T extends z.ZodTypeAny
 > extends StateObject<B, M, string[][], z.output<T>> {
   declare pathParams: z.output<z.ZodObject<P>>;
+  declare queryParams: z.output<z.ZodObject<Q>>;
   // declare data: z.output<T>;
 }
 
@@ -375,30 +378,67 @@ export type RouterKeyMap<T, V> = {
 
 
 // this is definitely the better version of defineRoute, but that was the starting point
-export function zodRoute<M extends AllowedMethod, B extends "GET" | "HEAD" extends M ? "ignore" : BodyFormat, P extends Record<string, z.ZodTypeAny>, T extends z.ZodTypeAny, R extends JsonValue>(
-  method: M[],
-  /** `"path/to/route/:var/route/:var2"` */
-  path: string,
-  zodPathParams: (z: Z2<"STRING">) => P,
-  bodyFormat: B,
-  zodRequest: (z: Z2<"JSON">) => T,
-  inner: (state: ZodState<M, B, P, T>) => Promise<R>,
-): ZodRoute<M, B, P, T, R> {
+export function zodRoute<
+  M extends AllowedMethod,
+  B extends "GET" | "HEAD" extends M ? "ignore" : BodyFormat,
+  P extends Record<string, z.ZodTypeAny>,
+  Q extends Record<string, z.ZodType<any, any, string[] | undefined>>,
+  T extends z.ZodTypeAny,
+  R extends JsonValue
+>({
+  method, path, bodyFormat,
+  zodPathParams,
+  zodQueryParams = (z => ({}) as any),
+  zodRequestBody = ["string", "json", "www-form-urlencoded"].includes(bodyFormat)
+    ? z => z.undefined() : (z => z.any() as any),
+  inner
+}: {
+  method: M[];
+  /** `"/path/to/route/:var/route/:var2"` */
+  path: string;
+  bodyFormat: B;
+  /** 
+   * The input will be `Record<string, string>` 
+   * If a path variable is not set in the request, the path will not match.
+   * 
+   * Expects a Record of zod checks. Every path variable must be included.
+  */
+  zodPathParams: (z: Z2<"STRING">) => P;
+  /** 
+   * The input will be `Record<string, string[]>`. 
+   * If a value is not set, an empty string is used. 
+   * 
+   * Expects a Record of zod checks.
+   * 
+   * The default behavior is to remove all query params.
+   */
+  zodQueryParams?: (z: Z2<"STRING">) => Q;
+  /** 
+   * A zod check of the request body result. 
+   * 
+   * Only valid for `string`, `json`, and `www-form-urlencoded` body types
+   * 
+   * The default is `undefined` for those types.
+   */
+  zodRequestBody?: B extends "string" | "json" | "www-form-urlencoded" ? (z: Z2<"JSON">) => T : undefined;
+  inner: (state: ZodState<M, B, P, Q, T>) => Promise<R>;
+}): ZodRoute<M, B, P, Q, T, R> {
+
   return {
     method,
     path,
     bodyFormat,
     inner,
-    zodRequest,
+    zodRequestBody,
     zodPathParams,
-  } as ZodRoute<M, B, P, T, R>;
+  } as ZodRoute<M, B, P, Q, T, R>;
 }
 
 export const registerZodRoutes = (root: rootRoute, router: any, keys: string[]) => {
   // const router = new TiddlerRouter();
   keys.forEach((key) => {
-    const route = router[key as keyof typeof router] as ZodRoute<any, any, any, any, any>;
-    const { method, path, bodyFormat, zodPathParams, zodRequest, inner } = route;
+    const route = router[key as keyof typeof router] as ZodRoute<any, any, any, any, any, any>;
+    const { method, path, bodyFormat, zodPathParams, zodRequestBody: zodRequest, inner } = route;
     const pathParams = path.split("/").filter(e => e.startsWith(":")).map(e => e.substring(1));
     ///^\/recipes\/([^\/]+)\/tiddlers\/(.+)$/,
     if (!path.startsWith("/")) throw new Error(`Path ${path} must start with a forward slash`);
@@ -459,9 +499,17 @@ export const registerZodRoutes = (root: rootRoute, router: any, keys: string[]) 
 
 export function zodManage<T extends z.ZodTypeAny, R extends JsonValue>(
   zodRequest: (z: Z2<"JSON">) => T,
-  inner: (state: ZodState<"POST", "json", Record<string, z.ZodTypeAny>, T>, prisma: PrismaTxnClient) => Promise<R>
+  inner: (state: ZodState<"POST", "json", Record<string, z.ZodTypeAny>, {}, T>, prisma: PrismaTxnClient) => Promise<R>
 ) {
-  return zodRoute(["POST"], "/manager/$key", z => ({}), "json", zodRequest, async state => {
-    return state.$transaction(async (prisma) => await inner(state, prisma));
+  return zodRoute({
+    method: ["POST"],
+    path: "/manager/$key",
+    zodPathParams: z => ({}),
+    zodQueryParams: z => ({}),
+    bodyFormat: "json",
+    zodRequestBody: zodRequest as any,
+    inner: async (state) => {
+      return state.$transaction(async (prisma) => await inner(state, prisma));
+    }
   });
 }

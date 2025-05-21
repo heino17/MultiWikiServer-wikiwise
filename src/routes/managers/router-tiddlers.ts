@@ -36,97 +36,95 @@ export class TiddlerRouter {
   // 6. Wiki Index - the wiki client itself, with all the config 
   //    from the recipe, and the initial tiddler state
 
-  handleGetRecipeStatus = zodRoute(
-    ["GET", "HEAD"],
-    "/recipes/:recipe_name/status",
-    z => ({
+  handleGetRecipeStatus = zodRoute({
+    method: ["GET", "HEAD"],
+    path: "/recipes/:recipe_name/status",
+    bodyFormat: "ignore",
+    zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
     }),
-    "ignore",
-    z => z.undefined(),
-    async (state) => {
+    inner:
+      async (state) => {
 
-      const { recipe_name } = state.pathParams;
+        const { recipe_name } = state.pathParams;
 
-      const { recipe, canRead, canWrite } = await state.getRecipeACL(recipe_name, true);
+        const { recipe, canRead, canWrite } = await state.getRecipeACL(recipe_name, true);
 
-      if (!recipe) throw state.sendEmpty(404, { "x-reason": "recipe not found" });
-      if (!canRead) throw state.sendEmpty(403, { "x-reason": "read access denied" });
+        if (!recipe) throw state.sendEmpty(404, { "x-reason": "recipe not found" });
+        if (!canRead) throw state.sendEmpty(403, { "x-reason": "read access denied" });
 
-      const { isAdmin, user_id, username } = state.user;
+        const { isAdmin, user_id, username } = state.user;
 
-      return {
-        isAdmin,
-        user_id,
-        username,
-        isLoggedIn: state.user.isLoggedIn,
-        isReadOnly: !canWrite,
-        allowAnonReads: false,
-        allowAnonWrites: false,
-      };
-    }
-  );
+        return {
+          isAdmin,
+          user_id,
+          username,
+          isLoggedIn: state.user.isLoggedIn,
+          isReadOnly: !canWrite,
+          allowAnonReads: false,
+          allowAnonWrites: false,
+        };
+      }
+  });
 
-  handleGetRecipeTiddler = zodRoute(
-    ["GET", "HEAD"],
-    "/recipes/:recipe_name/tiddlers/:title",
-    z => ({
+  handleGetRecipeTiddler = zodRoute({
+    method: ["GET", "HEAD"],
+    path: "/recipes/:recipe_name/tiddlers/:title",
+    bodyFormat: "ignore",
+    zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
       title: z.prismaField("Tiddlers", "title", "string"),
     }),
-    "ignore",
-    z => z.undefined(),
-    async (state) => {
-      const { recipe_name, title } = state.pathParams;
+    inner:
+      async (state) => {
+        const { recipe_name, title } = state.pathParams;
 
-      await state.assertRecipeACL(recipe_name, false);
+        await state.assertRecipeACL(recipe_name, false);
 
-      throw await state.$transaction(async prisma => {
-        const server = new TiddlerServer(state, prisma);
-        const bag = await server.getRecipeBagWithTiddler({ recipe_name, title });
-        return server.sendBagTiddler({ state, bag_id: bag?.bag_id, title });
-      });
+        throw await state.$transaction(async (prisma) => {
+          const server = new TiddlerServer(state, prisma);
+          const bag = await server.getRecipeBagWithTiddler({ recipe_name, title });
+          return server.sendBagTiddler({ state, bag_id: bag?.bag_id, title });
+        });
 
-    }
-  )
+      }
+  })
 
-  handleGetBagTiddler = zodRoute(
-    ["GET", "HEAD"],
-    "/bags/:bag_name/tiddlers/:title",
-    z => ({
+  handleGetBagTiddler = zodRoute({
+    method: ["GET", "HEAD"],
+    path: "/bags/:bag_name/tiddlers/:title",
+    bodyFormat: "ignore",
+    zodPathParams: z => ({
       bag_name: z.prismaField("Bags", "bag_name", "string"),
       title: z.prismaField("Tiddlers", "title", "string"),
     }),
-    "ignore",
-    z => z.undefined(),
-    async (state) => {
+    inner:
+      async (state) => {
 
-      await state.assertBagACL(state.pathParams.bag_name, false);
+        await state.assertBagACL(state.pathParams.bag_name, false);
 
-      throw await state.$transaction(async prisma => {
-        const server = new TiddlerServer(state, prisma);
-        // return await server.getBagTiddler(state.pathParams);
-        return server.sendBagTiddler({ state, ...state.pathParams });
-      });
+        throw await state.$transaction(async (prisma) => {
+          const server = new TiddlerServer(state, prisma);
+          // return await server.getBagTiddler(state.pathParams);
+          return server.sendBagTiddler({ state, ...state.pathParams });
+        });
 
-      // return this.sendTiddlerInfo(state, tiddlerInfo);
-
-    });
+      }
+  });
 
 
-  handleListRecipeTiddlers = zodRoute(
-    ["GET", "HEAD"],
-    "/recipes/:recipe_name/tiddlers.json",
-    z => ({
+  handleListRecipeTiddlers = zodRoute({
+    method: ["GET", "HEAD"],
+    path: "/recipes/:recipe_name/tiddlers.json",
+    bodyFormat: "ignore",
+    zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
     }),
-    "ignore",
-    z => z.undefined(),
-    async (state) => {
-      zodAssert.queryParams(state, z => ({
-        include_deleted: z.string().array().optional(),
-        last_known_revision_id: z.string().array().optional(),
-      }));
+    zodQueryParams: z => ({
+      include_deleted: z.string().array().optional(),
+      last_known_revision_id: z.string().array().optional(),
+    }),
+    inner: async (state) => {
 
       const { recipe_name } = state.pathParams;
       const include_deleted = state.queryParams.include_deleted?.[0] === "true";
@@ -134,7 +132,7 @@ export class TiddlerRouter {
 
       await state.assertRecipeACL(recipe_name, false);
 
-      const result = await state.$transaction(async prisma => {
+      const result = await state.$transaction(async (prisma) => {
         const server = new TiddlerServer(state, prisma);
         const options = { include_deleted, last_known_revision_id };
         let result = await server.getRecipeTiddlers(recipe_name);
@@ -144,18 +142,17 @@ export class TiddlerRouter {
       });
       return result;
     }
-  )
+  })
 
 
-  handleGetBagStates = zodRoute(
-    ["GET", "HEAD"],
-    "/recipes/:recipe_name/bag-states",
-    z => ({
+  handleGetBagStates = zodRoute({
+    method: ["GET", "HEAD"],
+    path: "/recipes/:recipe_name/bag-states",
+    bodyFormat: "ignore",
+    zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
     }),
-    "ignore",
-    z => z.undefined(),
-    async (state) => {
+    inner: async (state) => {
 
       const { recipe_name } = state.pathParams;
       await state.assertRecipeACL(recipe_name, false);
@@ -166,17 +163,16 @@ export class TiddlerRouter {
       }));
 
       const
-        last_known_revision_id = state.queryParams.last_known_revision_id?.[0],
-        include_deleted = state.queryParams.include_deleted?.[0] === "yes";
+        last_known_revision_id = state.queryParams.last_known_revision_id?.[0], include_deleted = state.queryParams.include_deleted?.[0] === "yes";
 
-      const result = await state.$transaction(async prisma => {
+      const result = await state.$transaction(async (prisma) => {
         const server = new TiddlerServer(state, prisma);
         return await server.getRecipeTiddlersByBag(recipe_name, { include_deleted, last_known_revision_id });
       });
 
       return result;
     }
-  )
+  })
 
   parseFields(input: string, ctype: string | undefined) {
 
@@ -204,158 +200,144 @@ export class TiddlerRouter {
     }
   }
 
-  handleSaveRecipeTiddler = zodRoute(
-    ["PUT"],
-    "/recipes/:recipe_name/tiddlers/:title",
-    z => ({
+  handleSaveRecipeTiddler = zodRoute({
+    method: ["PUT"],
+    path: "/recipes/:recipe_name/tiddlers/:title",
+    bodyFormat: "string",
+    zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
       title: z.prismaField("Tiddlers", "title", "string"),
     }),
-    "string",
-    z => z.string(), // read the tiddler as a string
-    async (state) => {
+    zodRequestBody: z => z.string(),
+    inner:
+      async (state) => {
 
-      const { recipe_name } = state.pathParams;
+        const { recipe_name } = state.pathParams;
 
-      await state.assertRecipeACL(recipe_name, true);
+        await state.assertRecipeACL(recipe_name, true);
 
-      const fields = this.parseFields(state.data, state.headers["content-type"]);
+        const fields = this.parseFields(state.data, state.headers["content-type"]);
 
-      if (fields === undefined)
-        throw state.sendEmpty(400, {
-          "x-reason": "PUT tiddler expects a valid json or x-mws-tiddler body"
+        if (fields === undefined)
+          throw state.sendEmpty(400, {
+            "x-reason": "PUT tiddler expects a valid json or x-mws-tiddler body"
+          });
+
+        const { bag_name, revision_id } = await state.$transaction(async (prisma) => {
+          const server = new TiddlerServer(state, prisma);
+          // The tiddlywiki client saves binary tiddlers as base64-encoded text field
+          // so no special handling is required.
+          return await server.saveRecipeTiddlerFields(fields, state.pathParams.recipe_name, null);
         });
 
-      const { bag_name, revision_id } = await state.$transaction(async prisma => {
-        const server = new TiddlerServer(state, prisma);
-        // The tiddlywiki client saves binary tiddlers as base64-encoded text field
-        // so no special handling is required.
-        return await server.saveRecipeTiddlerFields(fields, state.pathParams.recipe_name, null);
-      });
+        return { bag_name, revision_id };
 
-      return { bag_name, revision_id };
-
-    });
+      }
+  });
 
 
-  handleDeleteRecipeTiddler = zodRoute(
-    ["DELETE"],
-    "/recipes/:recipe_name/tiddlers/:title",
-    z => ({
+  handleDeleteRecipeTiddler = zodRoute({
+    method: ["DELETE"],
+    path: "/recipes/:recipe_name/tiddlers/:title",
+    bodyFormat: "json",
+    zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
       title: z.prismaField("Tiddlers", "title", "string"),
     }),
-    "json",
-    z => z.undefined(),
-    async (state) => {
+    zodRequestBody:
+      z => z.undefined(), inner:
+      async (state) => {
 
-      const { recipe_name, title } = state.pathParams;
-      if (!recipe_name || !title) throw state.sendEmpty(404, { "x-reason": "bag_name or title not found" });
+        const { recipe_name, title } = state.pathParams;
+        if (!recipe_name || !title) throw state.sendEmpty(404, { "x-reason": "bag_name or title not found" });
 
-      await state.assertRecipeACL(recipe_name, true);
+        await state.assertRecipeACL(recipe_name, true);
 
-      const { bag_name, revision_id } = await state.$transaction(async prisma => {
-        const server = new TiddlerServer(state, prisma);
-        return await server.deleteRecipeTiddler(recipe_name, title);
-      });
+        const { bag_name, revision_id } = await state.$transaction(async (prisma) => {
+          const server = new TiddlerServer(state, prisma);
+          return await server.deleteRecipeTiddler(recipe_name, title);
+        });
 
-      return { bag_name, revision_id };
+        return { bag_name, revision_id };
 
-    });
+      }
+  });
 
   // this is not used by the sync adaptor. I'm not sure what uses it.
-  handleCreateRecipeTiddler = zodRoute(
-    ["POST"],
-    "/recipes/:recipe_name/tiddlers",
-    z => ({
-      recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
-    }),
-    "json",
-    z => z.object({
-      title: z.prismaField("Tiddlers", "title", "string", false),
-    }).and(z.record(z.string())),
-    async (state) => {
-      await state.assertRecipeACL(state.pathParams.recipe_name, true);
+  handleCreateRecipeTiddler = zodRoute({
+    method: ["POST"],
+    path: "/recipes/:recipe_name/tiddlers",
+    bodyFormat: "json",
+    zodPathParams:
+      z => ({
+        recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
+      }),
+    zodRequestBody:
+      z => z.object({
+        title: z.prismaField("Tiddlers", "title", "string", false),
+      }).and(z.record(z.string())), inner:
+      async (state) => {
+        await state.assertRecipeACL(state.pathParams.recipe_name, true);
 
-      const recipe_name = state.pathParams.recipe_name;
+        const recipe_name = state.pathParams.recipe_name;
 
-      return await state.$transaction(async prisma => {
-        const server = new TiddlerServer(state, prisma);
-        const { bag_name } = await server.getRecipeWritableBag(recipe_name) ?? {};
-        if (!bag_name) throw state.sendEmpty(404, { "x-reason": "bag not found" });
-        return { bag_name, results: await server.processIncomingStream(bag_name) };
-      });
+        return await state.$transaction(async (prisma) => {
+          const server = new TiddlerServer(state, prisma);
+          const { bag_name } = await server.getRecipeWritableBag(recipe_name) ?? {};
+          if (!bag_name) throw state.sendEmpty(404, { "x-reason": "bag not found" });
+          return { bag_name, results: await server.processIncomingStream(bag_name) };
+        });
 
-    });
+      }
+  });
 
-  handleGetBagTiddlerBlob = zodRoute(
-    ["GET", "HEAD"],
-    "/bags/:bag_name/tiddlers/:title/blob",
-    z => ({
+  handleGetBagTiddlerBlob = zodRoute({
+    method: ["GET", "HEAD"],
+    path: "/bags/:bag_name/tiddlers/:title/blob",
+    bodyFormat: "ignore",
+    zodPathParams: z => ({
       bag_name: z.prismaField("Bags", "bag_name", "string"),
       title: z.prismaField("Tiddlers", "title", "string"),
     }),
-    "ignore",
-    z => z.undefined(),
-    async (state) => {
-      const { bag_name, title } = state.pathParams;
+    inner:
+      async (state) => {
+        const { bag_name, title } = state.pathParams;
 
-      await state.assertBagACL(bag_name, false);
+        await state.assertBagACL(bag_name, false);
 
-      const result = await state.$transaction(async prisma => {
-        const server = new TiddlerServer(state, prisma);
-        return await server.getBagTiddlerStream(title, bag_name);
-      });
+        const result = await state.$transaction(async (prisma) => {
+          const server = new TiddlerServer(state, prisma);
+          return await server.getBagTiddlerStream(title, bag_name);
+        });
 
-      if (!result) throw state.sendEmpty(404, { "x-reason": "no result" });
+        if (!result) throw state.sendEmpty(404, { "x-reason": "no result" });
 
-      throw state.sendStream(200, {
-        Etag: state.makeTiddlerEtag(result),
-        "Content-Type": result.type
-      }, result.stream);
-    });
+        throw state.sendStream(200, {
+          Etag: state.makeTiddlerEtag(result),
+          "Content-Type": result.type
+        }, result.stream);
+      }
+  });
 
-  handleGetWikiIndex = zodRoute(
-    ["GET", "HEAD"],
-    "/wiki/:recipe_name",
-    z => ({
+  handleGetWikiIndex = zodRoute({
+    method: ["GET", "HEAD"],
+    path: "/wiki/:recipe_name",
+    bodyFormat: "ignore",
+    zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
     }),
-    "ignore",
-    z => z.undefined(),
-    async (state) => {
-      await state.assertRecipeACL(state.pathParams.recipe_name, false);
+    inner:
+      async (state) => {
+        await state.assertRecipeACL(state.pathParams.recipe_name, false);
 
-      await state.$transaction(async prisma => {
-        const server = new TiddlerServer(state, prisma);
-        await server.serveIndexFile(state.pathParams.recipe_name);
-      });
+        await state.$transaction(async (prisma) => {
+          const server = new TiddlerServer(state, prisma);
+          await server.serveIndexFile(state.pathParams.recipe_name);
+        });
 
-      throw STREAM_ENDED;
-    });
-
-  private sendTiddlerInfo = async (
-    state: StateObject,
-    tiddlerInfo: Awaited<ReturnType<TiddlerServer["getBagTiddler"]>>
-  ) => {
-
-    zodAssert.queryParams(state, z => ({
-      fallback: z.array(z.string()).optional()
-    }));
-    // fallbacks are kind of slow, I'm not sure if this is a good idea
-    if (!tiddlerInfo || !tiddlerInfo.tiddler) {
-      // Redirect to fallback URL if tiddler not found
-      const fallback = state.queryParams.fallback?.[0];
-      if (fallback) {
-        // await state.pushStream(fallback);
-        throw state.redirect(fallback);
-      } else {
-        throw state.sendEmpty(404, { "x-reason": "tiddler not found (no fallback)" });
+        throw STREAM_ENDED;
       }
-    }
-
-    return tiddlerInfo;
-  }
+  });
 
 
 }
