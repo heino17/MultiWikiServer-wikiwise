@@ -1,0 +1,8 @@
+title: $:/plugins/tiddlywiki/multiwikiclient/info-segment
+tags: $:/tags/TiddlerInfo/Advanced
+
+\define lingo-base() $:/language/MWS/BagInfo/
+
+''<<lingo Heading>>''
+
+<$view tiddler="$:/state/multiwikiclient/tiddlers/bag" index=<<currentTiddler>> >(none)</$view>

@@ -1,5 +1,5 @@
 {
-	"title": "$:/plugins/tiddlywiki/multiwikiclient",
+	"title": "$:/plugins/mws/client",
 	"name": "MultiWikiClient",
 	"description": "Synchronise changes from the browser to TiddlyWiki ~MultiWikiServer",
 	"list": "readme",

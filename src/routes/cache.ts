@@ -18,8 +18,8 @@ export async function startupCache($tw: TW, cachePath: string) {
   const filePlugins = new Map([...pluginFiles.entries()].map(e => e.reverse() as [string, string]));
 
   const requiredPlugins = [
-    "$:/plugins/tiddlywiki/multiwikiclient",
-    "$:/plugins/tiddlywiki/tiddlyweb",
+    "$:/plugins/mws/client",
+    // "$:/plugins/tiddlywiki/tiddlyweb",
     "$:/themes/tiddlywiki/snowwhite",
     "$:/themes/tiddlywiki/vanilla",
   ];
@@ -127,9 +127,10 @@ async function importPlugins(twFolder: string, cacheFolder: string, type: string
     const plugin = $tw.loadPluginFolder(oldPath);
     const newPath = path.join(cacheFolder, relativePluginPath);
     fs.mkdirSync(newPath, { recursive: true });
-    if (plugin && plugin.title) {
+    if (plugin && plugin.title && plugin.text) {
       // need to compare sizes of various configurations
-      plugin.text = JSON.stringify(JSON.parse(plugin.text as string));
+
+      // plugin.text = JSON.stringify(JSON.parse(plugin.text as string));
       Object.keys(plugin).forEach(e => {
         if (plugin[e] !== undefined && typeof plugin[e] !== "string") {
           // before, this was handled by the database making sure all field values were strings

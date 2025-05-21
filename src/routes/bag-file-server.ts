@@ -380,7 +380,10 @@ export class TiddlerServer extends TiddlerStore {
     });
     // get the latest tiddler id in the database. It doesn't have to be filtered.
 
-
+    writeTiddler({
+      title: "$:/config/multiwikiclient/use-server-sent-events",
+      text: false ? "yes" : "no"
+    });
 
     writeTiddler({
       title: "$:/config/multiwikiclient/host",
@@ -464,7 +467,7 @@ export class TiddlerServer extends TiddlerStore {
       writeTiddler(tiddler2);
     }
 
-    const last_revision_id = Object.values(revisionInfo).reduce((n,e) => n > e ? n : e, "");
+    const last_revision_id = Object.values(revisionInfo).reduce((n, e) => n > e ? n : e, "");
 
     writeTiddler({
       title: "$:/state/multiwikiclient/tiddlers/bag",
