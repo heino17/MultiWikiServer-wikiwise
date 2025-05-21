@@ -13,6 +13,7 @@
     "inlineSources": true,
     "skipLibCheck": true,
     "removeComments": false,
+    "isolatedModules": true,
     "types": [
       "tw5-typed"
     ],

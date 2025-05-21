@@ -251,6 +251,16 @@ export class TiddlerServer extends TiddlerStore {
       where: { bag_id: { in: recipe.recipe_bags.map(e => e.bag.bag_id) } }
     });
 
+    const { cachePath, pluginFiles, pluginHashes, requiredPlugins } = state.tiddlerCache;
+
+    const plugins = [
+      ...new Set([
+        ...(!recipe.skip_required_plugins) ? requiredPlugins : [],
+        ...(!recipe.skip_core) ? ["$:/core"] : [],
+        ...recipe.plugin_names,
+      ]).values()
+    ];
+
     const template = readFileSync(resolve(this.state.config.cachePath, "tiddlywiki5.html"), "utf8");
     const hash = createHash('md5');
     // Put everything into the hash that could change and invalidate the data that
@@ -260,7 +270,7 @@ export class TiddlerServer extends TiddlerStore {
     // the bag names
     hash.update(recipe.recipe_bags.map(e => e.bag.bag_name).join(","));
     // the plugin names
-    hash.update(recipe.plugin_names.join(","));
+    hash.update(plugins.map(e => pluginHashes.get(e) ?? "").join(","));
     // the latest tiddler id in those bags
     hash.update(`${lastTiddlerId._max.revision_id}`);
     const contentDigest = hash.digest("hex");
@@ -312,15 +322,7 @@ export class TiddlerServer extends TiddlerStore {
     }
     state.write(template.substring(0, markerPos));
 
-    const { cachePath, pluginFiles, requiredPlugins } = state.tiddlerCache;
 
-    const plugins = [
-      ...new Set([
-        ...(!recipe.skip_required_plugins) ? requiredPlugins : [],
-        ...(!recipe.skip_core) ? ["$:/core"] : [],
-        ...recipe.plugin_names,
-      ]).values()
-    ];
 
     console.log(plugins);
 
@@ -342,8 +344,8 @@ export class TiddlerServer extends TiddlerStore {
       `);
 
       state.write(plugins.map(e => {
-        const plugin = state.tiddlerCache.pluginFiles.get(e)!;
-        const hash = state.tiddlerCache.pluginHashes.get(e)!;
+        const plugin = pluginFiles.get(e)!;
+        const hash = pluginHashes.get(e)!;
         return `<script src="${state.pathPrefix}/$cache/${plugin}/plugin.js" `
           + ` integrity="${hash}" crossorigin="anonymous"></script>`;
       }).join("\n"));
@@ -378,10 +380,7 @@ export class TiddlerServer extends TiddlerStore {
     });
     // get the latest tiddler id in the database. It doesn't have to be filtered.
 
-    writeTiddler({
-      title: "$:/state/multiwikiclient/recipe/last_revision_id",
-      text: (lastTiddlerId._max.revision_id ?? 0).toString()
-    });
+
 
     writeTiddler({
       title: "$:/config/multiwikiclient/host",
@@ -465,6 +464,8 @@ export class TiddlerServer extends TiddlerStore {
       writeTiddler(tiddler2);
     }
 
+    const last_revision_id = Object.values(revisionInfo).reduce((n,e) => n > e ? n : e, "");
+
     writeTiddler({
       title: "$:/state/multiwikiclient/tiddlers/bag",
       text: JSON.stringify(bagInfo),
@@ -474,6 +475,10 @@ export class TiddlerServer extends TiddlerStore {
       title: "$:/state/multiwikiclient/tiddlers/revision",
       text: JSON.stringify(revisionInfo),
       type: "application/json"
+    });
+    writeTiddler({
+      title: "$:/state/multiwikiclient/recipe/last_revision_id",
+      text: last_revision_id
     });
   }
 }

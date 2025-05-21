@@ -22,7 +22,9 @@ export type TiddlerManagerMap = RouterRouteMap<TiddlerRouter>;
 
 export class TiddlerRouter {
   static defineRoutes = (root: rootRoute) => {
-    registerZodRoutes(root, new TiddlerRouter(), Object.keys(TiddlerKeyMap));
+    const router = new TiddlerRouter();
+    const keys = Object.keys(TiddlerKeyMap);
+    registerZodRoutes(root, router, keys);
   }
 
   // lets start with the scenarios from the sync adapter
@@ -158,9 +160,18 @@ export class TiddlerRouter {
       const { recipe_name } = state.pathParams;
       await state.assertRecipeACL(recipe_name, false);
 
+      zodAssert.queryParams(state, z => ({
+        last_known_revision_id: z.prismaField("Tiddlers", "revision_id", "string").array().optional(),
+        include_deleted: z.enum(["yes", "no"]).array().optional(),
+      }));
+
+      const
+        last_known_revision_id = state.queryParams.last_known_revision_id?.[0],
+        include_deleted = state.queryParams.include_deleted?.[0] === "yes";
+
       const result = await state.$transaction(async prisma => {
         const server = new TiddlerServer(state, prisma);
-        return await server.getRecipeTiddlersByBag(recipe_name);
+        return await server.getRecipeTiddlersByBag(recipe_name, { include_deleted, last_known_revision_id });
       });
 
       return result;

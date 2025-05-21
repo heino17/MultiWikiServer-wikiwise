@@ -5,6 +5,8 @@
     "tsc": "tsc"
   },
   "devDependencies": {
+    "@types/tiddlywiki": "file:../../tiddlywiki-types",
+    "@tiddlywiki/mws": "file:../..",
     "tw5-typed": "*",
     "typescript": "^5.8.3"
   }

@@ -62,10 +62,12 @@ export namespace ZodAssert {
    * 
    * This is the only place that the query parameters are declared, so the keys are not checked. 
    * 
-   * If no value is specified, it defaults to an empty string
+   * For query params, if no value is specified, it defaults to an empty string
    * (`?key&key=&key` becomes `key: ["", "", ""]`).
    * 
-   * In zod: `z.object({ key: z.array(z.string()).optional() })`
+   * Your zod definition should be `z => ({ key: z.string().array().optional() })`
+   * 
+   * You shouldn't make query params required unless you absolutely have to.
    */
   export function queryParams<T extends Record<string, z.ZodTypeAny>, S extends StateObject>(
     state: S, schemaShape: (zod: Z2<"STRING">) => T,
