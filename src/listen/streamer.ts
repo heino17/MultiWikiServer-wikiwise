@@ -1,6 +1,6 @@
 import "../global";
 import * as http2 from 'node:http2';
-import send from './send.js';
+import send from 'send';
 import { Readable } from 'stream';
 import { IncomingMessage, ServerResponse, IncomingHttpHeaders as NodeIncomingHeaders, OutgoingHttpHeaders } from 'node:http';
 import { is, UserError } from '../utils';
@@ -189,9 +189,8 @@ export class Streamer {
     if (process.env.DEBUG?.split(",").includes("send")) {
       console.error("sendString", status, headers);
     }
-    this.checkHeadersSentBy(true);
     headers['content-length'] = Buffer.byteLength(data, encoding);
-    this.res.writeHead(status, headers);
+    this.writeHead(status, headers, true);
 
     if (this.method === "HEAD")
       this.res.end();
@@ -205,27 +204,26 @@ export class Streamer {
     if (process.env.DEBUG?.split(",").includes("send")) {
       console.error("sendBuffer", status, headers);
     }
-    this.checkHeadersSentBy(true);
     headers['content-length'] = data.length;
-    this.res.writeHead(status, headers);
+    this.writeHead(status, headers, true);
     if (this.method === "HEAD")
       this.res.end();
     else
       this.res.end(data);
     return STREAM_ENDED;
   }
-  /** If this is a HEAD request, the stream will be ignored AND LEFT OPEN. */
+  /** If this is a HEAD request, the stream will be drained. */
   sendStream(status: number, headers: OutgoingHttpHeaders, stream: Readable): typeof STREAM_ENDED {
     if (process.env.DEBUG?.split(",").includes("send")) {
       console.error("sendStream", status, headers);
     }
-    this.checkHeadersSentBy(true);
-    this.res.writeHead(status, headers);
-    if (this.method === "HEAD")
+    this.writeHead(status, headers, true);
+    if (this.method === "HEAD") {
+      stream.resume();
       this.res.end();
-    else
+    } else {
       stream.pipe(this.res);
-
+    }
     return STREAM_ENDED;
   }
 
@@ -287,6 +285,8 @@ export class Streamer {
 
     const { root, reqpath, offset, length, prefix, suffix } = options;
 
+    if (prefix || suffix) throw new Error("prefix and suffix are not implemented");
+
     if (process.env.DEBUG?.split(",").includes("send")) {
       console.error("sendFile", root, reqpath, status, headers);
     }
@@ -297,8 +297,6 @@ export class Streamer {
       root,
       start: offset,
       end: length && length - 1,
-      prefix,
-      suffix,
     });
     return new Promise<typeof STREAM_ENDED>((resolve, reject) => {
 
@@ -359,25 +357,30 @@ export class Streamer {
   setHeader(name: string, value: string): void {
     this.res.setHeader(name, value);
   }
-  writeHead(status: number, headers: OutgoingHttpHeaders = {}): void {
+  writeHead(status: number, headers: OutgoingHttpHeaders = {}, compression = false): void {
     if (process.env.DEBUG?.split(",").includes("send")) {
       console.error("writeHead", status, headers);
     }
     this.checkHeadersSentBy(true);
+
     this.res.writeHead(status, headers);
   }
   pause: boolean = false;
+  /** awaiting is not required. everything happens sync'ly */
   write(chunk: Buffer | string, encoding?: NodeJS.BufferEncoding): Promise<void> {
-    // Between http1 and http2, the types are slightly different, but the runtime effect seems to be the same.
+    // console.log(this.writer.write.toString());
     const continueWriting = encoding
+      // Between http1 and http2, the types are slightly different, but the runtime effect seems to be the same.
       ? (this.res as ServerResponse).write(chunk, encoding)
       : (this.res as ServerResponse).write(chunk);
+    console.log(continueWriting, new Error().stack);
     if (!continueWriting)
       return new Promise<void>(resolve => this.res.once("drain", () => { resolve(); }));
     else
       return Promise.resolve();
   }
   end(): typeof STREAM_ENDED {
+    console.log(this.writer.end.toString());
     this.res.end();
     return STREAM_ENDED;
   }
@@ -427,7 +430,8 @@ export class StreamerState {
   /** 
    * this will pipe from the specified stream, but will not end the 
    * response when the input stream ends. Input stream errors will be 
-   * caught and reject the promise.
+   * caught and reject the promise. The promise will resolve once the
+   * input stream ends.
    */
 
   async pipeFrom(stream: Readable) {
@@ -453,8 +457,13 @@ export class StreamerState {
 
   gzipStream?: Gzip;
 
-  startGzip() {
-
+  /** 
+   * Start gzip using the same conditions as the send* functions use. 
+   * 
+   * This means that it will check whether the browser accept-encoding header allows gzip, 
+   * and whether it is enabled on this server. 
+   */
+  startCompressor() {
     this.gzipStream = createGzip();
     this.gzipStream.pipe(this.streamer.writer);
 

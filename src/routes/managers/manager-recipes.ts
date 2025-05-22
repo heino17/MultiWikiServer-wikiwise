@@ -150,6 +150,7 @@ export class RecipeManager {
           owner_id: isAdmin ? owner_id : undefined,
           skip_core,
           skip_required_plugins,
+          plugin_names,
           recipe_bags: { deleteMany: {}, }
         }
       });

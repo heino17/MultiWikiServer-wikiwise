@@ -23,25 +23,6 @@ export class TiddlerServer extends TiddlerStore {
     );
   }
 
-  private toTiddlyWebJson(info: { bag_name: string; revision_id: number; tiddler: TiddlerFields }) {
-    const output: any = { fields: {} };
-    const knownFields = [
-      "bag", "created", "creator", "modified", "modifier", "permissions", "recipe", "revision", "tags", "text", "title", "type", "uri"
-    ];
-
-    each(info.tiddler, (field, name) => {
-      if (knownFields.indexOf(name) !== -1) {
-        output[name] = field;
-      } else {
-        output.fields[name] = field;
-      }
-    });
-    output.type = info.tiddler.type || "text/vnd.tiddlywiki";
-
-    output.revision = `${info.revision_id}`;
-    output.bag = info.bag_name;
-    return output;
-  }
 
   /** If neither bag_name nor bag_id are specified, the fallback will be sent. */
   async sendBagTiddler({ state, bag_name, bag_id, title }: {
@@ -263,13 +244,13 @@ export class TiddlerServer extends TiddlerStore {
 
     const template = readFileSync(resolve(this.state.config.cachePath, "tiddlywiki5.html"), "utf8");
     const hash = createHash('md5');
-    // Put everything into the hash that could change and invalidate the data that
-    // the browser already stored.
+    // Put everything into the hash that could change and invalidate the page
+
     // the rendered template
     hash.update(template);
     // the bag names
     hash.update(recipe.recipe_bags.map(e => e.bag.bag_name).join(","));
-    // the plugin names
+    // the plugin hashes
     hash.update(plugins.map(e => pluginHashes.get(e) ?? "").join(","));
     // the latest tiddler id in those bags
     hash.update(`${lastTiddlerId._max.revision_id}`);
@@ -281,15 +262,11 @@ export class TiddlerServer extends TiddlerStore {
     state.writeHead(200, {
       "Content-Type": "text/html",
       "Etag": '"' + contentDigest + '"',
-      // TODO: WHY IS THIS DISABLED???
-      "Cache-Control": "max-age=1000, must-revalidate",
-      "content-encoding": "gzip",
-    });
-    state.startGzip();
+      // this still allows Etag to be used, it just has to check every time
+      "Cache-Control": "max-age=0, private, no-cache",
+    }, true);
 
     if (state.method === "HEAD") return state.end();
-    // Get the tiddlers in the recipe
-    // Render the template
 
     // it is recommended to add <link rel="preload" to the header since these cannot be deferred
     // <link rel="preload" href="main.js" as="script" />
@@ -314,17 +291,16 @@ export class TiddlerServer extends TiddlerStore {
     if (markerPos === -1) {
       throw new Error("Cannot find tiddler store in template");
     }
-    
-    
+
+
     /**
      * 
      * @param {Record<string, string>} tiddlerFields 
      */
-    function writeTiddler(tiddlerFields: Record<string, string>) {
-      state.write(JSON.stringify(tiddlerFields).replace(/</g, "\\u003c"));
-      state.write(",\n");
+    async function writeTiddler(tiddlerFields: Record<string, string>) {
+      await state.write(JSON.stringify(tiddlerFields).replace(/</g, "\\u003c") + ",\n");
     }
-    state.write(template.substring(0, markerPos));
+    await state.write(template.substring(0, markerPos));
 
     plugins.forEach(e => {
       if (!state.tiddlerCache.pluginFiles.has(e))
@@ -333,28 +309,28 @@ export class TiddlerServer extends TiddlerStore {
 
     if (state.config.enableExternalPlugins) {
 
-      state.write(`
-        ${"<"}script>
+      await state.write(`
+        <script>
         window.$tw = window.$tw || Object.create(null);
         $tw.preloadTiddlers = $tw.preloadTiddlers || [];
         $tw.preloadTiddler = function(fields) {
           $tw.preloadTiddlers.push(fields);
         };
-        ${"</"}script>
+        </script>
       `);
 
-      state.write(plugins.map(e => {
+      await state.write(plugins.map(e => {
         const plugin = pluginFiles.get(e)!;
         const hash = pluginHashes.get(e)!;
         return `<script src="${state.pathPrefix}/$cache/${plugin}/plugin.js" `
-          + ` integrity="${hash}" crossorigin="anonymous"></script>`;
+          + ` integrity="${hash}" crossorigin="anonymous"/>`;
       }).join("\n"));
 
-      state.write(marker);
+      await state.write(marker);
 
     } else {
 
-      state.write(marker);
+      await state.write(marker);
 
       const fileStreams = plugins.map(e =>
         createReadStream(join(cachePath, pluginFiles.get(e)!, "plugin.json"))
@@ -399,7 +375,7 @@ export class TiddlerServer extends TiddlerStore {
   private async serveStoreTiddlers(
     bagKeys: string[],
     bagOrder: Map<string, number>,
-    writeTiddler: (tiddlerFields: Record<string, string>) => void
+    writeTiddler: (tiddlerFields: Record<string, string>) => Promise<void>
   ) {
 
     // NOTES: 
@@ -464,7 +440,7 @@ export class TiddlerServer extends TiddlerStore {
 
       bagInfo[title] = bag_name;
       revisionInfo[title] = revision_id.toString();
-      writeTiddler(tiddler2);
+      await writeTiddler(tiddler2);
     }
 
     const last_revision_id = Object.values(revisionInfo).reduce((n, e) => n > e ? n : e, "");

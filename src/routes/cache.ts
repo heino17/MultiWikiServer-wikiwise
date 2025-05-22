@@ -4,8 +4,7 @@ import * as path from "path";
 import * as crypto from "crypto";
 import { TW } from "tiddlywiki";
 import { SiteConfig } from "../ServerState";
-import { gzipSync } from "fflate";
-// import { gzipSync } from "zlib";
+import { gzipSync } from "zlib";
 
 const prefix = Buffer.from(`$tw.preloadTiddler(`, "utf8");
 const suffix = Buffer.from(`);`, "utf8");
@@ -148,10 +147,10 @@ async function importPlugins(twFolder: string, cacheFolder: string, type: string
         fs.writeFileSync(path.join(newPath, "plugin.info"), JSON.stringify(plugin));
       } else if (type === "client") {
         const json = Buffer.from(JSON.stringify(plugin).replace(/<\//gi, "\\u003c/"), "utf8");
+        fs.writeFileSync(path.join(newPath, "plugin.json"), json);
         const js = Buffer.concat([prefix, json, suffix]);
         let hash = crypto.createHash("sha384").update(js).digest("base64");
-        const gz = gzipSync(js, { level: 4, mem: 4 })
-        fs.writeFileSync(path.join(newPath, "plugin.json"), json);
+        const gz = gzipSync(js, { level: 4, memLevel: 4 });
         fs.writeFileSync(path.join(newPath, "plugin.js.gz"), gz);
         tiddlerFiles.set(plugin.title, relativePluginPath);
         tiddlerHashes.set(plugin.title, "sha384-" + hash);

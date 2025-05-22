@@ -16,6 +16,7 @@ import { t as try_ } from "try";
 export { RouteMatch, Route, rootRoute };
 import Debug from "debug";
 import { TW } from "tiddlywiki";
+import compression = require("compression");
 const debug = Debug("mws:router");
 
 
@@ -120,6 +121,8 @@ export class Router {
     }
 
     this.handle(streamer).catch(streamer.catcher);
+
+
   }
 
   async handle(streamer: Streamer) {
@@ -329,6 +332,7 @@ export interface ZodRoute<
   R extends JsonValue
 > extends ZodAction<T, R> {
   zodPathParams: (z: Z2<"STRING">) => P;
+  zodQueryParams: (z: Z2<"STRING">) => Q;
   method: M[];
   path: string;
   bodyFormat: B;
@@ -431,6 +435,7 @@ export function zodRoute<
     inner,
     zodRequestBody,
     zodPathParams,
+    zodQueryParams,
   } as ZodRoute<M, B, P, Q, T, R>;
 }
 
