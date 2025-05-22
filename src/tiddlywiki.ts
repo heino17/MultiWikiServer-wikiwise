@@ -65,10 +65,6 @@ export async function bootTiddlyWiki(wikiPath: string) {
   // tiddlywiki [+<pluginname> | ++<pluginpath>] [<wikipath>] ...[--command ...args]
   $tw.boot.argv = [
     "++" + dist_resolve("../plugins/server"),
-    // "+plugins/tiddlywiki/tiddlyweb",
-    // these are sane defaults, these should be in the recipe
-    // "+themes/tiddlywiki/vanilla",
-    // "+themes/tiddlywiki/snowwhite",
     wikiPath, // this should be inert
   ];
 

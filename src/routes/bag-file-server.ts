@@ -283,7 +283,9 @@ export class TiddlerServer extends TiddlerStore {
       "Etag": '"' + contentDigest + '"',
       // TODO: WHY IS THIS DISABLED???
       "Cache-Control": "max-age=1000, must-revalidate",
+      "content-encoding": "gzip",
     });
+    state.startGzip();
 
     if (state.method === "HEAD") return state.end();
     // Get the tiddlers in the recipe
@@ -312,6 +314,8 @@ export class TiddlerServer extends TiddlerStore {
     if (markerPos === -1) {
       throw new Error("Cannot find tiddler store in template");
     }
+    
+    
     /**
      * 
      * @param {Record<string, string>} tiddlerFields 
@@ -321,10 +325,6 @@ export class TiddlerServer extends TiddlerStore {
       state.write(",\n");
     }
     state.write(template.substring(0, markerPos));
-
-
-
-    console.log(plugins);
 
     plugins.forEach(e => {
       if (!state.tiddlerCache.pluginFiles.has(e))

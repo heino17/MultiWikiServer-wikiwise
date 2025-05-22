@@ -4,6 +4,8 @@ import * as path from "path";
 import * as crypto from "crypto";
 import { TW } from "tiddlywiki";
 import { SiteConfig } from "../ServerState";
+import { gzipSync } from "fflate";
+// import { gzipSync } from "zlib";
 
 const prefix = Buffer.from(`$tw.preloadTiddler(`, "utf8");
 const suffix = Buffer.from(`);`, "utf8");
@@ -54,11 +56,11 @@ export async function registerCacheRoutes(rootRoute: rootRoute, config: SiteConf
   }, async state => {
     ZodAssert.pathParams(state, z => ({ plugin: z.string() }));
     // console.log("serving plugin", state.pathParams.plugin)
+    state.setHeader("Content-Type", "application/javascript");
+    state.setHeader("Content-Encoding", "gzip");
     return state.sendFile(200, {}, {
       root: path.join(config.wikiPath, "cache"),
-      reqpath: state.pathParams.plugin + "/plugin.json",
-      prefix,
-      suffix,
+      reqpath: state.pathParams.plugin + "/plugin.js.gz",
     });
 
   })
@@ -148,7 +150,9 @@ async function importPlugins(twFolder: string, cacheFolder: string, type: string
         const json = Buffer.from(JSON.stringify(plugin).replace(/<\//gi, "\\u003c/"), "utf8");
         const js = Buffer.concat([prefix, json, suffix]);
         let hash = crypto.createHash("sha384").update(js).digest("base64");
+        const gz = gzipSync(js, { level: 4, mem: 4 })
         fs.writeFileSync(path.join(newPath, "plugin.json"), json);
+        fs.writeFileSync(path.join(newPath, "plugin.js.gz"), gz);
         tiddlerFiles.set(plugin.title, relativePluginPath);
         tiddlerHashes.set(plugin.title, "sha384-" + hash);
         pluginsList.push({ title: plugin.title, path: relativePluginPath, hash });

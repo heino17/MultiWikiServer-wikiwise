@@ -229,10 +229,6 @@ export class Streamer {
     return STREAM_ENDED;
   }
 
-  async pipeFrom(stream: Readable) {
-    stream.pipe(this.res, { end: false });
-    return new Promise<void>((r, c) => stream.on("end", r).on("error", c));
-  }
 
   // I'm not sure if there's a use case for this
   private sendFD(status: number, headers: OutgoingHttpHeaders, options: {
@@ -370,13 +366,25 @@ export class Streamer {
     this.checkHeadersSentBy(true);
     this.res.writeHead(status, headers);
   }
-  write(chunk: Buffer | string, encoding?: NodeJS.BufferEncoding): void {
+  pause: boolean = false;
+  write(chunk: Buffer | string, encoding?: NodeJS.BufferEncoding): Promise<void> {
     // Between http1 and http2, the types are slightly different, but the runtime effect seems to be the same.
-    encoding ? (this.res as ServerResponse).write(chunk, encoding) : (this.res as ServerResponse).write(chunk)
+    const continueWriting = encoding
+      ? (this.res as ServerResponse).write(chunk, encoding)
+      : (this.res as ServerResponse).write(chunk);
+    if (!continueWriting)
+      return new Promise<void>(resolve => this.res.once("drain", () => { resolve(); }));
+    else
+      return Promise.resolve();
   }
   end(): typeof STREAM_ENDED {
     this.res.end();
     return STREAM_ENDED;
+  }
+
+  /** Destroy the transport stream and possibly the entire connection. */
+  destroy() {
+    this.res.destroy();
   }
 
   get headersSent() {
@@ -421,7 +429,14 @@ export class StreamerState {
    * response when the input stream ends. Input stream errors will be 
    * caught and reject the promise.
    */
-  pipeFrom;
+
+  async pipeFrom(stream: Readable) {
+    if (this.gzipStream)
+      stream.pipe(this.gzipStream, { end: false });
+    else
+      stream.pipe(this.streamer.writer, { end: false });
+    return new Promise<void>((r, c) => stream.on("end", r).on("error", c));
+  }
 
   /** sends a status and plain text string body */
   sendSimple(status: number, msg: string): typeof STREAM_ENDED {
@@ -436,6 +451,29 @@ export class StreamerState {
     }, JSON.stringify(obj), "utf8");
   }
 
+  gzipStream?: Gzip;
+
+  startGzip() {
+
+    this.gzipStream = createGzip();
+    this.gzipStream.pipe(this.streamer.writer);
+
+    this.write = (chunk: string | Buffer, encoding: BufferEncoding) => {
+      // console.log(chunk.toString())
+      const continueWriting = typeof chunk === "string"
+        ? this.gzipStream!.write(Buffer.from(chunk, encoding))
+        : this.gzipStream!.write(Buffer.from(chunk));
+      return continueWriting
+        ? Promise.resolve()
+        : new Promise<void>((r) => this.gzipStream!.once("drain", r));
+    };
+    this.end = (): typeof STREAM_ENDED => {
+      this.gzipStream!.end();
+      return STREAM_ENDED;
+    }
+
+  }
+
 
   STREAM_ENDED: typeof STREAM_ENDED = STREAM_ENDED;
 
@@ -446,7 +484,7 @@ export class StreamerState {
     this.sendBuffer = this.streamer.sendBuffer.bind(this.streamer);
     this.sendStream = this.streamer.sendStream.bind(this.streamer);
     this.sendFile = this.streamer.sendFile.bind(this.streamer);
-    this.pipeFrom = this.streamer.pipeFrom.bind(this.streamer);
+    // this.pipeFrom = this.streamer.pipeFrom.bind(this.streamer);
     this.setHeader = this.streamer.setHeader.bind(this.streamer);
     this.writeHead = this.streamer.writeHead.bind(this.streamer);
     this.write = this.streamer.write.bind(this.streamer);
@@ -484,4 +522,6 @@ export class StreamerState {
 
 
 import { AllowedMethod, AllowedMethods, Router } from '../router';
+import { createGzip, Gzip } from "node:zlib";
+import { pipeline } from "node:stream/promises";
 
