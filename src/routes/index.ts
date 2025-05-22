@@ -1,4 +1,3 @@
-import { readdirSync, statSync } from "fs";
 import { rootRoute } from "../router";
 import { ZodAssert } from "../utils";
 import { Prisma, PrismaClient } from "@prisma/client";
@@ -6,6 +5,8 @@ import { ManagerRoutes } from "./managers";
 import { TiddlerRouter } from "./managers/router-tiddlers";
 import { DocsRoute } from "./tw-routes";
 import { SiteConfig } from "../ServerState";
+import { SessionManager } from "../services/sessions";
+import { registerCacheRoutes } from "./cache";
 
 declare global {
   const ENABLE_UNSAFE_PRISMA_ROUTE: any;
@@ -13,57 +14,21 @@ declare global {
 }
 
 export default async function RootRoute(root: rootRoute, config: SiteConfig) {
-  // we can directly hand requests off to loaded tiddlywiki datafolders, 
-  // but this takes significantly more memory than normal MWS.
-  if (process.env.ENABLE_DOCS_ROUTE) DocsRoute(root, "/mws-docs", false);
-  TiddlerRouter.defineRoutes(root);
-  ManagerRoutes(root, config);
+
+
+  
+  await SessionManager.defineRoutes(root);
+  if (process.env.ENABLE_DOCS_ROUTE)
+    await DocsRoute(root, "/mws-docs", false);
+  await TiddlerRouter.defineRoutes(root);
+  await ManagerRoutes(root, config);
+  await registerCacheRoutes(root, config);
+
+
   if (process.env.ENABLE_UNSAFE_PRISMA_ROUTE)
-    root.defineRoute({
-      method: ["POST"],
-      path: /^\/prisma$/,
-      bodyFormat: "json",
-    }, async state => {
-      ZodAssert.data(state, z => z.object({
-        table: z.string(),
-        action: z.string(),
-        arg: z.any(),
-      }));
-      return await state.$transaction(async prisma => {
-        // DEV: this just lets the client directly call the database. 
-        // TODO: it's just for dev purposes and will be removed later. 
-        // DANGER: it circumvents all security and can totally rewrite the ACL.
-        const p: any = prisma;
-        const table = p[state.data.table];
-        if (!table) throw new Error(`No such table`);
-        const fn = table[state.data.action];
-        if (!fn) throw new Error(`No such table or action`);
-        console.log(state.data.arg);
-        return state.sendJSON(200, await fn.call(table, state.data.arg));
-      });
-    });
+    definePrismaRoute(root, config);
 
-
-
-}
-async function importDir(root: rootRoute, folder: string) {
-  await Promise.all(readdirSync(`src/routes/${folder}`).map(async (item) => {
-    const stat = statSync(`src/routes/${folder}/${item}`);
-    if (stat.isFile()) {
-      const e = await import(`./${folder}/${item}`);
-      if (!e.route) throw new Error(`No route defined in ${item}`);
-      e.route(root, ZodAssert);
-    } else if (stat.isDirectory()) {
-      await importDir(root, `${folder}/${item}`);
-    }
-  }));
-}
-
-export async function importEsbuild(root: rootRoute) {
-  // "build": "tsc -b; esbuild main=src/main.tsx 
-  // --outdir=public --bundle --target=es2020 
-  // --platform=browser --jsx=automatic"
-
+  // fallback route 
 
   root.defineRoute({
     method: ['GET'],
@@ -72,8 +37,37 @@ export async function importEsbuild(root: rootRoute) {
   }, async state => {
     await state.sendDevServer();
   });
+
+
+
+
 }
 
+function definePrismaRoute(root: rootRoute, config: SiteConfig) {
+  root.defineRoute({
+    method: ["POST"],
+    path: /^\/prisma$/,
+    bodyFormat: "json",
+  }, async state => {
+    ZodAssert.data(state, z => z.object({
+      table: z.string(),
+      action: z.string(),
+      arg: z.any(),
+    }));
+    return await state.$transaction(async prisma => {
+      // DEV: this just lets the client directly call the database. 
+      // TODO: it's just for dev purposes and will be removed later. 
+      // DANGER: it circumvents all security and can totally rewrite the ACL.
+      const p: any = prisma;
+      const table = p[state.data.table];
+      if (!table) throw new Error(`No such table`);
+      const fn = table[state.data.action];
+      if (!fn) throw new Error(`No such table or action`);
+      console.log(state.data.arg);
+      return state.sendJSON(200, await fn.call(table, state.data.arg));
+    });
+  });
+}
 
 class ProxyPromise {
   static getErrorStack(t: ProxyPromise) { return t.#error.stack; }

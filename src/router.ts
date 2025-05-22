@@ -1,6 +1,6 @@
 import { STREAM_ENDED, Streamer, SYMBOL_IGNORE_ERROR } from "./listen/streamer";
 import { StateObject } from "./routes/StateObject";
-import RootRoute, { importEsbuild } from "./routes";
+import RootRoute from "./routes";
 import * as z from "zod";
 import { createStrictAwaitProxy, JsonValue, truthy, Z2 } from "./utils";
 import { Route, rootRoute, RouteOptAny, RouteMatch, } from "./utils";
@@ -63,16 +63,11 @@ export class Router {
       path: /^/,
       denyFinal: true,
     }, async (state: StateObject) => {
+      // real world example of a parent route being useful:
       state.sendDevServer = sendDevServer.bind(undefined, state);
     });
 
-    await SessionManager.defineRoutes(rootRoute);
-
     await RootRoute(rootRoute, config);
-
-    await registerCacheRoutes(rootRoute, config);
-
-    await importEsbuild(rootRoute);
 
     return new Router(rootRoute, config);
   }
@@ -103,27 +98,7 @@ export class Router {
     this.tiddlerCache = config.pluginCache;
   }
 
-  handleIncomingRequest(
-    req: http.IncomingMessage | http2.Http2ServerRequest,
-    res: http.ServerResponse | http2.Http2ServerResponse,
-    options: Listener
-  ) {
 
-    const [ok, err, streamer] = try_(() => new Streamer(
-      req, res, options.prefix,
-      !!(options.key && options.cert || options.secure)
-    ));
-
-    if (!ok) {
-      if (err === STREAM_ENDED) return;
-      res.writeHead(500, { "x-reason": "handle incoming request" }).end();
-      throw err;
-    }
-
-    this.handle(streamer).catch(streamer.catcher);
-
-
-  }
 
   async handle(streamer: Streamer) {
 

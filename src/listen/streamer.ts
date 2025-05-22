@@ -5,7 +5,8 @@ import { Readable } from 'stream';
 import { IncomingMessage, ServerResponse, IncomingHttpHeaders as NodeIncomingHeaders, OutgoingHttpHeaders } from 'node:http';
 import { is, UserError } from '../utils';
 import { createReadStream } from 'node:fs';
-import { Writable } from 'node:stream';
+import { PassThrough, Writable } from 'node:stream';
+import Debug from "debug";
 
 declare module 'node:net' {
   interface Socket {
@@ -39,6 +40,7 @@ export class Streamer {
   url: string;
   headers: IncomingHttpHeaders;
   cookies: URLSearchParams;
+  compressor;
   constructor(
     private req: IncomingMessage | http2.Http2ServerRequest,
     private res: ServerResponse | http2.Http2ServerResponse,
@@ -80,6 +82,8 @@ export class Streamer {
     this.urlInfo = new URL(`https://${this.headers.host}${this.url}`);
 
     this.cookies = this.parseCookieString(req.headers.cookie || "");
+
+    this.compressor = new Compressor(req, res, {});
   }
 
 
@@ -127,7 +131,8 @@ export class Streamer {
     // don't overwrite it here if it's already set because this could just be for sending the body.
     if (!this.headersSent && !this.headersSentBy)
       this.headersSentBy = new Error("Possible culprit was given access to the response object here.");
-    return this.res;
+
+    return this.compressor.stream ?? this.res;
   }
 
   throw(statusCode: number) {
@@ -181,7 +186,7 @@ export class Streamer {
     }
     this.checkHeadersSentBy(true);
     this.res.writeHead(status, headers);
-    this.res.end();
+    this.writer.end();
     return STREAM_ENDED;
   }
 
@@ -193,9 +198,9 @@ export class Streamer {
     this.writeHead(status, headers, true);
 
     if (this.method === "HEAD")
-      this.res.end();
+      this.writer.end();
     else
-      this.res.end(data, encoding);
+      this.writer.end(data, encoding);
 
     return STREAM_ENDED;
   }
@@ -207,9 +212,9 @@ export class Streamer {
     headers['content-length'] = data.length;
     this.writeHead(status, headers, true);
     if (this.method === "HEAD")
-      this.res.end();
+      this.writer.end();
     else
-      this.res.end(data);
+      this.writer.end(data);
     return STREAM_ENDED;
   }
   /** If this is a HEAD request, the stream will be drained. */
@@ -220,9 +225,9 @@ export class Streamer {
     this.writeHead(status, headers, true);
     if (this.method === "HEAD") {
       stream.resume();
-      this.res.end();
+      this.writer.end();
     } else {
-      stream.pipe(this.res);
+      stream.pipe(this.writer);
     }
     return STREAM_ENDED;
   }
@@ -275,7 +280,9 @@ export class Streamer {
     index?: string | boolean | string[] | undefined,
     on404?: () => Promise<typeof STREAM_ENDED>;
     onDir?: () => Promise<typeof STREAM_ENDED>;
+    /** @deprecated not implemented */
     prefix?: Buffer;
+    /** @deprecated not implemented */
     suffix?: Buffer;
   }) {
 
@@ -301,6 +308,7 @@ export class Streamer {
     return new Promise<typeof STREAM_ENDED>((resolve, reject) => {
 
       sender.on("error", (err) => Promise.resolve().then(async (): Promise<typeof STREAM_ENDED> => {
+        console.log(err);
         if (err === 404 || err?.statusCode === 404) {
           return (await options.on404?.()) ?? this.sendEmpty(404);
         } else {
@@ -314,10 +322,13 @@ export class Streamer {
           ?? this.sendEmpty(404, { "x-reason": "Directory listing not allowed" })
       }).then(resolve, reject));
 
-      sender.on("end", () => {
-        resolve(STREAM_ENDED);
-      })
+      sender.on("stream", (fileStream) => {
+        this.compressor.beforeWriteHead();
+        const orig_pipe = fileStream.pipe as Function;
+        fileStream.pipe = () => orig_pipe.call(fileStream, this.writer);
+      });
 
+      this.res.on("end", () => { resolve(STREAM_ENDED); });
       this.checkHeadersSentBy(true);
       sender.pipe(this.res);
     });
@@ -358,12 +369,17 @@ export class Streamer {
     this.res.setHeader(name, value);
   }
   writeHead(status: number, headers: OutgoingHttpHeaders = {}, compression = false): void {
-    if (process.env.DEBUG?.split(",").includes("send")) {
+    if (Debug.enabled("send"))
       console.error("writeHead", status, headers);
-    }
-    this.checkHeadersSentBy(true);
 
-    this.res.writeHead(status, headers);
+    Object.entries(headers).forEach(([k, v]) => {
+      if (v != null) this.setHeader(k, `${v}`);
+    });
+
+    this.checkHeadersSentBy(true);
+    // console.error(new Error("writeHead"));
+    this.compressor.beforeWriteHead();
+    this.res.writeHead(status);
   }
   pause: boolean = false;
   /** awaiting is not required. everything happens sync'ly */
@@ -533,4 +549,5 @@ export class StreamerState {
 import { AllowedMethod, AllowedMethods, Router } from '../router';
 import { createGzip, Gzip } from "node:zlib";
 import { pipeline } from "node:stream/promises";
+import { Compressor } from "./compression";
 
