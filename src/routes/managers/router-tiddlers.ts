@@ -172,7 +172,9 @@ export class TiddlerRouter {
       });
 
       state.writeHead(200, {
-        "content-type": "application/json",
+        "content-type": "application/gzip",
+        "content-encoding": "identity",
+        "x-gzip-stream": "yes"
       });
       state.write("[");
       for (let i = 0; i < result.length; i++) {
@@ -182,7 +184,9 @@ export class TiddlerRouter {
       state.write("]");
       throw state.end();
 
+      // this still sets the return type of the function
       return result;
+
     }
   })
 

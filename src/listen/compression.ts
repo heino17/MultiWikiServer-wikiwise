@@ -88,6 +88,7 @@ export class Compressor {
 
     this.createStream = (method: string) => {
       switch (method) {
+        case "gzip-stream":
         case "gzip": return zlib.createGzip(gzip);
         case "br": return zlib.createBrotliCompress(optsBrotli);
         case "deflate": return zlib.createDeflate(deflate);
@@ -132,7 +133,7 @@ export class Compressor {
     debug('using %s compression', this.method)
     this.stream = this.createStream(this.method);
 
-    if (this.method) {
+    if (this.method && this.method !== "gzip-stream") {
       res.setHeader('Content-Encoding', this.method)
       res.removeHeader('Content-Length')
     }
@@ -157,6 +158,11 @@ export class Compressor {
 
   getEncodingMethod(): string {
     const { req, res } = this;
+
+    if (res.getHeader("content-type") === "application/gzip"
+      && res.getHeader("content-encoding") === "identity"
+      && res.getHeader("x-gzip-stream") === "yes"
+    ) return "gzip-stream";
 
     // determine if request is filtered
     if (!this.filter()) {

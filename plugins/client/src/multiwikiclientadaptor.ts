@@ -23,6 +23,9 @@ import type { Syncer, Tiddler, ITiddlyWiki } from "tiddlywiki";
 import type { TiddlerRouter } from "@tiddlywiki/mws/src/routes/managers/router-tiddlers";
 import type { ZodRoute } from "@tiddlywiki/mws/src/router";
 
+declare global {
+	const fflate: typeof import("fflate");
+}
 
 declare class Logger {
 	constructor(componentName: any, options: any);
@@ -232,14 +235,14 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 	}
 
 	private async recipeRequest<KEY extends (string & keyof TiddlerRouterResponse)>(
-		options: Omit<HttpRequestOptions<"text">, "responseType"> & { key: KEY }
+		options: Omit<HttpRequestOptions<"arraybuffer">, "responseType"> & { key: KEY }
 	) {
 		if (!options.url.startsWith("/"))
 			throw new Error("The url does not start with a slash");
 
 		return await httpRequest({
 			...options,
-			responseType: "text",
+			responseType: "arraybuffer",
 			url: this.host + "recipes/" + encodeURIComponent(this.recipe) + options.url,
 		}).then(result => {
 			// in theory, 403 and 404 should result in further action, 
@@ -252,17 +255,35 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 			} else {
 				return result;
 			}
-		}).then(e => [true, void 0, {
-			...e,
-			/** this is undefined if status is not 200 */
-			responseJSON: e.status === 200 ? tryParseJSON(e.response) as TiddlerRouterResponse[KEY]["R"] : undefined
-		}] as const, e => [false, e, void 0] as const);
+		}).then(e => {
+			let responseString: string = "";
+			if (e.headers.get("x-gzip-stream") === "yes") {
+				const gunzip = new fflate.Gunzip((chunk) => {
+					responseString += fflate.strFromU8(chunk);
+				});
+				gunzip.push(new Uint8Array(e.response))
+			} else {
+				responseString = fflate.strFromU8(
+					new Uint8Array(e.response)
+				);
+			}
+
+			return [true, void 0, {
+				...e,
+				responseString,
+				/** this is undefined if status is not 200 */
+				responseJSON: e.status === 200
+					? tryParseJSON(responseString) as TiddlerRouterResponse[KEY]["R"]
+					: undefined,
+			}] as const;
+		}, e => [false, e, void 0] as const);
 
 		function tryParseJSON(data: string) {
 			try {
 				return JSON.parse(data);
 			} catch (e) {
 				console.error("Error parsing JSON, returning undefined", e);
+				console.log(data);
 				return undefined;
 			}
 		}
@@ -455,7 +476,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		});
 	}
 	private async pollServer() {
-		type t=  TiddlerRouterResponse["handleGetBagStates"]
+		type t = TiddlerRouterResponse["handleGetBagStates"]
 		const [ok, err, result] = await this.recipeRequest({
 			key: "handleGetBagStates",
 			url: "/bag-states",
