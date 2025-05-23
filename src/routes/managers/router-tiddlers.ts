@@ -163,12 +163,24 @@ export class TiddlerRouter {
       }));
 
       const
-        last_known_revision_id = state.queryParams.last_known_revision_id?.[0], include_deleted = state.queryParams.include_deleted?.[0] === "yes";
+        last_known_revision_id = state.queryParams.last_known_revision_id?.[0], 
+        include_deleted = state.queryParams.include_deleted?.[0] === "yes";
 
       const result = await state.$transaction(async (prisma) => {
         const server = new TiddlerServer(state, prisma);
         return await server.getRecipeTiddlersByBag(recipe_name, { include_deleted, last_known_revision_id });
       });
+
+      state.writeHead(200, {
+        "content-type": "application/json",
+      });
+      state.write("[");
+      for (let i = 0; i < result.length; i++) {
+        await state.write((i > 0 ? "," : "") + JSON.stringify(result[i]));
+        await state.splitStream();
+      }
+      state.write("]");
+      throw state.end();
 
       return result;
     }

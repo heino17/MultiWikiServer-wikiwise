@@ -95,8 +95,12 @@ export class Compressor {
       }
     }
 
-  }
+    this.finisher = () => this.res.end();
 
+  }
+  /** Ends the response. Shortcut for easy removal when switching streams. */
+  finisher;
+  method: string = "";
   filter;
   threshold;
   enforceEncoding;
@@ -122,20 +126,37 @@ export class Compressor {
   beforeWriteHead() {
     const { req, res } = this;
 
-    const method = this.getEncodingMethod()
+    this.method = this.getEncodingMethod()
 
     // compression stream
-    debug('using %s compression', method)
-    this.stream = this.createStream(method);
+    debug('using %s compression', this.method)
+    this.stream = this.createStream(this.method);
+    // console.log(req.url);
 
-    if (method) {
+    if (this.method) {
       // header fields
-      res.setHeader('Content-Encoding', method)
+      // if (req.url !== "/dev/recipes/test/bag-states?include_deleted=yes")
+      res.setHeader('Content-Encoding', this.method)
       res.removeHeader('Content-Length')
     }
+    this.stream.pipe(this.res, { end: false });
+    this.res.on("unpipe", this.finisher);
 
-    this.stream.pipe(this.res);
+  }
 
+  async splitStream() {
+    await new Promise(resolve => {
+      this.res.off("unpipe", this.finisher);
+      this.res.once("unpipe", resolve);
+      this.stream!.end();
+    });
+    console.log("unpiped");
+    this.stream = this.createStream(this.method);
+    await new Promise(resolve => {
+      this.res.on("pipe", resolve);
+      this.res.on("unpipe", this.finisher);
+      this.stream!.pipe(this.res, { end: false });
+    });
   }
 
   getEncodingMethod(): string {

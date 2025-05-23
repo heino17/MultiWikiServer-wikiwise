@@ -15,3 +15,9 @@ The key to all of these attacks is being able to somehow insert arbitrary plaint
 ## Length Oracle
 
 A similar attack involves inspecting the request length to determine whether a request returned any results. This is especially true of search features. A very big response implies returned results and a very tiny response implies no results. 
+
+## Cross-bag compression oracles
+
+A cross-bag compression oracle would allow an attacker with write access in one bag to infer the contents of a different bag in the recipe which they do not have access to by somehow attacking someone who does have access to that recipe and watching how the browser compresses various things. Without directly reading the bag's contents, they can write to the bag they have access to and watch the responses being sent to the other user to infer the contents of the recipe overall. 
+
+The mitigation is to make sure multiple bags do not get compressed in the same gzip. 

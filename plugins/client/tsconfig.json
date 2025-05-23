@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "outDir": "./tiddlers",
+    "outDir": "./tiddlers/syncer",
     "strict": true,
     "target": "es2015", // ES6 is the first one that has promises
     "module": "CommonJS",

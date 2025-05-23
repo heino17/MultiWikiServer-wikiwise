@@ -195,7 +195,7 @@ export class Streamer {
       console.error("sendString", status, headers);
     }
     headers['content-length'] = Buffer.byteLength(data, encoding);
-    this.writeHead(status, headers, true);
+    this.writeHead(status, headers);
 
     if (this.method === "HEAD")
       this.writer.end();
@@ -210,7 +210,7 @@ export class Streamer {
       console.error("sendBuffer", status, headers);
     }
     headers['content-length'] = data.length;
-    this.writeHead(status, headers, true);
+    this.writeHead(status, headers);
     if (this.method === "HEAD")
       this.writer.end();
     else
@@ -222,7 +222,7 @@ export class Streamer {
     if (process.env.DEBUG?.split(",").includes("send")) {
       console.error("sendStream", status, headers);
     }
-    this.writeHead(status, headers, true);
+    this.writeHead(status, headers);
     if (this.method === "HEAD") {
       stream.resume();
       this.writer.end();
@@ -368,7 +368,7 @@ export class Streamer {
   setHeader(name: string, value: string): void {
     this.res.setHeader(name, value);
   }
-  writeHead(status: number, headers: OutgoingHttpHeaders = {}, compression = false): void {
+  writeHead(status: number, headers: OutgoingHttpHeaders = {}): void {
     if (Debug.enabled("send"))
       console.error("writeHead", status, headers);
 
@@ -385,19 +385,16 @@ export class Streamer {
   /** awaiting is not required. everything happens sync'ly */
   write(chunk: Buffer | string, encoding?: NodeJS.BufferEncoding): Promise<void> {
     // console.log(this.writer.write.toString());
-    const continueWriting = encoding
-      // Between http1 and http2, the types are slightly different, but the runtime effect seems to be the same.
-      ? (this.res as ServerResponse).write(chunk, encoding)
-      : (this.res as ServerResponse).write(chunk);
-    console.log(continueWriting, new Error().stack);
+    const continueWriting = this.writer.write(typeof chunk === "string" ? Buffer.from(chunk, encoding) : chunk);
+    // console.log("write", continueWriting, new Error().stack);
     if (!continueWriting)
-      return new Promise<void>(resolve => this.res.once("drain", () => { resolve(); }));
+      return new Promise<void>(resolve => this.writer.once("drain", () => { resolve(); }));
     else
       return Promise.resolve();
   }
   end(): typeof STREAM_ENDED {
-    console.log(this.writer.end.toString());
-    this.res.end();
+    // console.log(this.writer.end.toString());
+    this.writer.end();
     return STREAM_ENDED;
   }
 
@@ -451,11 +448,8 @@ export class StreamerState {
    */
 
   async pipeFrom(stream: Readable) {
-    if (this.gzipStream)
-      stream.pipe(this.gzipStream, { end: false });
-    else
-      stream.pipe(this.streamer.writer, { end: false });
-    return new Promise<void>((r, c) => stream.on("end", r).on("error", c));
+    stream.pipe(this.streamer.writer, { end: false });
+    return new Promise<void>((r, c) => this.streamer.writer.on("unpipe", r).on("error", c));
   }
 
   /** sends a status and plain text string body */
@@ -471,34 +465,9 @@ export class StreamerState {
     }, JSON.stringify(obj), "utf8");
   }
 
-  gzipStream?: Gzip;
-
-  /** 
-   * Start gzip using the same conditions as the send* functions use. 
-   * 
-   * This means that it will check whether the browser accept-encoding header allows gzip, 
-   * and whether it is enabled on this server. 
-   */
-  startCompressor() {
-    this.gzipStream = createGzip();
-    this.gzipStream.pipe(this.streamer.writer);
-
-    this.write = (chunk: string | Buffer, encoding: BufferEncoding) => {
-      // console.log(chunk.toString())
-      const continueWriting = typeof chunk === "string"
-        ? this.gzipStream!.write(Buffer.from(chunk, encoding))
-        : this.gzipStream!.write(Buffer.from(chunk));
-      return continueWriting
-        ? Promise.resolve()
-        : new Promise<void>((r) => this.gzipStream!.once("drain", r));
-    };
-    this.end = (): typeof STREAM_ENDED => {
-      this.gzipStream!.end();
-      return STREAM_ENDED;
-    }
-
+  async splitStream() {
+    await this.streamer.compressor.splitStream();
   }
-
 
   STREAM_ENDED: typeof STREAM_ENDED = STREAM_ENDED;
 

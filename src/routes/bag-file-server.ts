@@ -264,7 +264,7 @@ export class TiddlerServer extends TiddlerStore {
       "Etag": '"' + contentDigest + '"',
       // this still allows Etag to be used, it just has to check every time
       "Cache-Control": "max-age=0, private, no-cache",
-    }, true);
+    });
 
     if (state.method === "HEAD") return state.end();
 
@@ -350,23 +350,23 @@ export class TiddlerServer extends TiddlerStore {
     const bagIDs = recipe.recipe_bags.filter(e => !state.tiddlerCache.pluginFiles.has(e.bag.bag_name)).map(e => e.bag.bag_id)
     await this.serveStoreTiddlers(bagIDs, bagOrder, writeTiddler);
 
-    writeTiddler({
+    await writeTiddler({
       title: "$:/config/multiwikiclient/recipe",
       text: recipe_name
     });
     // get the latest tiddler id in the database. It doesn't have to be filtered.
 
-    writeTiddler({
+    await writeTiddler({
       title: "$:/config/multiwikiclient/use-server-sent-events",
       text: false ? "yes" : "no"
     });
 
-    writeTiddler({
+    await writeTiddler({
       title: "$:/config/multiwikiclient/host",
       text: "$protocol$//$host$" + this.state.pathPrefix + "/",
     });
 
-    state.write(template.substring(markerPos + marker.length))
+    await state.write(template.substring(markerPos + marker.length))
     // Finish response
     return state.end();
   }
