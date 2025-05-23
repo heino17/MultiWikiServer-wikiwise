@@ -1,18 +1,20 @@
 import { StateObject } from "../routes/StateObject";
 import * as z from "zod";
-import { AllowedMethod, BodyFormat } from "../router";
+import { AllowedMethod, BodyFormat } from ".";
 
 
 export interface RouteOptAny extends RouteOptBase<BodyFormat, AllowedMethod[], string[]> { }
 
 export interface Route extends RouteDef<ParentTuple, string[]> { }
 
-export interface rootRoute extends RouteDef<[
-  undefined,
-  AllowedMethod[],
-  StateObject<BodyFormat, AllowedMethod>,
-  [[]]
-], []> { }
+declare global {
+  interface rootRoute extends RouteDef<[
+    undefined,
+    AllowedMethod[],
+    StateObject<BodyFormat, AllowedMethod>,
+    [[]]
+  ], []> { }
+}
 
 export interface RouteMatch {
   route: Route;

@@ -366,6 +366,12 @@ export class TiddlerServer extends TiddlerStore {
       text: "$protocol$//$host$" + this.state.pathPrefix + "/",
     });
 
+    if (this.state.config.enableDevServer)
+      await writeTiddler({
+        title: "$:/state/multiwikiclient/dev-mode",
+        text: "yes"
+      })
+
     await state.write(template.substring(markerPos + marker.length))
     // Finish response
     return state.end();

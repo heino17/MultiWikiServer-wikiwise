@@ -20,7 +20,6 @@ export async function startupCache($tw: TW, cachePath: string) {
 
   const requiredPlugins = [
     "$:/plugins/mws/client",
-    // "$:/plugins/tiddlywiki/tiddlyweb",
     "$:/themes/tiddlywiki/snowwhite",
     "$:/themes/tiddlywiki/vanilla",
   ];
@@ -54,7 +53,6 @@ export async function registerCacheRoutes(rootRoute: rootRoute, config: SiteConf
     pathParams: ["plugin"]
   }, async state => {
     ZodAssert.pathParams(state, z => ({ plugin: z.string() }));
-    // console.log("serving plugin", state.pathParams.plugin)
     state.setHeader("Content-Type", "application/javascript");
     state.setHeader("Content-Encoding", "gzip");
     return state.sendFile(200, {}, {

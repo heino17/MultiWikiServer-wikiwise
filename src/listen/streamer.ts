@@ -512,9 +512,6 @@ export class StreamerState {
 
 }
 
-
-import { AllowedMethod, AllowedMethods, Router } from '../router';
-import { createGzip, Gzip } from "node:zlib";
-import { pipeline } from "node:stream/promises";
+import { AllowedMethod, AllowedMethods } from "../utils";
 import { Compressor } from "./compression";
 

@@ -1,4 +1,3 @@
-import { rootRoute } from "../router";
 import { ZodAssert } from "../utils";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { ManagerRoutes } from "./managers";

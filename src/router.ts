@@ -2,8 +2,8 @@ import { STREAM_ENDED, Streamer } from "./listen/streamer";
 import { StateObject } from "./routes/StateObject";
 import RootRoute from "./routes";
 import * as z from "zod";
-import { createStrictAwaitProxy, JsonValue, Z2 } from "./utils";
-import { Route, rootRoute, RouteOptAny, RouteMatch, } from "./utils";
+import { AllowedMethod, AllowedMethods, BodyFormat, BodyFormats, createStrictAwaitProxy, JsonValue, Z2 } from "./utils";
+import { Route, RouteOptAny, RouteMatch, } from "./utils";
 import { setupDevServer } from "./listen/setupDevServer";
 import { ServerState } from "./ServerState";
 import { CacheState } from "./routes/cache";
@@ -14,14 +14,6 @@ import { TW } from "tiddlywiki";
 export { RouteMatch, Route, rootRoute };
 const debug = Debug("mws:router");
 
-
-export const AllowedMethods = [...["GET", "HEAD", "OPTIONS", "POST", "PUT", "DELETE"] as const];
-export type AllowedMethod = typeof AllowedMethods[number];
-
-export const BodyFormats = ["stream", "string", "json", "buffer", "www-form-urlencoded", "www-form-urlencoded-urlsearchparams", "ignore"] as const;
-export type BodyFormat = typeof BodyFormats[number];
-
-export const PermissionName = []
 
 const zodTransformJSON = (arg: string, ctx: z.RefinementCtx) => {
   try {

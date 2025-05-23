@@ -1,8 +1,6 @@
-import type { rootRoute as _rootRoute } from "./router";
 import * as path from "path";
 import * as fs from "fs";
 import type { Prisma } from "@prisma/client";
-import type { ZodAssert } from "./utils";
 import { ServerState } from "./ServerState";
 
 
@@ -50,11 +48,6 @@ declare global {
   type EntityType = "recipe" | "bag";
 
   type ACLPermissionName = "READ" | "WRITE" | "ADMIN";
-
-  interface rootRoute extends _rootRoute { }
-
-  type ZodAssert = typeof ZodAssert;
-
 }
 
 
