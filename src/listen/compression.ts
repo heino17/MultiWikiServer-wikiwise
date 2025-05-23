@@ -137,6 +137,10 @@ export class Compressor {
       res.setHeader('Content-Encoding', this.method)
       res.removeHeader('Content-Length')
     }
+
+    // vary
+    vary(res, 'Accept-Encoding');
+
     this.stream.pipe(this.res, { end: false });
     this.res.on("unpipe", this.finisher);
 
@@ -159,10 +163,15 @@ export class Compressor {
   getEncodingMethod(): string {
     const { req, res } = this;
 
+
+
     if (res.getHeader("content-type") === "application/gzip"
       && res.getHeader("content-encoding") === "identity"
       && res.getHeader("x-gzip-stream") === "yes"
     ) return "gzip-stream";
+
+    const encoding = res.getHeader('Content-Encoding');
+    if (encoding) return encoding.toString();
 
     // determine if request is filtered
     if (!this.filter()) {
@@ -170,8 +179,7 @@ export class Compressor {
       return "";
     }
 
-    var cacheControl = res.getHeader('Cache-Control') as string;
-
+    var cacheControl = res.getHeader('cache-control') as string;
     if (cacheControl && cacheControlNoTransformRegExp.test(cacheControl)) {
       // Don't compress for Cache-Control: no-transform
       // https://tools.ietf.org/html/rfc7234#section-5.2.2.4
@@ -179,20 +187,11 @@ export class Compressor {
       return "";
     }
 
-    // vary
-    vary(res, 'Accept-Encoding')
+
 
     // content-length below threshold
     if (res.getHeader('Content-Length') && Number(res.getHeader('Content-Length')) < this.threshold) {
       debug('size below threshold')
-      return "";
-    }
-
-    var encoding = res.getHeader('Content-Encoding') || 'identity'
-
-    // already encoded
-    if (encoding !== 'identity') {
-      debug('already encoded')
       return "";
     }
 

@@ -162,7 +162,8 @@ var CONFIG_HOST_TIDDLER = "$:/config/multiwikiclient/host",
 	REVISION_STATE_TIDDLER = "$:/state/multiwikiclient/tiddlers/revision",
 	CONNECTION_STATE_TIDDLER = "$:/state/multiwikiclient/connection",
 	INCOMING_UPDATES_FILTER_TIDDLER = "$:/config/multiwikiclient/incoming-updates-filter",
-	ENABLE_SSE_TIDDLER = "$:/config/multiwikiclient/use-server-sent-events";
+	ENABLE_SSE_TIDDLER = "$:/config/multiwikiclient/use-server-sent-events",
+	IS_DEV_MODE_TIDDLER = `$:/state/multiwikiclient/dev-mode`;
 
 var SERVER_NOT_CONNECTED = "NOT CONNECTED",
 	SERVER_CONNECTING_SSE = "CONNECTING SSE",
@@ -188,6 +189,8 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 	private username;
 	private incomingUpdatesFilterFn;
 	private serverUpdateConnectionStatus!: string;
+	private isDevMode: boolean;
+	private useGzipStream: boolean;
 
 	name = "multiwikiclient";
 	private supportsLazyLoading = true;
@@ -196,10 +199,12 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		this.host = this.getHost();
 		this.recipe = this.wiki.getTiddlerText("$:/config/multiwikiclient/recipe");
 		this.useServerSentEvents = this.wiki.getTiddlerText(ENABLE_SSE_TIDDLER) === "yes";
+		this.isDevMode = this.wiki.getTiddlerText(IS_DEV_MODE_TIDDLER) === "yes";
 		this.last_known_revision_id = this.wiki.getTiddlerText("$:/state/multiwikiclient/recipe/last_revision_id", "0")
 		this.outstandingRequests = Object.create(null); // Hashmap by title of outstanding request object: {type: "PUT"|"GET"|"DELETE"}
 		this.lastRecordedUpdate = Object.create(null); // Hashmap by title of last recorded update via SSE: {type: "update"|"detetion", revision_id:}
 		this.logger = new $tw.utils.Logger("MultiWikiClientAdaptor");
+		this.useGzipStream = false;
 		this.isLoggedIn = false;
 		this.isReadOnly = false;
 		this.username = "";
@@ -255,19 +260,30 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 			} else {
 				return result;
 			}
-		}).then(e => {
+		}).then(async e => {
 			let responseString: string = "";
+			console.log(e.headers.get("x-gzip-stream"))
 			if (e.headers.get("x-gzip-stream") === "yes") {
-				const gunzip = new fflate.Gunzip((chunk) => {
-					responseString += fflate.strFromU8(chunk);
+				await new Promise<void>(resolve => {
+					const gunzip = new fflate.AsyncGunzip((err, chunk, final) => {
+						if (err) return console.log(err);
+						responseString += fflate.strFromU8(chunk);
+						if (final) resolve();
+					});
+
+					if (this.isDevMode) gunzip.onmember = e => console.log("gunzip member", e);
+
+					gunzip.push(new Uint8Array(e.response));
+					// this has to be on a separate line
+					gunzip.push(new Uint8Array(), true);
 				});
-				gunzip.push(new Uint8Array(e.response))
 			} else {
 				responseString = fflate.strFromU8(
 					new Uint8Array(e.response)
 				);
 			}
-
+			if (this.isDevMode)
+				console.log(responseString.length);
 			return [true, void 0, {
 				...e,
 				responseString,
@@ -283,7 +299,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 				return JSON.parse(data);
 			} catch (e) {
 				console.error("Error parsing JSON, returning undefined", e);
-				console.log(data);
+				// console.log(data);
 				return undefined;
 			}
 		}
@@ -483,6 +499,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 			method: "GET",
 			queryParams: {
 				include_deleted: "yes",
+				...this.useGzipStream ? { gzip_stream: "yes" } : {},
 			}
 		});
 
@@ -490,7 +507,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 
 		const bags = result.responseJSON;
 
-		if (!bags) return;
+		if (!bags) throw new Error("no result returned");
 
 		bags.sort((a, b) => b.position - a.position);
 		const modified = new Set<string>(),
@@ -552,6 +569,9 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		options?: {}
 	) {
 		var self = this, title = tiddler.fields.title as string;
+		if (title === "$:/StoryList") {
+			return callback(null);
+		}
 		if (this.isReadOnly || title.substr(0, MWC_STATE_TIDDLER_PREFIX.length) === MWC_STATE_TIDDLER_PREFIX) {
 			return callback(null);
 		}
@@ -741,8 +761,6 @@ function httpRequest<TYPE extends "arraybuffer" | "blob" | "text">(options: Http
 		const url = new URL(options.url, location.href);
 		const query = paramsInput(options.queryParams);
 		query.forEach((v, k) => { url.searchParams.append(k, v); });
-
-		console.log(url, query, options.queryParams, url.href);
 
 		const headers = paramsInput(options.headers);
 		normalizeHeaders(headers);
