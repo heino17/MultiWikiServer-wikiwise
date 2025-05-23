@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsup';
 import "@serenity-kit/opaque"
 export default defineConfig({
-  entry: ['src/server.ts'],
+  entry: ['src/index.ts'],
   format: ['esm'],
   outDir: "dist",
   external: [

@@ -377,16 +377,13 @@ export class Streamer {
     });
 
     this.checkHeadersSentBy(true);
-    // console.error(new Error("writeHead"));
     this.compressor.beforeWriteHead();
     this.res.writeHead(status);
   }
   pause: boolean = false;
   /** awaiting is not required. everything happens sync'ly */
   write(chunk: Buffer | string, encoding?: NodeJS.BufferEncoding): Promise<void> {
-    // console.log(this.writer.write.toString());
     const continueWriting = this.writer.write(typeof chunk === "string" ? Buffer.from(chunk, encoding) : chunk);
-    // console.log("write", continueWriting, new Error().stack);
     if (!continueWriting)
       return new Promise<void>(resolve => this.writer.once("drain", () => { resolve(); }));
     else
@@ -465,7 +462,8 @@ export class StreamerState {
     }, JSON.stringify(obj), "utf8");
   }
 
-  async splitStream() {
+  /** End the compression stream, flushing the rest of the compressed data, then begin a brand new stream to concatenate. */
+  async splitCompressionStream() {
     await this.streamer.compressor.splitStream();
   }
 

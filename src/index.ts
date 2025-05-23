@@ -12,7 +12,7 @@ import { ServerState } from "./ServerState";
 import opaque from "@serenity-kit/opaque";
 import { BaseCommand, CommandClass, CommandFile } from "./utils";
 
-export async function startServer() {
+export async function runCLI() {
 
   const wikiPath = process.cwd();
 

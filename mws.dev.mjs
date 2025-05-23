@@ -1,6 +1,7 @@
 //@ts-check
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
-import { startServer } from "./dist/server.js";
+//@ts-ignore
+import { runCLI } from "./dist/index.js";
 /** * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
  * For development, it is usually preferred to have a custom configuration that 
  * doesn't get committed or overwritten. For this purpose I have gitignore'd two 
@@ -21,7 +22,7 @@ import { startServer } from "./dist/server.js";
  * 
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 // if args aren't specified on the cli, generate listen args from the json file
-console.log("args", process.argv);
+
 if(process.argv.length === 2) {
   const listenerFile = "./mws.dev.json";
   /** @type {ListenArgs[]} */
@@ -29,15 +30,17 @@ if(process.argv.length === 2) {
     ? JSON.parse(readFileSync(listenerFile, "utf8"))
     : [{}];
 
-  const args = listeners.flatMap(e => ["--listener", ...Object.entries(e).map(([k, v]) => `${k}=${v}`)])
+  const args = listeners.flatMap(e => [
+    "--listener", ...Object.entries(e).map(([k, v]) => `${k}=${v}`)
+  ]);
   process.argv = [process.argv[0], process.argv[1], "listen", ...args];
-  console.log(args);
 }
+console.log("args", process.argv);
 // make the editions/mws directory if it doesn't exist
 mkdirSync("editions/mws", { recursive: true })
 // change to the editions/mws directory for development
 process.chdir("editions/mws");
-
-startServer().catch(console.log);
+// run the cli
+runCLI().catch(console.log);
 
 

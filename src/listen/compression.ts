@@ -131,11 +131,8 @@ export class Compressor {
     // compression stream
     debug('using %s compression', this.method)
     this.stream = this.createStream(this.method);
-    // console.log(req.url);
 
     if (this.method) {
-      // header fields
-      // if (req.url !== "/dev/recipes/test/bag-states?include_deleted=yes")
       res.setHeader('Content-Encoding', this.method)
       res.removeHeader('Content-Length')
     }
@@ -150,7 +147,6 @@ export class Compressor {
       this.res.once("unpipe", resolve);
       this.stream!.end();
     });
-    console.log("unpiped");
     this.stream = this.createStream(this.method);
     await new Promise(resolve => {
       this.res.on("pipe", resolve);

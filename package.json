@@ -5,9 +5,8 @@
   "version": "0.0.21",
   "type": "module",
   "exports": {
-    "types": "./src/server.ts",
-    "require": "./dist/server.cjs",
-    "import": "./dist/server.js"
+    "types": "./src/index.ts",
+    "import": "./dist/index.js"
   },
   "files": [
     "dist",

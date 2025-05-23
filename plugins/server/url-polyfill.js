@@ -1,9 +1,9 @@
 /*\
-title: $:/plugins/tiddlywiki/multiwikiclient/url-polyfill.js
+title: $:/library/url-polyfill.js
 type: application/javascript
 library: yes
 
-A widget to manage tiddler actions.
+A polyfill for the URL and URLSearchParams classes.
 \*/
 
 "use strict";

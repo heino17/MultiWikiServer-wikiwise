@@ -177,7 +177,7 @@ export class TiddlerRouter {
       state.write("[");
       for (let i = 0; i < result.length; i++) {
         await state.write((i > 0 ? "," : "") + JSON.stringify(result[i]));
-        await state.splitStream();
+        await state.splitCompressionStream();
       }
       state.write("]");
       throw state.end();

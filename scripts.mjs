@@ -20,7 +20,7 @@ switch(process.argv[2]) {
     // don't wait on tsc, it's just for checking types
     // await start("npm run tsc", []);
     await start("tsup --silent", [], { 
-      SKIPDTS: "1" 
+      // SKIPDTS: "1" 
     });
     await start("node mws.dev.mjs", process.argv.slice(3), {
       ENABLE_DEV_SERVER: "1"
