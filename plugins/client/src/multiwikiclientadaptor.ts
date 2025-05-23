@@ -43,8 +43,8 @@ declare class Logger {
 }
 
 type TiddlerRouterResponse = {
-	[K in keyof TiddlerRouter]: TiddlerRouter[K] extends ZodRoute<infer M, infer B, infer P, infer T, infer R>
-	? { M: M, B: B, P: P, T: T, R: R }
+	[K in keyof TiddlerRouter]: TiddlerRouter[K] extends ZodRoute<infer M, infer B, infer P, infer Q, infer T, infer R>
+	? { M: M, B: B, P: P, Q: Q, T: T, R: R }
 	: never
 }
 
@@ -212,7 +212,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 			text: status
 		});
 	}
-	private setLoggerSaveBuffer(loggerForSaving: Logger) {
+	setLoggerSaveBuffer(loggerForSaving: Logger) {
 		this.logger.setSaveBuffer(loggerForSaving);
 	}
 	isReady() {
@@ -285,7 +285,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 	}
 	private getTiddlerBag(title: string) {
 		return this.wiki.extractTiddlerDataItem(BAG_STATE_TIDDLER, title);
-	}	
+	}
 	getTiddlerRevision(title: string) {
 		return this.wiki.extractTiddlerDataItem(REVISION_STATE_TIDDLER, title);
 	}
@@ -455,14 +455,13 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		});
 	}
 	private async pollServer() {
-
+		type t=  TiddlerRouterResponse["handleGetBagStates"]
 		const [ok, err, result] = await this.recipeRequest({
 			key: "handleGetBagStates",
 			url: "/bag-states",
 			method: "GET",
 			queryParams: {
 				include_deleted: "yes",
-				last_known_revision_id: this.last_known_revision_id,
 			}
 		});
 
