@@ -7,6 +7,22 @@ import { ServerState } from "./ServerState";
 declare global {
   namespace PrismaJson {
     type Recipes_plugin_names = string[];
+    type Recipe_bags_partitioned_bags = {
+      /** partitioned bags allow each user with write access to write to `${title_prefix}${username}` */
+      title_prefix: string;
+      /** 
+       * everyone with acl read can read all tiddlers 
+       * 
+       * if this is false, admins can still do this, but they will be in a restricted readonly mode.
+       */
+      everyone_readable: boolean;
+      /** 
+       * everyone with acl write can write normal tiddlers.
+       * 
+       * site and entity admins can always do this.
+       */
+      normally_writable: boolean;
+    }
   }
 }
 

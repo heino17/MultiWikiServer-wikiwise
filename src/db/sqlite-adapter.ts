@@ -5,11 +5,12 @@ import { readdir, readFile } from "fs/promises";
 import { dist_resolve } from "../utils";
 import { createHash, randomUUID } from "crypto";
 import { existsSync } from "fs";
+import { SiteConfig } from "../ServerState";
 const INIT_0_0 = "20250406213424_init";
 const INIT_0_1 = "20250513012507_init";
 
 export class SqliteAdapter {
-  constructor(private databasePath: string) {
+  constructor(private databasePath: string, private isDevMode: boolean) {
     this.adapter = new PrismaBetterSQLite3({ url: "file:" + this.databasePath });
   }
 
@@ -76,12 +77,32 @@ export class SqliteAdapter {
       process.exit(1);
     } else if (!applied_migrations.size || applied_migrations.has(INIT_0_1)) {
       await this.checkMigrationsTable(libsql, hasExisting && !hasMigrationsTable, applied_migrations, "prisma", INIT_0_1);
+    } else if (this.isDevMode) {
+      console.log([
+        "The database does not match the configured migrations. ",
+        "Since you are in dev mode, you probably just need to ",
+        "delete the store folder and init a new database.",
+      ].join("\n"));
+      process.exit(1);
     } else {
-      console.log("Unknown migrations have been found in the database.");
-      console.log("There is no way to guarentee the integrity of the database under these conditions.");
-      console.log("The only way I know of that you could be seeing this message is if you installed this verion of MWS in a project either from the PR branch or from a newer version of MWS.");
-      console.log("Please revert back to the version you had installed before.");
-      console.log("The sqlite database can be opened manually with any third-party SQLite tool to retrieve your data. If you do this, make sure you keep all the files in the store folder together, as they are all an integral part of your sqlite database and deleting any of them manually is very likely to cause data loss.");
+      console.log([
+        "===============================================================",
+        "Unknown migrations have been found in the database. ",
+        "There is no way to guarentee the integrity of the database ",
+        "under these conditions. The only way I know of that you ",
+        "could be seeing this message is if you installed this verion ",
+        "of MWS in a project either from the PR branch or from a newer ",
+        "version of MWS. Please revert back to the version you had ",
+        "installed before. The sqlite database can be opened manually ",
+        "with any third-party SQLite tool to retrieve your data. ",
+        "",
+        "If you do this, make sure you keep all the files in the ",
+        "store folder together, as they are all an integral part ",
+        "of your sqlite database and deleting any of them manually ",
+        "is very likely to cause data loss.",
+        "===============================================================",
+      ].join("\n"));
+
       process.exit(1);
     }
 

@@ -256,14 +256,16 @@ export class TiddlerServer extends TiddlerStore {
     hash.update(`${lastTiddlerId._max.revision_id}`);
     const contentDigest = hash.digest("hex");
 
-    if ('"' + contentDigest + '"' === state.headers["if-none-match"])
-      return state.sendEmpty(304, { "x-reason": "if-none-match" });
+    // if ('"' + contentDigest + '"' === state.headers["if-none-match"])
+    //   return state.sendEmpty(304, { "x-reason": "if-none-match" });
 
     state.writeHead(200, {
       "Content-Type": "text/html",
       "Etag": '"' + contentDigest + '"',
       // this still allows Etag to be used, it just has to check every time
       "Cache-Control": "max-age=0, private, no-cache",
+      // this gets saved in the cache and use for 304
+      'content-security-policy': "default-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' data:"
     });
 
     if (state.method === "HEAD") return state.end();

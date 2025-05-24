@@ -57,7 +57,7 @@ export class ServerState {
     this.enableDevServer = !!process.env.ENABLE_DEV_SERVER;
 
 
-    this.adapter = new SqliteAdapter(this.databasePath);
+    this.adapter = new SqliteAdapter(this.databasePath, this.enableDevServer);
     this.engine = new PrismaClient({
       log: [
         ...Debug.enabled("prisma:query") ? ["query" as const] : [],

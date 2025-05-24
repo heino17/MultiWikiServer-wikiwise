@@ -186,6 +186,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 	private logger;
 	private isLoggedIn;
 	private isReadOnly;
+	private offline;
 	private username;
 	private incomingUpdatesFilterFn;
 	private serverUpdateConnectionStatus!: string;
@@ -204,9 +205,10 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		this.outstandingRequests = Object.create(null); // Hashmap by title of outstanding request object: {type: "PUT"|"GET"|"DELETE"}
 		this.lastRecordedUpdate = Object.create(null); // Hashmap by title of last recorded update via SSE: {type: "update"|"detetion", revision_id:}
 		this.logger = new $tw.utils.Logger("MultiWikiClientAdaptor");
-		this.useGzipStream = false;
+		this.useGzipStream = true;
 		this.isLoggedIn = false;
 		this.isReadOnly = false;
+		this.offline = false;
 		this.username = "";
 		// Compile the dirty tiddler filter
 		this.incomingUpdatesFilterFn = this.wiki.compileFilter(this.wiki.getTiddlerText(INCOMING_UPDATES_FILTER_TIDDLER));
@@ -247,7 +249,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 
 		return await httpRequest({
 			...options,
-			responseType: "arraybuffer",
+			responseType: "blob",
 			url: this.host + "recipes/" + encodeURIComponent(this.recipe) + options.url,
 		}).then(result => {
 			// in theory, 403 and 404 should result in further action, 
@@ -262,9 +264,12 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 			}
 		}).then(async e => {
 			let responseString: string = "";
-			console.log(e.headers.get("x-gzip-stream"))
 			if (e.headers.get("x-gzip-stream") === "yes") {
-				await new Promise<void>(resolve => {
+				// Browsers only decode the first stream, 
+				// so we cant use content-encoding or DecompressionStream
+
+				await new Promise<void>(async resolve => {
+
 					const gunzip = new fflate.AsyncGunzip((err, chunk, final) => {
 						if (err) return console.log(err);
 						responseString += fflate.strFromU8(chunk);
@@ -273,17 +278,18 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 
 					if (this.isDevMode) gunzip.onmember = e => console.log("gunzip member", e);
 
-					gunzip.push(new Uint8Array(e.response));
+					gunzip.push(new Uint8Array(await readBlobAsArrayBuffer(e.response)));
 					// this has to be on a separate line
 					gunzip.push(new Uint8Array(), true);
+
 				});
+
 			} else {
-				responseString = fflate.strFromU8(
-					new Uint8Array(e.response)
-				);
+				responseString = fflate.strFromU8(new Uint8Array(await readBlobAsArrayBuffer(e.response)));
 			}
-			if (this.isDevMode)
-				console.log(responseString.length);
+
+			if (this.isDevMode) console.log("gunzip result", responseString.length);
+
 			return [true, void 0, {
 				...e,
 				responseString,
@@ -346,18 +352,21 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 			url: "/status",
 		});
 		if (!ok) {
-			this.logger.log("Error getting status", error);
-			if (callback) callback(error);
-			return;
+			this.isLoggedIn = false;
+			this.isReadOnly = true;
+			this.username = "(offline)";
+			this.offline = true;
+		} else {
+			const status = data.responseJSON;
+			this.isReadOnly = status?.isReadOnly ?? true;
+			this.isLoggedIn = status?.isLoggedIn ?? false;
+			this.username = status?.username ?? "(anon)";
+			this.offline = false;
 		}
-		const status = data.responseJSON;
-		this.isReadOnly = status?.isReadOnly ?? true;
-		this.isLoggedIn = status?.isLoggedIn ?? false;
-		this.username = status?.username ?? "(anon)";
 		if (callback) {
 			callback(
 				// Error
-				null,
+				!ok ? error : null,
 				// Is logged in
 				this.isLoggedIn,
 				// Username
@@ -374,6 +383,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 	Get details of changed tiddlers from the server
 	*/
 	getUpdatedTiddlers(syncer: Syncer, callback: (err: any, changes?: { modifications: string[]; deletions: string[] }) => void) {
+		if(this.offline) return callback(null);
 		if (!this.useServerSentEvents) {
 			this.pollServer().then(changes => {
 				callback(null, changes);
@@ -755,7 +765,7 @@ function httpRequest<TYPE extends "arraybuffer" | "blob" | "text">(options: Http
 		TYPE extends "blob" ? Blob :
 		TYPE extends "text" ? string :
 		never;
-	}>((resolve) => {
+	}>((resolve, reject) => {
 		// if this throws sync'ly, the promise will reject.
 
 		const url = new URL(options.url, location.href);
@@ -768,8 +778,9 @@ function httpRequest<TYPE extends "arraybuffer" | "blob" | "text">(options: Http
 		const request = new XMLHttpRequest();
 		request.responseType = options.responseType || "text";
 
-		request.open(options.method, url, true);
-
+		try {
+			request.open(options.method, url, true);
+		} catch (e) { console.log(e, { e }); throw e; }
 
 		if (!headers.has("content-type"))
 			headers.set("content-type", "application/x-www-form-urlencoded; charset=UTF-8");
@@ -784,6 +795,10 @@ function httpRequest<TYPE extends "arraybuffer" | "blob" | "text">(options: Http
 			request.setRequestHeader(k, v);
 		});
 
+		// request.onerror = (event) => {
+		// 	console.log(event);
+		// 	console.log((event as ProgressEvent<XMLHttpRequest>)!.target?.status);
+		// }
 
 		request.onreadystatechange = function () {
 			if (this.readyState !== 4) return;
@@ -808,11 +823,24 @@ function httpRequest<TYPE extends "arraybuffer" | "blob" | "text">(options: Http
 		if (options.progress)
 			request.onprogress = options.progress;
 
-		request.send(options.requestBodyString);
+		try { request.send(options.requestBodyString); } catch (e) { console.log(e, { e }); throw e; }
 
 
 	});
 
 }
 
+function readBlobAsArrayBuffer(blob: Blob) {
+	const error = new Error("Error reading blob");
+	return new Promise<ArrayBuffer>((resolve, reject) => {
+		const reader = new FileReader();
+		reader.onload = () => {
+			resolve(reader.result as ArrayBuffer)
+		};
+		reader.onerror = () => {
+			reject(error);
+		};
+		reader.readAsArrayBuffer(blob);
+	});
 
+}

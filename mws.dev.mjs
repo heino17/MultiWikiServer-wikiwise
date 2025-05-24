@@ -35,6 +35,7 @@ if(process.argv.length === 2) {
   ]);
   process.argv = [process.argv[0], process.argv[1], "listen", ...args];
 }
+
 console.log("args", process.argv);
 // make the editions/mws directory if it doesn't exist
 mkdirSync("editions/mws", { recursive: true })
