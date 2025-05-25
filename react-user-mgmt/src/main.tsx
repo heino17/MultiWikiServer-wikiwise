@@ -6,6 +6,7 @@ import { DataLoader, getIndexJson, IndexJsonContext } from './helpers/utils';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { ErrorBoundary } from "react-error-boundary";
+import { TestColors } from './colors';
 const theme = createTheme({
   palette: {
     background: {
@@ -19,6 +20,7 @@ const theme = createTheme({
 
   },
 });
+
 //https://v5.mui.com/material-ui/getting-started/
 
 export const App = DataLoader(async () => {
@@ -26,6 +28,7 @@ export const App = DataLoader(async () => {
 }, (indexJson, refresh, props) => {
   useEffect(() => { window.document.documentElement.classList.add("loaded"); }, []);
   const route = location.pathname.slice(pathPrefix.length);
+  // return <TestColors/>;
   return (
     <StrictMode>
       <ThemeProvider theme={theme} defaultMode="system" noSsr>
