@@ -385,7 +385,7 @@ type: text/css
   --tiddler-link-background: var(--background);
   --tiddler-link-foreground: var(--primary);
   --tiddler-subtitle-foreground: var(--muted-foreground);
-  --tiddler-title-foreground: var(--muted-foreground);
+  --tiddler-title-foreground: var(--color-secondary-foreground);
 
   /* --------------------------------------------------------------------- */
   /* Toolbar actions                                                       */

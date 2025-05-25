@@ -1,0 +1,3 @@
+- Not using **HTTPS**.
+- **Oracles** that leak information through observable side-effects, such as network traffic, without directly revealing the contents. 
+- **Multi-user** situations where one user can modify the tiddlers of another user to somehow gain information about bags they don't have access to.

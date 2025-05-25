@@ -27,19 +27,3 @@ If batching is enabled, and if updates have side effects which trigger a save wh
 ## MWS mitigations
 
 - The simplest mitigation is to never compress the contents of two bags together. 
-
-## Other security concerns
-
-- Not using HTTPS.
-- If somehow a side effect occurs that writes the contents of the other bag to the writable bag. 
-
-- What if you couldn't have write access to a bag unless you had read access on all recipes that bag was a part of. 
-
-## Multi-user attack vectors
-
-Consider the scenario where a teacher has a bag for each of his students which they can write to (whatever the reason is doesn't matter) and he can read all their bags loaded in one recipe (maybe he enforces that they all name their tiddlers with some prefix, somehow, which is fairly easy to do with some minor UI tweaks).
-
-Now each student has write access to one of the bags in the recipe, but cannot read most of them. However, a student may be able to come up with an attack which somehow allows them to modify their own bag in such a way that when the teacher loads his recipe, or clicks a button, or who knows what, it dumps all the tiddlers of all the students into that one student's bag.
-
-Obviously the partitioned bags feature I keep talking about would enforce username prefixes at the server level to avoid trusting the user, and we can prevent bags from loading modules, so most of this can be mitigated quite well, but a few vectors may still be possible.
-
