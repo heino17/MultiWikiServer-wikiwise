@@ -1,23 +1,10 @@
 node_modules
 node_modules_old
 scratch
-src/oldroutes
-oldtwserver
-# This is the development edition folder, so ignore it
-editions/mws/**
-# This file gets built on every startup, so ignore it
-/tiddlywiki5.html
-# Ignore this file so we can put our own start server command in it
-/mws.run.ts
-/mws.run.mjs
-/mws.dev.json
-# ignore for backward compatibility for now
 localhost.*
 *.key
 /dist
 TiddlyWiki5
-test5213tw
 *.tgz
 /.vscode/settings.json
 editions/mws-docs/tiddlers/$__StoryList.tid
-index.node

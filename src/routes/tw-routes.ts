@@ -1,6 +1,7 @@
 import { TiddlyWiki } from "tiddlywiki";
 import { basename } from "path";
 import EventEmitter from "events";
+import { dist_resolve } from "../utils";
 
 /**
  * 
@@ -23,7 +24,7 @@ export function DocsRoute(rootRoute: rootRoute, mountPath: string, singleFile: b
     "+plugins/tiddlywiki/tiddlyweb",
     "+plugins/tiddlywiki/filesystem",
     // relative to the cwd
-    "../mws-docs",
+    dist_resolve("../editions/mws-docs"),
   ];
 
   const hooks = new EventEmitter();
