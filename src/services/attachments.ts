@@ -3,9 +3,10 @@ import * as path from "path";
 import * as fs from "fs";
 import sjcl from "sjcl";
 import { SiteConfig } from "../ServerState";
-export interface TiddlerFields extends Record<string, any> {
-  title: PrismaField<"Tiddlers", "title">;
-}
+import { TiddlerFields } from "tiddlywiki";
+// export interface TiddlerFields extends Record<string, any> {
+//   title: PrismaField<"Tiddlers", "title">;
+// }
 const $tw: any = {};
 
 
@@ -102,8 +103,8 @@ export class AttachmentService {
 
     if (attachmentsEnabled && isBinary && shouldProcessAttachment) {
       const attachment_hash = existing_attachment_hash || await this.saveAttachment({
-        text: tiddlerFields.text,
-        type: tiddlerFields.type,
+        text: tiddlerFields.text!,
+        type: tiddlerFields.type || "text/vnd.tiddlywiki",
         reference: tiddlerFields.title,
         _canonical_uri: tiddlerFields._canonical_uri
       });

@@ -1,10 +1,12 @@
-import { AttachmentService, TiddlerFields } from "../services/attachments";
+import { AttachmentService } from "../services/attachments";
 import { ok } from "assert";
-import { FileInfoTiddlers, TiddlerFieldModule } from "tiddlywiki";
+import { FileInfoTiddlers, TiddlerFieldModule, TiddlerFields } from "tiddlywiki";
 import { UserError } from "../utils";
 import { SiteConfig } from "../ServerState";
+import { Prisma, PrismaClient, PrismaPromise } from "@prisma/client";
+import * as runtime from "@prisma/client/runtime/library";
 
-/**
+/*
 
 ### NOTES from attachments file
 
@@ -31,26 +33,10 @@ store/
   database.sql - The database file (managed by Prisma)
 
 */
-export class TiddlerStore {
-  static fromConfig(config: SiteConfig, prisma: PrismaTxnClient) {
-    return new TiddlerStore(
-      config.fieldModules,
-      new AttachmentService(config, prisma),
-      config.storePath,
-      config.contentTypeInfo,
-      prisma
-    );
-  }
 
-  constructor(
-    public fieldModules: Record<string, TiddlerFieldModule>,
-    public attachService: AttachmentService,
-    public storePath: string,
-    public contentTypeInfo: Record<string, any>,
-    public prisma: PrismaTxnClient
-  ) {
+abstract class TiddlerStore_PrismaBase {
 
-  }
+  abstract prisma: PrismaTxnClient;
 
   /*
   Returns null if a bag/recipe name is valid, or a string error message if not
@@ -94,18 +80,7 @@ export class TiddlerStore {
       return errors.join("\n");
     }
   }
-  async upsertRecipe(
-    recipe_name: PrismaField<"Recipes", "recipe_name">,
-    description: PrismaField<"Recipes", "description">,
-    bags: { bag_name: PrismaField<"Bags", "bag_name">, with_acl: PrismaField<"Recipe_bags", "with_acl"> }[],
-    plugins: string[],
-    { allowPrivilegedCharacters = false }: { allowPrivilegedCharacters?: boolean; } = {}
-  ) {
-    const [recipe_, recipe_bags_] = this.upsertRecipe_PrismaArray(recipe_name, description, bags, plugins, { allowPrivilegedCharacters });
-    const recipe = await recipe_;
-    await recipe_bags_;
-    return recipe;
-  }
+
   upsertRecipe_PrismaArray(
     recipe_name: PrismaField<"Recipes", "recipe_name">,
     description: PrismaField<"Recipes", "description">,
@@ -118,7 +93,7 @@ export class TiddlerStore {
     if (validationRecipeName) throw validationRecipeName;
     if (bags.length === 0) throw new UserError("Recipes must contain at least one bag");
 
-    return [
+    return tuple(
       this.prisma.recipes.upsert({
         where: { recipe_name },
         update: { description, recipe_bags: { deleteMany: {} }, plugin_names },
@@ -137,19 +112,10 @@ export class TiddlerStore {
           }
         }
       })
-    ];
+    );
 
   }
-  async upsertBag(
-    bag_name: PrismaField<"Bags", "bag_name">,
-    description: PrismaField<"Bags", "description">,
-    is_plugin: PrismaField<"Bags", "is_plugin">,
-    { allowPrivilegedCharacters = false }: { allowPrivilegedCharacters?: boolean; } = {}
-  ) {
-    return await this.upsertBag_PrismaPromise(bag_name, description, is_plugin, {
-      allowPrivilegedCharacters
-    });
-  }
+
   upsertBag_PrismaPromise(
     bag_name: PrismaField<"Bags", "bag_name">,
     description: PrismaField<"Bags", "description">,
@@ -168,36 +134,250 @@ export class TiddlerStore {
     });
 
   }
-  /**
-   * You probably want to call this inside a transaction.
-   *
-  ```js
-  const tiddlersFromPath = $tw.loadTiddlersFromPath(tiddlerPath);
-  ```
-   */
-  async saveTiddlersFromPath(
-    tiddlersFromPath: { tiddlers: TiddlerFields[] }[],
-    bag_name: PrismaField<"Bags", "bag_name">
-  ) {
 
-  }
   saveTiddlersFromPath_PrismaArray(
-    tiddlersFromPath: { tiddlers: TiddlerFields[] }[],
-    bag_name: PrismaField<"Bags", "bag_name">
+    bag_name: PrismaField<"Bags", "bag_name">,
+    tiddlers: TiddlerFields[]
   ) {
-    return [
+    return tuple(
       this.prisma.tiddlers.deleteMany({
         where: { bag: { bag_name } }
       }),
-      ...tiddlersFromPath.flatMap(({ tiddlers }) =>
-        tiddlers.flatMap(tiddler =>
-          this.saveBagTiddlerFields_PrismaArray(tiddler, bag_name, null)
-        )
+      ...tiddlers.flatMap(tiddler =>
+        this.saveBagTiddlerFields_PrismaArray(tiddler, bag_name, null)
       )
-    ]
+    )
+  }
+
+  saveBagTiddlerFields_PrismaArray(
+    tiddlerFields: TiddlerFields,
+    bag_name: PrismaField<"Bags", "bag_name">,
+    attachment_hash: PrismaField<"Tiddlers", "attachment_hash">
+  ) {
+
+    const { title } = tiddlerFields;
+    if (!title) {
+      console.error(tiddlerFields);
+      throw new Error("Tiddler must have a title");
+    }
+
+    if (attachment_hash && tiddlerFields.text)
+      throw new Error("Do not set both the attachment_hash and the text field. It should be one or the other.")
+
+    const deletion = this.prisma.tiddlers.deleteMany({
+      where: { bag: { bag_name }, title }
+    });
+
+    const fields = Object.entries(tiddlerFields);
+    if (!fields.every(e => e.every(f => typeof f === "string")))
+      throw new Error("All fields must be saved to the server as strings.")
+
+    const creation = this.prisma.tiddlers.create({
+      data: {
+        bag: { connect: { bag_name } },
+        title,
+        is_deleted: false,
+        attachment_hash: attachment_hash || null,
+        fields: {
+          create: fields.map(([field_name, field_value]) => ({ field_name, field_value }))
+        }
+      },
+      select: {
+        revision_id: true
+      }
+    });
+
+    return tuple(deletion, creation);
 
   }
 
+  /**
+    Returns {revision_id:} of the delete marker
+    */
+  deleteBagTiddler_PrismaArray(
+    title: PrismaField<"Tiddlers", "title">,
+    bag_name: PrismaField<"Bags", "bag_name">
+  ) {
+    return tuple(
+      this.prisma.tiddlers.deleteMany({
+        where: { title, bag: { bag_name } },
+      }),
+      this.prisma.tiddlers.create({
+        data: {
+          title,
+          bag: { connect: { bag_name } },
+          is_deleted: true,
+          attachment_hash: null,
+        },
+        select: {
+          revision_id: true
+        }
+      })
+    );
+  }
+}
+
+export class TiddlerStore_PrismaStatic extends TiddlerStore_PrismaBase {
+  constructor(public prisma: PrismaEngineClient) {
+    super();
+  }
+
+  $transaction<P extends Prisma.PrismaPromise<any>[]>(arg: [...P], options?: {
+    isolationLevel?: Prisma.TransactionIsolationLevel
+  }): Promise<runtime.Types.Utils.UnwrapTuple<P>> {
+    return this.prisma.$transaction(arg, options);
+  }
+
+
+}
+
+export class TiddlerStore_Primitives extends TiddlerStore_PrismaBase {
+  constructor(public prisma: PrismaTxnClient) {
+    super();
+  }
+  /** 
+   * Get the writable bag for the specified recipe.
+   * 
+   * If title is specified, the tiddler will be included in bag.tiddlers, if it exists. 
+   * 
+   * The bag will still be returned even if the tiddler does not exist. 
+   */
+  async getRecipeWritableBag(
+    recipe_name: PrismaField<"Recipes", "recipe_name">,
+    title?: PrismaField<"Tiddlers", "title">
+  ) {
+
+    const recipe = await this.prisma.recipes.findUnique({
+      where: { recipe_name },
+      select: {
+        recipe_id: true,
+        recipe_bags: {
+          where: { position: 0 },
+          select: {
+            bag: {
+              select: {
+                bag_id: true, bag_name: true, is_plugin: true,
+                ...title ? {
+                  tiddlers: {
+                    select: { revision_id: true },
+                    where: { title }
+                  }
+                } : {}
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!recipe) throw new UserError("Recipe not found");
+
+    // the where clause selects only the bag at position 0, 
+    // not to be confused with index zero of the result array!
+    const bag = recipe.recipe_bags[0]?.bag;
+
+    if (!bag) throw new UserError("Recipe has no bag at position 0");
+
+    if (bag.is_plugin)
+      throw new UserError("Saving to plugin bags is not currently supported. "
+        + "Please use a normal bag at the top of the recipe. "
+        + "This error occurs if a plugin bag is at the top of the recipe.\n");
+
+    return bag;
+  }
+
+  async getRecipeBagWithTiddler({ recipe_name, title }: { recipe_name: string; title: string; }) {
+
+    return await this.prisma.recipe_bags.findFirst({
+      include: { bag: true, recipe: true },
+      where: {
+        recipe: { recipe_name },
+        bag: { tiddlers: { some: { title, is_deleted: false } } }
+      },
+      orderBy: { position: "asc" }
+    });
+  }
+
+  async getRecipeTiddlersByBag(
+    recipe_name: PrismaField<"Recipes", "recipe_name">,
+    options: {
+      last_known_revision_id?: PrismaField<"Tiddlers", "revision_id">,
+      include_deleted?: boolean,
+    } = {}
+  ) {
+    // In prisma it's easy to get the top bag for a specific title. 
+    // To get all titles we basically have to get all bags and manually find the top one. 
+    const lastid = options.last_known_revision_id;
+    const withDeleted = options.include_deleted;
+    const bags = await this.prisma.recipe_bags.findMany({
+      where: { recipe: { recipe_name } },
+      select: {
+        position: true,
+        bag: {
+          select: {
+            bag_id: true,
+            bag_name: true,
+            is_plugin: true,
+            tiddlers: {
+              select: {
+                title: true,
+                revision_id: true,
+                is_deleted: true,
+              },
+              where: {
+                is_deleted: withDeleted ? undefined : false,
+                revision_id: lastid ? { gt: lastid } : undefined
+              },
+            }
+          }
+        }
+      },
+    });
+
+    bags.sort((a, b) => a.position - b.position);
+
+    return bags.map(e => ({
+      bag_id: e.bag.bag_id,
+      bag_name: e.bag.bag_name,
+      is_plugin: e.bag.is_plugin,
+      position: e.position,
+      tiddlers: e.bag.tiddlers
+    }));
+
+  }
+
+  
+  getTiddlerFields(
+    title: PrismaField<"Tiddlers", "title">,
+    fields: { field_name: string, field_value: string }[]
+  ) {
+    return Object.fromEntries([
+      ...fields.map(e => [e.field_name, e.field_value] as const),
+      ["title", title]
+    ]) as TiddlerFields;
+  }
+}
+
+export class TiddlerStore extends TiddlerStore_Primitives {
+  static fromConfig(config: SiteConfig, prisma: PrismaTxnClient) {
+    return new TiddlerStore(
+      config.fieldModules,
+      new AttachmentService(config, prisma),
+      config.storePath,
+      config.contentTypeInfo,
+      prisma
+    );
+  }
+
+  constructor(
+    public fieldModules: Record<string, TiddlerFieldModule>,
+    private attachService: AttachmentService,
+    public storePath: string,
+    public contentTypeInfo: Record<string, any>,
+    public prisma: PrismaTxnClient
+  ) {
+    super(prisma);
+  }
 
   /*
   Returns {revision_id:}
@@ -218,6 +398,7 @@ export class TiddlerStore {
       existing_attachment_hash,
       existing_canonical_uri: existing_attachment_hash && this.attachService.makeCanonicalUri(bag_name, incomingTiddlerFields.title)
     });
+
     return this.saveBagTiddlerFields(tiddlerFields, bag_name, attachment_hash);
 
   }
@@ -254,33 +435,6 @@ export class TiddlerStore {
       return null;
     }
   }
-  /*
-  Returns {revision_id:,bag_name:}
- 
-  The tiddler gets saved to the bag at position 0.
-  */
-  async saveRecipeTiddler(
-    incomingTiddlerFields: TiddlerFields,
-    recipe_name: PrismaField<"Recipes", "recipe_name">
-  ) {
-    // const { title } = incomingTiddlerFields;
-    // const currentBag = await this.getRecipeBagWithTiddler({ recipe_name, title });
-
-    // const existing_attachment_hash = currentBag && await this.prisma.tiddlers.findUnique({
-    //   where: { bag_id_title: { title, bag_id: currentBag.bag_id } },
-    //   select: { attachment_hash: true }
-    // }).then(e => e?.attachment_hash ?? null);
-
-    // const { tiddlerFields, attachment_hash } = await this.attachService.processIncomingTiddler({
-    //   existing_attachment_hash,
-    //   existing_canonical_uri: incomingTiddlerFields._canonical_uri,
-    //   tiddlerFields: incomingTiddlerFields
-    // });
-
-    // The tiddlywiki client saves binary tiddlers as base64-encoded text field
-    // so no special handling is required.
-    return this.saveRecipeTiddlerFields(incomingTiddlerFields, recipe_name, null);
-  }
 
   /*
   returns {revision_id:,tiddler:}
@@ -304,13 +458,6 @@ export class TiddlerStore {
     var tiddlerInfo = await this.getTiddlerInfo(tiddler.revision_id);
     if (!tiddlerInfo) return null;
 
-    // if (tiddlerInfo.is_plugin) {
-    //   const pluginBag = await this.prisma.bags.findUnique({
-    //     where: { bag_name: tiddlerInfo.bag_name },
-    //     include: { tiddlers: { include: { fields: true } } }
-    //   });
-    // }
-
     return {
       ...tiddlerInfo,
       tiddler: this.attachService.processOutgoingTiddler(tiddlerInfo)
@@ -318,7 +465,7 @@ export class TiddlerStore {
 
   }
 
-  async getRecipeTiddler(
+  private async getRecipeTiddler(
     title: PrismaField<"Tiddlers", "title">,
     recipe_name: PrismaField<"Recipes", "recipe_name">
   ) {
@@ -329,30 +476,6 @@ export class TiddlerStore {
 
     return await this.getBagTiddler({ title, bag_id: recipe_bag.bag_id });
 
-  }
-
-
-  async getRecipeBagWithTiddler({ recipe_name, title }: { recipe_name: string; title: string; }) {
-
-    return await this.prisma.recipe_bags.findFirst({
-      include: { bag: true, recipe: true },
-      where: {
-        recipe: { recipe_name },
-        bag: { tiddlers: { some: { title, is_deleted: false } } }
-      },
-      orderBy: { position: "asc" }
-    });
-  }
-
-  async getRecipeWritableBag(
-    recipe_name: PrismaField<"Recipes", "recipe_name">
-  ) {
-    const recipe_bag = await this.prisma.recipe_bags.findFirst({
-      select: { bag: true },
-      where: { recipe: { recipe_name }, position: 0 }
-    });
-    if (!recipe_bag) return null;
-    return recipe_bag.bag;
   }
 
 
@@ -429,30 +552,7 @@ export class TiddlerStore {
     recipe_name: PrismaField<"Recipes", "recipe_name">,
     attachment_hash: PrismaField<"Tiddlers", "attachment_hash">
   ) {
-
-    const recipe = await this.prisma.recipes.findUnique({
-      where: { recipe_name },
-      select: {
-        recipe_id: true,
-        recipe_bags: {
-          where: { position: 0 },
-          select: { bag: { select: { bag_name: true, is_plugin: true } } }
-        }
-      }
-    });
-
-    if (!recipe) throw new UserError("Recipe not found");
-
-    // the where clause selects only the bag at position 0, 
-    // not to be confused with index zero of the result array!
-    const bag = recipe.recipe_bags[0]?.bag;
-
-    if (!bag) throw new UserError("Recipe has no bag at position 0");
-
-    if (bag.is_plugin)
-      throw new UserError("Saving to plugin bags is not currently supported. "
-        + "Please use a normal bag at the top of the recipe. "
-        + "This error occurs if a plugin bag is at the top of the recipe.\n")
+    const bag = await this.getRecipeWritableBag(recipe_name);
 
     // Save the tiddler to the specified bag
     var { revision_id } = await this.saveBagTiddlerFields(
@@ -462,7 +562,8 @@ export class TiddlerStore {
     return { revision_id, bag_name: bag.bag_name };
   }
 
-  async saveBagTiddlerFields(
+
+  private async saveBagTiddlerFields(
     tiddlerFields: TiddlerFields,
     bag_name: PrismaField<"Bags", "bag_name">,
     attachment_hash: PrismaField<"Tiddlers", "attachment_hash">
@@ -471,87 +572,7 @@ export class TiddlerStore {
     await deletion;
     return await creation;
   }
-  saveBagTiddlerFields_PrismaArray(
-    tiddlerFields: TiddlerFields,
-    bag_name: PrismaField<"Bags", "bag_name">,
-    attachment_hash: PrismaField<"Tiddlers", "attachment_hash">
-  ) {
 
-    const { title } = tiddlerFields;
-    if (!title) {
-      console.error(tiddlerFields);
-      throw new Error("Tiddler must have a title");
-    }
-
-    if (attachment_hash && tiddlerFields.text)
-      throw new Error("Do not set both the attachment_hash and the text field. It should be one or the other.")
-
-    const deletion = this.prisma.tiddlers.deleteMany({
-      where: { bag: { bag_name }, title }
-    });
-
-    const fields = Object.entries(tiddlerFields);
-    if (!fields.every(e => e.every(f => typeof f === "string")))
-      throw new Error("All fields must be saved to the server as strings.")
-
-    const creation = this.prisma.tiddlers.create({
-      data: {
-        bag: { connect: { bag_name } },
-        title,
-        is_deleted: false,
-        attachment_hash: attachment_hash || null,
-        fields: {
-          create: fields.map(([field_name, field_value]) => ({ field_name, field_value }))
-        }
-      },
-      select: {
-        revision_id: true
-      }
-    });
-
-    return [deletion, creation] as const;
-
-    // 	attachment_hash = attachment_hash || null;
-    // 	// Update the tiddlers table
-    // 	var info = this.engine.runStatement(`
-    // 	INSERT OR REPLACE INTO tiddlers (bag_id, title, is_deleted, attachment_hash)
-    // 	VALUES (
-    // 		(SELECT bag_id FROM bags WHERE bag_name = $bag_name),
-    // 		$title,
-    // 		FALSE,
-    // 		$attachment_hash
-    // 	)
-    // `, {
-    // 		$title: tiddlerFields.title,
-    // 		$attachment_hash: attachment_hash,
-    // 		$bag_name: bag_name
-    // 	});
-    // 	// Update the fields table
-    // 	this.engine.runStatement(`
-    // 	INSERT OR REPLACE INTO fields (revision_id, field_name, field_value)
-    // 	SELECT
-    // 		t.revision_id,
-    // 		json_each.key AS field_name,
-    // 		json_each.value AS field_value
-    // 	FROM (
-    // 		SELECT revision_id
-    // 		FROM tiddlers
-    // 		WHERE bag_id = (
-    // 			SELECT bag_id
-    // 			FROM bags
-    // 			WHERE bag_name = $bag_name
-    // 		) AND title = $title
-    // 	) AS t
-    // 	JOIN json_each($field_values) AS json_each
-    // `, {
-    // 		$title: tiddlerFields.title,
-    // 		$bag_name: bag_name,
-    // 		$field_values: JSON.stringify(Object.assign({}, tiddlerFields, { title: undefined }))
-    // 	});
-    // 	return {
-    // 		revision_id: info.lastInsertRowid
-    // 	};
-  }
   /*
   Returns {revision_id:,bag_name:}
   */
@@ -560,149 +581,15 @@ export class TiddlerStore {
     title: PrismaField<"Tiddlers", "title">
   ) {
 
-    const currentBag = await this.getRecipeBagWithTiddler({ recipe_name, title });
-    if (!currentBag)
-      throw new UserError("Tiddler not found in recipe");
-    if (currentBag.position !== 0)
-      throw new UserError("Cannot delete tiddler from non-top bag");
-    return await this.deleteBagTiddler(title, currentBag.bag.bag_name);
-  }
-  /**
-    Returns {revision_id:} of the delete marker
-    */
-  async deleteBagTiddler(
-    title: PrismaField<"Tiddlers", "title">,
-    bag_name: PrismaField<"Bags", "bag_name">
-  ) {
-    await this.prisma.tiddlers.deleteMany({
-      where: { title, bag: { bag_name } },
-    });
-    const { revision_id } = await this.prisma.tiddlers.create({
-      data: {
-        title,
-        bag: { connect: { bag_name } },
-        is_deleted: true,
-        attachment_hash: null,
-      },
-      select: {
-        revision_id: true
-      }
-    });
+    const bag = await this.getRecipeWritableBag(recipe_name, title);
 
-    return { bag_name, revision_id }
+    if (!bag.tiddlers.length) throw new UserError("Cannot delete tiddler from non-top bag");
 
-    // 	// Delete the fields of this tiddler
-    // 	this.engine.runStatement(`
-    // 	DELETE FROM fields
-    // 	WHERE revision_id IN (
-    // 		SELECT t.revision_id
-    // 		FROM tiddlers AS t
-    // 		INNER JOIN bags AS b ON t.bag_id = b.bag_id
-    // 		WHERE b.bag_name = $bag_name AND t.title = $title
-    // 	)
-    // `, {
-    // 		$title: title,
-    // 		$bag_name: bag_name
-    // 	});
-    // 	// Mark the tiddler itself as deleted
-    // 	const rowDeleteMarker = this.engine.runStatement(`
-    // 	INSERT OR REPLACE INTO tiddlers (bag_id, title, is_deleted, attachment_hash)
-    // 	VALUES (
-    // 		(SELECT bag_id FROM bags WHERE bag_name = $bag_name),
-    // 		$title,
-    // 		TRUE,
-    // 		NULL
-    // 	)
-    // `, {
-    // 		$title: title,
-    // 		$bag_name: bag_name
-    // 	});
-    // 	return { revision_id: rowDeleteMarker.lastInsertRowid };
+    const [deletion, creation] = this.deleteBagTiddler_PrismaArray(title, bag.bag_name);
+    await deletion;
+    const { revision_id } = await creation;
+    return { revision_id, bag_name: bag.bag_name };
   }
 
-  async getRecipeTiddlersByBag(
-    recipe_name: PrismaField<"Recipes", "recipe_name">,
-    options: {
-      // how do you limit a list of unique titles?
-      // limit?: number, 
-      last_known_revision_id?: PrismaField<"Tiddlers", "revision_id">,
-      include_deleted?: boolean,
-    } = {}
-  ) {
-    // In prisma it's easy to get the top bag for a specific title. 
-    // To get all titles we basically have to get all bags and manually find the top one. 
-    const lastid = options.last_known_revision_id;
-    const withDeleted = options.include_deleted;
-    const bags = await this.prisma.recipe_bags.findMany({
-      where: { recipe: { recipe_name } },
-      select: {
-        position: true,
-        bag: {
-          select: {
-            bag_id: true,
-            bag_name: true,
-            is_plugin: true,
-            tiddlers: {
-              select: {
-                title: true,
-                revision_id: true,
-                is_deleted: true,
-              },
-              where: {
-                is_deleted: withDeleted ? undefined : false,
-                revision_id: lastid ? { gt: lastid } : undefined
-              },
-            }
-          }
-        }
-      },
-    });
 
-    bags.sort((a, b) => a.position - b.position);
-
-    return bags.map(e => ({
-      bag_id: e.bag.bag_id,
-      bag_name: e.bag.bag_name,
-      is_plugin: e.bag.is_plugin,
-      position: e.position,
-      tiddlers: e.bag.tiddlers
-    }));
-
-    // 	// Get the recipe ID
-    // 	const rowsCheckRecipe = this.engine.runStatementGet(`
-    // 	SELECT recipe_id FROM recipes WHERE recipes.recipe_name = $recipe_name
-    // `, {
-    // 		$recipe_name: recipe_name
-    // 	});
-    // 	if (!rowsCheckRecipe) {
-    // 		return null;
-    // 	}
-    // 	const recipe_id = rowsCheckRecipe.recipe_id;
-    // 	// Compose the query to get the tiddlers
-    // 	const params = {
-    // 		$recipe_id: recipe_id
-    // 	};
-    // 	if (options.limit) {
-    // 		params.$limit = options.limit.toString();
-    // 	}
-    // 	if (options.last_known_revision_id) {
-    // 		params.$last_known_revision_id = options.last_known_revision_id;
-    // 	}
-    // 	const rows = this.engine.runStatementGetAll(`
-    // 	SELECT title, revision_id, is_deleted, bag_name
-    // 	FROM (
-    // 		SELECT t.title, t.revision_id, t.is_deleted, b.bag_name, MAX(rb.position) AS position
-    // 		FROM bags AS b
-    // 		INNER JOIN recipe_bags AS rb ON b.bag_id = rb.bag_id
-    // 		INNER JOIN tiddlers AS t ON b.bag_id = t.bag_id
-    // 		WHERE rb.recipe_id = $recipe_id
-    // 		${options.include_deleted ? "" : "AND t.is_deleted = FALSE"}
-    // 		${options.last_known_revision_id ? "AND revision_id > $last_known_revision_id" : ""}
-    // 		GROUP BY t.title
-    // 		ORDER BY t.title, revision_id DESC
-    // 		${options.limit ? "LIMIT $limit" : ""}
-    // 	)
-    // `, params);
-    // 	return rows;
-  }
 }

@@ -1,11 +1,10 @@
 import { PrismaBetterSQLite3 } from "@prisma/adapter-better-sqlite3";
-import { PrismaClient } from "@prisma/client";
 import { SqlDriverAdapter, SqlMigrationAwareDriverAdapterFactory } from "@prisma/driver-adapter-utils";
 import { readdir, readFile } from "fs/promises";
 import { dist_resolve } from "../utils";
 import { createHash, randomUUID } from "crypto";
 import { existsSync } from "fs";
-import { SiteConfig } from "../ServerState";
+
 const INIT_0_0 = "20250406213424_init";
 const INIT_0_1 = "20250513012507_init";
 

@@ -171,7 +171,7 @@ export class Compressor {
     ) return "gzip-stream";
 
     const encoding = res.getHeader('Content-Encoding');
-    if (encoding) return encoding.toString();
+    if (encoding) return ""; //the content is already encoded
 
     // determine if request is filtered
     if (!this.filter()) {

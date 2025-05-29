@@ -1,13 +1,13 @@
 import { resolve } from "path";
 import type { CommandInfo } from "../utils/BaseCommand";
 import { BaseCommand } from "../utils/BaseCommand";
-import { TiddlerStore } from "../routes/TiddlerStore";
+import { TiddlerStore, TiddlerStore_PrismaStatic } from "../routes/TiddlerStore";
 
 export const info: CommandInfo = {
 	name: "load-tiddlers",
 	description: "Load tiddlers from a folder into a bag",
 	arguments: [
-		["path", "Path to the TiddlyWiki5 plugins folder"],
+		["path", "Path to load tiddlers from."],
 		["bag-name", "Name of the bag to load tiddlers into"],
 	],
 };
@@ -26,12 +26,15 @@ export class Command extends BaseCommand {
 	async execute() {
 
 		if (this.params.length < 2) return "Missing pathname and/or bag name";
-		await this.config.$transaction(async (prisma) => {
-			const store = TiddlerStore.fromConfig(this.config, prisma);
-			var tiddlersFromPath = this.$tw.loadTiddlersFromPath(this.tiddlersPath);
-			//@ts-ignore
-			await store.saveTiddlersFromPath(tiddlersFromPath, this.bagName);
-		});
+		const tiddlersFromPath = this.$tw.loadTiddlersFromPath(this.tiddlersPath);
+
+		const store = new TiddlerStore_PrismaStatic(this.config.engine);
+
+		// execute a batch transaction, rather than an interactive transaction
+		await store.$transaction(
+			store.saveTiddlersFromPath_PrismaArray(this.bagName, tiddlersFromPath.map(e => e.tiddlers).flat())
+		);
+		
 		return null;
 
 	}

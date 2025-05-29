@@ -18,14 +18,14 @@ export async function runCLI() {
 
   if (!existsSync(wikiPath)) throw "The wiki path does not exist";
 
-  console.log(wikiPath, process.argv)
-
   const cmder = getCLI()
 
   const cmd = process.argv[2];
-  if (!cmd) {
-    return cmder.outputHelp();
-  }
+
+  if (!cmd) return cmder.outputHelp();
+
+  if (cmd === "help") return cmder.parse();
+
   // const cmdDef
   const cmdDef: CommandFile | undefined = Object.values(commands).find(e => e.info.name === cmd);
   if (!cmdDef) {
@@ -33,15 +33,9 @@ export async function runCLI() {
     return cmder.outputHelp();
   }
 
-  if (cmd === "help") {
-    return cmder.parse();
-  }
 
   // parse the CLI first since that's easy
   const { params, options } = parseCLI(cmder, cmd, process.argv.slice(3));
-
-
-  console.log(wikiPath, cmd, params, options);
 
   await opaque.ready;
 

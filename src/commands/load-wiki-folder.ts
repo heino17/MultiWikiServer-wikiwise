@@ -13,11 +13,10 @@ Command to create and load a bag for the specified core editions
 import { resolve } from "path";
 import { BaseCommand } from "../utils/BaseCommand";
 import type { CommandInfo } from "../utils/BaseCommand";
-import { TiddlerStore } from "../routes/TiddlerStore";
-import { TiddlerFields } from "../services/attachments";
+import { TiddlerStore, TiddlerStore_PrismaStatic } from "../routes/TiddlerStore";
 import * as path from "path";
 import * as fs from "fs";
-import { TW } from "tiddlywiki";
+import { TW, TiddlerFields } from "tiddlywiki";
 import { truthy } from "../utils";
 import { CacheState } from "../routes/cache";
 
@@ -32,14 +31,16 @@ export const info: CommandInfo = {
 		["bag-description <string>", "Description of the bag"],
 		["recipe-name <string>", "Name of the recipe to create"],
 		["recipe-description <string>", "Description of the recipe"],
+		["overwrite", "Confirm that you want to overwrite existing content"]
 	],
 };
 // tiddlywiki --load ./mywiki.html --savewikifolder ./mywikifolder
 export class Command extends BaseCommand<[string], {
-	"bag-name"?: string;
-	"bag-description"?: string;
-	"recipe-name"?: string;
-	"recipe-description"?: string;
+	"bag-name"?: string[];
+	"bag-description"?: string[];
+	"recipe-name"?: string[];
+	"recipe-description"?: string[];
+	"overwrite"?: true;
 }> {
 
 
@@ -47,7 +48,7 @@ export class Command extends BaseCommand<[string], {
 
 		// Check parameters
 		if (this.params.length < 1) {
-			return "Missing parameters for --mws-load-wiki-folder command";
+			throw "Missing parameters for load-wiki-folder command";
 		}
 
 		if (!this.options["bag-name"])
@@ -59,13 +60,17 @@ export class Command extends BaseCommand<[string], {
 		if (!this.options["recipe-description"])
 			throw new Error("missing required option recipe-description");
 
-		await this.config.engine.$transaction(loadWikiFolder({
+		const overwrite = !!this.options["overwrite"];
+		const store = new TiddlerStore_PrismaStatic(this.config.engine);
+
+		await store.$transaction(loadWikiFolder({
 			wikiPath: this.params[0],
-			bagName: this.options["bag-name"] as PrismaField<"Bags", "bag_name">,
-			bagDescription: this.options["bag-description"] as PrismaField<"Bags", "description">,
-			recipeName: this.options["recipe-name"] as PrismaField<"Recipes", "recipe_name">,
-			recipeDescription: this.options["recipe-description"] as PrismaField<"Recipes", "description">,
-			store: TiddlerStore.fromConfig(this.config, this.config.engine),
+			bagName: this.options["bag-name"][0] as PrismaField<"Bags", "bag_name">,
+			bagDescription: this.options["bag-description"][0] as PrismaField<"Bags", "description">,
+			recipeName: this.options["recipe-name"][0] as PrismaField<"Recipes", "recipe_name">,
+			recipeDescription: this.options["recipe-description"][0] as PrismaField<"Recipes", "description">,
+			overwrite,
+			store,
 			$tw: this.$tw,
 			cache: this.config.pluginCache
 		}));
@@ -84,7 +89,8 @@ function loadWikiFolder({ $tw, store, cache, ...options }: {
 	bagDescription: PrismaField<"Bags", "description">,
 	recipeName: PrismaField<"Recipes", "recipe_name">,
 	recipeDescription: PrismaField<"Recipes", "description">,
-	store: TiddlerStore,
+	overwrite: boolean;
+	store: TiddlerStore_PrismaStatic,
 	$tw: TW,
 	cache: CacheState,
 }) {
@@ -121,7 +127,7 @@ function loadWikiFolder({ $tw, store, cache, ...options }: {
 			plugins.map(e => e.plugin).filter(truthy)
 		),
 		// save the tiddlers (this will skip attachments)
-		...store.saveTiddlersFromPath_PrismaArray(tiddlersFromPath, options.bagName)
+		...store.saveTiddlersFromPath_PrismaArray(options.bagName, tiddlersFromPath.map(e => e.tiddlers).flat())
 	];
 
 }

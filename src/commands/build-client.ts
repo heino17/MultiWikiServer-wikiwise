@@ -14,7 +14,7 @@ export class Command extends BaseCommand {
 
   async execute() {
     
-    const { ctx, port, rootdir } = await esbuildStartup();
+    const { ctx } = await esbuildStartup();
     ctx.dispose();
   }
 }

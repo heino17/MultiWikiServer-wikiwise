@@ -48,27 +48,28 @@ export class Command extends BaseCommand {
 		// should give us the path to boot.js
 		const tweditions = resolve(dist_require_resolve("tiddlywiki"), "../../editions");
 
-		const runner = async ([path, bagName, bagDesc, recName, recDesc]: string[]) => {
+		const runner = async (path: string, bagName: string, bagDesc: string, recName: string, recDesc: string) => {
 			await new LoadWikiFolderCommand([path!], {
-				"bag-name": bagName,
-				"bag-description": bagDesc,
-				"recipe-name": recName,
-				"recipe-description": recDesc,
+				"bag-name": [bagName],
+				"bag-description": [bagDesc],
+				"recipe-name": [recName],
+				"recipe-description": [recDesc],
+				overwrite: true
 			}, this.config, this.$tw).execute();
 		}
 
-		await runner([dist_resolve("../editions/mws-docs"),
+		await runner(dist_resolve("../editions/mws-docs"),
 			"mws-docs", "MWS Documentation from https://mws.tiddlywiki.com",
-			"mws-docs", "MWS Documentation from https://mws.tiddlywiki.com"]);
-		await runner([resolve(tweditions, "tw5.com"),
+			"mws-docs", "MWS Documentation from https://mws.tiddlywiki.com");
+		await runner(resolve(tweditions, "tw5.com"),
 			"docs", "TiddlyWiki Documentation from https://tiddlywiki.com",
-			"docs", "TiddlyWiki Documentation from https://tiddlywiki.com"]);
-		await runner([resolve(tweditions, "dev"),
+			"docs", "TiddlyWiki Documentation from https://tiddlywiki.com");
+		await runner(resolve(tweditions, "dev"),
 			"dev", "TiddlyWiki Developer Documentation from https://tiddlywiki.com/dev",
-			"dev-docs", "TiddlyWiki Developer Documentation from https://tiddlywiki.com/dev"]);
-		await runner([resolve(tweditions, "tour"),
+			"dev-docs", "TiddlyWiki Developer Documentation from https://tiddlywiki.com/dev");
+		await runner(resolve(tweditions, "tour"),
 			"tour", "TiddlyWiki Interactive Tour from https://tiddlywiki.com",
-			"tour", "TiddlyWiki Interactive Tour from https://tiddlywiki.com"]);
+			"tour", "TiddlyWiki Interactive Tour from https://tiddlywiki.com");
 
 		this.config.setupRequired = false;
 	}

@@ -163,7 +163,9 @@ var CONFIG_HOST_TIDDLER = "$:/config/multiwikiclient/host",
 	CONNECTION_STATE_TIDDLER = "$:/state/multiwikiclient/connection",
 	INCOMING_UPDATES_FILTER_TIDDLER = "$:/config/multiwikiclient/incoming-updates-filter",
 	ENABLE_SSE_TIDDLER = "$:/config/multiwikiclient/use-server-sent-events",
-	IS_DEV_MODE_TIDDLER = `$:/state/multiwikiclient/dev-mode`;
+	IS_DEV_MODE_TIDDLER = `$:/state/multiwikiclient/dev-mode`,
+	ENABLE_GZIP_STREAM_TIDDLER = `$:/state/multiwikiclient/gzip-stream`;
+
 
 var SERVER_NOT_CONNECTED = "NOT CONNECTED",
 	SERVER_CONNECTING_SSE = "CONNECTING SSE",
@@ -201,11 +203,11 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		this.recipe = this.wiki.getTiddlerText("$:/config/multiwikiclient/recipe");
 		this.useServerSentEvents = this.wiki.getTiddlerText(ENABLE_SSE_TIDDLER) === "yes";
 		this.isDevMode = this.wiki.getTiddlerText(IS_DEV_MODE_TIDDLER) === "yes";
+		this.useGzipStream = this.wiki.getTiddlerText(ENABLE_GZIP_STREAM_TIDDLER) === "yes";
 		this.last_known_revision_id = this.wiki.getTiddlerText("$:/state/multiwikiclient/recipe/last_revision_id", "0")
 		this.outstandingRequests = Object.create(null); // Hashmap by title of outstanding request object: {type: "PUT"|"GET"|"DELETE"}
 		this.lastRecordedUpdate = Object.create(null); // Hashmap by title of last recorded update via SSE: {type: "update"|"detetion", revision_id:}
 		this.logger = new $tw.utils.Logger("MultiWikiClientAdaptor");
-		this.useGzipStream = true;
 		this.isLoggedIn = false;
 		this.isReadOnly = false;
 		this.offline = false;

@@ -41,7 +41,6 @@ if(process.argv.length === 2) {
 
 }
 
-console.log("args", process.argv);
 // make the editions/mws directory if it doesn't exist
 mkdirSync("dev/wiki", { recursive: true })
 // change to the editions/mws directory for development

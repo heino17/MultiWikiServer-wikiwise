@@ -2,6 +2,14 @@ import * as path from "path";
 import * as fs from "fs";
 import type { Prisma } from "@prisma/client";
 import { ServerState } from "./ServerState";
+import { Types } from "@prisma/client/runtime/library";
+
+declare global {
+  /** helper function which returns the arguments as an array, but typed as a tuple, which is still an array, but positional. */
+  function tuple<P extends any[]>(...arg: P): P;
+}
+
+(global as any).tuple = function (...args: any[]) { return args; }
 
 
 declare global {
@@ -27,7 +35,8 @@ declare global {
 }
 
 declare global {
-  type PrismaTxnClient = Omit<ServerState["engine"], "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">
+  type PrismaTxnClient = Omit<ServerState["engine"], "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">;
+  type PrismaEngineClient = ServerState["engine"];
   type ART<T extends (...args: any) => any> = Awaited<ReturnType<T>>
   type Complete<T> = { [K in keyof T]-?: T[K] }
   interface ObjectConstructor { keys<T>(t: T): (string & keyof T)[]; }

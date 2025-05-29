@@ -1,6 +1,6 @@
 import type { CommandInfo } from "../utils/BaseCommand";
 import { BaseCommand } from "../utils/BaseCommand";
-import { TiddlerStore } from "../routes/TiddlerStore";
+import { TiddlerStore, TiddlerStore_PrismaStatic } from "../routes/TiddlerStore";
 
 export const info: CommandInfo = {
 	name: "save-tiddler-text",
@@ -23,10 +23,14 @@ export class Command extends BaseCommand {
 			tiddlerTitle = this.params[1] as PrismaField<"Tiddlers", "title">,
 			tiddlerText = this.params[2] as string;
 
-		await this.config.$transaction(async (prisma) => {
-			const store = TiddlerStore.fromConfig(this.config, prisma);
-			await store.saveBagTiddler({ title: tiddlerTitle, text: tiddlerText }, bagName);
-		});
+		const store = new TiddlerStore_PrismaStatic(this.config.engine);
+		await store.$transaction(
+			store.saveBagTiddlerFields_PrismaArray(
+				{ title: tiddlerTitle, text: tiddlerText },
+				bagName,
+				null
+			)
+		);
 
 	}
 }

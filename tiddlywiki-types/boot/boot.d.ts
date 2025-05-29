@@ -360,7 +360,7 @@ declare module "tiddlywiki" {
 
   // Tiddler fields interface
   interface TiddlerFields {
-    title?: string;
+    title: string;
     text?: string;
     type?: string;
     tags?: string | string[];

@@ -14,7 +14,8 @@ import { ServerState } from "../ServerState";
 import { PasswordService } from '../services/PasswordService';
 
 // This class abstracts the request/response cycle into a single object.
-// It hides most of the details from the routes, allowing us to easily change the underlying server implementation.
+// It hides most of the details from the routes, allowing us to easily 
+// change the underlying server implementation.
 export class StateObject<
   B extends BodyFormat = BodyFormat,
   M extends AllowedMethod = AllowedMethod,
