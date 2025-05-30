@@ -105,7 +105,6 @@ function loadWikiFolder({ $tw, store, cache, ...options }: {
 	});
 	recipeList.reverse();
 
-	const is_plugin = false as PrismaField<"Bags", "is_plugin">;
 
 	const plugins = pluginNamesTW5.map(e => ({
 		plugin: cache.filePlugins.get(path.join("tiddlywiki", e)),
@@ -118,7 +117,7 @@ function loadWikiFolder({ $tw, store, cache, ...options }: {
 
 	return [
 		// create the bag
-		store.upsertBag_PrismaPromise(options.bagName, options.bagDescription, is_plugin),
+		store.upsertBag_PrismaPromise(options.bagName, options.bagDescription),
 		// create the recipe and recipe_bags entries
 		...store.upsertRecipe_PrismaArray(
 			options.recipeName,

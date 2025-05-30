@@ -20,7 +20,7 @@ previous operation to complete before sending a new one.
 "use strict";
 
 import type { Syncer, Tiddler, ITiddlyWiki } from "tiddlywiki";
-import type { TiddlerRouter } from "@tiddlywiki/mws/src/routes/managers/router-tiddlers";
+import type { TiddlerRouter } from "@tiddlywiki/mws/src/routes/managers/wiki-routes";
 import type { ZodRoute } from "@tiddlywiki/mws/src/router";
 
 declare global {

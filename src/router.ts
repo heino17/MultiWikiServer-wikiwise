@@ -317,7 +317,7 @@ export class ZodState<
 export type RouterRouteMap<T> = {
   [K in keyof T as T[K] extends ZodAction<any, any> ? K : never]:
   T[K] extends {
-    zodRequest: (z: any) => infer REQ extends z.ZodTypeAny,
+    zodRequestBody: (z: any) => infer REQ extends z.ZodTypeAny,
     zodResponse?: (z: any) => infer RES extends z.ZodType<JsonValue>
   } ? ((data: z.input<REQ>) => Promise<jsonify<z.output<RES>>>) : never;
 }
@@ -474,7 +474,7 @@ export function zodManage<T extends z.ZodTypeAny, R extends JsonValue>(
     zodPathParams: z => ({}),
     zodQueryParams: z => ({}),
     bodyFormat: "json",
-    zodRequestBody: zodRequest as any,
+    zodRequestBody: zodRequest,
     inner: async (state) => {
       return state.$transaction(async (prisma) => await inner(state, prisma));
     }

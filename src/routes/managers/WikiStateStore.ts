@@ -35,7 +35,6 @@ export class WikiStateStore extends TiddlerStore_PrismaTransaction {
               select: {
                 bag_id: true,
                 bag_name: true,
-                is_plugin: true,
               }
             }
           },
@@ -227,7 +226,6 @@ $tw.preloadTiddler = function(fields) {
       select: {
         bag_id: true,
         bag_name: true,
-        is_plugin: true,
         description: true,
         owner_id: true,
         tiddlers: {

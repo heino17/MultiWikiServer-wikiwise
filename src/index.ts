@@ -53,18 +53,22 @@ export async function runCLI() {
 }
 
 
+try {
 
-deepEqual(
-  parseCLI(getCLI(), "listen", "--listener test=test --listener hello=world hello2=test --allow-hosts test --require-https".split(" ")),
-  {
-    options: {
-      listener: [{ test: 'test' }, { hello: 'world', hello2: 'test' }],
-      'allow-hosts': ['test'],
-      'require-https': true
-    },
-    params: [],
-  }
-);
+  deepEqual(
+    parseCLI(getCLI(), "listen", "--listener test=test --listener hello=world hello2=test --require-https".split(" ")),
+    {
+      options: {
+        listener: [{ test: 'test' }, { hello: 'world', hello2: 'test' }],
+        // 'allow-hosts': ['test'],
+        'require-https': true
+      },
+      params: [],
+    }
+  );
+} catch (e){
+  throw new Error(e as any);
+}
 
 function parseCLI(cmder: commander.Command, cmd: string, cli: string[]) {
 

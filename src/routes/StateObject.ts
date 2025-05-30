@@ -270,7 +270,7 @@ export class StateObject<
     const write = new DataChecks(this.config).getBagWhereACL({ permission: "WRITE", user_id, role_ids });
     const [bag, canRead, canWrite] = await prisma.$transaction([
       prisma.bags.findUnique({
-        select: { bag_id: true, is_plugin: true, owner_id: true },
+        select: { bag_id: true, owner_id: true },
         where: { bag_name }
       }),
       isAdmin ? prisma.$queryRaw`SELECT 1` : prisma.bags.findUnique({

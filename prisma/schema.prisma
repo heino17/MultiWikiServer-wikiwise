@@ -64,7 +64,6 @@ model Bags {
   bag_id      String        @id @default(uuid(7))
   bag_name    String        @unique
   description String
-  is_plugin   Boolean
   owner_id    String?
   recipe_bags Recipe_bags[]
   tiddlers    Tiddlers[]

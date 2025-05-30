@@ -22,7 +22,7 @@ switch(process.argv[2]) {
     await start("tsup --silent", [], { 
       SKIPDTS: "1" 
     });
-    await start("node mws.dev.mjs", process.argv.slice(3), {
+    await start("node --trace-uncaught mws.dev.mjs", process.argv.slice(3), {
       ENABLE_DEV_SERVER: "1"
     });
     break;

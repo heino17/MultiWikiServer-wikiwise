@@ -26,6 +26,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import GroupsIcon from '@mui/icons-material/Groups';
 import ExtensionIcon from '@mui/icons-material/Extension';
 import { sessionRequest } from '../../helpers';
+import { ClientPlugins } from '../Dashboard/ClientPlugins';
 
 
 function Message({ children }: PropsWithChildren<{}>) {
@@ -114,8 +115,8 @@ export function PageRoot() {
   const pages: [RegExp, (args: string[]) => ReactNode, string][] = [
     [/^\/$/, () => <Recipes />, "Recipes"],
     [/^\/admin\/recipes$/, () => <Recipes />, "Recipes"],
-    [/^\/admin\/bags$/, () => <Bags title='Bags' />, "Bags"],
-    [/^\/admin\/client-plugins$/, () => <Bags title="Plugins" />, "Plugins"],
+    [/^\/admin\/bags$/, () => <Bags />, "Bags"],
+    [/^\/admin\/client-plugins$/, () => <ClientPlugins />, "Plugins"],
     [/^\/admin\/users\/?$/, () => <UserManagement />, "User Management"],
     [/^\/admin\/users\/(.*)$/, ([, user_id]) => <ManageUser userID={user_id} />, "Manage User"],
     [/^\/admin\/roles$/, () => <UsersScreen />, "Roles"],
@@ -165,7 +166,7 @@ export function PageRoot() {
       menu={<>
         <FrameMenuLine onClick={handleRecipes} icon={<AssignmentIcon />} text1="Recipes" />
         <FrameMenuLine onClick={handleBags} icon={<LuggageRoundedIcon />} text1="Bags" />
-        <FrameMenuLine onClick={handlePlugins} icon={<ExtensionIcon />} text1="Client Plugins" />
+        <FrameMenuLine onClick={handlePlugins} icon={<ExtensionIcon />} text1="TW5 Plugins" />
         {userIsAdmin ? <>
           <Divider />
           <FrameMenuLine onClick={handleManageUsers} icon={<PersonIcon />} text1="Users" />

@@ -96,7 +96,6 @@ abstract class TiddlerStore_PrismaBase {
   upsertBag_PrismaPromise(
     bag_name: PrismaField<"Bags", "bag_name">,
     description: PrismaField<"Bags", "description">,
-    is_plugin: PrismaField<"Bags", "is_plugin">,
     { allowPrivilegedCharacters = false }: { allowPrivilegedCharacters?: boolean; } = {}
   ) {
 
@@ -105,8 +104,8 @@ abstract class TiddlerStore_PrismaBase {
 
     return this.prisma.bags.upsert({
       where: { bag_name },
-      update: { description, is_plugin },
-      create: { bag_name, description, is_plugin },
+      update: { description },
+      create: { bag_name, description },
       select: { bag_id: true }
     });
 
@@ -278,7 +277,6 @@ export class TiddlerStore_PrismaTransaction extends TiddlerStore_PrismaBase {
       title: tiddler.title,
       revision_id: tiddler.revision_id,
       is_deleted: tiddler.is_deleted,
-      is_plugin: false,
       bag_name: bag.bag_name,
       bag_id: bag.bag_id
     }])
@@ -308,7 +306,7 @@ export class TiddlerStore_PrismaTransaction extends TiddlerStore_PrismaBase {
           select: {
             bag: {
               select: {
-                bag_id: true, bag_name: true, is_plugin: true,
+                bag_id: true, bag_name: true,
                 ...title ? {
                   tiddlers: {
                     select: { revision_id: true },
@@ -329,11 +327,6 @@ export class TiddlerStore_PrismaTransaction extends TiddlerStore_PrismaBase {
     const bag = recipe.recipe_bags[0]?.bag;
 
     if (!bag) throw new UserError("Recipe has no bag at position 0");
-
-    if (bag.is_plugin)
-      throw new UserError("Saving to plugin bags is not currently supported. "
-        + "Please use a normal bag at the top of the recipe. "
-        + "This error occurs if a plugin bag is at the top of the recipe.\n");
 
     return bag;
   }
@@ -369,7 +362,6 @@ export class TiddlerStore_PrismaTransaction extends TiddlerStore_PrismaBase {
           select: {
             bag_id: true,
             bag_name: true,
-            is_plugin: true,
             tiddlers: {
               select: {
                 title: true,
@@ -391,7 +383,6 @@ export class TiddlerStore_PrismaTransaction extends TiddlerStore_PrismaBase {
     return bags.map(e => ({
       bag_id: e.bag.bag_id,
       bag_name: e.bag.bag_name,
-      is_plugin: e.bag.is_plugin,
       position: e.position,
       tiddlers: e.bag.tiddlers
     }));

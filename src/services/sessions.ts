@@ -67,7 +67,7 @@ export type RouterPathRouteMap<T> = {
   [K in keyof T as T[K] extends ZodSessionRoute<any, any, any> ? K : never]:
   T[K] extends {
     path: infer P,
-    zodRequest: (z: any) => infer REQ extends z.ZodTypeAny,
+    zodRequestBody: (z: any) => infer REQ extends z.ZodTypeAny,
     zodResponse?: (z: any) => infer RES extends z.ZodType<JsonValue>
   } ? {
     (data: z.input<REQ>): Promise<jsonify<z.output<RES>>>;

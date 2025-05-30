@@ -38,8 +38,8 @@ export class RecipeManager {
   }
 
   recipe_create = zodManage(z => z.object({
-    recipe_name: z.string(),
-    description: z.string(),
+    recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
+    description: z.prismaField("Recipes", "description", "string"),
     bag_names: z.array(z.object({ bag_name: z.string(), with_acl: z.boolean() })),
     plugin_names: z.string().array(),
     owner_id: z.prismaField("Recipes", "owner_id", "string", true).optional(),
@@ -50,8 +50,8 @@ export class RecipeManager {
     return await this.recipeCreateOrUpdate(state.data, prisma, state.user);
   });
   recipe_update = zodManage(z => z.object({
-    recipe_name: z.string(),
-    description: z.string(),
+    recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
+    description: z.prismaField("Recipes", "description", "string"),
     bag_names: z.array(z.object({ bag_name: z.string(), with_acl: z.boolean() })),
     plugin_names: z.string().array(),
     owner_id: z.prismaField("Recipes", "owner_id", "string", true).optional(),
@@ -63,8 +63,8 @@ export class RecipeManager {
   });
 
   recipe_upsert = zodManage(z => z.object({
-    recipe_name: z.string(),
-    description: z.string(),
+    recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
+    description: z.prismaField("Recipes", "description", "string"),
     bag_names: z.array(z.object({ bag_name: z.string(), with_acl: z.boolean() })),
     plugin_names: z.string().array(),
     owner_id: z.prismaField("Recipes", "owner_id", "string", true).optional(),
@@ -76,9 +76,8 @@ export class RecipeManager {
   });
 
   bag_create = zodManage(z => z.object({
-    bag_name: z.string(),
-    description: z.string(),
-    is_plugin: z.boolean(),
+    bag_name: z.prismaField("Bags", "bag_name", "string"),
+    description: z.prismaField("Bags", "description", "string"),
     owner_id: z.prismaField("Bags", "owner_id", "string", true).optional(),
     isCreate: z.literal(true).default(true),
   }), async (state, prisma) => {
@@ -86,9 +85,8 @@ export class RecipeManager {
   });
 
   bag_update = zodManage(z => z.object({
-    bag_name: z.string(),
-    description: z.string(),
-    is_plugin: z.boolean(),
+    bag_name: z.prismaField("Bags", "bag_name", "string"),
+    description: z.prismaField("Bags", "description", "string"),
     owner_id: z.prismaField("Bags", "owner_id", "string", true).optional(),
     isCreate: z.literal(false).default(false),
   }), async (state, prisma) => {
@@ -96,9 +94,8 @@ export class RecipeManager {
   });
 
   bag_upsert = zodManage(z => z.object({
-    bag_name: z.string(),
-    description: z.string(),
-    is_plugin: z.boolean(),
+    bag_name: z.prismaField("Bags", "bag_name", "string"),
+    description: z.prismaField("Bags", "description", "string"),
     owner_id: z.prismaField("Bags", "owner_id", "string", true).optional(),
     isCreate: z.boolean(),
   }), async (state, prisma) => {
@@ -106,8 +103,8 @@ export class RecipeManager {
   });
 
   async recipeCreateOrUpdate({ bag_names, description, owner_id, recipe_name, isCreate, plugin_names, skip_core, skip_required_plugins }: {
-    recipe_name: string,
-    description: string,
+    recipe_name: PrismaField<"Recipes", "recipe_name">,
+    description: PrismaField<"Recipes", "description">,
     bag_names: { bag_name: string, with_acl: boolean }[],
     owner_id?: PrismaField<"Recipes", "owner_id"> | null,
     plugin_names: PrismaJson.Recipes_plugin_names,
@@ -179,10 +176,9 @@ export class RecipeManager {
     }
   }
 
-  async bagCreateOrUpdate({ bag_name, description, is_plugin, owner_id, isCreate }: {
-    bag_name: string,
-    description: string,
-    is_plugin: boolean,
+  async bagCreateOrUpdate({ bag_name, description, owner_id, isCreate }: {
+    bag_name: PrismaField<"Bags", "bag_name">,
+    description: PrismaField<"Bags", "description">,
     owner_id?: PrismaField<"Bags", "owner_id"> | null,
     isCreate: boolean,
   }, prisma: PrismaTxnClient, user: AuthUser) {
@@ -199,13 +195,11 @@ export class RecipeManager {
       where: { bag_name },
       update: {
         description,
-        is_plugin,
         owner_id: isAdmin ? owner_id : undefined //undefined leaves the value as-is
       },
       create: {
         bag_name,
         description,
-        is_plugin,
         owner_id: isAdmin ? owner_id : user_id
       },
     });

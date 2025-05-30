@@ -20,7 +20,6 @@ export const useBagEditForm = createDialogForm({
       description: new forms.FormControl(value?.description ?? "", {
         nonNullable: true, validators: [forms.Validators.required]
       }),
-      is_plugin: new forms.FormControl<boolean>(value?.is_plugin ?? false),
       owner_id: new forms.FormControl<string | null>(value?.owner_id ?? null),
     });
     if (value) form.controls.bag_name.disable();
@@ -42,14 +41,6 @@ export const useBagEditForm = createDialogForm({
         value={bagForm.controls.description.value}
         onChange={onChange(bagForm.controls.description)}
         disabled={bagForm.controls.description.disabled}
-      />
-      <FormControlLabel
-        label="Plugin Bag: This bag should be rendered as a plugin."
-        control={<Checkbox
-          checked={bagForm.controls.is_plugin.value ?? false}
-          onChange={onChecked(bagForm.controls.is_plugin)}
-          disabled={bagForm.controls.is_plugin.disabled}
-        />}
       />
       <OwnerSelection
         type="bag"
@@ -76,7 +67,6 @@ export const useBagEditForm = createDialogForm({
             bag_name,
             description: formData.description,
             owner_id: isAdmin ? formData.owner_id : undefined,
-            is_plugin: formData.is_plugin ?? false,
             isCreate,
           });
 

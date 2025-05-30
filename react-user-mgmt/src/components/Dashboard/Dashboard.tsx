@@ -176,23 +176,8 @@ export function Recipes() {
   </CardContent >
 }
 
-export function Bags({ title }: {
-  // filteredBags: IndexJson["bagList"][number][];
-  // hasBagAclAccess?: (bag: IndexJson["bagList"][number]) => boolean;
-  // bagSet: (value: IndexJson["bagList"][number] | null) => void;
-  // aclSet: (value: EntityACL) => void;
-  // getOwner: (owner_id: number | null) => string;
-  title: "Bags" | "Plugins";
-  // favicon: boolean;
-}) {
+export function Bags() {
   const [{ hasBagAclAccess, ...indexJson }] = useIndexJson();
-
-  const filteredBags = useMemo(() => {
-    switch (title) {
-      case "Bags": return indexJson.bagList.filter(bag => !bag.is_plugin);
-      case "Plugins": return indexJson.bagList.filter(bag => bag.is_plugin);
-    }
-  }, [title, indexJson.bagList]);
 
   const getOwner = useCallback((owner_id: string | null): string => {
     if (owner_id === null) return "System";
@@ -207,13 +192,12 @@ export function Bags({ title }: {
     <Stack direction="column" spacing={2}>
       <Card variant='outlined'>
         <CardContent>
-          <h1>{title}</h1>
-          {title === "Plugins" && <span>This plugin system will be replaced by a completely different one in v0.1</span>}
+          <h1>Bags</h1>
           <List>
-            {filteredBags.map(bag => (
+            {indexJson.bagList.map(bag => (
               <ListItemButton key={bag.bag_name} disableRipple>
                 <ListItemAvatar>
-                  <Avatar src={title === "Bags" ? `bags/${encodeURIComponent(bag.bag_name)}/tiddlers/%24%3A%2Ffavicon.ico` : undefined}>
+                  <Avatar src={`bags/${encodeURIComponent(bag.bag_name)}/tiddlers/%24%3A%2Ffavicon.ico`}>
                     <MissingFavicon />
                   </Avatar>
                 </ListItemAvatar>

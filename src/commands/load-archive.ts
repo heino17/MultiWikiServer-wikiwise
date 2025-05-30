@@ -259,7 +259,6 @@ class Archiver2 {
 				bag_name: bagInfo.bag_name,
 				description: bagInfo.description,
 				owner_id: this.user_key(bagInfo.owner_id),
-				is_plugin: bagInfo.is_plugin,
 				acl: {
 					createMany: {
 						data: bagInfo.acl.map(e => ({

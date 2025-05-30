@@ -37,10 +37,10 @@ if(process.argv.length === 2) {
     return ["--listener", ...Object.entries(e).map(([k, v]) => `${k}=${v}`)]
   });
 
+  console.log(args);
   process.argv = [process.argv[0], process.argv[1], "listen", ...args];
 
 }
-
 // make the editions/mws directory if it doesn't exist
 mkdirSync("dev/wiki", { recursive: true })
 // change to the editions/mws directory for development
