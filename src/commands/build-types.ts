@@ -1,7 +1,7 @@
 import type { CommandInfo } from "../utils/BaseCommand";
 
-import { UserKeyMap, UserManager } from "../routes/managers/manager-users";
-import { RecipeKeyMap, RecipeManager } from "../routes/managers/manager-recipes";
+import { UserKeyMap, UserManager } from "../routes/managers/admin-users";
+import { RecipeKeyMap, RecipeManager } from "../routes/managers/admin-recipes";
 import { BaseCommand, is, Z2 } from "../utils";
 import { StatusKeyMap, StatusManager } from "../routes/managers";
 

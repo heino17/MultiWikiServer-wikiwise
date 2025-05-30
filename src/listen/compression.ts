@@ -21,17 +21,15 @@ import zlib, { BrotliOptions, ZlibOptions } from 'zlib';
  * @const
  * whether current node version has brotli support
  */
-var hasBrotliSupport = 'createBrotliCompress' in zlib
+const hasBrotliSupport = 'createBrotliCompress' in zlib
 
 /**
  * Module variables.
  * @private
  */
-var cacheControlNoTransformRegExp = /(?:^|,)\s*?no-transform\s*?(?:,|$)/
-var SUPPORTED_ENCODING = hasBrotliSupport ? ['br', 'gzip', 'deflate', 'identity'] : ['gzip', 'deflate', 'identity']
-var PREFERRED_ENCODING = hasBrotliSupport ? ['br', 'gzip'] : ['gzip']
-
-var encodingSupported = ['gzip', 'deflate', 'identity', 'br']
+const cacheControlNoTransformRegExp = /(?:^|,)\s*?no-transform\s*?(?:,|$)/
+const SUPPORTED_ENCODING = hasBrotliSupport ? ['br', 'gzip', 'deflate', 'identity'] : ['gzip', 'deflate', 'identity']
+const PREFERRED_ENCODING = hasBrotliSupport ? ['br', 'gzip'] : ['gzip']
 
 
 export interface CompressorOptions {
@@ -41,23 +39,18 @@ export interface CompressorOptions {
   gzip?: ZlibOptions;
   /** Opts passed to deflate */
   deflate?: ZlibOptions;
-  /** 
-   * Filter function to determine whether the request should be compressed.  
-   * 
-   * Defaults to `compressor.shouldCompress()`, which checks the mime type.
-   * 
-   * You can also call it from the filter function itself. 
-   */
-  filter?: (this: Compressor) => boolean;
+  /** options to pass to the Passthrough stream used for identity encoding. */
+  identity?: DuplexOptions;
   /** 
    * source threshold below which to skip compression. 
    * only works if content-length header is set. 
+   * 
+   * If a string, may be any number with a byte suffix (kb, mb, etc).
    */
-  threshold?: number;
-  /** use a specific encoding as default, defaults to identity */
-  enforceEncoding?: string;
-  /** options to pass to the Passthrough stream used for identity encoding. */
-  identity?: DuplexOptions;
+  threshold?: number | string;
+  /** use a specific encoding if the accept-encoding header is not present, defaults to identity */
+  defaultEncoding?: string;
+
 }
 
 export class Compressor {
@@ -65,7 +58,7 @@ export class Compressor {
   constructor(
     private req: import("http").IncomingMessage | import("http2").Http2ServerRequest,
     private res: import("http").ServerResponse | import("http2").Http2ServerResponse,
-    { identity, brotli, filter, threshold, enforceEncoding, deflate, gzip }: CompressorOptions,
+    { identity, brotli, threshold, defaultEncoding, deflate, gzip }: CompressorOptions,
   ) {
     var optsBrotli: any = {}
 
@@ -80,9 +73,8 @@ export class Compressor {
     }
 
     // options
-    this.filter = filter ?? (() => this.shouldCompress());
     this.threshold = bytes.parse(threshold)
-    this.enforceEncoding = enforceEncoding || 'identity'
+    this.defaultEncoding = defaultEncoding || 'identity'
 
     if (this.threshold == null) { this.threshold = 1; }
 
@@ -102,9 +94,8 @@ export class Compressor {
   /** Ends the response. Shortcut for easy removal when switching streams. */
   finisher;
   method: string = "";
-  filter;
   threshold;
-  enforceEncoding;
+  defaultEncoding;
   ended = false;
   createStream;
   length: number = 0;
@@ -163,19 +154,20 @@ export class Compressor {
   getEncodingMethod(): string {
     const { req, res } = this;
 
-
-
     if (res.getHeader("content-type") === "application/gzip"
       && res.getHeader("content-encoding") === "identity"
       && res.getHeader("x-gzip-stream") === "yes"
     ) return "gzip-stream";
 
     const encoding = res.getHeader('Content-Encoding');
-    if (encoding) return ""; //the content is already encoded
+    if (encoding) {
+      debug('encoding already set');
+      return "";
+    }
 
     // determine if request is filtered
-    if (!this.filter()) {
-      debug('filtered')
+    if (!this.shouldCompress()) {
+      debug('should not compress');
       return "";
     }
 
@@ -186,8 +178,6 @@ export class Compressor {
       debug('no transform')
       return "";
     }
-
-
 
     // content-length below threshold
     if (res.getHeader('Content-Length') && Number(res.getHeader('Content-Length')) < this.threshold) {
@@ -201,18 +191,19 @@ export class Compressor {
       return "";
     }
 
-    // compression method
+    // if no accept-encoding header is found, use the default encoding
+    if (!req.headers['accept-encoding'] && SUPPORTED_ENCODING.includes(this.defaultEncoding)) {
+      debug("no accept-encoding header, using default encoding %s", this.defaultEncoding)
+      return this.defaultEncoding
+    }
+
+    // determine the compression method to use for this request
     var negotiator = new Negotiator(req)
     var method = negotiator.encoding(SUPPORTED_ENCODING, PREFERRED_ENCODING)
 
-    // if no method is found, use the default encoding
-    if (!req.headers['accept-encoding'] && encodingSupported.indexOf(this.enforceEncoding) !== -1) {
-      method = this.enforceEncoding
-    }
-
-    // negotiation failed
+    // negotiation failed, just pretend we never checked.
     if (!method) {
-      debug('not acceptable')
+      debug('accept-encoding header not acceptable')
       return "";
     }
 

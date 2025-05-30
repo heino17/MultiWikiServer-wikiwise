@@ -1,12 +1,12 @@
 
 import { DataChecks } from "../../utils";
-import { RecipeManager } from "../managers/manager-recipes";
-import { UserManager } from "../managers/manager-users";
+import { RecipeManager } from "./admin-recipes";
+import { UserManager } from "./admin-users";
 import { registerZodRoutes, RouterKeyMap, RouterRouteMap, zodManage } from "../../router";
 import { SiteConfig } from "../../ServerState";
 
-export { UserManager, UserManagerMap } from "./manager-users";
-export { RecipeManager, RecipeManagerMap } from "./manager-recipes";
+export { UserManager, UserManagerMap } from "./admin-users";
+export { RecipeManager, RecipeManagerMap } from "./admin-recipes";
 
 export const ManagerRoutes = (root: rootRoute, config: SiteConfig) => {
   StatusManager.defineRoutes(root, config);

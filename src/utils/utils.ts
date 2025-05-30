@@ -14,13 +14,15 @@ Options include:
 - `cbPartStart(headers,name,filename)` - invoked when a file starts being received
 - `cbPartChunk(chunk)` - invoked when a chunk of a file is received
 - `cbPartEnd()` - invoked when a file finishes being received
-- `cbFinished(err)` - invoked when the all the form data has been processed
+- `cbFinished(err)` - invoked when the all the form data has been processed, optional, 
+                      as it is called immediately before resolving or rejecting the promise.
+                      The promise will reject with err if there is an error. 
 */
 export function readMultipartData(this: StateObject<any, any>, options: {
   cbPartStart: (headers: IncomingHttpHeaders, name: string | null, filename: string | null) => void,
   cbPartChunk: (chunk: Buffer) => void,
   cbPartEnd: () => void,
-  cbFinished: (err: Error | string | null) => void
+  cbFinished?: (err: Error | string | null) => void
 }) {
   return new Promise<void>((resolve, reject) => {
     // Check that the Content-Type is multipart/form-data
@@ -116,9 +118,9 @@ export function readMultipartData(this: StateObject<any, any>, options: {
       resolve();
     });
   }).then(() => {
-    options.cbFinished(null);
+    options.cbFinished?.(null);
   }, (err) => {
-    options.cbFinished(err);
+    options.cbFinished?.(err);
     throw err;
   });
 

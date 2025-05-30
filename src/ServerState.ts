@@ -116,8 +116,8 @@ export class ServerState {
 
   contentTypeInfo: Record<string, ContentTypeInfo>;
 
-  getContentType(type: string): ContentTypeInfo {
-    return this.contentTypeInfo[type] || this.contentTypeInfo[DEFAULT_CONTENT_TYPE]!;
+  getContentType(type?: string): ContentTypeInfo {
+    return type && this.contentTypeInfo[type] || this.contentTypeInfo[DEFAULT_CONTENT_TYPE]!;
   }
 
   adapter!: SqliteAdapter;

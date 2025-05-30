@@ -1,6 +1,5 @@
 import type { CommandInfo } from "../utils/BaseCommand";
 import { BaseCommand } from "../utils/BaseCommand";
-import { TiddlerStore } from "../routes/TiddlerStore";
 import { resolve } from "path";
 import * as _fsp from "fs/promises";
 import { createStrictAwaitProxy } from "../utils";
@@ -16,27 +15,27 @@ export const info: CommandInfo = {
 export class Command extends BaseCommand {
 
 	get archivePath() { return this.params[0] as string; }
-	store?: TiddlerStore;
+	prisma?: PrismaTxnClient;
 
 	async execute() {
 		// Check parameters
 		if (this.params.length < 1) throw "Missing pathname";
 		await this.config.$transaction(async (prisma) => {
-			this.store = TiddlerStore.fromConfig(this.config, prisma);
+			this.prisma = prisma;
 			await this.saveArchive();
-			this.store = undefined;
+			this.prisma = undefined;
 		});
 		console.log(info.name, "complete:", this.params[0])
 		return null;
 	}
 
 	async getRecipes() {
-		return await this.store!.prisma.recipes.findMany({
+		return await this.prisma!.recipes.findMany({
 			include: { recipe_bags: true, acl: true },
 		});
 	}
 	async getBags() {
-		const bags = await this.store!.prisma.bags.findMany({
+		const bags = await this.prisma!.bags.findMany({
 			include: { tiddlers: { include: { fields: true } }, acl: true }
 		});
 		return bags.map(e => ({
@@ -48,17 +47,17 @@ export class Command extends BaseCommand {
 		}));
 	}
 	async getUsers() {
-		return await this.store!.prisma.users.findMany({ include: { roles: true, sessions: true, groups: true } });
+		return await this.prisma!.users.findMany({ include: { roles: true, sessions: true, groups: true } });
 	}
 	async getGroups() {
-		return await this.store!.prisma.groups.findMany({ include: { roles: true } });
+		return await this.prisma!.groups.findMany({ include: { roles: true } });
 	}
 	async getRoles() {
-		return await this.store!.prisma.roles.findMany({});
+		return await this.prisma!.roles.findMany({});
 	}
 
 	async saveArchive() {
-		if (!this.store) throw new Error("Store not initialized");
+		if (!this.prisma) throw new Error("prisma not initialized");
 		await fsp.mkdir(resolve(this.archivePath, "recipes"), { recursive: true });
 		const recipes = await this.getRecipes();
 		for (const recipeInfo of recipes) {
@@ -90,6 +89,8 @@ export class Command extends BaseCommand {
 		}, null, "\t"));
 		// Version 1: 
 		//   is_plugin did not exist. A bag_name starting with $:/ was a plugin.
+		// Version 2:
+		//   is_plugin did exist and made all kinds of bad setups possible.
 	}
 
 }

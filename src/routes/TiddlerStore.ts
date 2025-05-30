@@ -5,34 +5,11 @@ import { UserError } from "../utils";
 import { SiteConfig } from "../ServerState";
 import { Prisma, PrismaClient, PrismaPromise } from "@prisma/client";
 import * as runtime from "@prisma/client/runtime/library";
-
-/*
-
-### NOTES from attachments file
-
-Class to handle the attachments in the filing system
-
-The store folder looks like this:
-
-store/
-  inbox/ - files that are in the process of being uploaded via a multipart form upload
-    202402282125432742/
-      0
-      1
-      ...
-    ...
-  files/ - files that are the text content of large tiddlers
-    b7def178-79c4-4d88-b7a4-39763014a58b/
-      data.jpg - the extension is provided for convenience when directly inspecting the file system
-      meta.json - contains:
-        {
-          "filename": "data.jpg",
-          "type": "video/mp4",
-          "uploaded": "2024021821224823"
-        }
-  database.sql - The database file (managed by Prisma)
-
-*/
+import { IncomingHttpHeaders } from "http";
+import { resolve } from "path";
+import { Writable } from "stream";
+import { Hash } from "crypto";
+import { readFile } from "fs/promises";
 
 abstract class TiddlerStore_PrismaBase {
 
@@ -215,8 +192,16 @@ abstract class TiddlerStore_PrismaBase {
       })
     );
   }
-}
 
+
+
+}
+/** 
+ * The functions in this class return one or more Prisma actions which can be performed in a batch. 
+ *
+ * Use the `$transaction` method to execute the batch and return the result as an array.  
+ * 
+ */
 export class TiddlerStore_PrismaStatic extends TiddlerStore_PrismaBase {
   constructor(public prisma: PrismaEngineClient) {
     super();
@@ -231,17 +216,84 @@ export class TiddlerStore_PrismaStatic extends TiddlerStore_PrismaBase {
 
 }
 
-export class TiddlerStore_Primitives extends TiddlerStore_PrismaBase {
+export class TiddlerStore_PrismaTransaction extends TiddlerStore_PrismaBase {
   constructor(public prisma: PrismaTxnClient) {
     super();
   }
-  /** 
-   * Get the writable bag for the specified recipe.
-   * 
-   * If title is specified, the tiddler will be included in bag.tiddlers, if it exists. 
-   * 
-   * The bag will still be returned even if the tiddler does not exist. 
-   */
+
+  /**
+    Returns {revision_id:,bag_name:} or null if the recipe is empty
+    */
+  async saveRecipeTiddlerFields(
+    tiddlerFields: TiddlerFields,
+    recipe_name: PrismaField<"Recipes", "recipe_name">,
+    attachment_hash: PrismaField<"Tiddlers", "attachment_hash">
+  ) {
+    const bag = await this.getRecipeWritableBag(recipe_name);
+    const { revision_id } = await this.saveBagTiddlerFields(
+      tiddlerFields, bag.bag_name, attachment_hash
+    );
+    return { revision_id, bag_name: bag.bag_name };
+  }
+
+  async saveBagTiddlerFields(
+    tiddlerFields: TiddlerFields,
+    bag_name: PrismaField<"Bags", "bag_name">,
+    attachment_hash: PrismaField<"Tiddlers", "attachment_hash">
+  ) {
+    const [deletion, creation] = this.saveBagTiddlerFields_PrismaArray(
+      tiddlerFields, bag_name, attachment_hash
+    );
+    return await deletion, await creation;
+  }
+
+  /*
+  Returns {revision_id:,bag_name:}
+  */
+  async deleteRecipeTiddler(
+    recipe_name: PrismaField<"Recipes", "recipe_name">,
+    title: PrismaField<"Tiddlers", "title">
+  ) {
+
+    const bag = await this.getRecipeWritableBag(recipe_name, title);
+
+    if (!bag.tiddlers.length) throw new UserError("The writable bag does not contain this tiddler.");
+
+    const [deletion, creation] = this.deleteBagTiddler_PrismaArray(title, bag.bag_name);
+
+    const { revision_id } = (await deletion, await creation);
+
+    return { revision_id, bag_name: bag.bag_name };
+  }
+
+
+  async getRecipeTiddlers(recipe_name: PrismaField<"Recipes", "recipe_name">) {
+    // Get the recipe name from the parameters
+    const bagTiddlers = await this.getRecipeTiddlersByBag(recipe_name);
+
+    // reverse order for Map, so 0 comes after 1 and overlays it
+    bagTiddlers.sort((a, b) => b.position - a.position);
+
+    return Array.from(new Map(bagTiddlers.flatMap(bag => bag.tiddlers.map(tiddler => [tiddler.title, {
+      title: tiddler.title,
+      revision_id: tiddler.revision_id,
+      is_deleted: tiddler.is_deleted,
+      is_plugin: false,
+      bag_name: bag.bag_name,
+      bag_id: bag.bag_id
+    }])
+    )).values());
+
+  }
+
+
+  /**
+  * Get the writable bag for the specified recipe.
+  *
+  * If title is specified, the tiddler will be included in bag.tiddlers, if it exists.
+  *
+  * The bag will still be returned even if the tiddler does not exist.
+  */
   async getRecipeWritableBag(
     recipe_name: PrismaField<"Recipes", "recipe_name">,
     title?: PrismaField<"Tiddlers", "title">
@@ -301,8 +353,8 @@ export class TiddlerStore_Primitives extends TiddlerStore_PrismaBase {
   async getRecipeTiddlersByBag(
     recipe_name: PrismaField<"Recipes", "recipe_name">,
     options: {
-      last_known_revision_id?: PrismaField<"Tiddlers", "revision_id">,
-      include_deleted?: boolean,
+      last_known_revision_id?: PrismaField<"Tiddlers", "revision_id">;
+      include_deleted?: boolean;
     } = {}
   ) {
     // In prisma it's easy to get the top bag for a specific title. 
@@ -345,251 +397,5 @@ export class TiddlerStore_Primitives extends TiddlerStore_PrismaBase {
     }));
 
   }
-
-  
-  getTiddlerFields(
-    title: PrismaField<"Tiddlers", "title">,
-    fields: { field_name: string, field_value: string }[]
-  ) {
-    return Object.fromEntries([
-      ...fields.map(e => [e.field_name, e.field_value] as const),
-      ["title", title]
-    ]) as TiddlerFields;
-  }
-}
-
-export class TiddlerStore extends TiddlerStore_Primitives {
-  static fromConfig(config: SiteConfig, prisma: PrismaTxnClient) {
-    return new TiddlerStore(
-      config.fieldModules,
-      new AttachmentService(config, prisma),
-      config.storePath,
-      config.contentTypeInfo,
-      prisma
-    );
-  }
-
-  constructor(
-    public fieldModules: Record<string, TiddlerFieldModule>,
-    private attachService: AttachmentService,
-    public storePath: string,
-    public contentTypeInfo: Record<string, any>,
-    public prisma: PrismaTxnClient
-  ) {
-    super(prisma);
-  }
-
-  /*
-  Returns {revision_id:}
-  */
-  async saveBagTiddler(
-    incomingTiddlerFields: TiddlerFields,
-    bag_name: PrismaField<"Bags", "bag_name">
-  ) {
-    const { title } = incomingTiddlerFields;
-
-    const existing_attachment_hash = await this.prisma.tiddlers.findFirst({
-      where: { title, bag: { bag_name } },
-      select: { attachment_hash: true }
-    }).then(e => e?.attachment_hash ?? null);
-
-    const { tiddlerFields, attachment_hash } = await this.attachService.processIncomingTiddler({
-      tiddlerFields: incomingTiddlerFields,
-      existing_attachment_hash,
-      existing_canonical_uri: existing_attachment_hash && this.attachService.makeCanonicalUri(bag_name, incomingTiddlerFields.title)
-    });
-
-    return this.saveBagTiddlerFields(tiddlerFields, bag_name, attachment_hash);
-
-  }
-  /*
-  Create a tiddler in a bag adopting the specified file as the attachment. The attachment file must be on the same disk as the attachment store
-  Options include:
-  
-  filepath - filepath to the attachment file
-  hash - string hash of the attachment file
-  type - content type of file as uploaded
-  
-  Returns {revision_id:}
-  */
-  async saveBagTiddlerWithAttachment(
-    incomingTiddlerFields: TiddlerFields,
-    bag_name: PrismaField<"Bags", "bag_name">,
-    options: {
-      filepath: string;
-      hash: string;
-      type: string;
-      _canonical_uri: string;
-    }
-  ) {
-    const attachment_hash = await this.attachService.adoptAttachment({
-      // options.filepath, options.type, options.hash, options._canonical_uri
-      incomingFilepath: options.filepath,
-      type: options.type,
-      hash: options.hash,
-      _canonical_uri: options._canonical_uri
-    });
-    if (attachment_hash) {
-      return this.saveBagTiddlerFields(incomingTiddlerFields, bag_name, attachment_hash);
-    } else {
-      return null;
-    }
-  }
-
-  /*
-  returns {revision_id:,tiddler:}
-  */
-  async getBagTiddler(options: {
-    title: PrismaField<"Tiddlers", "title">;
-    bag_name?: PrismaField<"Bags", "bag_name">;
-    bag_id?: PrismaField<"Bags", "bag_id">;
-  }) {
-    const { title, bag_name, bag_id } = options;
-    ok(bag_name || bag_id, "bag_name or bag_id must be provided");
-
-    const tiddler = await this.prisma.tiddlers.findFirst({
-      where: bag_name
-        ? { title, bag: { bag_name }, is_deleted: false }
-        : { title, bag_id, is_deleted: false },
-      select: { revision_id: true }
-    });
-    if (!tiddler) return null;
-
-    var tiddlerInfo = await this.getTiddlerInfo(tiddler.revision_id);
-    if (!tiddlerInfo) return null;
-
-    return {
-      ...tiddlerInfo,
-      tiddler: this.attachService.processOutgoingTiddler(tiddlerInfo)
-    };
-
-  }
-
-  private async getRecipeTiddler(
-    title: PrismaField<"Tiddlers", "title">,
-    recipe_name: PrismaField<"Recipes", "recipe_name">
-  ) {
-
-    const recipe_bag = await this.getRecipeBagWithTiddler({ recipe_name, title });
-
-    if (!recipe_bag) return null;
-
-    return await this.getBagTiddler({ title, bag_id: recipe_bag.bag_id });
-
-  }
-
-
-  async getTiddlerInfo(
-    revision_id: PrismaField<"Tiddlers", "revision_id">
-  ) {
-
-    const tiddler = await this.prisma.tiddlers.findUnique({
-      where: { revision_id, is_deleted: false },
-      include: { fields: true, bag: true }
-    });
-
-    if (!tiddler) return null;
-
-    if (tiddler.bag.is_plugin && tiddler.title as string !== tiddler.bag.bag_name as string)
-      throw new UserError("Can only get tiddler info for a plugin bag itself");
-
-    return {
-      bag_name: tiddler.bag.bag_name,
-      is_plugin_bag: tiddler.bag.is_plugin,
-      revision_id: tiddler.revision_id,
-      attachment_hash: tiddler.attachment_hash,
-      tiddler: Object.fromEntries([
-        ...tiddler.fields.map(e => [e.field_name, e.field_value] as const),
-        ["title", tiddler.title]
-      ]) as TiddlerFields
-    };
-  }
-  /*
-  Get an attachment ready to stream. Returns null if there is an error or:
-  revision_id: revision of tiddler
-  stream: stream of file
-  type: type of file
-  Returns {revision_id:,bag_name:}
-  */
-  async getBagTiddlerStream(
-    title: PrismaField<"Tiddlers", "title">,
-    bag_name: PrismaField<"Bags", "bag_name">
-  ) {
-    const tiddlerInfo = await this.getBagTiddler({ title, bag_name });
-    if (!tiddlerInfo) return null;
-
-    if (tiddlerInfo.attachment_hash) {
-      return {
-        ...await this.attachService.getAttachmentStream(tiddlerInfo.attachment_hash) ?? {},
-        revision_id: tiddlerInfo.revision_id,
-        bag_name: bag_name
-      };
-    } else {
-      const { Readable } = require('stream');
-      const stream = new Readable();
-      stream._read = () => {
-        // Push data
-        const type = tiddlerInfo.tiddler.type || "text/plain";
-        stream.push(tiddlerInfo.tiddler.text || "", (this.contentTypeInfo[type] || { encoding: "utf8" }).encoding);
-        // Push null to indicate the end of the stream
-        stream.push(null);
-      };
-      return {
-        revision_id: tiddlerInfo.revision_id,
-        bag_name: bag_name,
-        stream: stream,
-        type: tiddlerInfo.tiddler.type || "text/plain"
-      };
-    }
-
-  }
-
-  /**
-    Returns {revision_id:,bag_name:} or null if the recipe is empty
-    */
-  async saveRecipeTiddlerFields(
-    tiddlerFields: TiddlerFields,
-    recipe_name: PrismaField<"Recipes", "recipe_name">,
-    attachment_hash: PrismaField<"Tiddlers", "attachment_hash">
-  ) {
-    const bag = await this.getRecipeWritableBag(recipe_name);
-
-    // Save the tiddler to the specified bag
-    var { revision_id } = await this.saveBagTiddlerFields(
-      tiddlerFields, bag.bag_name, attachment_hash
-    );
-
-    return { revision_id, bag_name: bag.bag_name };
-  }
-
-
-  private async saveBagTiddlerFields(
-    tiddlerFields: TiddlerFields,
-    bag_name: PrismaField<"Bags", "bag_name">,
-    attachment_hash: PrismaField<"Tiddlers", "attachment_hash">
-  ) {
-    const [deletion, creation] = this.saveBagTiddlerFields_PrismaArray(tiddlerFields, bag_name, attachment_hash);
-    await deletion;
-    return await creation;
-  }
-
-  /*
-  Returns {revision_id:,bag_name:}
-  */
-  async deleteRecipeTiddler(
-    recipe_name: PrismaField<"Recipes", "recipe_name">,
-    title: PrismaField<"Tiddlers", "title">
-  ) {
-
-    const bag = await this.getRecipeWritableBag(recipe_name, title);
-
-    if (!bag.tiddlers.length) throw new UserError("Cannot delete tiddler from non-top bag");
-
-    const [deletion, creation] = this.deleteBagTiddler_PrismaArray(title, bag.bag_name);
-    await deletion;
-    const { revision_id } = await creation;
-    return { revision_id, bag_name: bag.bag_name };
-  }
-
 
 }

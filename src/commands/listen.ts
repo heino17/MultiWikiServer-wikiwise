@@ -11,12 +11,17 @@ export const info: CommandInfo = {
   description: "Listen for web requests. ",
   arguments: [],
   options: [
-    ["allow-hosts <host...>", "Allowed host headers. This does not change CORS behavior. At least 1 is required."],
-    ["subdomains", "Change root paths to subdomains, (so domain.com/wiki/ becomes wiki.domain.com). "
-      + "Listener prefix is ignored. "
-    ],
-    // ["no-subdomains", "Do not change root paths to subdomains. This is the default."],
-    // ["root-path-map [root=map]", "Change root paths: \n/$cache, /$api, /wiki, /admin "],
+    // ["allow-hosts <host...>", "Allowed host headers. This does not change CORS behavior. "],
+    // some notes about subdomains (not implemented yet)
+    // - the dollar sign of $cache and $api is removed.
+    // - domain name may have any number of levels
+    // - attempting to host multiple domains will be confusing to users
+    // - individual wikis cannot be set to subdomains, although there is a security use case for this.
+    // - separate session cookies will be set for admin and wiki subdomains
+    // - the login subdomain may become an oauth provider for the others
+    // ["subdomains", "Change root paths to subdomains, (so domain.com/wiki/ becomes wiki.domain.com). "
+    //   + "Listener prefix is ignored. Use allow-hosts to set valid hostnames (domain.com)"
+    // ],
     ["require-https", "The server will do everything it can to redirect HTTP to HTTPS. "
       + "Setting this without an HTTPS endpoint to redirect to can make the site unreachable. "
       + "The login form will refuse to login from http URLs and will attempt to redirect if possible. "
@@ -93,7 +98,7 @@ export class Command extends BaseCommand<[], {
       prefix: z.string().optional(),
       key: z.string().optional(),
       cert: z.string().optional(),
-      secure: z.enum(["true", "false"]).optional()
+      secure: z.enum(["true", "false", "yes", "no"]).optional()
     }).strict().array().safeParse(this.options.listener);
 
     if (!listenerCheck.success) {

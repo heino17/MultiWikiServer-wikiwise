@@ -13,7 +13,7 @@ Command to create and load a bag for the specified core editions
 import { resolve } from "path";
 import { BaseCommand } from "../utils/BaseCommand";
 import type { CommandInfo } from "../utils/BaseCommand";
-import { TiddlerStore, TiddlerStore_PrismaStatic } from "../routes/TiddlerStore";
+import { TiddlerStore_PrismaStatic } from "../routes/TiddlerStore";
 import * as path from "path";
 import * as fs from "fs";
 import { TW, TiddlerFields } from "tiddlywiki";

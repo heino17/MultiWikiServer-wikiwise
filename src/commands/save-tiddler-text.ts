@@ -1,6 +1,6 @@
 import type { CommandInfo } from "../utils/BaseCommand";
 import { BaseCommand } from "../utils/BaseCommand";
-import { TiddlerStore, TiddlerStore_PrismaStatic } from "../routes/TiddlerStore";
+import { TiddlerStore_PrismaStatic } from "../routes/TiddlerStore";
 
 export const info: CommandInfo = {
 	name: "save-tiddler-text",

@@ -1,7 +1,7 @@
 import { ZodAssert } from "../utils";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { ManagerRoutes } from "./managers";
-import { TiddlerRouter } from "./managers/router-tiddlers";
+import { TiddlerRouter } from "./managers/wiki-routes";
 import { DocsRoute } from "./tw-routes";
 import { SiteConfig } from "../ServerState";
 import { SessionManager } from "../services/sessions";

@@ -217,14 +217,14 @@ export class Streamer {
       this.writer.end(data);
     return STREAM_ENDED;
   }
-  /** If this is a HEAD request, the stream will be drained. */
+  /** If this is a HEAD request, the stream will be destroyed. */
   sendStream(status: number, headers: OutgoingHttpHeaders, stream: Readable): typeof STREAM_ENDED {
     if (process.env.DEBUG?.split(",").includes("send")) {
       console.error("sendStream", status, headers);
     }
     this.writeHead(status, headers);
     if (this.method === "HEAD") {
-      stream.resume();
+      stream.destroy();
       this.writer.end();
     } else {
       stream.pipe(this.writer);
@@ -335,12 +335,66 @@ export class Streamer {
   }
 
   setCookie(name: string, value: string, options: {
+    /**
+
+      Defines the host to which the cookie will be sent.
+
+      Only the current domain can be set as the value, or a domain of a higher order, unless it is a public suffix. Setting the domain will make the cookie available to it, as well as to all its subdomains.
+
+      If omitted, this attribute defaults to the host of the current document URL, not including subdomains.
+
+      Contrary to earlier specifications, leading dots in domain names (.example.com) are ignored.
+
+      Multiple host/domain values are not allowed, but if a domain is specified, then subdomains are always included.
+
+     */
     domain?: string;
+    /**
+
+    Indicates the path that must exist in the requested URL for the browser to send the Cookie header.
+
+    The forward slash (`/`) character is interpreted as a directory separator, and subdirectories are matched as well. 
+    
+    For example, for `Path=/docs`,
+
+    - the request paths `/docs`,` /docs/`, `/docs/Web/`, and `/docs/Web/HTTP` will all match.
+    - the request paths `/`, `/docsets`, `/fr/docs` will not match.
+
+     */
     path?: string;
     expires?: Date;
     maxAge?: number;
     secure?: boolean;
     httpOnly?: boolean;
+    /**
+      Controls whether or not a cookie is sent with cross-site requests: that is, requests originating from a different site, including the scheme, from the site that set the cookie. This provides some protection against certain cross-site attacks, including cross-site request forgery (CSRF) attacks.
+
+      The possible attribute values are:
+
+      ### Strict
+
+      Send the cookie only for requests originating from the same site that set the cookie.
+
+      ### Lax
+
+      Send the cookie only for requests originating from the same site that set the cookie, and for cross-site requests that meet both of the following criteria:
+
+      - The request is a top-level navigation: this essentially means that the request causes the URL shown in the browser's address bar to change.
+
+        - This would exclude, for example, requests made using the fetch() API, or requests for subresources from <img> or <script> elements, or navigations inside <iframe> elements.
+
+        - It would include requests made when the user clicks a link in the top-level browsing context from one site to another, or an assignment to document.location, or a <form> submission.
+
+      - The request uses a safe method: in particular, this excludes POST, PUT, and DELETE.
+
+      Some browsers use Lax as the default value if SameSite is not specified: see Browser compatibility for details.
+
+      > Note: When Lax is applied as a default, a more permissive version is used. In this more permissive version, cookies are also included in POST requests, as long as they were set no more than two minutes before the request was made.
+
+      ### None
+
+      Send the cookie with both cross-site and same-site requests. The Secure attribute must also be set when using this value.
+     */
     sameSite?: "Strict" | "Lax" | "None";
   }) {
     var cookie = `${name}=${encodeURIComponent(value)}`;
