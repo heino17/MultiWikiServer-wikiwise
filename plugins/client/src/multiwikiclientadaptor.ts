@@ -20,7 +20,7 @@ previous operation to complete before sending a new one.
 "use strict";
 
 import type { Syncer, Tiddler, ITiddlyWiki } from "tiddlywiki";
-import type { TiddlerRouter } from "@tiddlywiki/mws/src/routes/managers/wiki-routes";
+import type { WikiRoutes } from "@tiddlywiki/mws/src/routes/managers/wiki-routes";
 import type { ZodRoute } from "@tiddlywiki/mws/src/router";
 
 declare global {
@@ -46,7 +46,7 @@ declare class Logger {
 }
 
 type TiddlerRouterResponse = {
-	[K in keyof TiddlerRouter]: TiddlerRouter[K] extends ZodRoute<infer M, infer B, infer P, infer Q, infer T, infer R>
+	[K in keyof WikiRoutes]: WikiRoutes[K] extends ZodRoute<infer M, infer B, infer P, infer Q, infer T, infer R>
 	? { M: M, B: B, P: P, Q: Q, T: T, R: R }
 	: never
 }
@@ -252,7 +252,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		return await httpRequest({
 			...options,
 			responseType: "blob",
-			url: this.host + "recipes/" + encodeURIComponent(this.recipe) + options.url,
+			url: this.host + "wiki/" + encodeURIComponent(this.recipe) + options.url,
 		}).then(result => {
 			// in theory, 403 and 404 should result in further action, 
 			// but in reality an error gets logged to console and that's it.

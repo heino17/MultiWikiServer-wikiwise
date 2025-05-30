@@ -1,6 +1,6 @@
 import { STREAM_ENDED } from "../../listen/streamer";
 import { tryParseJSON, UserError } from "../../utils";
-import { registerZodRoutes, zodRoute, RouterKeyMap, RouterRouteMap } from "../../router";
+import { registerZodRoutes, zodRoute, RouterKeyMap, RouterRouteMap, ZodState } from "../../router";
 import { TiddlerFields } from "tiddlywiki";
 import { createWriteStream } from "fs";
 import { parse, resolve } from "path";
@@ -12,9 +12,11 @@ import { PassThrough, Writable } from "stream";
 import { IncomingHttpHeaders } from "http";
 import { PrismaPromise } from "@prisma/client";
 import { WikiStateStore } from "./WikiStateStore";
+import { StateObject } from "../StateObject";
+import { ZodEffects, ZodType, ZodTypeAny } from "zod";
 
 
-export const TiddlerKeyMap: RouterKeyMap<TiddlerRouter, true> = {
+export const TiddlerKeyMap: RouterKeyMap<WikiRoutes, true> = {
   // recipe status updates
   handleGetRecipeStatus: true,
   handleListRecipeTiddlers: true,
@@ -26,14 +28,18 @@ export const TiddlerKeyMap: RouterKeyMap<TiddlerRouter, true> = {
   // wiki index
   handleGetWikiIndex: true,
   // external tools
-  handleCreateRecipeTiddler: true,
+  handleDeleteBagTiddler: true,
+  handleFormMultipartBagTiddler: true,
+  handleFormMultipartRecipeTiddler: true,
+  handleLoadBagTiddler: true,
+  handleSaveBagTiddler: true,
 }
 
-export type TiddlerManagerMap = RouterRouteMap<TiddlerRouter>;
+export type TiddlerManagerMap = RouterRouteMap<WikiRoutes>;
 
-export class TiddlerRouter {
+export class WikiRoutes {
   static defineRoutes = (root: rootRoute) => {
-    const router = new TiddlerRouter();
+    const router = new WikiRoutes();
     const keys = Object.keys(TiddlerKeyMap);
     registerZodRoutes(root, router, keys);
   }
@@ -49,7 +55,7 @@ export class TiddlerRouter {
 
   handleGetRecipeStatus = zodRoute({
     method: ["GET", "HEAD"],
-    path: "/recipes/:recipe_name/status",
+    path: "/wiki/:recipe_name/status",
     bodyFormat: "ignore",
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
@@ -79,7 +85,7 @@ export class TiddlerRouter {
 
   handleGetRecipeTiddler = zodRoute({
     method: ["GET", "HEAD"],
-    path: "/recipes/:recipe_name/tiddlers/:title",
+    path: "/wiki/:recipe_name/tiddlers/:title",
     bodyFormat: "ignore",
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
@@ -89,60 +95,12 @@ export class TiddlerRouter {
       const { recipe_name, title } = state.pathParams;
 
       await state.assertRecipeACL(recipe_name, false);
-
+      // we can only throw STREAM_ENDED outside the transaction
       throw await state.$transaction(async (prisma) => {
         const server = new WikiStateStore(state, prisma);
         const bag = await server.getRecipeBagWithTiddler({ recipe_name, title });
-
         if (!bag) return state.sendEmpty(404, { "x-reason": "tiddler not found" });
-
-        const tiddler = await prisma.tiddlers.findUnique({
-          where: { bag_id_title: { bag_id: bag.bag_id, title } },
-          include: { fields: true }
-        })
-
-        if (!tiddler) return state.sendEmpty(404, { "x-reason": "tiddler not found" });
-
-        const result = getTiddlerFields(title, tiddler.fields);
-
-        const accept_json = state.headers.accept?.includes("application/json");
-        const accept_mws_tiddler = state.headers.accept?.includes("application/x-mws-tiddler");
-
-        // If application/json is requested then this is an API request, and gets the response in JSON
-        if (accept_json || accept_mws_tiddler) {
-
-          const type = accept_mws_tiddler ? "application/x-mws-tiddler"
-            : accept_json ? "application/json"
-              : undefined;
-
-          if (!type) throw new Error("undefined type");
-
-          return state.sendResponse(200, {
-            "Etag": state.makeTiddlerEtag({
-              bag_name: bag.bag.bag_name,
-              revision_id: tiddler.revision_id,
-            }),
-            "Content-Type": "application/json",
-            "X-Revision-Number": tiddler.revision_id,
-            "X-Bag-Name": bag.bag.bag_name,
-          }, formatTiddlerFields(result, type), "utf8");
-
-        } else {
-
-          // This is not a JSON API request, we should return the raw tiddler content
-
-          const type = state.config.getContentType(result.type);
-
-          return state.sendString(200, {
-            "Etag": state.makeTiddlerEtag({
-              bag_name: bag.bag.bag_name,
-              revision_id: tiddler.revision_id,
-            }),
-            "Content-Type": result.type
-          }, result.text ?? "", type.encoding as BufferEncoding);
-
-        }
-
+        return await server.serveBagTiddler(bag.bag_id, bag.bag.bag_name, title);
       });
 
     }
@@ -150,7 +108,7 @@ export class TiddlerRouter {
 
   handleListRecipeTiddlers = zodRoute({
     method: ["GET", "HEAD"],
-    path: "/recipes/:recipe_name/tiddlers.json",
+    path: "/wiki/:recipe_name/tiddlers.json",
     bodyFormat: "ignore",
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
@@ -172,7 +130,7 @@ export class TiddlerRouter {
 
   handleGetBagStates = zodRoute({
     method: ["GET", "HEAD"],
-    path: "/recipes/:recipe_name/bag-states",
+    path: "/wiki/:recipe_name/bag-states",
     bodyFormat: "ignore",
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
@@ -238,7 +196,7 @@ export class TiddlerRouter {
 
   handleSaveRecipeTiddler = zodRoute({
     method: ["PUT"],
-    path: "/recipes/:recipe_name/tiddlers/:title",
+    path: "/wiki/:recipe_name/tiddlers/:title",
     bodyFormat: "string",
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
@@ -274,7 +232,7 @@ export class TiddlerRouter {
 
   handleDeleteRecipeTiddler = zodRoute({
     method: ["DELETE"],
-    path: "/recipes/:recipe_name/tiddlers/:title",
+    path: "/wiki/:recipe_name/tiddlers/:title",
     bodyFormat: "json",
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
@@ -300,103 +258,20 @@ export class TiddlerRouter {
 
   // this is not used by the sync adaptor.
   // it allows an HTML form to upload a tiddler directly with file upload
-  handleCreateRecipeTiddler = zodRoute({
+  handleFormMultipartRecipeTiddler = zodRoute({
     method: ["POST"],
-    path: "/recipes/:recipe_name/tiddlers",
+    path: "/wiki/:recipe_name/tiddlers",
     bodyFormat: "stream",
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
     }),
     inner: async (state) => {
+
       await state.assertRecipeACL(state.pathParams.recipe_name, true);
 
       const recipe_name = state.pathParams.recipe_name;
 
-      interface UploadPart {
-        name: string | null;
-        headers: IncomingHttpHeaders;
-        hash: string;
-        length: number;
-        filename: string | null;
-        value?: string;
-        inboxFilename?: string;
-      }
-      // Process the incoming data
-      const inboxName = new Date().toISOString().replace(/:/g, "-");
-      const inboxPath = resolve(state.config.storePath, "inbox", inboxName);
-      createDirectory(inboxPath);
-      
-      /** Current file being written */
-      let fileStream: Writable | null = null;
-      /** Accumulating hash of current part */
-      let hasher: Hash | null = null;
-      /** Accumulating length of current part */
-      let length = 0;
-      // Array of {name:, headers:, value:, hash:} and/or {name:, filename:, headers:, inboxFilename:, hash:} 
-      const parts: UploadPart[] = [];
-
-      await state.readMultipartData({
-        cbPartStart: function (headers, name, filename) {
-          const part: UploadPart = {
-            name: name,
-            filename: filename,
-            headers: headers,
-            hash: "",
-            length: 0,
-          };
-          if (filename) {
-            const inboxFilename = (parts.length).toString();
-            part.inboxFilename = resolve(inboxPath, inboxFilename);
-            fileStream = createWriteStream(part.inboxFilename);
-          } else {
-            part.value = "";
-          }
-          // hash = new sjcl.hash.sha256();
-          hasher = createHash("sha-256");
-          length = 0;
-          parts.push(part);
-        },
-        cbPartChunk: function (chunk) {
-          if (fileStream) {
-            fileStream.write(chunk);
-          } else {
-            parts[parts.length - 1]!.value! += chunk;
-          }
-          length += chunk.length;
-          hasher!.update(chunk);
-        },
-        cbPartEnd: function () {
-          if (fileStream) fileStream.end();
-          fileStream = null;
-          parts[parts.length - 1]!.hash = hasher!.digest("base64url");
-          parts[parts.length - 1]!.length = length;
-          hasher = null;
-        },
-      });
-
-      const partFile = parts.find(part => part.name === "file-to-upload" && !!part.filename);
-
-      if (!partFile) throw state.sendSimple(400, "Missing file to upload");
-
-      const missingfilename = "File uploaded " + new Date().toISOString()
-
-      const type = partFile.headers["content-type"];
-      const tiddlerFields: TiddlerFields = { title: partFile.filename ?? missingfilename, type, };
-
-      for (const part of parts) {
-        const tiddlerFieldPrefix = "tiddler-field-";
-        if (part.name?.startsWith(tiddlerFieldPrefix)) {
-          (tiddlerFields as any)[part.name.slice(tiddlerFieldPrefix.length)] = part.value?.trim();
-        }
-      }
-
-      const contentTypeInfo = state.config.getContentType(type);
-
-      const file = await readFile(partFile.inboxFilename!);
-
-      tiddlerFields.text = file.toString(contentTypeInfo.encoding as BufferEncoding);
-
-      deleteDirectory(inboxPath);
+      const tiddlerFields = await recieveTiddlerMultipartUpload(state);
 
       return await state.$transaction(async (prisma) => {
         const server = new WikiStateStore(state, prisma);
@@ -429,17 +304,83 @@ export class TiddlerRouter {
   });
 
 
+  handleLoadBagTiddler = zodRoute({
+    method: ["GET", "HEAD"],
+    path: "/bags/:bag_name/tiddlers/:title",
+    bodyFormat: "ignore",
+    zodPathParams: z => ({
+      bag_name: z.prismaField("Bags", "bag_name", "string"),
+      title: z.prismaField("Tiddlers", "title", "string"),
+    }),
+    inner: async (state) => {
+      const { bag_name, title } = state.pathParams;
+      const bag = await state.assertBagACL(bag_name, false);
+      throw await state.$transaction(async (prisma) => {
+        const server = new WikiStateStore(state, prisma);
+        return await server.serveBagTiddler(bag.bag_id, bag_name, title);
+      });
+    }
+  });
+  handleSaveBagTiddler = zodRoute({
+    method: ["PUT"],
+    path: "/bags/:bag_name/tiddlers/:title",
+    bodyFormat: "string",
+    zodPathParams: z => ({
+      bag_name: z.prismaField("Bags", "bag_name", "string"),
+      title: z.prismaField("Tiddlers", "title", "string"),
+    }),
+    zodRequestBody: z => z.string(),
+    inner: async (state) => {
+      const { bag_name, title } = state.pathParams;
+      await state.assertBagACL(bag_name, true);
+      const fields = parseTiddlerFields(state.data, state.headers["content-type"]);
+      if (fields === undefined)
+        throw state.sendEmpty(400, {
+          "x-reason": "PUT tiddler expects a valid json or x-mws-tiddler body"
+        });
+      return await state.$transaction(async (prisma) => {
+        const server = new WikiStateStore(state, prisma);
+        return server.saveBagTiddlerFields(fields, bag_name, null);
+      });
+    }
+  });
+  handleDeleteBagTiddler = zodRoute({
+    method: ["DELETE"],
+    path: "/bags/:bag_name/tiddlers/:title",
+    bodyFormat: "ignore",
+    zodPathParams: z => ({
+      bag_name: z.prismaField("Bags", "bag_name", "string"),
+      title: z.prismaField("Tiddlers", "title", "string"),
+    }),
+    inner: async (state) => {
+      const { bag_name, title } = state.pathParams;
+      await state.assertBagACL(bag_name, true);
+      return await state.$transaction(async (prisma) => {
+        const server = new WikiStateStore(state, prisma);
+        return server.deleteBagTiddler(bag_name, title);
+      });
+    }
+  });
+  handleFormMultipartBagTiddler = zodRoute({
+    method: ["POST"],
+    path: "/bags/:bag_name/tiddlers",
+    bodyFormat: "stream",
+    zodPathParams: z => ({
+      bag_name: z.prismaField("Bags", "bag_name", "string"),
+    }),
+    inner: async (state) => {
+      const { bag_name } = state.pathParams;
+      await state.assertBagACL(bag_name, true);
+      const tiddlerFields = await recieveTiddlerMultipartUpload(state);
+      return await state.$transaction(async (prisma) => {
+        const server = new WikiStateStore(state, prisma);
+        return await server.saveBagTiddlerFields(tiddlerFields, bag_name, null);
+      });
+    }
+  });
+
 }
 
-function getTiddlerFields(
-  title: PrismaField<"Tiddlers", "title">,
-  fields: { field_name: string, field_value: string }[]
-) {
-  return Object.fromEntries([
-    ...fields.map(e => [e.field_name, e.field_value] as const),
-    ["title", title]
-  ]) as TiddlerFields;
-};
 
 function parseTiddlerFields(input: string, ctype: string | undefined) {
 
@@ -467,18 +408,94 @@ function parseTiddlerFields(input: string, ctype: string | undefined) {
   }
 }
 
-function formatTiddlerFields(input: TiddlerFields, ctype: "application/x-mws-tiddler" | "application/json") {
-  if (ctype === "application/x-mws-tiddler") {
-    const body = input.text;
-    delete input.text;
-    const head = JSON.stringify(input);
-    return `${head}\n\n${body}`;
+
+async function recieveTiddlerMultipartUpload(state: ZodState<"POST", "stream", {}, {}, ZodTypeAny>) {
+
+  interface UploadPart {
+    name: string | null;
+    headers: IncomingHttpHeaders;
+    hash: string;
+    length: number;
+    filename: string | null;
+    value?: string;
+    inboxFilename?: string;
+  }
+  // Process the incoming data
+  const inboxName = new Date().toISOString().replace(/:/g, "-");
+  const inboxPath = resolve(state.config.storePath, "inbox", inboxName);
+  createDirectory(inboxPath);
+
+  /** Current file being written */
+  let fileStream: Writable | null = null;
+  /** Accumulating hash of current part */
+  let hasher: Hash | null = null;
+  /** Accumulating length of current part */
+  let length = 0;
+  // Array of {name:, headers:, value:, hash:} and/or {name:, filename:, headers:, inboxFilename:, hash:} 
+  const parts: UploadPart[] = [];
+
+  await state.readMultipartData({
+    cbPartStart: function (headers, name, filename) {
+      const part: UploadPart = {
+        name: name,
+        filename: filename,
+        headers: headers,
+        hash: "",
+        length: 0,
+      };
+      if (filename) {
+        const inboxFilename = (parts.length).toString();
+        part.inboxFilename = resolve(inboxPath, inboxFilename);
+        fileStream = createWriteStream(part.inboxFilename);
+      } else {
+        part.value = "";
+      }
+      // hash = new sjcl.hash.sha256();
+      hasher = createHash("sha-256");
+      length = 0;
+      parts.push(part);
+    },
+    cbPartChunk: function (chunk) {
+      if (fileStream) {
+        fileStream.write(chunk);
+      } else {
+        parts[parts.length - 1]!.value! += chunk;
+      }
+      length += chunk.length;
+      hasher!.update(chunk);
+    },
+    cbPartEnd: function () {
+      if (fileStream) fileStream.end();
+      fileStream = null;
+      parts[parts.length - 1]!.hash = hasher!.digest("base64url");
+      parts[parts.length - 1]!.length = length;
+      hasher = null;
+    },
+  });
+
+  const partFile = parts.find(part => part.name === "file-to-upload" && !!part.filename);
+
+  if (!partFile) throw state.sendSimple(400, "Missing file to upload");
+
+  const missingfilename = "File uploaded " + new Date().toISOString()
+
+  const type = partFile.headers["content-type"];
+  const tiddlerFields: TiddlerFields = { title: partFile.filename ?? missingfilename, type, };
+
+  for (const part of parts) {
+    const tiddlerFieldPrefix = "tiddler-field-";
+    if (part.name?.startsWith(tiddlerFieldPrefix)) {
+      (tiddlerFields as any)[part.name.slice(tiddlerFieldPrefix.length)] = part.value?.trim();
+    }
   }
 
-  if (ctype === "application/json") {
-    return JSON.stringify(input);
-  }
+  const contentTypeInfo = state.config.getContentType(type);
 
-  throw new UserError("Unknown tiddler wire format " + ctype)
+  const file = await readFile(partFile.inboxFilename!);
 
+  tiddlerFields.text = file.toString(contentTypeInfo.encoding as BufferEncoding);
+
+  deleteDirectory(inboxPath);
+
+  return tiddlerFields;
 }

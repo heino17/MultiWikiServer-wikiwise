@@ -171,8 +171,8 @@ abstract class TiddlerStore_PrismaBase {
     Returns {revision_id:} of the delete marker
     */
   deleteBagTiddler_PrismaArray(
+    bag_name: PrismaField<"Bags", "bag_name">,
     title: PrismaField<"Tiddlers", "title">,
-    bag_name: PrismaField<"Bags", "bag_name">
   ) {
     return tuple(
       this.prisma.tiddlers.deleteMany({
@@ -258,13 +258,18 @@ export class TiddlerStore_PrismaTransaction extends TiddlerStore_PrismaBase {
 
     if (!bag.tiddlers.length) throw new UserError("The writable bag does not contain this tiddler.");
 
-    const [deletion, creation] = this.deleteBagTiddler_PrismaArray(title, bag.bag_name);
-
-    const { revision_id } = (await deletion, await creation);
+    const { revision_id } = await this.deleteBagTiddler(bag.bag_name, title);
 
     return { revision_id, bag_name: bag.bag_name };
   }
 
+  async deleteBagTiddler(
+    bag_name: PrismaField<"Bags", "bag_name">,
+    title: PrismaField<"Tiddlers", "title">,
+  ) {
+    const [deletion, creation] = this.deleteBagTiddler_PrismaArray(bag_name, title);
+    return await deletion, await creation;
+  }
 
   async getRecipeTiddlers(recipe_name: PrismaField<"Recipes", "recipe_name">) {
     // Get the recipe name from the parameters

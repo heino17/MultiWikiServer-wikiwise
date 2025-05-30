@@ -1,11 +1,12 @@
-import { ZodAssert } from "../utils";
+import { AllowedMethods, ZodAssert } from "../utils";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { ManagerRoutes } from "./managers";
-import { TiddlerRouter } from "./managers/wiki-routes";
+import { WikiRoutes } from "./managers/wiki-routes";
 import { DocsRoute } from "./tw-routes";
 import { SiteConfig } from "../ServerState";
 import { SessionManager } from "../services/sessions";
 import { registerCacheRoutes } from "./cache";
+import { StateObject } from "./StateObject";
 
 declare global {
   const ENABLE_UNSAFE_PRISMA_ROUTE: any;
@@ -14,12 +15,26 @@ declare global {
 
 export default async function RootRoute(root: rootRoute, config: SiteConfig) {
 
+  // const adminRoute = root.defineRoute({
+  //   method: AllowedMethods,
+  //   path: /^\/admin/,
+  //   denyFinal: true,
+  // }, async (state: StateObject) => {
+  //   // do admin route checks here
+  // });
 
-  
+  // const wikiRoute = root.defineRoute({
+  //   method: AllowedMethods,
+  //   path: /^\/wiki/,
+  //   denyFinal: true,
+  // }, async (state: StateObject) => {
+  //   // do wiki route checks here
+  // });
+
   await SessionManager.defineRoutes(root);
   if (process.env.ENABLE_DOCS_ROUTE)
     await DocsRoute(root, "/mws-docs", false);
-  await TiddlerRouter.defineRoutes(root);
+  await WikiRoutes.defineRoutes(root);
   await ManagerRoutes(root, config);
   await registerCacheRoutes(root, config);
 

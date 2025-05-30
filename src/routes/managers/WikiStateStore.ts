@@ -14,7 +14,7 @@ export class WikiStateStore extends TiddlerStore_PrismaTransaction {
   ) {
     super(prisma);
   }
-  
+
 
 
   async serveIndexFile(recipe_name: PrismaField<"Recipes", "recipe_name">) {
@@ -295,5 +295,87 @@ $tw.preloadTiddler = function(fields) {
     });
   }
 
+  async serveBagTiddler(
+    bag_id: PrismaField<"Bags", "bag_id">,
+    bag_name: PrismaField<"Bags", "bag_name">,
+    title: PrismaField<"Tiddlers", "title">
+  ) {
+    const { state, prisma } = this;
+
+    const tiddler = await prisma.tiddlers.findUnique({
+      where: { bag_id_title: { bag_id, title } },
+      include: { fields: true }
+    })
+
+    if (!tiddler) return state.sendEmpty(404, { "x-reason": "tiddler not found" });
+
+    const result = getTiddlerFields(title, tiddler.fields);
+
+    const accept_json = state.headers.accept?.includes("application/json");
+    const accept_mws_tiddler = state.headers.accept?.includes("application/x-mws-tiddler");
+
+    // If application/json is requested then this is an API request, and gets the response in JSON
+    if (accept_json || accept_mws_tiddler) {
+
+      const type = accept_mws_tiddler ? "application/x-mws-tiddler"
+        : accept_json ? "application/json"
+          : undefined;
+
+      if (!type) throw new Error("undefined type");
+
+      return state.sendResponse(200, {
+        "Etag": state.makeTiddlerEtag({
+          bag_name,
+          revision_id: tiddler.revision_id,
+        }),
+        "Content-Type": "application/json",
+        "X-Revision-Number": tiddler.revision_id,
+        "X-Bag-Name": bag_name,
+      }, formatTiddlerFields(result, type), "utf8");
+
+    } else {
+
+      // This is not a JSON API request, we should return the raw tiddler content
+
+      const type = state.config.getContentType(result.type);
+
+      return state.sendString(200, {
+        "Etag": state.makeTiddlerEtag({
+          bag_name,
+          revision_id: tiddler.revision_id,
+        }),
+        "Content-Type": result.type
+      }, result.text ?? "", type.encoding as BufferEncoding);
+
+    }
+  }
+
+
+}
+
+function getTiddlerFields(
+  title: PrismaField<"Tiddlers", "title">,
+  fields: { field_name: string, field_value: string }[]
+) {
+  return Object.fromEntries([
+    ...fields.map(e => [e.field_name, e.field_value] as const),
+    ["title", title]
+  ]) as TiddlerFields;
+};
+
+
+function formatTiddlerFields(input: TiddlerFields, ctype: "application/x-mws-tiddler" | "application/json") {
+  if (ctype === "application/x-mws-tiddler") {
+    const body = input.text;
+    delete input.text;
+    const head = JSON.stringify(input);
+    return `${head}\n\n${body}`;
+  }
+
+  if (ctype === "application/json") {
+    return JSON.stringify(input);
+  }
+
+  throw new UserError("Unknown tiddler wire format " + ctype)
 
 }
