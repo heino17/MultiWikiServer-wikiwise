@@ -24,7 +24,7 @@ export interface IncomingHttpHeaders extends NodeIncomingHeaders {
 }
 
 export const SYMBOL_IGNORE_ERROR: unique symbol = Symbol("IGNORE_ERROR");
-export const STREAM_ENDED: unique symbol = Symbol("STREAM_ENDED");
+
 
 
 export type StreamerChunk = { data: string, encoding: NodeJS.BufferEncoding } | NodeJS.ReadableStream | Readable | Buffer;

@@ -1,7 +1,6 @@
 import { StateObject } from "../routes/StateObject";
 import * as z from "zod";
-import { AllowedMethod, BodyFormat } from ".";
-
+import { AllowedMethod, BodyFormat, JsonValue, Z2 } from ".";
 
 export interface RouteOptAny extends RouteOptBase<BodyFormat, AllowedMethod[], string[]> { }
 
@@ -237,3 +236,91 @@ function testroute(root: rootRoute) {
   })
 }
 
+
+export const zodTransformJSON = (arg: string, ctx: z.RefinementCtx) => {
+  try {
+    if (arg === "") return undefined;
+    return JSON.parse(arg, (key, value) => {
+      //https://github.com/fastify/secure-json-parse
+      if (key === '__proto__')
+        throw new Error('Invalid key: __proto__');
+      if (key === 'constructor' && Object.prototype.hasOwnProperty.call(value, 'prototype'))
+        throw new Error('Invalid key: constructor.prototype');
+      return value;
+    });
+  } catch (e) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: e instanceof Error ? e.message : `${e}`,
+      fatal: true,
+    });
+    return z.NEVER;
+  }
+};
+
+
+
+
+export interface ZodAction<T extends z.ZodTypeAny, R extends JsonValue> {
+  // (state: StateObject): Promise<typeof STREAM_ENDED>;
+  inner: (route: z.output<T>) => Promise<R>
+  zodRequestBody: (z: Z2<"JSON">) => T;
+  zodResponse?: (z: Z2<"JSON">) => z.ZodType<R>;
+}
+
+export interface ZodRoute<
+  M extends AllowedMethod,
+  B extends BodyFormat,
+  P extends Record<string, z.ZodTypeAny>,
+  Q extends Record<string, z.ZodTypeAny>,
+  T extends z.ZodTypeAny,
+  R extends JsonValue
+> extends ZodAction<T, R> {
+  zodPathParams: (z: Z2<"STRING">) => P;
+  zodQueryParams: (z: Z2<"STRING">) => Q;
+  method: M[];
+  path: string;
+  bodyFormat: B;
+  inner: (state: ZodState<M, B, Q, P, T>) => Promise<R>,
+}
+
+export class ZodState<
+  M extends AllowedMethod,
+  B extends BodyFormat,
+  P extends Record<string, z.ZodTypeAny>,
+  Q extends Record<string, z.ZodTypeAny>,
+  T extends z.ZodTypeAny
+> extends StateObject<B, M, string[][], z.output<T>> {
+  declare pathParams: z.output<z.ZodObject<P>>;
+  declare queryParams: z.output<z.ZodObject<Q>>;
+  // declare data: z.output<T>;
+}
+
+
+export type RouterRouteMap<T> = {
+  [K in keyof T as T[K] extends ZodAction<any, any> ? K : never]:
+  T[K] extends {
+    zodRequestBody: (z: any) => infer REQ extends z.ZodTypeAny,
+    zodResponse?: (z: any) => infer RES extends z.ZodType<JsonValue>
+  } ? ((data: z.input<REQ>) => Promise<jsonify<z.output<RES>>>) : never;
+}
+
+export type jsonify<T> =
+  T extends void ? null :
+  T extends Promise<any> ? unknown :
+  T extends Date ? string :
+  // T extends Map<infer K, infer V> ? [jsonify<K>, jsonify<V>][] :
+  // T extends Set<infer U> ? jsonify<U>[] :
+  T extends string | number | boolean | null | undefined ? T :
+  T extends [...any[]] ? number extends T["length"] ? jsonify<T[number]>[] : [...jsonifyTuple<T>] :
+  T extends Array<infer U> ? jsonify<U>[] :
+  T extends object ? { [K in keyof T]: jsonify<T[K]> } :
+  unknown;
+
+export type jsonifyTuple<T> = T extends [infer A, ...infer B] ? [jsonify<A>, ...jsonifyTuple<B>] : T extends [infer A] ? [jsonify<A>] : [];
+
+
+
+export type RouterKeyMap<T, V> = {
+  [K in keyof T as T[K] extends ZodAction<any, any> ? K : never]: V;
+}

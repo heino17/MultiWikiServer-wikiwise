@@ -2,7 +2,6 @@ import * as path from "path";
 import * as fs from "fs";
 import type { Prisma } from "@prisma/client";
 import { ServerState } from "./ServerState";
-import { Types } from "@prisma/client/runtime/library";
 
 declare global {
   /** helper function which returns the arguments as an array, but typed as a tuple, which is still an array, but positional. */
@@ -10,6 +9,11 @@ declare global {
 }
 
 (global as any).tuple = function (...args: any[]) { return args; }
+
+
+declare global { const STREAM_ENDED: unique symbol; }
+const STREAM_ENDED: unique symbol = Symbol("STREAM_ENDED");
+(global as any).STREAM_ENDED = STREAM_ENDED;
 
 
 declare global {

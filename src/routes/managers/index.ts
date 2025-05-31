@@ -1,9 +1,10 @@
 
-import { DataChecks } from "../../utils";
+import { DataChecks, RouterKeyMap, RouterRouteMap } from "../../utils";
 import { RecipeManager } from "./admin-recipes";
 import { UserManager } from "./admin-users";
-import { registerZodRoutes, RouterKeyMap, RouterRouteMap, zodManage } from "../../router";
+import { zodManage } from "../zodManage";
 import { SiteConfig } from "../../ServerState";
+import { registerZodRoutes } from "../zodRegister";
 
 export { UserManager, UserManagerMap } from "./admin-users";
 export { RecipeManager, RecipeManagerMap } from "./admin-recipes";
@@ -38,8 +39,8 @@ export class StatusManager {
 
     const OR = this.checks.getBagWhereACL({ permission: "READ", user_id, role_ids });
 
-    const clientPlugins = [...state.tiddlerCache.pluginFiles.keys()];
-    const corePlugins = state.tiddlerCache.requiredPlugins;
+    const clientPlugins = [...state.pluginCache.pluginFiles.keys()];
+    const corePlugins = state.pluginCache.requiredPlugins;
 
     const bagList = await prisma.bags.findMany({
       include: {
@@ -108,7 +109,7 @@ export class StatusManager {
       isLoggedIn: state.user.isLoggedIn,
       allowAnonReads: false,
       allowAnonWrites: false,
-      versions: state.router.versions,
+      versions: state.config.versions,
     }
   });
 

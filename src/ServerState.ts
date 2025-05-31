@@ -52,6 +52,7 @@ export class ServerState {
     this.enableGzip = true;
     this.attachmentsEnabled = false;
     this.attachmentSizeLimit = 100 * 1024;
+    this.csrfDisable = false;
 
     this.enableExternalPlugins = !!process.env.ENABLE_EXTERNAL_PLUGINS;
     this.enableDevServer = !!process.env.ENABLE_DEV_SERVER;
@@ -112,6 +113,7 @@ export class ServerState {
   attachmentSizeLimit;
   enableExternalPlugins;
   enableDevServer;
+  csrfDisable;
 
 
   contentTypeInfo: Record<string, ContentTypeInfo>;

@@ -1,4 +1,4 @@
-import "./router";
+import "./listen/router";
 import "./routes/StateObject";
 import "./listen/streamer";
 import "./global";

@@ -220,21 +220,6 @@ export class TiddlerStore_PrismaTransaction extends TiddlerStore_PrismaBase {
     super();
   }
 
-  /**
-    Returns {revision_id:,bag_name:} or null if the recipe is empty
-    */
-  async saveRecipeTiddlerFields(
-    tiddlerFields: TiddlerFields,
-    recipe_name: PrismaField<"Recipes", "recipe_name">,
-    attachment_hash: PrismaField<"Tiddlers", "attachment_hash">
-  ) {
-    const bag = await this.getRecipeWritableBag(recipe_name);
-    const { revision_id } = await this.saveBagTiddlerFields(
-      tiddlerFields, bag.bag_name, attachment_hash
-    );
-    return { revision_id, bag_name: bag.bag_name };
-  }
-
   async saveBagTiddlerFields(
     tiddlerFields: TiddlerFields,
     bag_name: PrismaField<"Bags", "bag_name">,
@@ -246,23 +231,6 @@ export class TiddlerStore_PrismaTransaction extends TiddlerStore_PrismaBase {
     return await deletion, await creation;
   }
 
-  /*
-  Returns {revision_id:,bag_name:}
-  */
-  async deleteRecipeTiddler(
-    recipe_name: PrismaField<"Recipes", "recipe_name">,
-    title: PrismaField<"Tiddlers", "title">
-  ) {
-
-    const bag = await this.getRecipeWritableBag(recipe_name, title);
-
-    if (!bag.tiddlers.length) throw new UserError("The writable bag does not contain this tiddler.");
-
-    const { revision_id } = await this.deleteBagTiddler(bag.bag_name, title);
-
-    return { revision_id, bag_name: bag.bag_name };
-  }
-
   async deleteBagTiddler(
     bag_name: PrismaField<"Bags", "bag_name">,
     title: PrismaField<"Tiddlers", "title">,
@@ -270,25 +238,6 @@ export class TiddlerStore_PrismaTransaction extends TiddlerStore_PrismaBase {
     const [deletion, creation] = this.deleteBagTiddler_PrismaArray(bag_name, title);
     return await deletion, await creation;
   }
-
-  async getRecipeTiddlers(recipe_name: PrismaField<"Recipes", "recipe_name">) {
-    // Get the recipe name from the parameters
-    const bagTiddlers = await this.getRecipeTiddlersByBag(recipe_name);
-
-    // reverse order for Map, so 0 comes after 1 and overlays it
-    bagTiddlers.sort((a, b) => b.position - a.position);
-
-    return Array.from(new Map(bagTiddlers.flatMap(bag => bag.tiddlers.map(tiddler => [tiddler.title, {
-      title: tiddler.title,
-      revision_id: tiddler.revision_id,
-      is_deleted: tiddler.is_deleted,
-      bag_name: bag.bag_name,
-      bag_id: bag.bag_id
-    }])
-    )).values());
-
-  }
-
 
   /**
   * Get the writable bag for the specified recipe.

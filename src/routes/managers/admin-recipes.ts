@@ -1,7 +1,8 @@
-import { registerZodRoutes, zodManage, RouterKeyMap, RouterRouteMap } from "../../router";
-import { DataChecks } from "../../utils";
+import { zodManage } from "../zodManage";
+import { DataChecks, RouterKeyMap, RouterRouteMap } from "../../utils";
 import { AuthUser } from "../../services/sessions";
 import { SiteConfig } from "../../ServerState";
+import { registerZodRoutes } from "../zodRegister";
 
 // https://crates.io/crates/indradb
 

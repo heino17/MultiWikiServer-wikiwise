@@ -1,17 +1,17 @@
 import { Readable } from 'stream';
-import { filterAsync, mapAsync, readMultipartData, sendResponse } from '../utils';
-import { STREAM_ENDED, Streamer, StreamerState } from '../listen/streamer';
+import { filterAsync, mapAsync, readMultipartData, RouteMatch, sendResponse } from '../utils';
+import { Streamer, StreamerState } from '../listen/streamer';
 import { PassThrough } from 'node:stream';
-import { RouteMatch, Router } from '../router';
 import { AllowedMethod, BodyFormat } from "../utils";
 import * as z from 'zod';
 import { AuthUser } from '../services/sessions';
-import { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { Types } from '@prisma/client/runtime/library';
 import { DataChecks } from '../utils';
 import { setupDevServer } from "../listen/setupDevServer";
-import { ServerState } from "../ServerState";
+import { ServerState, SiteConfig } from "../ServerState";
 import { PasswordService } from '../services/PasswordService';
+import { CacheState } from './cache';
 
 // This class abstracts the request/response cycle into a single object.
 // It hides most of the details from the routes, allowing us to easily 
@@ -22,10 +22,6 @@ export class StateObject<
   RoutePathParams extends string[][] = string[][],
   D = unknown
 > extends StreamerState {
-
-  z: typeof z = z;
-
-  STREAM_ENDED: typeof STREAM_ENDED = STREAM_ENDED;
 
   get method(): M { return super.method as M; }
   readMultipartData
@@ -59,8 +55,8 @@ export class StateObject<
 
 
   private engine: ServerState["engine"];
-  public config: ServerState;
   public PasswordService: PasswordService;
+  public pluginCache: CacheState;
 
   constructor(
     streamer: Streamer,
@@ -69,14 +65,14 @@ export class StateObject<
     /** The bodyformat that ended up taking precedence. This should be correctly typed. */
     public bodyFormat: B,
     public user: AuthUser,
-    public router: Router,
-    public tiddlerCache: Router["tiddlerCache"],
+    public config: SiteConfig,
+    
   ) {
     super(streamer);
 
-    this.engine = router.engine;
-    this.config = router.siteConfig;
-    this.PasswordService = router.PasswordService;
+    this.engine = config.engine;
+    this.pluginCache = config.pluginCache;
+    this.PasswordService = config.PasswordService;
 
 
     this.readMultipartData = readMultipartData.bind(this);
@@ -117,10 +113,14 @@ export class StateObject<
   // }
 
   $transaction = async <T>(fn: (prisma: PrismaTxnClient) => Promise<T>): Promise<T> => {
+    if (!this.asserted)
+      throw new Error("You must check access before opening a transaction.")
     return await this.engine.$transaction(prisma => fn(prisma as PrismaTxnClient));
   }
 
   $transactionTuple<P extends Prisma.PrismaPromise<any>[]>(arg: (prisma: ServerState["engine"]) => [...P], options?: { isolationLevel?: Prisma.TransactionIsolationLevel }): Promise<Types.Utils.UnwrapTuple<P>> {
+    if (!this.asserted)
+      throw new Error("You must check access before opening a transaction.");
     return this.engine.$transaction(arg(this.engine), options);
   }
 
@@ -206,17 +206,6 @@ export class StateObject<
     };
 
   }
-  // several changes were made to this function
-  // - it shouldn't assume it knows where the entityName is
-  // - it throws STREAM_ENDED if it ends the request
-  // - it does not check whether headers have been sent before throwing. 
-  // - headers should not be sent before it is called. 
-  // - it should not send a response more than once since it should throw every time it does.
-  // and now it is replaced by the getACL prisma query.
-  async checkACL(entityType: EntityType, entityName: string, permissionName: ACLPermissionName): Promise<void> {
-    console.error("checkACL is not implemented");
-    throw this.sendEmpty(500);
-  }
 
 
   async getRecipeACL(
@@ -247,6 +236,9 @@ export class StateObject<
     return { recipe, canRead, canWrite };
 
   }
+
+  asserted: boolean = false;
+
   async assertRecipeACL(
     recipe_name: PrismaField<"Recipes", "recipe_name">,
     needWrite: boolean
@@ -257,6 +249,8 @@ export class StateObject<
     if (!recipe) throw this.sendEmpty(404, { "x-reason": "recipe not found" });
     if (!canRead) throw this.sendEmpty(403, { "x-reason": "no read permission" });
     if (!canWrite) throw this.sendEmpty(403, { "x-reason": "no write permission" });
+
+    this.asserted = true;
 
   }
 
@@ -285,6 +279,7 @@ export class StateObject<
     return { bag, canRead, canWrite };
   }
 
+
   async assertBagACL(
     bag_name: PrismaField<"Bags", "bag_name">,
     needWrite: boolean
@@ -294,6 +289,8 @@ export class StateObject<
     if (!bag) throw this.sendEmpty(404, { "x-reason": "recipe not found" });
     if (!canRead) throw this.sendEmpty(403, { "x-reason": "no read permission" });
     if (!canWrite) throw this.sendEmpty(403, { "x-reason": "no write permission" });
+
+    this.asserted = true;
 
     return bag;
 

@@ -1,8 +1,9 @@
 
 import { assertSignature } from "../../services/sessions";
-import { registerZodRoutes, zodManage, RouterKeyMap, RouterRouteMap } from "../../router";
-import { STREAM_ENDED } from "../../listen/streamer";
+import { zodManage } from "../zodManage";
 import { SiteConfig } from "../../ServerState";
+import { RouterKeyMap, RouterRouteMap } from "../../utils";
+import { registerZodRoutes } from "../zodRegister";
 
 export const UserKeyMap: RouterKeyMap<UserManager, true> = {
   user_edit_data: true,

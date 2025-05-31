@@ -1,6 +1,5 @@
-import { STREAM_ENDED } from "../../listen/streamer";
-import { tryParseJSON, UserError } from "../../utils";
-import { registerZodRoutes, zodRoute, RouterKeyMap, RouterRouteMap, ZodState } from "../../router";
+import { tryParseJSON, UserError, RouterKeyMap, RouterRouteMap, ZodState } from "../../utils";
+import { zodRoute } from "../zodRoute";
 import { TiddlerFields } from "tiddlywiki";
 import { createWriteStream } from "fs";
 import { parse, resolve } from "path";
@@ -14,6 +13,7 @@ import { PrismaPromise } from "@prisma/client";
 import { WikiStateStore } from "./WikiStateStore";
 import { StateObject } from "../StateObject";
 import { ZodEffects, ZodType, ZodTypeAny } from "zod";
+import { registerZodRoutes } from "../zodRegister";
 
 
 export const TiddlerKeyMap: RouterKeyMap<WikiRoutes, true> = {
@@ -77,8 +77,6 @@ export class WikiRoutes {
         username,
         isLoggedIn: state.user.isLoggedIn,
         isReadOnly: !canWrite,
-        allowAnonReads: false,
-        allowAnonWrites: false,
       };
     }
   });
@@ -121,7 +119,19 @@ export class WikiRoutes {
 
       const result = await state.$transaction(async (prisma) => {
         const server = new WikiStateStore(state, prisma);
-        return await server.getRecipeTiddlers(recipe_name);
+        // Get the recipe name from the parameters
+        const bagTiddlers = await server.getRecipeTiddlersByBag(recipe_name);
+
+        // reverse order for Map, so 0 comes after 1 and overlays it
+        bagTiddlers.sort((a, b) => b.position - a.position);
+
+        return Array.from(new Map(bagTiddlers.flatMap(bag => bag.tiddlers.map(tiddler => [tiddler.title, {
+          title: tiddler.title,
+          revision_id: tiddler.revision_id,
+          is_deleted: tiddler.is_deleted,
+          bag_name: bag.bag_name,
+          bag_id: bag.bag_id
+        }]))).values());
       });
       return result;
     }
@@ -220,8 +230,9 @@ export class WikiRoutes {
         const server = new WikiStateStore(state, prisma);
         // The tiddlywiki client saves binary tiddlers as base64-encoded text field
         // so no special handling is required.
-
-        return await server.saveRecipeTiddlerFields(fields, state.pathParams.recipe_name, null);
+        const bag = await server.getRecipeWritableBag(recipe_name);
+        const { revision_id } = await server.saveBagTiddlerFields(fields, bag.bag_name, null);
+        return { revision_id, bag_name: bag.bag_name };
       });
 
       return { bag_name, revision_id };
@@ -247,8 +258,17 @@ export class WikiRoutes {
       await state.assertRecipeACL(recipe_name, true);
 
       const { bag_name, revision_id } = await state.$transaction(async (prisma) => {
+
         const server = new WikiStateStore(state, prisma);
-        return await server.deleteRecipeTiddler(recipe_name, title);
+
+        const bag = await server.getRecipeWritableBag(recipe_name, title);
+
+        if (!bag.tiddlers.length) throw new UserError("The writable bag does not contain this tiddler.");
+
+        const { revision_id } = await server.deleteBagTiddler(bag.bag_name, title);
+
+        return { revision_id, bag_name: bag.bag_name };
+
       });
 
       return { bag_name, revision_id };

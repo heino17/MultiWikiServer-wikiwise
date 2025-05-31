@@ -1,9 +1,11 @@
 
 import { Streamer } from "../listen/streamer";
 import { createHash, randomBytes } from "node:crypto";
-import { jsonify, registerZodRoutes, Router, RouterKeyMap, ZodAction, zodRoute, ZodState } from "../router";
+import { zodRoute } from "../routes/zodRoute";
 import { z } from "zod";
-import { JsonValue, Z2 } from "../utils";
+import { JsonValue, Z2, jsonify, RouterKeyMap, ZodAction, ZodState } from "../utils";
+import { SiteConfig } from "../ServerState";
+import { registerZodRoutes } from "../routes/zodRegister";
 
 export interface AuthUser {
   /** User ID. 0 if the user is not logged in. */
@@ -83,10 +85,10 @@ export class SessionManager {
     registerZodRoutes(root, new SessionManager(), Object.keys(SessionKeyMap))
   }
 
-  static async parseIncomingRequest(streamer: Streamer, router: Router): Promise<AuthUser> {
+  static async parseIncomingRequest(streamer: Streamer, config: SiteConfig): Promise<AuthUser> {
 
     const sessionId = streamer.cookies.getAll("session") as PrismaField<"Sessions", "session_id">[];
-    const session = sessionId && await router.engine.sessions.findFirst({
+    const session = sessionId && await config.engine.sessions.findFirst({
       where: { session_id: { in: sessionId } },
       select: { session_id: true, user: { select: { user_id: true, username: true, roles: { select: { role_id: true, role_name: true } } } } }
     });

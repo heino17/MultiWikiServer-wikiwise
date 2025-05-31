@@ -1,19 +1,20 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { Router } from "../router";
+import { Router } from "./router";
 import { ok } from "node:assert";
 import { createServer, IncomingMessage, Server, ServerResponse } from "node:http";
 import { createSecureServer, Http2SecureServer, Http2ServerRequest, Http2ServerResponse } from "node:http2";
 import { ListenerRaw } from '../commands/listen';
 import { SiteConfig } from '../ServerState';
 import { t as try_ } from "try";
-import { STREAM_ENDED, Streamer } from './streamer';
+import { Streamer } from './streamer';
+import { makeRouter } from './makeRouter';
 
 
 export async function startListeners(listeners: ListenerRaw[], config: SiteConfig) {
 
 
 
-  const router = await Router.makeRouter(
+  const router = await makeRouter(
     config,
   ).catch(e => {
     console.log(e.stack);
@@ -36,7 +37,7 @@ export async function startListeners(listeners: ListenerRaw[], config: SiteConfi
 
 
 export interface Listener extends ListenerRaw {
-  prefix: string;
+  prefix: string; // this is always a string
 }
 
 export class ListenerBase {

@@ -52,7 +52,7 @@ export class WikiStateStore extends TiddlerStore_PrismaTransaction {
       where: { bag_id: { in: recipe.recipe_bags.map(e => e.bag.bag_id) } }
     });
 
-    const { cachePath, pluginFiles, pluginHashes, requiredPlugins } = state.tiddlerCache;
+    const { cachePath, pluginFiles, pluginHashes, requiredPlugins } = state.pluginCache;
 
     const plugins = [
       ...new Set([
@@ -130,7 +130,7 @@ export class WikiStateStore extends TiddlerStore_PrismaTransaction {
     await state.write(template.substring(headPos, markerPos));
 
     plugins.forEach(e => {
-      if (!state.tiddlerCache.pluginFiles.has(e))
+      if (!state.pluginCache.pluginFiles.has(e))
         console.log(`Recipe ${recipe_name} uses unknown plugin ${e}`);
     });
 
@@ -176,7 +176,7 @@ $tw.preloadTiddler = function(fields) {
     }
 
     const bagOrder = new Map(recipe.recipe_bags.map(e => [e.bag.bag_id, e.position]));
-    const bagIDs = recipe.recipe_bags.filter(e => !state.tiddlerCache.pluginFiles.has(e.bag.bag_name)).map(e => e.bag.bag_id);
+    const bagIDs = recipe.recipe_bags.filter(e => !state.pluginCache.pluginFiles.has(e.bag.bag_name)).map(e => e.bag.bag_id);
     await this.serveStoreTiddlers(bagIDs, bagOrder, writeTiddler);
 
     await writeTiddler({
