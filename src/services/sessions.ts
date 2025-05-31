@@ -49,6 +49,7 @@ export function zodSession<P extends string, T extends z.ZodTypeAny, R extends J
       zodQueryParams: z => ({}),
       zodRequestBody: zodRequest,
       inner: async (state) => {
+        state.asserted = true;
         return state.$transaction(async (prisma) => await inner(state, prisma));
       }
     }),

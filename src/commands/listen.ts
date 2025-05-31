@@ -3,8 +3,6 @@ import { BaseCommand } from "../utils";
 import { z } from "zod";
 import { fromError } from "zod-validation-error";
 import { startListeners } from "../listen/listeners";
-import { Command as InitStoreCommand } from "../commands/init-store"
-
 
 export const info: CommandInfo = {
   name: "listen",

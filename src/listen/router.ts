@@ -116,11 +116,13 @@ export class Router {
   findRouteRecursive(
     routes: Route[],
     testPath: string,
-    method: AllowedMethod
-  ): RouteMatch[] {
+    method: AllowedMethod | null,
+    returnAll: boolean
+  ): RouteMatch[][] {
+    const results: RouteMatch[][] = [];
     for (const potentialRoute of routes) {
       // Skip if the method doesn't match.
-      if (!potentialRoute.method.includes(method)) continue;
+      if (method && !potentialRoute.method.includes(method)) continue;
 
       // Try to match the path.
       const match = potentialRoute.path.exec(testPath);
@@ -141,18 +143,21 @@ export class Router {
 
         // If there are inner routes, try to match them recursively.
         if (childRoutes.length > 0) {
-          const innerMatch = this.findRouteRecursive(
+          const innerMatches = this.findRouteRecursive(
             childRoutes,
             remainingPath,
-            method
+            method,
+            returnAll
           );
-          return [result, ...innerMatch];
+          innerMatches.forEach(e => { results.push([result, ...e]) })
         } else {
-          return [result];
+          results.push([result]);
         }
+        // we have a match
+        if (!returnAll) return results;
       }
     }
-    return [];
+    return results;
   }
 
   /**
@@ -166,7 +171,19 @@ export class Router {
   findRoute(streamer: Streamer): RouteMatch[] {
     const { method, urlInfo } = streamer;
     let testPath = urlInfo.pathname || "/";
-    return this.findRouteRecursive([this.rootRoute as any], testPath, method);
+    const routes = this.findRouteRecursive([this.rootRoute as any], testPath, method, false);
+    // const routes = this.findRouteRecursive([this.rootRoute as any], testPath, null, true);
+    // console.log(routes);
+    // routes.forEach(e => {
+    //   console.log(e[e.length - 1]?.route.method, e[e.length - 1]?.route.path.source)
+    // });
+    // const matchedMethods = new Set(
+    //   routes.map(e =>
+    //     e.filter(f => !f.route.denyFinal).map(f => f.route.method).flat()
+    //   ).flat()
+    // );
+    // console.log(matchedMethods);
+    return routes.find(e => e.every(f => f.route.method.includes(method))) ?? [];
   }
 
 }
