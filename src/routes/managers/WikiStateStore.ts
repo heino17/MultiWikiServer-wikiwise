@@ -116,13 +116,15 @@ export class WikiStateStore extends TiddlerStore_PrismaTransaction {
       await state.write("\n" + plugins.map(e => {
         const plugin = pluginFiles.get(e)!;
         const hash = pluginHashes.get(e)!;
-        return `<link rel="preload" href="${state.pathPrefix}/$cache/${plugin}/plugin.js" as="script" integrity="${hash}" crossorigin="anonymous" />`;
+        return `<link rel="preload" href="${state.pathPrefix}/$cache/${plugin}/plugin.js" `
+          + `as="script" integrity="${hash}" crossorigin="anonymous" />`;
       }).join("\n") + "\n");
     }
 
 
     // Splice in our tiddlers
-    var marker = `<script class="tiddlywiki-tiddler-store" type="application/json">[`, markerPos = template.indexOf(marker);
+    const marker = `<script class="tiddlywiki-tiddler-store" type="application/json">[`;
+    const markerPos = template.indexOf(marker);
     if (markerPos === -1) {
       throw new Error("Cannot find tiddler store in template");
     }
@@ -150,7 +152,7 @@ $tw.preloadTiddler = function(fields) {
         const plugin = pluginFiles.get(e)!;
         const hash = pluginHashes.get(e)!;
         return `<script src="${state.pathPrefix}/$cache/${plugin}/plugin.js" `
-          + ` integrity="${hash}" crossorigin="anonymous"></script>`;
+          + `integrity="${hash}" crossorigin="anonymous"></script>`;
       }).join("\n") + "\n");
 
       await state.write(marker);

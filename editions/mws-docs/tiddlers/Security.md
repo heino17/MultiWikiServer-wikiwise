@@ -42,6 +42,10 @@ I just needed some place to list all the different things we could do to secure 
 - Using separate subdomains for admin and wiki paths is also an option. 
 - Having a separate login subdomain and using oauth is a more complicated option.
 
+### Request Methods
+
+- JavaScript `no-cors` mode allows `GET`, `HEAD`, and `POST`, so none of those can be used for any kind of protected APIs, assuming opaque `no-cors` requests still send cookies (probably depends on SameSite flag on the cookie).
+
 ### CORS headers
 
 - Set CORS header to only allow expected origins. This doesn't prevent external CLI tools from accessing the site, only browser-based tools. This could also be set for certain endpoints or recipes to only allow specific bags to receive external requests. 
