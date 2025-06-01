@@ -430,6 +430,12 @@ export class Streamer {
     this.res.writeHead(status);
   }
   /**
+   * Write early hints using 103 Early Hints.
+   * 
+   * Despite this being an HTTP/1.1 feature, not all browsers
+   * correctly implemented it, so this is commonly restricted 
+   * to HTTP/2. 
+   * 
    * @example
     state.writeEarlyHints({
       'link': [
@@ -442,7 +448,8 @@ export class Streamer {
    * @returns 
    */
   writeEarlyHints(hints: Record<string, string | string[]>) {
-    this.res.writeEarlyHints(hints);
+    if (this.req.httpVersionMajor > 1)
+      this.res.writeEarlyHints(hints);
   }
 
 
@@ -471,8 +478,6 @@ export class Streamer {
   }
 
   headersSentBy: Error | undefined;
-
-  get httpVersionMajor() { return this.req.httpVersionMajor }
 }
 
 /** 
@@ -569,7 +574,6 @@ export class StreamerState {
   get cookies() { return this.streamer.cookies; }
   /** This is based on the listener either having a key + cert or having secure set */
   get expectSecure() { return this.streamer.expectSecure; }
-  get httpVersionMajor() { return this.streamer.httpVersionMajor }
 
 
   /** 

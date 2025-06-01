@@ -67,18 +67,7 @@ export class Router {
   }
 
   async handleStreamer(streamer: Streamer) {
-    // await new Promise(resolve => {
-    //   this.helmet(streamer.req)
-    // })
-    // this.helmet(req as IncomingMessage, res as ServerResponse, (err1) => {
-    //   if (err1) {
-    //     console.log("helmet error", err1);
-    //     res.writeHead(500, { "x-reason": "helmet error" }).end();
-    //     return;
-    //   }
-    // });
-
-
+   
 
     if (!this.config.csrfDisable
       && !["GET", "HEAD", "OPTIONS"].includes(streamer.method)
