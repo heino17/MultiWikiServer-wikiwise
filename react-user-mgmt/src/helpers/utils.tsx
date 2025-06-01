@@ -86,13 +86,14 @@ declare global {
   // see setupDevServer.ts
   const pathPrefix: string;
 }
+type t = StatusManagerMap["index_json"]
 
 function postManager<K extends keyof StatusManagerMap>(key: K): StatusManagerMap[K]
 function postManager<K extends keyof RecipeManagerMap>(key: K): RecipeManagerMap[K]
 function postManager<K extends keyof UserManagerMap>(key: K): UserManagerMap[K]
 function postManager(key: string) {
   return async (data: any) => {
-    const req = await fetch(pathPrefix + "/manager/" + key, {
+    const req = await fetch(pathPrefix + "/admin/" + key, {
       method: "POST",
       headers: {
         'Content-Type': 'application/json',

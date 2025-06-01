@@ -1,6 +1,6 @@
 
 import { assertSignature } from "../../services/sessions";
-import { zodManage } from "../zodManage";
+import { admin } from "./admin-utils";
 import { SiteConfig } from "../../ServerState";
 import { RouterKeyMap, RouterRouteMap } from "../../utils";
 import { registerZodRoutes } from "../zodRegister";
@@ -17,12 +17,6 @@ export const UserKeyMap: RouterKeyMap<UserManager, true> = {
 }
 
 export type UserManagerMap = RouterRouteMap<UserManager>;
-declare const root: rootRoute;
-
-// class RoutesClass { test = zodManage(z => z.any(), async e => null) }
-// const RoutesKeyMap: RouterKeyMap<RoutesClass, true> = { test: true }
-// registerZodRoutes(root, new RoutesClass(), Object.keys(RoutesKeyMap));
-
 
 export class UserManager {
   static defineRoutes(root: rootRoute, config: SiteConfig) {
@@ -32,7 +26,7 @@ export class UserManager {
 
   constructor(private config: SiteConfig) { }
 
-  user_edit_data = zodManage(z => z.object({
+  user_edit_data = admin(z => z.object({
     user_id: z.prismaField("Users", "user_id", "string")
   }), async (state, prisma) => {
     state.okUser();
@@ -67,7 +61,7 @@ export class UserManager {
     return { user, allRoles }
   });
 
-  user_list = zodManage(z => z.undefined(), async (state, prisma) => {
+  user_list = admin(z => z.undefined(), async (state, prisma) => {
 
     state.okAdmin();
 
@@ -89,7 +83,7 @@ export class UserManager {
   });
 
 
-  user_create = zodManage(z => z.object({
+  user_create = admin(z => z.object({
     username: z.string(),
     email: z.string(),
     role_ids: z.prismaField("Roles", "role_id", "string", false).array(),
@@ -106,7 +100,7 @@ export class UserManager {
     return user;
   });
 
-  user_update = zodManage(z => z.object({
+  user_update = admin(z => z.object({
     user_id: z.prismaField("Users", "user_id", "string"),
     username: z.prismaField("Users", "username", "string"),
     email: z.prismaField("Users", "email", "string"),
@@ -127,7 +121,7 @@ export class UserManager {
   });
 
 
-  user_delete = zodManage(z => z.object({
+  user_delete = admin(z => z.object({
     user_id: z.prismaField("Users", "user_id", "string"),
   }), async (state, prisma) => {
     const { user_id } = state.data;
@@ -146,7 +140,7 @@ export class UserManager {
   });
 
 
-  user_update_password = zodManage(z => z.object({
+  user_update_password = admin(z => z.object({
     user_id: z.prismaField("Users", "user_id", "string"),
     registrationRequest: z.string().optional(),
     registrationRecord: z.string().optional(),
@@ -198,7 +192,7 @@ export class UserManager {
     return null;
   });
 
-  role_create = zodManage(z => z.object({
+  role_create = admin(z => z.object({
     role_name: z.string(),
     description: z.string(),
   }), async (state, prisma) => {
@@ -212,7 +206,7 @@ export class UserManager {
 
   });
 
-  role_update = zodManage(z => z.object({
+  role_update = admin(z => z.object({
     role_id: z.prismaField("Roles", "role_id", "string"),
     role_name: z.prismaField("Roles", "role_name", "string"),
     description: z.prismaField("Roles", "description", "string"),

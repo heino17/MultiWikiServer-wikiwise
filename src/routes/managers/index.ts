@@ -2,7 +2,7 @@
 import { DataChecks, RouterKeyMap, RouterRouteMap } from "../../utils";
 import { RecipeManager } from "./admin-recipes";
 import { UserManager } from "./admin-users";
-import { zodManage } from "../zodManage";
+import { admin } from "./admin-utils";
 import { SiteConfig } from "../../ServerState";
 import { registerZodRoutes } from "../zodRegister";
 
@@ -33,7 +33,7 @@ export class StatusManager {
     this.checks = new DataChecks(config)
   }
 
-  index_json = zodManage(z => z.undefined(), async (state, prisma) => {
+  index_json = admin(z => z.undefined(), async (state, prisma) => {
 
     const { isAdmin, user_id, username, role_ids } = state.user;
 

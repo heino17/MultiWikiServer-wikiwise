@@ -3,7 +3,7 @@ import { truthy } from "./utils";
 import { ok } from "node:assert";
 import { SiteConfig } from "../ServerState";
 
-export const AllowedMethods = [...["GET", "HEAD", "OPTIONS", "POST", "PUT", "DELETE"] as const];
+export const AllowedMethods = [...["GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"] as const];
 export type AllowedMethod = (typeof AllowedMethods)[number];
 
 export const BodyFormats = ["stream", "string", "json", "buffer", "www-form-urlencoded", "www-form-urlencoded-urlsearchparams", "ignore"] as const;

@@ -4,7 +4,6 @@ import { join, resolve } from "path";
 import { StateObject } from "../routes/StateObject";
 import { dist_resolve } from "../utils";
 import { createHash } from "crypto";
-import { STREAM_ENDED } from "./streamer";
 import { readFile } from "fs/promises";
 import { writeFileSync } from "fs";
 import { ServerState } from "../ServerState";

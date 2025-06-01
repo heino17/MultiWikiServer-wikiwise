@@ -5,8 +5,6 @@ import { createServer, IncomingMessage, Server, ServerResponse } from "node:http
 import { createSecureServer, Http2SecureServer, Http2ServerRequest, Http2ServerResponse } from "node:http2";
 import { ListenerRaw } from '../commands/listen';
 import { SiteConfig } from '../ServerState';
-import { t as try_ } from "try";
-import { Streamer } from './streamer';
 import { makeRouter } from './makeRouter';
 
 
@@ -59,7 +57,6 @@ export class ListenerBase {
 
     this.options = options as Listener;
 
-
     this.server.on("request", (
       req: IncomingMessage | Http2ServerRequest,
       res: ServerResponse | Http2ServerResponse
@@ -105,20 +102,7 @@ export class ListenerBase {
     req: IncomingMessage | Http2ServerRequest,
     res: ServerResponse | Http2ServerResponse
   ) {
-
-    const [ok, err, streamer] = try_(() => new Streamer(
-      req, res, this.options.prefix,
-      !!(this.options.key && this.options.cert || this.options.secure)
-    ));
-
-    if (!ok) {
-      if (err === STREAM_ENDED) return;
-      res.writeHead(500, { "x-reason": "handle incoming request" }).end();
-      throw err;
-    }
-
-    this.router.handle(streamer).catch(streamer.catcher);
-
+    this.router.handle(req, res, this.options);
   }
 
 }

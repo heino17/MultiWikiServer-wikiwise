@@ -1,27 +1,87 @@
 import { TW } from "tiddlywiki";
 import * as z from "zod";
+import { StateObject } from "../routes/StateObject";
 import { Streamer } from "./streamer";
 import Debug from "debug";
-import { StateObject } from "../routes/StateObject";
 import { ServerState } from "../ServerState";
 import { SessionManager } from "../services/sessions";
-import { Route, BodyFormat, createStrictAwaitProxy, AllowedMethod, RouteMatch, zodTransformJSON } from "../utils";
+import { BodyFormat, createStrictAwaitProxy, AllowedMethod, RouteMatch, zodTransformJSON } from "../utils";
+import { IncomingMessage, ServerResponse } from "node:http";
+import { Http2ServerRequest, Http2ServerResponse } from "node:http2";
+import { t as try_ } from "try";
+import { Listener } from "./listeners";
+import helmet from "helmet";
 
 const debug = Debug("mws:router:matching");
 
 export class Router {
-
+  helmet;
   constructor(
     private rootRoute: rootRoute,
     private config: ServerState
   ) {
+    //https://helmetjs.github.io/
+    // we'll start with the defaults and go from there
+    // feel free to open issues on Github for this
+    this.helmet = helmet({
+      contentSecurityPolicy: false,
+      strictTransportSecurity: false,
+    });
 
   }
 
-  async handle(streamer: Streamer) {
+  handle(
+    req: IncomingMessage | Http2ServerRequest,
+    res: ServerResponse | Http2ServerResponse,
+    options: Listener
+  ) {
+
+    this.handleRequest(req, res, options).catch(err2 => {
+      if (err2 === STREAM_ENDED) return;
+      res.writeHead(500, { "x-reason": "handle incoming request" }).end();
+      console.log(req.url, err2);
+    });
+
+
+  }
+
+  async handleRequest(
+    req: IncomingMessage | Http2ServerRequest,
+    res: ServerResponse | Http2ServerResponse,
+    options: Listener
+  ) {
+
+    await new Promise<void>((resolve, reject) => this.helmet(
+      req as IncomingMessage,
+      res as ServerResponse,
+      err => err ? reject(err) : resolve()
+    ));
+
+    const streamer = new Streamer(
+      req, res, options.prefix,
+      !!(options.key && options.cert || options.secure)
+    );
+
+    await this.handleStreamer(streamer).catch(streamer.catcher);
+
+  }
+
+  async handleStreamer(streamer: Streamer) {
+    // await new Promise(resolve => {
+    //   this.helmet(streamer.req)
+    // })
+    // this.helmet(req as IncomingMessage, res as ServerResponse, (err1) => {
+    //   if (err1) {
+    //     console.log("helmet error", err1);
+    //     res.writeHead(500, { "x-reason": "helmet error" }).end();
+    //     return;
+    //   }
+    // });
+
+
 
     if (!this.config.csrfDisable
-      && ["POST", "PUT", "DELETE"].includes(streamer.method)
+      && !["GET", "HEAD", "OPTIONS"].includes(streamer.method)
       && streamer.headers["x-requested-with"] !== "TiddlyWiki")
       throw streamer.sendString(400, { "x-reason": "x-requested-with missing" },
         `'X-Requested-With' header required`, "utf8");

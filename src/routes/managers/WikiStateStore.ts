@@ -62,6 +62,19 @@ export class WikiStateStore extends TiddlerStore_PrismaTransaction {
       ]).values()
     ];
 
+    if (state.config.enableExternalPlugins && state.httpVersionMajor > 1) {
+      state.writeEarlyHints({
+        'link': plugins.map(e => {
+          const plugin = pluginFiles.get(e);
+          return `<${state.pathPrefix}/$cache/${plugin}/plugin.js>; rel=preload; as=script`
+        }).reverse(),
+        'x-trace-id': 'id for diagnostics',
+      });
+      // for testing only, wait for a second
+      await new Promise<void>(r => setTimeout(r, 2000));
+    }
+
+
     const template = readFileSync(resolve(state.config.cachePath, "tiddlywiki5.html"), "utf8");
     const hash = createHash('md5');
     // Put everything into the hash that could change and invalidate the page

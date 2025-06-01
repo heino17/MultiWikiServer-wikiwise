@@ -50,6 +50,7 @@ export default async function RootRoute(root: rootRoute, config: SiteConfig) {
     bodyFormat: "stream",
   }, async state => {
     await state.sendDevServer();
+    return STREAM_ENDED;
   });
 
 
@@ -62,13 +63,13 @@ function definePrismaRoute(root: rootRoute, config: SiteConfig) {
     method: ["POST"],
     path: /^\/prisma$/,
     bodyFormat: "json",
-  }, async state => {
+  }, async (state) => {
     ZodAssert.data(state, z => z.object({
       table: z.string(),
       action: z.string(),
       arg: z.any(),
     }));
-    return await state.$transaction(async prisma => {
+    await state.$transaction(async prisma => {
       // DEV: this just lets the client directly call the database. 
       // TODO: it's just for dev purposes and will be removed later. 
       // DANGER: it circumvents all security and can totally rewrite the ACL.
@@ -80,6 +81,7 @@ function definePrismaRoute(root: rootRoute, config: SiteConfig) {
       console.log(state.data.arg);
       return state.sendJSON(200, await fn.call(table, state.data.arg));
     });
+    return STREAM_ENDED;
   });
 }
 

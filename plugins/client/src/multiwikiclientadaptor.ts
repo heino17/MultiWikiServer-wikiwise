@@ -21,7 +21,7 @@ previous operation to complete before sending a new one.
 
 import type { Syncer, Tiddler, ITiddlyWiki } from "tiddlywiki";
 import type { WikiRoutes } from "@tiddlywiki/mws/src/routes/managers/wiki-routes";
-import type { ZodRoute } from "@tiddlywiki/mws/src/router";
+import type { ZodRoute } from "@tiddlywiki/mws/src/utils";
 
 declare global {
 	const fflate: typeof import("fflate");
@@ -243,6 +243,11 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		return text;
 	}
 
+	/** 
+	 * This throws an error if the response status is not 2xx, but will still return the response alongside the error.
+	 * 
+	 * So if the first parameter is false, the third parameter may still contain the response.
+	 */
 	private async recipeRequest<KEY extends (string & keyof TiddlerRouterResponse)>(
 		options: Omit<HttpRequestOptions<"arraybuffer">, "responseType"> & { key: KEY }
 	) {
@@ -253,18 +258,13 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 			...options,
 			responseType: "blob",
 			url: this.host + "wiki/" + encodeURIComponent(this.recipe) + options.url,
-		}).then(result => {
-			// in theory, 403 and 404 should result in further action, 
-			// but in reality an error gets logged to console and that's it.
-			if (!result.ok) {
-				throw new Error(
-					`The server return a status code ${result.status} with the following reason: `
-					+ `${result.headers.get("x-reason") ?? "(no reason given)"}`
-				);
-			} else {
-				return result;
-			}
 		}).then(async e => {
+			if (!e.ok) return [
+				false, new Error(
+					`The server return a status code ${e.status} with the following reason: `
+					+ `${e.headers.get("x-reason") ?? "(no reason given)"}`
+				), e
+			] as const;
 			let responseString: string = "";
 			if (e.headers.get("x-gzip-stream") === "yes") {
 				// Browsers only decode the first stream, 
@@ -343,6 +343,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		this.wiki.setText(REVISION_STATE_TIDDLER, null, title, undefined, { suppressTimestamp: true });
 	}
 
+	error: string | null = null;
 	/*
 	Get the current status of the server connection
 	*/
@@ -353,22 +354,26 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 			method: "GET",
 			url: "/status",
 		});
-		if (!ok) {
+		if (!ok && data?.status === 0) {
+			this.error = "The webpage is forbidden from contacting the server."
 			this.isLoggedIn = false;
 			this.isReadOnly = true;
 			this.username = "(offline)";
 			this.offline = true;
-		} else {
+		} else if (ok) {
+			this.error = null;
 			const status = data.responseJSON;
 			this.isReadOnly = status?.isReadOnly ?? true;
 			this.isLoggedIn = status?.isLoggedIn ?? false;
 			this.username = status?.username ?? "(anon)";
 			this.offline = false;
+		} else {
+			this.error = error.message ?? `${error}`;
 		}
 		if (callback) {
 			callback(
 				// Error
-				!ok ? error : null,
+				this.error,
 				// Is logged in
 				this.isLoggedIn,
 				// Username
@@ -385,7 +390,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 	Get details of changed tiddlers from the server
 	*/
 	getUpdatedTiddlers(syncer: Syncer, callback: (err: any, changes?: { modifications: string[]; deletions: string[] }) => void) {
-		if(this.offline) return callback(null);
+		if (this.offline) return callback(null);
 		if (!this.useServerSentEvents) {
 			this.pollServer().then(changes => {
 				callback(null, changes);
@@ -731,31 +736,6 @@ interface HttpRequestOptions<TYPE extends "arraybuffer" | "blob" | "text"> {
 
 function httpRequest<TYPE extends "arraybuffer" | "blob" | "text">(options: HttpRequestOptions<TYPE>) {
 
-	options.method = options.method.toUpperCase();
-
-	if ((options.method === "GET" || options.method === "HEAD") && options.requestBodyString)
-		throw new Error("requestBodyString must be falsy if method is GET or HEAD");
-
-	function paramsInput(input: ParamsInput) {
-		if (!input) return new URLSearchParams();
-		if (input instanceof URLSearchParams) return input;
-		if (Array.isArray(input) || typeof input === "string") return new URLSearchParams(input);
-		return new URLSearchParams(Object.entries(input));
-	}
-
-	function normalizeHeaders(headers: URLSearchParams) {
-		[...headers.keys()].forEach(([k, v]) => {
-			const k2 = k.toLowerCase();
-			if (k2 !== k) {
-				headers.getAll(k).forEach(e => {
-					headers.append(k2, e);
-				})
-				headers.delete(k);
-				console.log(k, k2);
-			}
-		})
-	}
-
 	return new Promise<{
 		/** Shorthand to check if the response is in the 2xx range. */
 		ok: boolean;
@@ -769,6 +749,12 @@ function httpRequest<TYPE extends "arraybuffer" | "blob" | "text">(options: Http
 		never;
 	}>((resolve, reject) => {
 		// if this throws sync'ly, the promise will reject.
+
+		options.method = options.method.toUpperCase();
+
+		if ((options.method === "GET" || options.method === "HEAD") && options.requestBodyString)
+			throw new Error("requestBodyString must be falsy if method is GET or HEAD");
+
 
 		const url = new URL(options.url, location.href);
 		const query = paramsInput(options.queryParams);
@@ -797,11 +783,6 @@ function httpRequest<TYPE extends "arraybuffer" | "blob" | "text">(options: Http
 			request.setRequestHeader(k, v);
 		});
 
-		// request.onerror = (event) => {
-		// 	console.log(event);
-		// 	console.log((event as ProgressEvent<XMLHttpRequest>)!.target?.status);
-		// }
-
 		request.onreadystatechange = function () {
 			if (this.readyState !== 4) return;
 
@@ -829,6 +810,27 @@ function httpRequest<TYPE extends "arraybuffer" | "blob" | "text">(options: Http
 
 
 	});
+
+
+	function paramsInput(input: ParamsInput) {
+		if (!input) return new URLSearchParams();
+		if (input instanceof URLSearchParams) return input;
+		if (Array.isArray(input) || typeof input === "string") return new URLSearchParams(input);
+		return new URLSearchParams(Object.entries(input));
+	}
+
+	function normalizeHeaders(headers: URLSearchParams) {
+		[...headers.keys()].forEach(([k, v]) => {
+			const k2 = k.toLowerCase();
+			if (k2 !== k) {
+				headers.getAll(k).forEach(e => {
+					headers.append(k2, e);
+				})
+				headers.delete(k);
+				console.log(k, k2);
+			}
+		})
+	}
 
 }
 

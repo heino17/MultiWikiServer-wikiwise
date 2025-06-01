@@ -59,6 +59,7 @@ export async function registerCacheRoutes(rootRoute: rootRoute, config: SiteConf
     return state.sendFile(200, {}, {
       root: path.join(config.wikiPath, "cache"),
       reqpath: state.pathParams.plugin + "/plugin.js.gz",
+      
     });
 
   })

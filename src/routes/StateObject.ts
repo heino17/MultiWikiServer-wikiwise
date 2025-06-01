@@ -19,7 +19,6 @@ import { CacheState } from './cache';
 export class StateObject<
   B extends BodyFormat = BodyFormat,
   M extends AllowedMethod = AllowedMethod,
-  RoutePathParams extends string[][] = string[][],
   D = unknown
 > extends StreamerState {
 
@@ -43,7 +42,7 @@ export class StateObject<
    * 
    * Conflicting names would be defined on the route definitions, so just change the name there if there is a conflict.
    */
-  pathParams: Record<RoutePathParams extends (infer X extends string)[][] ? X : never, string | undefined>;
+  pathParams: Record<string, string | undefined>;
   /** 
    * The query params. Because these aren't checked anywhere, 
    * the value includes undefined since it will be that if 
@@ -134,7 +133,7 @@ export class StateObject<
   }
 
   /** type-narrowing helper function. This affects anywhere T is used. */
-  isBodyFormat<T extends B, S extends { [K in B]: StateObject<K, M, RoutePathParams, D> }[T]>(format: T): this is S {
+  isBodyFormat<T extends B, S extends { [K in B]: StateObject<K, M, D> }[T]>(format: T): this is S {
     return this.bodyFormat as BodyFormat === format;
   }
 

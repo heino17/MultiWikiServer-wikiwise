@@ -3,7 +3,7 @@ import { Router } from "./router";
 import RootRoute from "../routes";
 import { StateObject } from "../routes/StateObject";
 import { ServerState } from "../ServerState";
-import { AllowedMethods, BodyFormats, Route, RouteOptAny } from "../utils";
+import { AllowedMethods, BodyFormats } from "../utils";
 import Debug from "debug";
 
 const debug = Debug("mws:router:defining");
@@ -32,7 +32,7 @@ export async function makeRouter(
 
 export function defineRoute(
   parent: { $o?: any; method: any; } | typeof ROOT_ROUTE,
-  route: RouteOptAny,
+  route: RouteDef,
   handler: (state: any) => any
 ) {
 

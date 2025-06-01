@@ -36,15 +36,16 @@ I just needed some place to list all the different things we could do to secure 
 
 [MDN - SetCookie](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie)
 
-- Secure and http-only attributes
-- Setting separate session cookies for the admin and wiki paths. 
-- Setting same-site=strict for the admin UI since the initial page is a static asset. 
+- Secure, HttpOnly, SameSite=strict, attributes
+- Setting separate session cookies for the admin and wiki paths doesn't work because it's based on the request path, not the page path.
 - Using separate subdomains for admin and wiki paths is also an option. 
 - Having a separate login subdomain and using oauth is a more complicated option.
 
-### Request Methods
+### `no-cors`
 
-- JavaScript `no-cors` mode allows `GET`, `HEAD`, and `POST`, so none of those can be used for any kind of protected APIs, assuming opaque `no-cors` requests still send cookies (probably depends on SameSite flag on the cookie).
+- JavaScript `no-cors` mode allows `GET`, `HEAD`, and `POST` and sends relevant cookies. 
+- **`no-cors` prevents most headers, including custom headers, from being set.**
+- Our standard `x-requested-with` header cannot be set.
 
 ### CORS headers
 

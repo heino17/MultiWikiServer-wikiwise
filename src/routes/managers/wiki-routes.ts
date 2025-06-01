@@ -14,7 +14,8 @@ import { WikiStateStore } from "./WikiStateStore";
 import { StateObject } from "../StateObject";
 import { ZodEffects, ZodType, ZodTypeAny } from "zod";
 import { registerZodRoutes } from "../zodRegister";
-
+import { Debug } from "@prisma/client/runtime/library";
+const debugCORS = Debug("mws:cors");
 
 export const TiddlerKeyMap: RouterKeyMap<WikiRoutes, true> = {
   // recipe status updates
@@ -60,6 +61,37 @@ export class WikiRoutes {
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
     }),
+    corsRequest: async state => {
+
+      // "Access-Control-Expose-Headers"
+      // https://developer.mozilla.org/en-US/docs/Glossary/CORS-safelisted_response_header
+      // https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Access-Control-Expose-Headers
+      // The following headers are exposed by default: 
+      // Cache-Control
+      // Content-Language
+      // Content-Length
+      // Content-Type
+      // Expires
+      // Last-Modified
+      // Pragma
+
+      const headers = state.headers["access-control-request-headers"]
+      const method = state.headers["access-control-request-method"]
+      debugCORS("OPTIONS %s %s %s", state.urlInfo.pathname, method, headers);
+      // CORS is currently disabled, so send an empty response
+      throw state.sendEmpty(204, {
+        // SameSite=strict should prevent the request from being credentialed
+        // Allow-Origin * prevents credentialed requests
+        // https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Access-Control-Allow-Credentials
+        // "Access-Control-Allow-Credentials": "true",
+        // "Access-Control-Allow-Origin": "*",
+        // "Access-Control-Allow-Methods": "POST",
+        // "Access-Control-Allow-Headers": "Content-Type, X-Requested-With",
+        // "Access-Control-Expose-Headers": "*",
+      });
+      // https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request
+
+    },
     inner: async (state) => {
 
       const { recipe_name } = state.pathParams;
@@ -228,8 +260,6 @@ export class WikiRoutes {
 
       const { bag_name, revision_id } = await state.$transaction(async (prisma) => {
         const server = new WikiStateStore(state, prisma);
-        // The tiddlywiki client saves binary tiddlers as base64-encoded text field
-        // so no special handling is required.
         const bag = await server.getRecipeWritableBag(recipe_name);
         const { revision_id } = await server.saveBagTiddlerFields(fields, bag.bag_name, null);
         return { revision_id, bag_name: bag.bag_name };

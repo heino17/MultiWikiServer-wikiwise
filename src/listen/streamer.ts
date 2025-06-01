@@ -3,9 +3,9 @@ import * as http2 from 'node:http2';
 import send from 'send';
 import { Readable } from 'stream';
 import { IncomingMessage, ServerResponse, IncomingHttpHeaders as NodeIncomingHeaders, OutgoingHttpHeaders } from 'node:http';
-import { is, UserError } from '../utils';
+import { is } from '../utils';
 import { createReadStream } from 'node:fs';
-import { PassThrough, Writable } from 'node:stream';
+import { Writable } from 'node:stream';
 import Debug from "debug";
 
 declare module 'node:net' {
@@ -147,11 +147,6 @@ export class Streamer {
     console.error(tag, error);
     if (!this.headersSent) {
       this.sendEmpty(500, { "x-reason": "Internal Server Error (catcher)" });
-      // if (error instanceof UserError) {
-      //   this.sendString(400, { "x-reason": "Client Error (catcher)" }, error.message, "utf8")
-      // } else {
-
-      // }
     }
   }
 
@@ -434,6 +429,23 @@ export class Streamer {
     this.compressor.beforeWriteHead();
     this.res.writeHead(status);
   }
+  /**
+   * @example
+    state.writeEarlyHints({
+      'link': [
+        '</styles.css>; rel=preload; as=style',
+        '</scripts.js>; rel=preload; as=script',
+      ],
+      'x-trace-id': 'id for diagnostics',
+    });
+   * @param hints 
+   * @returns 
+   */
+  writeEarlyHints(hints: Record<string, string | string[]>) {
+    this.res.writeEarlyHints(hints);
+  }
+
+
   pause: boolean = false;
   /** awaiting is not required. everything happens sync'ly */
   write(chunk: Buffer | string, encoding?: NodeJS.BufferEncoding): Promise<void> {
@@ -459,6 +471,8 @@ export class Streamer {
   }
 
   headersSentBy: Error | undefined;
+
+  get httpVersionMajor() { return this.req.httpVersionMajor }
 }
 
 /** 
@@ -488,6 +502,7 @@ export class StreamerState {
    */
   setHeader
   writeHead
+  writeEarlyHints
   write
   end
 
@@ -521,6 +536,7 @@ export class StreamerState {
     await this.streamer.compressor.splitStream();
   }
 
+
   STREAM_ENDED: typeof STREAM_ENDED = STREAM_ENDED;
 
   constructor(private streamer: Streamer) {
@@ -533,6 +549,7 @@ export class StreamerState {
     // this.pipeFrom = this.streamer.pipeFrom.bind(this.streamer);
     this.setHeader = this.streamer.setHeader.bind(this.streamer);
     this.writeHead = this.streamer.writeHead.bind(this.streamer);
+    this.writeEarlyHints = this.streamer.writeEarlyHints.bind(this.streamer);
     this.write = this.streamer.write.bind(this.streamer);
     this.end = this.streamer.end.bind(this.streamer);
     this.setCookie = this.streamer.setCookie.bind(this.streamer);
@@ -541,7 +558,7 @@ export class StreamerState {
 
 
   get url() { return this.streamer.url; }
-  get method(): AllowedMethod { return this.streamer.method; }
+  get method(): AllowedMethod | "OPTIONS" { return this.streamer.method; }
   get headers() { return this.streamer.headers; }
   get host() { return this.streamer.host; }
   get urlInfo() { return this.streamer.urlInfo; }
@@ -552,6 +569,8 @@ export class StreamerState {
   get cookies() { return this.streamer.cookies; }
   /** This is based on the listener either having a key + cert or having secure set */
   get expectSecure() { return this.streamer.expectSecure; }
+  get httpVersionMajor() { return this.streamer.httpVersionMajor }
+
 
   /** 
    * The path prefix is a essentially folder mount point. 

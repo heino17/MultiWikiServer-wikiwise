@@ -70,7 +70,7 @@ export function DocsRoute(rootRoute: rootRoute, mountPath: string, singleFile: b
 
     const prom = new Promise((r, c) => res.on("finish", r).on("error", c));
     hooks.emit("req", req, res, state.pathPrefix + mountPath);
-    return prom;
+    return prom.then(() => STREAM_ENDED);
   });
 }
 

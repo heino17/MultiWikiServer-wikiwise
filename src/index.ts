@@ -1,6 +1,4 @@
 import "./listen/router";
-import "./routes/StateObject";
-import "./listen/streamer";
 import "./global";
 import { existsSync } from 'node:fs';
 import * as commander from "commander";
