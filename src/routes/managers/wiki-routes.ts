@@ -15,6 +15,7 @@ import { StateObject } from "../StateObject";
 import { ZodEffects, ZodType, ZodTypeAny } from "zod";
 import { registerZodRoutes } from "../zodRegister";
 import { Debug } from "@prisma/client/runtime/library";
+import { serverEvents } from "../../ServerEvents";
 const debugCORS = Debug("mws:cors");
 
 export const TiddlerKeyMap: RouterKeyMap<WikiRoutes, true> = {
@@ -37,6 +38,10 @@ export const TiddlerKeyMap: RouterKeyMap<WikiRoutes, true> = {
 }
 
 export type TiddlerManagerMap = RouterRouteMap<WikiRoutes>;
+
+serverEvents.on("listen.routes.fallback", (root, config) => {
+  WikiRoutes.defineRoutes(root);
+})
 
 export class WikiRoutes {
   static defineRoutes = (root: rootRoute) => {

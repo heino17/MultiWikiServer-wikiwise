@@ -1,4 +1,5 @@
 import "./listen/router";
+import "./routes";
 import "./global";
 import { existsSync } from 'node:fs';
 import * as commander from "commander";
@@ -8,7 +9,8 @@ import chalk from "chalk";
 import { deepEqual } from "node:assert";
 import { ServerState } from "./ServerState";
 import opaque from "@serenity-kit/opaque";
-import { BaseCommand, CommandClass, CommandFile } from "./utils";
+import { CommandFile } from "./utils";
+import { serverEvents } from "./ServerEvents";
 
 export async function runCLI() {
 
@@ -16,7 +18,9 @@ export async function runCLI() {
 
   if (!existsSync(wikiPath)) throw "The wiki path does not exist";
 
-  const cmder = getCLI()
+  const cmder = getCLI();
+
+  await serverEvents.emitAsync("cli.commander", cmder);
 
   const cmd = process.argv[2];
 
@@ -31,15 +35,14 @@ export async function runCLI() {
     return cmder.outputHelp();
   }
 
-
   // parse the CLI first since that's easy
   const { params, options } = parseCLI(cmder, cmd, process.argv.slice(3));
+
+  await serverEvents.emitAsync("cli.command.parsed", cmd, params, options);
 
   await opaque.ready;
 
   const { $tw, config } = await ServerState.make(wikiPath);
-
-  await config.init();
 
   if (config.setupRequired && !["init-store", "load-archive"].includes(cmd)) {
     console.log("MWS setup required. Please run either init-store or load-archive first");
@@ -64,7 +67,7 @@ try {
       params: [],
     }
   );
-} catch (e){
+} catch (e) {
   throw new Error(e as any);
 }
 

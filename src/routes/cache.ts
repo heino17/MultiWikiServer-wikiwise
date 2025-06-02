@@ -5,6 +5,7 @@ import * as crypto from "crypto";
 import { TW } from "tiddlywiki";
 import { SiteConfig } from "../ServerState";
 import { gunzip, gunzipSync, gzipSync } from "zlib";
+import { serverEvents } from "../ServerEvents";
 
 const prefix = Buffer.from(`$tw.preloadTiddler(`, "utf8");
 const suffix = Buffer.from(`);`, "utf8");
@@ -44,9 +45,8 @@ export async function startupCache($tw: TW, cachePath: string) {
   };
 }
 
-export async function registerCacheRoutes(rootRoute: rootRoute, config: SiteConfig) {
-
-  rootRoute.defineRoute({
+serverEvents.on("listen.routes", (root, config) => {
+  root.defineRoute({
     method: ["GET", "HEAD"],
     path: /^\/\$cache\/(.*)\/plugin\.js$/,
     bodyFormat: "ignore",
@@ -59,12 +59,10 @@ export async function registerCacheRoutes(rootRoute: rootRoute, config: SiteConf
     return state.sendFile(200, {}, {
       root: path.join(config.wikiPath, "cache"),
       reqpath: state.pathParams.plugin + "/plugin.js.gz",
-      
+
     });
-
   })
-}
-
+})
 
 async function importPlugins(twFolder: string, cacheFolder: string, type: string, $tw: TW) {
 

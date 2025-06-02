@@ -1,25 +1,23 @@
 
 import { DataChecks, RouterKeyMap, RouterRouteMap } from "../../utils";
-import { RecipeManager } from "./admin-recipes";
-import { UserManager } from "./admin-users";
+import "./admin-recipes";
+import "./admin-users";
+import "./wiki-routes";
 import { admin } from "./admin-utils";
 import { SiteConfig } from "../../ServerState";
 import { registerZodRoutes } from "../zodRegister";
+import { serverEvents } from "../../ServerEvents";
 
-export { UserManager, UserManagerMap } from "./admin-users";
-export { RecipeManager, RecipeManagerMap } from "./admin-recipes";
-
-export const ManagerRoutes = (root: rootRoute, config: SiteConfig) => {
+serverEvents.on("listen.routes", (root: rootRoute, config: SiteConfig) => {
   StatusManager.defineRoutes(root, config);
-  RecipeManager.defineRoutes(root, config);
-  UserManager.defineRoutes(root, config);
-};
+});
 
 export const StatusKeyMap: RouterKeyMap<StatusManager, true> = {
   index_json: true,
 }
 
 export type StatusManagerMap = RouterRouteMap<StatusManager>;
+type t1 = ART<StatusManager["index_json"]["inner"]>;
 
 export class StatusManager {
 

@@ -11,6 +11,7 @@ import { Http2ServerRequest, Http2ServerResponse } from "node:http2";
 import { t as try_ } from "try";
 import { Listener } from "./listeners";
 import helmet from "helmet";
+import { serverEvents } from "../ServerEvents";
 
 const debug = Debug("mws:router:matching");
 

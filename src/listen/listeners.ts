@@ -6,11 +6,12 @@ import { createSecureServer, Http2SecureServer, Http2ServerRequest, Http2ServerR
 import { ListenerRaw } from '../commands/listen';
 import { SiteConfig } from '../ServerState';
 import { makeRouter } from './makeRouter';
+import { serverEvents } from '../ServerEvents';
 
 
-export async function startListeners(listeners: ListenerRaw[], config: SiteConfig) {
+export async function startListeners(listenOptions: ListenerRaw[], config: SiteConfig) {
 
-
+  await serverEvents.emitAsync("listen.options", listenOptions, config);
 
   const router = await makeRouter(
     config,
@@ -19,7 +20,7 @@ export async function startListeners(listeners: ListenerRaw[], config: SiteConfi
     throw "Router failed to load";
   });
 
-  return listeners.map(e => {
+  const listenInstances = listenOptions.map(e => {
 
     if (!e.key !== !e.cert) {
       throw new Error("Both key and cert are required for HTTPS");
@@ -30,6 +31,11 @@ export async function startListeners(listeners: ListenerRaw[], config: SiteConfi
       : new ListenerHTTP(router, e);
 
   });
+
+  await serverEvents.emitAsync("listen.instances", listenInstances);
+
+
+
 }
 
 

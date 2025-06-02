@@ -4,6 +4,7 @@ import { admin } from "./admin-utils";
 import { SiteConfig } from "../../ServerState";
 import { RouterKeyMap, RouterRouteMap } from "../../utils";
 import { registerZodRoutes } from "../zodRegister";
+import { serverEvents } from "../../ServerEvents";
 
 export const UserKeyMap: RouterKeyMap<UserManager, true> = {
   user_edit_data: true,
@@ -18,10 +19,13 @@ export const UserKeyMap: RouterKeyMap<UserManager, true> = {
 
 export type UserManagerMap = RouterRouteMap<UserManager>;
 
+serverEvents.on("listen.routes", (root: rootRoute, config: SiteConfig) => {
+  UserManager.defineRoutes(root, config);
+});
+
 export class UserManager {
   static defineRoutes(root: rootRoute, config: SiteConfig) {
     registerZodRoutes(root, new UserManager(config), Object.keys(UserKeyMap));
-
   }
 
   constructor(private config: SiteConfig) { }

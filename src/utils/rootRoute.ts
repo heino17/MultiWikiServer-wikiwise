@@ -90,11 +90,7 @@ export const zodTransformJSON = (arg: string, ctx: z.RefinementCtx) => {
 
 
 
-export interface ZodAction<T extends z.ZodTypeAny, R extends JsonValue> {
-  // (state: StateObject): Promise<typeof STREAM_ENDED>;
-  inner: (route: z.output<T>) => Promise<R>
-  zodRequestBody: (z: Z2<"JSON">) => T;
-}
+
 
 export interface ZodRoute<
   M extends AllowedMethod,
@@ -103,9 +99,10 @@ export interface ZodRoute<
   Q extends Record<string, z.ZodTypeAny>,
   T extends z.ZodTypeAny,
   R extends JsonValue
-> extends ZodAction<T, R> {
+> {
   zodPathParams: (z: Z2<"STRING">) => P;
   zodQueryParams: (z: Z2<"STRING">) => Q;
+  zodRequestBody: (z: Z2<"JSON">) => T;
   method: M[];
   path: string;
   bodyFormat: B;
@@ -127,11 +124,10 @@ export class ZodState<
 
 
 export type RouterRouteMap<T> = {
-  [K in keyof T as T[K] extends ZodAction<any, any> ? K : never]:
-  T[K] extends {
-    zodRequestBody: (z: any) => infer REQ extends z.ZodTypeAny,
-    zodResponse?: (z: any) => infer RES extends z.ZodType<JsonValue>
-  } ? ((data: z.input<REQ>) => Promise<jsonify<z.output<RES>>>) : never;
+  [K in keyof T as T[K] extends ZodRoute<any, any, any, any, any, any> ? K : never]:
+  T[K] extends ZodRoute<any, any, any, any, infer REQ, infer RES>
+  ? ((data: z.input<REQ>) => Promise<jsonify<RES>>)
+  : `${K & string} does not extend`;
 }
 
 export type jsonify<T> =
@@ -151,5 +147,5 @@ export type jsonifyTuple<T> = T extends [infer A, ...infer B] ? [jsonify<A>, ...
 
 
 export type RouterKeyMap<T, V> = {
-  [K in keyof T as T[K] extends ZodAction<any, any> ? K : never]: V;
+  [K in keyof T as T[K] extends ZodRoute<any, any, any, any, any, any> ? K : never]: V;
 }

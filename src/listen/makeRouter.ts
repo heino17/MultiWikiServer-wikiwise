@@ -1,10 +1,10 @@
 import { setupDevServer } from "./setupDevServer";
 import { Router } from "./router";
-import RootRoute from "../routes";
 import { StateObject } from "../routes/StateObject";
 import { ServerState } from "../ServerState";
 import { AllowedMethods, BodyFormats } from "../utils";
 import Debug from "debug";
+import { serverEvents } from "../ServerEvents";
 
 const debug = Debug("mws:router:defining");
 
@@ -23,9 +23,14 @@ export async function makeRouter(
     state.sendDevServer = sendDevServer.bind(undefined, state);
   });
 
-  await RootRoute(rootRoute, config);
+  await serverEvents.emitAsync("listen.routes", rootRoute, config)
+  await serverEvents.emitAsync("listen.routes.fallback", rootRoute, config)
 
-  return new Router(rootRoute, config);
+  const router = new Router(rootRoute, config);
+
+  await serverEvents.emitAsync("listen.router", router);
+
+  return router;
 }
 
 

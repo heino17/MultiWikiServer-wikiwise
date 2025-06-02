@@ -1,48 +1,18 @@
-import { AllowedMethods, ZodAssert } from "../utils";
+import { ZodAssert } from "../utils";
 import { Prisma, PrismaClient } from "@prisma/client";
-import { ManagerRoutes } from "./managers";
-import { WikiRoutes } from "./managers/wiki-routes";
-import { DocsRoute } from "./tw-routes";
 import { SiteConfig } from "../ServerState";
-import { SessionManager } from "../services/sessions";
-import { registerCacheRoutes } from "./cache";
-import { StateObject } from "./StateObject";
+import { serverEvents } from "../ServerEvents";
+import "./managers";
+import "./tw-routes";
+import "./cache";
 
-declare global {
-  const ENABLE_UNSAFE_PRISMA_ROUTE: any;
-  const ENABLE_DOCS_ROUTE: any;
-}
-
-export default async function RootRoute(root: rootRoute, config: SiteConfig) {
-
-  // const adminRoute = root.defineRoute({
-  //   method: AllowedMethods,
-  //   path: /^\/admin/,
-  //   denyFinal: true,
-  // }, async (state: StateObject) => {
-  //   // do admin route checks here
-  // });
-
-  // const wikiRoute = root.defineRoute({
-  //   method: AllowedMethods,
-  //   path: /^\/wiki/,
-  //   denyFinal: true,
-  // }, async (state: StateObject) => {
-  //   // do wiki route checks here
-  // });
-
-  await SessionManager.defineRoutes(root);
-  if (process.env.ENABLE_DOCS_ROUTE)
-    await DocsRoute(root, "/mws-docs", false);
-  await WikiRoutes.defineRoutes(root);
-  await ManagerRoutes(root, config);
-  await registerCacheRoutes(root, config);
-
-
-  if (process.env.ENABLE_UNSAFE_PRISMA_ROUTE)
+serverEvents.on("listen.routes", (root, config) => {
+  if (config.enableDevServer && process.env.ENABLE_UNSAFE_PRISMA_ROUTE)
     definePrismaRoute(root, config);
 
-  // fallback route 
+});
+
+serverEvents.on("listen.routes.fallback", (root, config) => {
 
   root.defineRoute({
     method: ['GET'],
@@ -52,11 +22,7 @@ export default async function RootRoute(root: rootRoute, config: SiteConfig) {
     await state.sendDevServer();
     return STREAM_ENDED;
   });
-
-
-
-
-}
+});
 
 function definePrismaRoute(root: rootRoute, config: SiteConfig) {
   root.defineRoute({

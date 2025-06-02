@@ -14,35 +14,9 @@ declare module "tiddlywiki" {
 
 export async function bootTiddlyWiki(wikiPath: string) {
 
-  const $tw = TiddlyWiki()
+  const $tw = TiddlyWiki();
 
-  $tw.utils.eachAsync = eachAsync;
-
-  $tw.boot.boot = async (callback) => {
-    // Initialise crypto object
-    $tw.crypto = new $tw.utils.Crypto();
-    // Initialise password prompter
-    if ($tw.browser && !$tw.node) {
-      $tw.passwordPrompt = new $tw.utils.PasswordPrompt();
-    }
-    // Preload any encrypted tiddlers
-    await new Promise<void>(resolve =>
-      $tw.boot.decryptEncryptedTiddlers(resolve)
-    );
-
-    // $tw.boot.startup();
-    await new Promise<void>(callback => {
-      const options = { callback };
-      $tw.boot.initStartup(options);
-      $tw.boot.loadStartup(options);
-      $tw.boot.execStartup(options);
-    });
-
-    callback?.();
-
-  };
-
-  // disable the default commander. We'll use our own version of it.
+  // disable the default commander.
 
   // creating a new tiddler with the same title as a shadow tiddler
   // prevents the shadow tiddler from defining modules
@@ -71,7 +45,7 @@ export async function bootTiddlyWiki(wikiPath: string) {
   await new Promise<void>(resolve => $tw.boot.boot(resolve));
 
   // this makes sure boot followed the node path
-  ok(!$tw.boot.tasks.readBrowserTiddlers);
+  ok(!$tw.boot.tasks.readBrowserTiddlers, "TiddlyWiki boot thinks we're in a browser");
 
   // grab library tiddlers from plugins and load them as regular tiddlers so they get rendered.
   // we can safely do this because we only load our own plugins here.

@@ -3,9 +3,13 @@ import { DataChecks, RouterKeyMap, RouterRouteMap } from "../../utils";
 import { AuthUser } from "../../services/sessions";
 import { SiteConfig } from "../../ServerState";
 import { registerZodRoutes } from "../zodRegister";
+import { serverEvents } from "../../ServerEvents";
 
 // https://crates.io/crates/indradb
 
+serverEvents.on("listen.routes", (root: rootRoute, config: SiteConfig) => {
+  RecipeManager.defineRoutes(root, config);
+});
 
 export const RecipeKeyMap: RouterKeyMap<RecipeManager, true> = {
 

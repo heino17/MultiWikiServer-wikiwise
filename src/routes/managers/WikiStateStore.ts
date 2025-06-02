@@ -62,7 +62,7 @@ export class WikiStateStore extends TiddlerStore_PrismaTransaction {
       ]).values()
     ];
 
-    if (state.config.enableExternalPlugins && state.httpVersionMajor > 1) {
+    if (state.config.enableExternalPlugins) {
       state.writeEarlyHints({
         'link': plugins.map(e => {
           const plugin = pluginFiles.get(e);

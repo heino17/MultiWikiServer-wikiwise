@@ -2,6 +2,12 @@ import { TiddlyWiki } from "tiddlywiki";
 import { basename } from "path";
 import EventEmitter from "events";
 import { dist_resolve } from "../utils";
+import { serverEvents } from "../ServerEvents";
+
+serverEvents.on("listen.routes", (root, config) => {
+  if (config.enableDocsRoute)
+    DocsRoute(root, "/mws-docs", false);
+})
 
 /**
  * 

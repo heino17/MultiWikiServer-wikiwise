@@ -10,6 +10,8 @@ import { startupCache } from "./routes/cache";
 import { createPasswordService } from "./services/PasswordService";
 import { bootTiddlyWiki } from "./tiddlywiki";
 import * as opaque from "@serenity-kit/opaque";
+import { EventEmitter } from "events";
+import { serverEvents } from "./ServerEvents";
 
 /** This is an alias for ServerState in case we want to separate the two purposes. */
 export type SiteConfig = ServerState;
@@ -18,6 +20,9 @@ export type SiteConfig = ServerState;
 
 const DEFAULT_CONTENT_TYPE = "application/octet-stream";
 
+
+
+
 export class ServerState {
   static async make(wikiPath: string) {
     /** The $tw instance needs to be disposable once commands are complete. */
@@ -25,6 +30,9 @@ export class ServerState {
     const passwordService = await createPasswordService(readPasswordMasterKey(wikiPath));
     const cache = await startupCache($tw, path.resolve(wikiPath, "cache"));
     const config = new ServerState(wikiPath, $tw, passwordService, cache);
+    serverEvents.emitAsync("server.create.after", config, $tw);
+    await config.init();
+    serverEvents.emitAsync("server.init.after", config);
     return { $tw, config };
   }
 
@@ -56,6 +64,7 @@ export class ServerState {
 
     this.enableExternalPlugins = !!process.env.ENABLE_EXTERNAL_PLUGINS;
     this.enableDevServer = !!process.env.ENABLE_DEV_SERVER;
+    this.enableDocsRoute = !!process.env.ENABLE_DOCS_ROUTE;
 
 
     this.adapter = new SqliteAdapter(this.databasePath, this.enableDevServer);
@@ -69,6 +78,8 @@ export class ServerState {
 
     this.versions = { tw5: $tw.packageInfo.version, mws: pkg.version };
 
+
+
   }
 
   async init() {
@@ -79,6 +90,8 @@ export class ServerState {
     this.setupRequired = false;
     const users = await this.engine.users.count();
     if (!users) { this.setupRequired = true; }
+
+
   }
 
 
@@ -113,6 +126,7 @@ export class ServerState {
   attachmentSizeLimit;
   enableExternalPlugins;
   enableDevServer;
+  enableDocsRoute;
   csrfDisable;
 
 
@@ -137,6 +151,7 @@ export class ServerState {
   }>;
 
 
+
 }
 export type PasswordService = ART<typeof createPasswordService>;
 export type TiddlerCache = ART<typeof startupCache>;
@@ -159,3 +174,5 @@ export type ContentTypeInfo = {
   flags?: string[];
   deserializerType?: string;
 };
+
+

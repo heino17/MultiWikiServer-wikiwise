@@ -61,7 +61,7 @@ export function Recipes() {
                   </Tooltip>}
                   <ListItemAvatar>
                     {bagsReadable ? (
-                      <Avatar src={`recipes/${encodeURIComponent(recipe.recipe_name)}/tiddlers/%24%3A%2Ffavicon.ico`}>
+                      <Avatar src={`${pathPrefix}/wiki/${encodeURIComponent(recipe.recipe_name)}/tiddlers/%24%3A%2Ffavicon.ico`}>
                         <MissingFavicon />
                       </Avatar>
                     ) : (
@@ -141,7 +141,7 @@ export function Recipes() {
                     {recipe.recipe_bags.map(bag => (
                       <ListItem key={getBagName(bag.bag_id)}>
                         <ListItemAvatar>
-                          <Avatar src={`bags/${encodeURIComponent(getBagName(bag.bag_id)!)}/tiddlers/%24%3A%2Ffavicon.ico`}>
+                          <Avatar src={`${pathPrefix}/bags/${encodeURIComponent(getBagName(bag.bag_id)!)}/tiddlers/%24%3A%2Ffavicon.ico`}>
                             <MissingFavicon />
                           </Avatar>
                         </ListItemAvatar>

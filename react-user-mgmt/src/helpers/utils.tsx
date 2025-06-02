@@ -4,7 +4,9 @@ import React, { ReactNode, useCallback, useId, useMemo, useState } from "react";
 import { FieldValues, useForm, UseFormRegisterReturn } from "react-hook-form";
 import { proxy } from "./prisma-proxy";
 import { z } from "zod";
-import type { RecipeManagerMap, StatusManagerMap, UserManagerMap } from "../../../src/routes/managers";
+import type { RecipeManagerMap } from "@tiddlywiki/mws/src/routes/managers/admin-recipes.ts";
+import type { UserManagerMap } from "@tiddlywiki/mws/src/routes/managers/admin-users.ts";
+import type { StatusManagerMap } from "@tiddlywiki/mws/src/routes/managers/index.ts";
 import { Button, ButtonProps } from "@mui/material";
 
 
@@ -101,7 +103,7 @@ function postManager(key: string) {
       },
       body: JSON.stringify(data),
     });
-    if (!req.ok) throw new Error(`Failed to fetch data for /manager/${key}: ${await req.text()}`);
+    if (!req.ok) throw new Error(`Failed to fetch data for /admin/${key}: ${await req.text()}`);
     return await req.json();
   };
 

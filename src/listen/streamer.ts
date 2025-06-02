@@ -430,7 +430,8 @@ export class Streamer {
     this.res.writeHead(status);
   }
   /**
-   * Write early hints using 103 Early Hints.
+   * Write early hints using 103 Early Hints, 
+   * silently ignored if the request version is prior to 2.
    * 
    * Despite this being an HTTP/1.1 feature, not all browsers
    * correctly implemented it, so this is commonly restricted 

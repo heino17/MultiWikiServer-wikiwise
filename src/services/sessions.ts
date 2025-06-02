@@ -3,9 +3,10 @@ import { Streamer } from "../listen/streamer";
 import { createHash, randomBytes } from "node:crypto";
 import { zodRoute } from "../routes/zodRoute";
 import { z } from "zod";
-import { JsonValue, Z2, jsonify, RouterKeyMap, ZodAction, ZodState } from "../utils";
+import { JsonValue, Z2, jsonify, RouterKeyMap, ZodState, ZodRoute } from "../utils";
 import { SiteConfig } from "../ServerState";
 import { registerZodRoutes } from "../routes/zodRegister";
+import { serverEvents } from "../ServerEvents";
 
 export interface AuthUser {
   /** User ID. 0 if the user is not logged in. */
@@ -58,31 +59,30 @@ export function zodSession<P extends string, T extends z.ZodTypeAny, R extends J
 }
 
 export interface ZodSessionRoute<
-  P extends string,
+  PATH extends string,
   T extends z.ZodTypeAny,
   R extends JsonValue
-> extends ZodAction<T, R> {
-  path: P;
-  inner: (state: ZodState<"POST", "json", {}, {}, T>) => Promise<R>,
+> extends ZodRoute<"POST", "json", {}, {}, T, R> {
+  path: PATH;
 }
 
 export type RouterPathRouteMap<T> = {
   [K in keyof T as T[K] extends ZodSessionRoute<any, any, any> ? K : never]:
-  T[K] extends {
-    path: infer P,
-    zodRequestBody: (z: any) => infer REQ extends z.ZodTypeAny,
-    zodResponse?: (z: any) => infer RES extends z.ZodType<JsonValue>
-  } ? {
-    (data: z.input<REQ>): Promise<jsonify<z.output<RES>>>;
+  T[K] extends ZodSessionRoute<infer P, infer REQ, infer RES> ? {
+    (data: z.input<REQ>): Promise<jsonify<RES>>;
     path: P;
     key: K;
   } : never;
 }
 export type SessionManagerMap = RouterPathRouteMap<SessionManager>;
 
+serverEvents.on("listen.routes", (root, config) => {
+  SessionManager.defineRoutes(root)
+});
+
 export class SessionManager {
 
-  static async defineRoutes(root: rootRoute) {
+  static defineRoutes(root: rootRoute) {
     registerZodRoutes(root, new SessionManager(), Object.keys(SessionKeyMap))
   }
 
