@@ -1,0 +1,88 @@
+{
+  "name": "@tiddlywiki/mws",
+  "description": "TiddlyWiki Multiple Wiki Server",
+  "private": false,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./dist/index.js"
+    },
+    "./src/*": "./src/*"
+  },
+  "files": [
+    "dist",
+    "prisma",
+    "react-user-mgmt",
+    "tiddlywiki-types",
+    "editions/mws-docs",
+    "plugins/client",
+    "scripts.mjs"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "docs": "node scripts.mjs docs",
+    "start": "node scripts.mjs start",
+    "certs": "(cd runtime-config && bash localhost_certs.sh)",
+    "tsc": "tsc -p tsconfig.json --skipLibCheck",
+    "tsc:all": "npm run tsc:src; npm run tsc:admin; npm run tsc:client;",
+    "tsc:admin": "cd react-user-mgmt && npm run tsc",
+    "tsc:client": "cd plugins/client && npm run tsc || true",
+    "build": "npm run tsc && tsup && node mws.dev.mjs --client-build",
+    "install-android": "GYP_DEFINES=\"android_ndk_path=''\" npm install",
+    "postinstall": "node scripts.mjs prisma:generate",
+    "env": "env",
+    "test:pack": "(git clean -dfx tests && npm pack --pack-destination tests && cd tests && npm install && npm install ./tiddlywiki-mws-$npm_package_version.tgz --no-save && npm test)",
+    "test": "(git clean -dfx tests && cd tests && npm install .. --no-save && npm test)",
+    "fulltest": "mv node_modules node_modules_old; npm run test:pack; mv node_modules_old node_modules",
+    "prepublishOnly": "npm run build",
+    "prisma:migrate": "DATABASE_URL=file:test.sqlite npx prisma migrate dev"
+  },
+  "dependencies": {
+    "@prisma/adapter-better-sqlite3": "6.7.0-dev.48",
+    "@prisma/client": "6.6.0",
+    "@serenity-kit/opaque": "^0.8.4",
+    "prisma": "6.6.0",
+    "prisma-json-types-generator": "~3.3.1"
+  },
+  "devDependencies": {
+    "@types/bytes": "^3.1.5",
+    "@types/compression": "^1.8.0",
+    "@types/debug": "^4.1.12",
+    "@types/mime-types": "^2.1.4",
+    "@types/negotiator": "^0.6.3",
+    "@types/node": "^22.13.1",
+    "@types/send": "^0.17.4",
+    "@types/sjcl": "^1.0.34",
+    "@types/tiddlywiki": "file:../../tiddlywiki-types",
+    "@tiddlywiki/server": "file:../server",
+    "bytes": "^3.1.2",
+    "chalk": "^5.4.1",
+    "commander": "13.1.0",
+    "compressible": "^2.0.18",
+    "compression": "^1.8.0",
+    "debug": "^4.4.1",
+    "esbuild": "0.25.2",
+    "mime-types": "^2.1.35",
+    "negotiator": "^1.0.0",
+    "send": "^1.2.0",
+    "sjcl": "^1.0.8",
+    "source-map-support": "^0.5.21",
+    "supports-color": "^10.0.0",
+    "tiddlywiki": "^5.1.22",
+    "try": "^1.0.0-beta.5",
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.3",
+    "uuid": "^11.1.0",
+    "vary": "^1.1.2",
+    "zod": "^3.25.49",
+    "zod-to-ts": "^1.2.0",
+    "zod-validation-error": "^3.4.1"
+  },
+  "peerDependencies": {
+    "tiddlywiki": "^5.1.22"
+  }
+}

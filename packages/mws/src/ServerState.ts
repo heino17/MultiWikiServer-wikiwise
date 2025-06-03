@@ -1,0 +1,130 @@
+import { PrismaClient, Prisma } from "@prisma/client";
+import { ITXClientDenyList } from "@prisma/client/runtime/library";
+import Debug from "debug";
+import * as path from "path";
+import { existsSync, mkdirSync } from "fs";
+import { TW } from "tiddlywiki";
+import pkg from "../package.json";
+import { SqliteAdapter } from "./db/sqlite-adapter";
+import { createPasswordService } from "./services/PasswordService";
+import { startupCache } from "./services/cache";
+
+/** This is an alias for ServerState in case we want to separate the two purposes. */
+export type SiteConfig = ServerState;
+
+/** Pre command server setup */
+
+const DEFAULT_CONTENT_TYPE = "application/octet-stream";
+
+export class ServerState {
+
+  constructor(
+    public wikiPath: string,
+    /** The $tw instance needs to be disposable once commands are complete. */
+    $tw: TW,
+    public PasswordService: PasswordService,
+    public pluginCache: TiddlerCache
+  ) {
+    this.storePath = path.resolve(this.wikiPath, "store");
+    this.cachePath = path.resolve(this.wikiPath, "cache");
+    this.databasePath = path.resolve(this.storePath, "database.sqlite");
+
+    this.fieldModules = $tw.Tiddler.fieldModules;
+    this.contentTypeInfo = $tw.config.contentTypeInfo;
+    if (!this.contentTypeInfo[DEFAULT_CONTENT_TYPE])
+      throw new Error("The content type info for " + DEFAULT_CONTENT_TYPE + " cannot be found in TW5")
+
+    if (!existsSync(this.databasePath)) this.setupRequired = true;
+
+    this.enableBrowserCache = true;
+    this.enableGzip = true;
+    this.attachmentsEnabled = false;
+    this.attachmentSizeLimit = 100 * 1024;
+    this.csrfDisable = false;
+
+    this.enableExternalPlugins = !!process.env.ENABLE_EXTERNAL_PLUGINS;
+    this.enableDevServer = !!process.env.ENABLE_DEV_SERVER;
+    this.enableDocsRoute = !!process.env.ENABLE_DOCS_ROUTE;
+
+
+    this.adapter = new SqliteAdapter(this.databasePath, this.enableDevServer);
+    this.engine = new PrismaClient({
+      log: [
+        ...Debug.enabled("prisma:query") ? ["query" as const] : [],
+        "info", "warn"
+      ],
+      adapter: this.adapter.adapter
+    });
+
+    this.versions = { tw5: $tw.packageInfo.version, mws: pkg.version };
+
+  }
+
+  async init() {
+    mkdirSync(this.storePath, { recursive: true });
+    mkdirSync(this.cachePath, { recursive: true });
+
+    await this.adapter.init();
+    this.setupRequired = false;
+    const users = await this.engine.users.count();
+    if (!users) { this.setupRequired = true; }
+
+
+  }
+
+  storePath;
+  cachePath;
+  databasePath;
+
+  versions;
+
+  setupRequired = false;
+
+  enableBrowserCache;
+  enableGzip;
+  attachmentsEnabled;
+  attachmentSizeLimit;
+  enableExternalPlugins;
+  enableDevServer;
+  enableDocsRoute;
+  csrfDisable;
+
+  fieldModules;
+  contentTypeInfo: Record<string, ContentTypeInfo>;
+
+  getContentType(type?: string): ContentTypeInfo {
+    return type && this.contentTypeInfo[type] || this.contentTypeInfo[DEFAULT_CONTENT_TYPE]!;
+  }
+
+  adapter!: SqliteAdapter;
+  engine!: PrismaClient<Prisma.PrismaClientOptions, never, {
+    result: {
+      [T in Uncapitalize<Prisma.ModelName>]: {
+        [K in keyof PrismaPayloadScalars<Capitalize<T>>]: () => {
+          compute: () => PrismaField<Capitalize<T>, K>;
+        };
+      };
+    };
+    client: {};
+    model: {};
+    query: {};
+  }>;
+
+
+
+}
+
+declare global {
+  type PrismaTxnClient = Omit<ServerState["engine"], ITXClientDenyList>;
+  type PrismaEngineClient = ServerState["engine"];
+}
+
+export interface ContentTypeInfo {
+  encoding: string;
+  extension: string | string[];
+  flags?: string[];
+  deserializerType?: string;
+};
+
+export type PasswordService = ART<typeof createPasswordService>;
+export type TiddlerCache = ART<typeof startupCache>;
