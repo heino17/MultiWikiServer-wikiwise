@@ -1,6 +1,6 @@
 import { TiddlyWiki } from "tiddlywiki";
 import { } from "tiddlywiki/boot/bootprefix";
-import { dist_resolve } from "./utils";
+import { dist_resolve } from "../utils";
 import { ok } from "node:assert";
 
 declare module "tiddlywiki" {

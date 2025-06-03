@@ -8,7 +8,7 @@ import pkg from "../package.json";
 import { SqliteAdapter } from "./db/sqlite-adapter";
 import { startupCache } from "./routes/cache";
 import { createPasswordService } from "./services/PasswordService";
-import { bootTiddlyWiki } from "./tiddlywiki";
+import { bootTiddlyWiki } from "./services/tiddlywiki";
 import * as opaque from "@serenity-kit/opaque";
 import { EventEmitter } from "events";
 import { serverEvents } from "./ServerEvents";
