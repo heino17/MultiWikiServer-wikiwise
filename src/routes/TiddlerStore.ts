@@ -285,7 +285,10 @@ export class TiddlerStore_PrismaTransaction extends TiddlerStore_PrismaBase {
     return bag;
   }
 
-  async getRecipeBagWithTiddler({ recipe_name, title }: { recipe_name: string; title: string; }) {
+  async getRecipeBagWithTiddler({ recipe_name, title }: {
+    recipe_name: string; 
+    title: string;
+  }) {
 
     return await this.prisma.recipe_bags.findFirst({
       include: { bag: true, recipe: true },

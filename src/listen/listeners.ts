@@ -52,14 +52,7 @@ export class ListenerBase {
     public bindInfo: string,
     options: ListenerRaw,
   ) {
-    if (!options.prefix)
-      options.prefix = "";
-    else if (typeof options.prefix !== "string")
-      throw new Error("Listener path prefix must be a string or falsy.");
-    else if (!options.prefix.startsWith("/"))
-      throw new Error("Listener path prefix must start with a slash, or be falsy");
-    else if (options.prefix.endsWith("/"))
-      throw new Error("Listener path prefix must NOT end with a slash")
+
 
     this.options = options as Listener;
 

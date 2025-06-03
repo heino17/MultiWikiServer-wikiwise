@@ -1,6 +1,8 @@
 import { fromError } from "zod-validation-error";
 import { Z2, ZodRoute } from "../utils";
 import { StateObject } from "./StateObject";
+import { Debug } from "@prisma/client/runtime/library";
+const debugCORS = Debug("mws:cors");
 
 export const registerZodRoutes = (root: rootRoute, router: any, keys: string[]) => {
   // const router = new TiddlerRouter();
@@ -9,11 +11,20 @@ export const registerZodRoutes = (root: rootRoute, router: any, keys: string[]) 
     const {
       method, path, bodyFormat,
       zodPathParams,
-      zodQueryParams,
-      zodRequestBody: zodRequest,
+      zodQueryParams = (z => ({}) as any),
+      zodRequestBody = ["string", "json", "www-form-urlencoded"].includes(bodyFormat)
+        ? z => z.undefined() : (z => z.any() as any),
       inner,
-      corsRequest,
+      corsRequest = async state => {
+        const headers = state.headers["access-control-request-headers"]
+        const method = state.headers["access-control-request-method"]
+        debugCORS("OPTIONS default %s %s %s", state.urlInfo.pathname, method, headers);
+        // CORS is disabled by default, so send an empty response
+        throw state.sendEmpty(204, {});
+      },
+      securityChecks,
     } = route;
+    
     if (method.includes("OPTIONS"))
       throw new Error(key + " includes OPTIONS. Use corsRequest instead.");
 
@@ -31,6 +42,7 @@ export const registerZodRoutes = (root: rootRoute, router: any, keys: string[]) 
       pathParams,
       bodyFormat: "ignore",
       denyFinal: false,
+      securityChecks,
     }, async state => {
 
       checkPath(zodPathParams, state);
@@ -39,7 +51,7 @@ export const registerZodRoutes = (root: rootRoute, router: any, keys: string[]) 
 
       await corsRequest(state as any as StateObject<"ignore", "OPTIONS">);
 
-    })
+    });
 
     root.defineRoute({
       method,
@@ -53,7 +65,7 @@ export const registerZodRoutes = (root: rootRoute, router: any, keys: string[]) 
 
       checkQuery(zodQueryParams, state);
 
-      checkData(zodRequest, state);
+      checkData(zodRequestBody, state);
 
       const [good, error, res] = await inner(state)
         .then(e => [true, undefined, e] as const, e => [false, e, undefined] as const);

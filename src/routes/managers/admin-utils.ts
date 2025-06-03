@@ -16,6 +16,7 @@ export function admin<T extends z.ZodTypeAny, R extends JsonValue>(
     zodPathParams: z => ({}),
     zodQueryParams: z => ({}),
     bodyFormat: "json",
+    securityChecks: { requestedWithHeader: true },
     zodRequestBody: zodRequest,
     inner: async (state) => {
       //  this would enable cors with credentials on admin routes, but we're not going to do that!
@@ -26,6 +27,8 @@ export function admin<T extends z.ZodTypeAny, R extends JsonValue>(
       //   state.setHeader("access-control-allow-headers", "x-requested-with, content-type, accepts");
       //   state.setHeader("access-control-expose-headers", "etag, x-reason")
       // }
+
+      debug("admin request from origin %s referer %s", state.headers.origin, state.headers.referer);
 
       state.asserted = true;
       return state.$transaction(async (prisma) => await inner(state, prisma));

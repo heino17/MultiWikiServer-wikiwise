@@ -49,6 +49,7 @@ export function zodSession<P extends string, T extends z.ZodTypeAny, R extends J
       zodPathParams: z => ({}),
       zodQueryParams: z => ({}),
       zodRequestBody: zodRequest,
+      securityChecks: { requestedWithHeader: true },
       inner: async (state) => {
         state.asserted = true;
         return state.$transaction(async (prisma) => await inner(state, prisma));

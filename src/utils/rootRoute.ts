@@ -26,6 +26,15 @@ declare global {
     /** If this route is the last one matched, it will NOT be called, and a 404 will be returned. */
     denyFinal?: boolean;
 
+    securityChecks?: {
+      /**
+       * If true, the request must have the "x-requested-with" header set to "XMLHttpRequest".
+       * This is a common way to check if the request is an AJAX request.
+       * If the header is not set, the request will be rejected with a 403 Forbidden.
+       */
+      requestedWithHeader?: boolean;
+    };
+
 
   }
   interface Route extends RouteDef {
@@ -100,14 +109,56 @@ export interface ZodRoute<
   T extends z.ZodTypeAny,
   R extends JsonValue
 > {
+
+  /**
+   * The input will be `Record<string, string>`
+   * If a path variable is not set in the request, the path will not match.
+   *
+   * Expects a Record of zod checks. Every path variable must be included.
+  */
   zodPathParams: (z: Z2<"STRING">) => P;
-  zodQueryParams: (z: Z2<"STRING">) => Q;
-  zodRequestBody: (z: Z2<"JSON">) => T;
+  /**
+   * The input will be `Record<string, string[]>`.
+   * If a value is not set, an empty string is used.
+   *
+   * Expects a Record of zod checks.
+   *
+   * The default behavior is to remove all query params.
+   */
+  zodQueryParams?: (z: Z2<"STRING">) => Q;
+  /** 
+   * CORS preflight requests do not include credentials or request headers,
+   * so you can't authenticate requests. It is a way to provide information about the endpoint. 
+   * 
+   * Be careful, because if you specify the same route with different methods, and set corsRequest
+   * on more than one, because only the first one will actually be called.
+   */
+  corsRequest?: (state: ZodState<"OPTIONS", "ignore", P, Q, z.ZodUndefined>) => Promise<typeof STREAM_ENDED>;
+  /**
+   * A zod check of the request body result.
+   *
+   * Only valid for `string`, `json`, and `www-form-urlencoded` body types
+   *
+   * The default is `undefined` for those types.
+   */
+  zodRequestBody?: (z: Z2<"JSON">) => T;
+
+  securityChecks?: RouteDef["securityChecks"];
   method: M[];
   path: string;
   bodyFormat: B;
-  inner: (state: ZodState<M, B, Q, P, T>) => Promise<R>,
-  corsRequest: (state: ZodState<"OPTIONS", "ignore", P, Q, z.ZodUndefined>) => Promise<symbol>;
+  inner: (state: { [K in M]: ZodState<K, B, P, Q, T> }[M]) => Promise<R>;
+}
+
+export interface ZodRouteDef<
+  M extends AllowedMethod,
+  B extends BodyFormat,
+  P extends Record<string, z.ZodTypeAny>,
+  Q extends Record<string, z.ZodTypeAny>,
+  T extends z.ZodTypeAny,
+  R extends JsonValue
+> {
+  zodRequestBody?: B extends "string" | "json" | "www-form-urlencoded" ? (z: Z2<"JSON">) => T : undefined;
 }
 
 export class ZodState<

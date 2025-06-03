@@ -24,7 +24,7 @@ export const TiddlerKeyMap: RouterKeyMap<WikiRoutes, true> = {
   handleListRecipeTiddlers: true,
   handleGetBagStates: true,
   // individual tiddlers
-  handleGetRecipeTiddler: true,
+  handleLoadRecipeTiddler: true,
   handleSaveRecipeTiddler: true,
   handleDeleteRecipeTiddler: true,
   // wiki index
@@ -43,12 +43,37 @@ serverEvents.on("listen.routes.fallback", (root, config) => {
   WikiRoutes.defineRoutes(root);
 })
 
+const BAG_PREFIX = "/bags";
+const RECIPE_PREFIX = "/wiki";
+const WIKI_PREFIX = "/wiki";
+
 export class WikiRoutes {
   static defineRoutes = (root: rootRoute) => {
     const router = new WikiRoutes();
     const keys = Object.keys(TiddlerKeyMap);
     registerZodRoutes(root, router, keys);
   }
+
+
+  handleGetWikiIndex = zodRoute({
+    method: ["GET", "HEAD"],
+    path: WIKI_PREFIX + "/:recipe_name",
+    bodyFormat: "ignore",
+    zodPathParams: z => ({
+      recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
+    }),
+    inner: async (state) => {
+
+      await state.assertRecipeACL(state.pathParams.recipe_name, false);
+
+      await state.$transaction(async (prisma) => {
+        const server = new WikiStateStore(state, prisma);
+        await server.serveIndexFile(state.pathParams.recipe_name);
+      });
+
+      throw STREAM_ENDED;
+    }
+  });
 
   // lets start with the scenarios from the sync adapter
   // 1. Status - The wiki status that gets sent to the TW5 client
@@ -61,7 +86,7 @@ export class WikiRoutes {
 
   handleGetRecipeStatus = zodRoute({
     method: ["GET", "HEAD"],
-    path: "/wiki/:recipe_name/status",
+    path: RECIPE_PREFIX + "/:recipe_name/status",
     bodyFormat: "ignore",
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
@@ -118,32 +143,9 @@ export class WikiRoutes {
     }
   });
 
-  handleGetRecipeTiddler = zodRoute({
-    method: ["GET", "HEAD"],
-    path: "/wiki/:recipe_name/tiddlers/:title",
-    bodyFormat: "ignore",
-    zodPathParams: z => ({
-      recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
-      title: z.prismaField("Tiddlers", "title", "string"),
-    }),
-    inner: async (state) => {
-      const { recipe_name, title } = state.pathParams;
-
-      await state.assertRecipeACL(recipe_name, false);
-      // we can only throw STREAM_ENDED outside the transaction
-      throw await state.$transaction(async (prisma) => {
-        const server = new WikiStateStore(state, prisma);
-        const bag = await server.getRecipeBagWithTiddler({ recipe_name, title });
-        if (!bag) return state.sendEmpty(404, { "x-reason": "tiddler not found" });
-        return await server.serveBagTiddler(bag.bag_id, bag.bag.bag_name, title);
-      });
-
-    }
-  })
-
   handleListRecipeTiddlers = zodRoute({
     method: ["GET", "HEAD"],
-    path: "/wiki/:recipe_name/tiddlers.json",
+    path: RECIPE_PREFIX + "/:recipe_name/tiddlers.json",
     bodyFormat: "ignore",
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
@@ -177,7 +179,7 @@ export class WikiRoutes {
 
   handleGetBagStates = zodRoute({
     method: ["GET", "HEAD"],
-    path: "/wiki/:recipe_name/bag-states",
+    path: RECIPE_PREFIX + "/:recipe_name/bag-states",
     bodyFormat: "ignore",
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
@@ -240,11 +242,35 @@ export class WikiRoutes {
   })
 
 
+  handleLoadRecipeTiddler = zodRoute({
+    method: ["GET", "HEAD"],
+    path: RECIPE_PREFIX + "/:recipe_name/tiddlers/:title",
+    bodyFormat: "ignore",
+    zodPathParams: z => ({
+      recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
+      title: z.prismaField("Tiddlers", "title", "string"),
+    }),
+    inner: async (state) => {
+      const { recipe_name, title } = state.pathParams;
+
+      await state.assertRecipeACL(recipe_name, false);
+      // we can only throw STREAM_ENDED outside the transaction
+      throw await state.$transaction(async (prisma) => {
+        const server = new WikiStateStore(state, prisma);
+        const bag = await server.getRecipeBagWithTiddler({ recipe_name, title });
+        if (!bag) return state.sendEmpty(404, { "x-reason": "tiddler not found" });
+        return await server.serveBagTiddler(bag.bag_id, bag.bag.bag_name, title);
+      });
+
+    }
+  })
+
 
   handleSaveRecipeTiddler = zodRoute({
     method: ["PUT"],
-    path: "/wiki/:recipe_name/tiddlers/:title",
+    path: RECIPE_PREFIX + "/:recipe_name/tiddlers/:title",
     bodyFormat: "string",
+    securityChecks: { requestedWithHeader: true },
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
       title: z.prismaField("Tiddlers", "title", "string"),
@@ -278,8 +304,9 @@ export class WikiRoutes {
 
   handleDeleteRecipeTiddler = zodRoute({
     method: ["DELETE"],
-    path: "/wiki/:recipe_name/tiddlers/:title",
+    path: RECIPE_PREFIX + "/:recipe_name/tiddlers/:title",
     bodyFormat: "json",
+    securityChecks: { requestedWithHeader: true },
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
       title: z.prismaField("Tiddlers", "title", "string"),
@@ -315,7 +342,7 @@ export class WikiRoutes {
   // it allows an HTML form to upload a tiddler directly with file upload
   handleFormMultipartRecipeTiddler = zodRoute({
     method: ["POST"],
-    path: "/wiki/:recipe_name/tiddlers",
+    path: RECIPE_PREFIX + "/:recipe_name/tiddlers",
     bodyFormat: "stream",
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
@@ -339,29 +366,11 @@ export class WikiRoutes {
     }
   });
 
-  handleGetWikiIndex = zodRoute({
-    method: ["GET", "HEAD"],
-    path: "/wiki/:recipe_name",
-    bodyFormat: "ignore",
-    zodPathParams: z => ({
-      recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
-    }),
-    inner: async (state) => {
-      await state.assertRecipeACL(state.pathParams.recipe_name, false);
-
-      await state.$transaction(async (prisma) => {
-        const server = new WikiStateStore(state, prisma);
-        await server.serveIndexFile(state.pathParams.recipe_name);
-      });
-
-      throw STREAM_ENDED;
-    }
-  });
 
 
   handleLoadBagTiddler = zodRoute({
     method: ["GET", "HEAD"],
-    path: "/bags/:bag_name/tiddlers/:title",
+    path: BAG_PREFIX + "/:bag_name/tiddlers/:title",
     bodyFormat: "ignore",
     zodPathParams: z => ({
       bag_name: z.prismaField("Bags", "bag_name", "string"),
@@ -376,10 +385,13 @@ export class WikiRoutes {
       });
     }
   });
+
+
   handleSaveBagTiddler = zodRoute({
     method: ["PUT"],
-    path: "/bags/:bag_name/tiddlers/:title",
+    path: BAG_PREFIX + "/:bag_name/tiddlers/:title",
     bodyFormat: "string",
+    securityChecks: { requestedWithHeader: true },
     zodPathParams: z => ({
       bag_name: z.prismaField("Bags", "bag_name", "string"),
       title: z.prismaField("Tiddlers", "title", "string"),
@@ -401,8 +413,9 @@ export class WikiRoutes {
   });
   handleDeleteBagTiddler = zodRoute({
     method: ["DELETE"],
-    path: "/bags/:bag_name/tiddlers/:title",
+    path: BAG_PREFIX + "/:bag_name/tiddlers/:title",
     bodyFormat: "ignore",
+    securityChecks: { requestedWithHeader: true },
     zodPathParams: z => ({
       bag_name: z.prismaField("Bags", "bag_name", "string"),
       title: z.prismaField("Tiddlers", "title", "string"),
@@ -418,7 +431,7 @@ export class WikiRoutes {
   });
   handleFormMultipartBagTiddler = zodRoute({
     method: ["POST"],
-    path: "/bags/:bag_name/tiddlers",
+    path: BAG_PREFIX + "/:bag_name/tiddlers",
     bodyFormat: "stream",
     zodPathParams: z => ({
       bag_name: z.prismaField("Bags", "bag_name", "string"),

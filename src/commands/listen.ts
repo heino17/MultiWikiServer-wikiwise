@@ -93,13 +93,20 @@ export class Command extends BaseCommand<[], {
     const listenerCheck = z.object({
       port: z.string().optional(),
       host: z.string().optional(),
-      prefix: z.string().optional(),
+      prefix: z.string().optional()
+        .transform(prefix => prefix || "")
+        .refine((prefix) => !prefix || prefix.startsWith("/"),
+          "Listener path prefix must start with a slash or be falsy")
+        .refine((prefix) => !prefix.endsWith("/"),
+          "Listener path prefix must NOT end with a slash"),
       key: z.string().optional(),
       cert: z.string().optional(),
       secure: z.enum(["true", "false", "yes", "no"]).optional()
     }).strict().array().safeParse(this.options.listener);
 
     if (!listenerCheck.success) {
+      console.log("Invalid listener options: ");
+      console.log(this.options.listener);
       console.log(fromError(listenerCheck.error).toString());
       process.exit();
     }

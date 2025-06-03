@@ -65,7 +65,7 @@ export class StateObject<
     public bodyFormat: B,
     public user: AuthUser,
     public config: SiteConfig,
-    
+
   ) {
     super(streamer);
 

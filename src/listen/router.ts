@@ -68,13 +68,6 @@ export class Router {
   }
 
   async handleStreamer(streamer: Streamer) {
-   
-
-    if (!this.config.csrfDisable
-      && !["GET", "HEAD", "OPTIONS"].includes(streamer.method)
-      && streamer.headers["x-requested-with"] !== "TiddlyWiki")
-      throw streamer.sendString(400, { "x-reason": "x-requested-with missing" },
-        `'X-Requested-With' header required`, "utf8");
 
     const authUser = await SessionManager.parseIncomingRequest(streamer, this.config);
 
@@ -87,10 +80,27 @@ export class Router {
     if (!routePath.length || routePath[routePath.length - 1]?.route.denyFinal)
       return streamer.sendEmpty(400, { "x-reason": "no-route" });
 
-    // Optionally output debug info
-    console.log(streamer.method, streamer.url);
+    // A basic CSRF prevention so that basic HTML forms and AJAX requests
+    // cannot be submitted unless custom headers can be sent.
+    // Full CSRF protection would look like this:
+    // 1. The server sends a CSRF token in the HTML form or AJAX request.
+    // 2. The client sends the CSRF token back in the request headers.
+    // 3. The server checks the CSRF token against the session.
+    // 4. If the CSRF token is valid, the request is processed.
+    // 5. If the CSRF token is invalid, the request is rejected with a 403 Forbidden.
+
+    // If the route requires a CSRF check,
+    if (routePath.some(e => e.route.securityChecks?.requestedWithHeader))
+      // If the method is not GET, HEAD, or OPTIONS, 
+      if (!["GET", "HEAD", "OPTIONS"].includes(streamer.method))
+        // If the x-requested-with header is not set to "TiddlyWiki", 
+        if (streamer.headers["x-requested-with"] !== "TiddlyWiki")
+          // we reject the request with a 403 Forbidden.
+          return streamer.sendEmpty(403, { "x-reason": "x-requested-with missing" });
+
     // if no bodyFormat is specified, we default to ignore
     const bodyFormat = routePath.find(e => e.route.bodyFormat)?.route.bodyFormat || "ignore";
+    console.log(streamer.method, streamer.url);
 
     type statetype = {
       [K in BodyFormat]: StateObject<K>;

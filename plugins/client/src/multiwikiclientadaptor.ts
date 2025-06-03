@@ -654,7 +654,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		var self = this;
 		self.outstandingRequests[title] = { type: "GET" };
 		const [ok, err, result] = await this.recipeRequest({
-			key: "handleGetRecipeTiddler",
+			key: "handleLoadRecipeTiddler",
 			url: "/tiddlers/" + encodeURIComponent(title),
 			method: "GET",
 		})

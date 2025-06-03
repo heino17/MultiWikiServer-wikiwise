@@ -17,7 +17,6 @@ export const StatusKeyMap: RouterKeyMap<StatusManager, true> = {
 }
 
 export type StatusManagerMap = RouterRouteMap<StatusManager>;
-type t1 = ART<StatusManager["index_json"]["inner"]>;
 
 export class StatusManager {
 

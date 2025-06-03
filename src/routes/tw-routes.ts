@@ -3,20 +3,54 @@ import { basename } from "path";
 import EventEmitter from "events";
 import { dist_resolve } from "../utils";
 import { serverEvents } from "../ServerEvents";
+import { IncomingMessage, ServerResponse } from "http";
+import { Http2ServerRequest, Http2ServerResponse } from "http2";
+import { ServerState } from "../ServerState";
+import { StateObject } from "./StateObject";
 
-serverEvents.on("listen.routes", (root, config) => {
-  if (config.enableDocsRoute)
-    DocsRoute(root, "/mws-docs", false);
+serverEvents.on("listen.routes", (rootRoute, config) => {
+
+  if (config.enableDocsRoute) {
+    const mountPath = "/mws-docs";
+    rootRoute.defineRoute({
+      method: ["OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE"],
+      bodyFormat: "stream",
+      path: new RegExp("^" + mountPath + "(/|$)"),
+      pathParams: []
+    }, TW5Route({
+      mountPath,
+      singleFile: true,
+      argv: [
+        "+plugins/tiddlywiki/tiddlyweb",
+        "+plugins/tiddlywiki/filesystem",
+        dist_resolve("../editions/mws-docs"),
+      ],
+      variables: {
+        rootTiddler: "$:/core/save/all",
+      },
+    }));
+  }
 })
 
 /**
+ * `tiddlywiki [+<pluginname> | ++<pluginpath>] [<wikipath>] ...[--command ...args]`
  * 
- * @param rootRoute
- * @param mountPath start with a slash and end without a slash
- * @param singleFile serve the page url without a trailing slash
- *  (as though it is a file rather than the implied index of a folder)
+ * 
+ * 
+ * @param options
+ * @param options.rootRoute  
  */
-export function DocsRoute(rootRoute: rootRoute, mountPath: string, singleFile: boolean) {
+export function TW5Route({
+  mountPath,
+  singleFile,
+  argv,
+  variables = {},
+}: {
+  mountPath: string;
+  singleFile: boolean;
+  argv: string[];
+  variables?: Record<string, string>;
+}) {
   const $tw = TiddlyWiki();
   const last = basename(mountPath);
 
@@ -25,43 +59,29 @@ export function DocsRoute(rootRoute: rootRoute, mountPath: string, singleFile: b
     // if the page url doesn't end with a slash, we have to include the basename here
     text: singleFile ? last + "/" : "",
   });
-  // tiddlywiki [+<pluginname> | ++<pluginpath>] [<wikipath>] ...[--command ...args]
-  $tw.boot.argv = [
-    "+plugins/tiddlywiki/tiddlyweb",
-    "+plugins/tiddlywiki/filesystem",
-    // relative to the cwd
-    dist_resolve("../editions/mws-docs"),
-  ];
 
-  const hooks = new EventEmitter();
+  $tw.boot.argv = argv;
+
+  const hooks = new EventEmitter<{
+    req: [req: IncomingMessage | Http2ServerRequest, res: ServerResponse | Http2ServerResponse, mount: string]
+  }>();
 
   // Boot the TW5 app
   $tw.boot.boot(() => {
-    const Server = $tw.modules.execute("$:/core/modules/server/server.js", "tw-test.ts").Server;
+    const Server = $tw.modules.execute("$:/core/modules/server/server.js", "tw-routes.ts").Server;
     const twserver = new Server({
       wiki: $tw.wiki,
-      variables: {
-        // path prefix gets set per-request
-        "path-prefix": "",
-        "root-tiddler": "$:/core/save/all",
-      },
+      variables,
       routes: [],
     });
     $tw.hooks.invokeHook("th-server-command-post-start", twserver, null, "mws");
     hooks.on("req", (req, res, pathPrefix) => {
       twserver.requestHandler(req, res, { pathPrefix } as any);
-    })
+    });
   });
 
-  rootRoute.defineRoute({
-    method: ["OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE"],
-    bodyFormat: "stream",
-    path: new RegExp("^" + mountPath + "(/|$)"),
-    pathParams: []
-  }, async (state) => {
+  return async (state: StateObject) => {
 
-    // eventually this will be optional because either method could be desired
-    // especially when importing from an existing single-file folder structure
     if (singleFile && state.urlInfo.pathname === mountPath + "/")
       throw state.redirect(mountPath);
     if (!singleFile && state.urlInfo.pathname === mountPath)
@@ -77,6 +97,7 @@ export function DocsRoute(rootRoute: rootRoute, mountPath: string, singleFile: b
     const prom = new Promise((r, c) => res.on("finish", r).on("error", c));
     hooks.emit("req", req, res, state.pathPrefix + mountPath);
     return prom.then(() => STREAM_ENDED);
-  });
+  };
+
 }
 

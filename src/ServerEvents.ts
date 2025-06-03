@@ -5,9 +5,11 @@ import type * as commander from "commander";
 import type { ListenerRaw } from "./commands/listen";
 import type { Router } from "./listen/router";
 import type { ListenerHTTP, ListenerHTTPS } from "./listen/listeners";
+import type { CommandFile } from "./utils";
 // the keys in the arrays are labels which get used for the 
 // argument names when the tuple is used in a function definition
 export interface ServerEventsMap {
+  "cli.commands.register": [commands: Record<string, CommandFile>]
   "cli.commander": [commander.Command]
   "cli.command.parsed": [cmd: string, params: string[], options: {}]
   "server.create.after": [state: ServerState, $tw: TW]

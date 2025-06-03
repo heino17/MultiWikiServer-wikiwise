@@ -10,13 +10,17 @@ import { deepEqual } from "node:assert";
 import { ServerState } from "./ServerState";
 import opaque from "@serenity-kit/opaque";
 import { CommandFile } from "./utils";
-import { serverEvents } from "./ServerEvents";
+import { serverEvents, ServerEventsMap, ServerEvents } from "./ServerEvents";
+
+export { serverEvents, ServerEventsMap, ServerEvents };
 
 export async function runCLI() {
 
   const wikiPath = process.cwd();
 
   if (!existsSync(wikiPath)) throw "The wiki path does not exist";
+
+  await serverEvents.emitAsync("cli.commands.register", commands);
 
   const cmder = getCLI();
 
