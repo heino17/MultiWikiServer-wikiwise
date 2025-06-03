@@ -1,7 +1,7 @@
 import * as path from "path";
 import * as fs from "fs";
-import { StateObject } from "./StateObject";
-import { BodyFormat } from "./utils";
+import { StateObject } from "./requests/StateObject";
+import { BodyFormat } from "./requests/router";
 
 declare global {
   /** helper function which returns the arguments as an array, but typed as a tuple, which is still an array, but positional. */

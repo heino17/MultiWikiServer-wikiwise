@@ -2,13 +2,12 @@ import * as z from "zod";
 import { StateObject } from "./StateObject";
 import { Streamer } from "./streamer";
 import Debug from "debug";
-import { BodyFormat, createStrictAwaitProxy, AllowedMethod } from "./utils";
 import { IncomingMessage, ServerResponse } from "node:http";
 import { Http2ServerRequest, Http2ServerResponse } from "node:http2";
 import { Listener } from "./listeners";
 import helmet from "helmet";
-import { serverEvents } from "./ServerEvents";
-import { zodTransformJSON } from "./zodRegister";
+import { serverEvents } from "../ServerEvents";
+
 
 const debug = Debug("mws:router:matching");
 
@@ -91,8 +90,8 @@ export class Router {
     if (routePath.some(e => e.route.securityChecks?.requestedWithHeader))
       // If the method is not GET, HEAD, or OPTIONS, 
       if (!["GET", "HEAD", "OPTIONS"].includes(streamer.method))
-        // If the x-requested-with header is not set to "TiddlyWiki", 
-        if (streamer.headers["x-requested-with"] !== "TiddlyWiki")
+        // If the x-requested-with header is not set to "fetch", 
+        if (streamer.headers["x-requested-with"] !== "fetch")
           // we reject the request with a 403 Forbidden.
           return streamer.sendEmpty(403, { "x-reason": "x-requested-with missing" });
 
@@ -245,4 +244,32 @@ export interface RouteMatch {
   params: (string | undefined)[];
   remainingPath: string;
 }
+
+
+export const zodTransformJSON = (arg: string, ctx: z.RefinementCtx) => {
+  try {
+    if (arg === "") return undefined;
+    return JSON.parse(arg, (key, value) => {
+      //https://github.com/fastify/secure-json-parse
+      if (key === '__proto__')
+        throw new Error('Invalid key: __proto__');
+      if (key === 'constructor' && Object.prototype.hasOwnProperty.call(value, 'prototype'))
+        throw new Error('Invalid key: constructor.prototype');
+      return value;
+    });
+  } catch (e) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: e instanceof Error ? e.message : `${e}`,
+      fatal: true,
+    });
+    return z.NEVER;
+  }
+};
+export const AllowedMethods = [...["GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"] as const];
+export type AllowedMethod = (typeof AllowedMethods)[number];
+
+export const BodyFormats = ["stream", "string", "json", "buffer", "www-form-urlencoded", "www-form-urlencoded-urlsearchparams", "ignore"] as const;
+export type BodyFormat = (typeof BodyFormats)[number];
+
 

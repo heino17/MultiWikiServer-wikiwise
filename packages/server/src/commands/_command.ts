@@ -1,8 +1,8 @@
 
 import { z } from "zod";
 import { fromError } from "zod-validation-error";
-import { startListeners } from "./listeners";
-import { serverEvents } from "./ServerEvents";
+import { startListeners } from "../requests/listeners";
+import { serverEvents } from "../ServerEvents";
 import { BaseCommand, CommandInfo } from "./BaseCommand";
 
 serverEvents.on("cli.register", (commands) => {

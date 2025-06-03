@@ -162,9 +162,3 @@ export declare type JsonObject = { [Key in string]?: JsonValue; };
 export declare type JsonValue = string | number | boolean | JsonObject | JsonArray | null | Date;
 
 
-export const AllowedMethods = [...["GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"] as const];
-export type AllowedMethod = (typeof AllowedMethods)[number];
-
-export const BodyFormats = ["stream", "string", "json", "buffer", "www-form-urlencoded", "www-form-urlencoded-urlsearchparams", "ignore"] as const;
-export type BodyFormat = (typeof BodyFormats)[number];
-

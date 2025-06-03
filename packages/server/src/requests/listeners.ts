@@ -1,12 +1,13 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { Router } from "./router";
 import { ok } from "node:assert";
 import { createServer, IncomingMessage, Server, ServerResponse } from "node:http";
 import { createSecureServer, Http2SecureServer, Http2ServerRequest, Http2ServerResponse } from "node:http2";
-import { makeRouter } from './makeRouter';
-import { serverEvents } from './ServerEvents';
+import { AllowedMethods, BodyFormats, Router } from "./router";
+import { serverEvents } from '../ServerEvents';
 import { z } from "zod";
 import { fromError } from 'zod-validation-error';
+import Debug from "debug";
+import { StateObject } from './StateObject';
 
 
 export async function startListeners(listenOptions: ListenerRaw[]) {
@@ -33,7 +34,14 @@ export async function startListeners(listenOptions: ListenerRaw[]) {
 
   await serverEvents.emitAsync("listen.options", listenerCheck.data);
 
-  const router = await makeRouter();
+
+
+  await serverEvents.emitAsync("listen.routes", rootRoute)
+  await serverEvents.emitAsync("listen.routes.fallback", rootRoute)
+
+  const router = new Router(rootRoute);
+
+  await serverEvents.emitAsync("listen.router", router);
 
   const listenInstances = listenOptions.map(e => {
 
@@ -154,3 +162,41 @@ export class ListenerHTTP extends ListenerBase {
 }
 
 
+const debugDefining = Debug("mws:router:defining");
+function defineRoute(
+  parent: { $o?: any; method: any; } | typeof ROOT_ROUTE,
+  route: RouteDef,
+  handler: (state: any) => any
+) {
+
+  if (route.bodyFormat && !BodyFormats.includes(route.bodyFormat))
+    throw new Error("Invalid bodyFormat: " + route.bodyFormat);
+  if (!route.method.every(e => (parent === ROOT_ROUTE ? AllowedMethods : parent.method).includes(e)))
+    throw new Error("Invalid method: " + route.method);
+  if (route.path.source[0] !== "^")
+    throw new Error("Path regex must start with ^");
+
+  if (parent !== ROOT_ROUTE) {
+    // the typing is too complicated if we add childRoutes
+    if (!(parent as any).childRoutes) (parent as any).childRoutes = [];
+    (parent as any).childRoutes.push(route);
+  }
+
+  (route as ServerRoute).defineRoute = (...args: [any, any]) => defineRoute(route, ...args);
+
+  (route as ServerRoute).handler = handler;
+
+  debugDefining(route.method, route.path.source);
+
+  return route as any;
+}
+
+const ROOT_ROUTE: unique symbol = Symbol("ROOT_ROUTE");
+
+export const rootRoute = defineRoute(ROOT_ROUTE, {
+  method: AllowedMethods,
+  path: /^/,
+  denyFinal: true,
+}, async (state: StateObject) => {
+
+});

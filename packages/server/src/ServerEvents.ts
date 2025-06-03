@@ -1,12 +1,12 @@
 import EventEmitter from "events";
 import type * as commander from "commander";
-import type { RouteMatch, Router } from "./router";
-import type { Listener, ListenerHTTP, ListenerHTTPS } from "./listeners";
-import type { BaseCommand, CommandClass, CommandFile } from "./BaseCommand";
-import type { Streamer } from "./streamer";
+import type { RouteMatch, Router } from "./requests/router";
+import type { Listener, ListenerHTTP, ListenerHTTPS } from "./requests/listeners";
+import type { BaseCommand, CommandClass, CommandFile } from "./commands/BaseCommand";
+import type { Streamer } from "./requests/streamer";
 import { IncomingMessage, ServerResponse } from "http";
 import { Http2ServerRequest, Http2ServerResponse } from "http2";
-import { StateObject } from "./StateObject";
+import { StateObject } from "./requests/StateObject";
 // the keys in the arrays are labels which get used for the 
 // argument names when the tuple is used in a function definition
 export interface ServerEventsMap {
@@ -49,6 +49,9 @@ export class ServerEvents extends EventEmitter<ServerEventsMap> {
 }
 /**
  * Server events used throughout the entire server.
+ * 
+ * To find all references to a specific event, 
+ * use find all occurrences on the event name string.
  * 
  * The listener function is awaited, but the return value is ignored. 
  * 

@@ -1,6 +1,6 @@
 import { Streamer, StreamerState } from './streamer';
 import { PassThrough } from 'node:stream';
-import { AllowedMethod, BodyFormat } from "./utils";
+import { AllowedMethod, BodyFormat } from "./router";
 import * as z from 'zod';
 import { RouteMatch } from './router';
 import { ok } from 'assert';

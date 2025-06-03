@@ -1,5 +1,5 @@
 import { fromError } from "zod-validation-error";
-import { StateObject } from "./StateObject";
+import { StateObject } from "../requests/StateObject";
 import Debug from "debug";
 import z from "zod";
 import { Z2, ZodRoute } from "./zodRoute";
@@ -136,23 +136,4 @@ export function checkPath<
 }
 
 
-export const zodTransformJSON = (arg: string, ctx: z.RefinementCtx) => {
-  try {
-    if (arg === "") return undefined;
-    return JSON.parse(arg, (key, value) => {
-      //https://github.com/fastify/secure-json-parse
-      if (key === '__proto__')
-        throw new Error('Invalid key: __proto__');
-      if (key === 'constructor' && Object.prototype.hasOwnProperty.call(value, 'prototype'))
-        throw new Error('Invalid key: constructor.prototype');
-      return value;
-    });
-  } catch (e) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: e instanceof Error ? e.message : `${e}`,
-      fatal: true,
-    });
-    return z.NEVER;
-  }
-};
+
