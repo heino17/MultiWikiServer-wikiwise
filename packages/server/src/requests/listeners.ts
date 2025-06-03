@@ -11,53 +11,7 @@ import { StateObject } from './StateObject';
 
 
 export async function startListeners(listenOptions: ListenerRaw[]) {
-  const listenerCheck = z.object({
-    port: z.string().optional(),
-    host: z.string().optional(),
-    prefix: z.string().optional()
-      .transform(prefix => prefix || "")
-      .refine((prefix) => !prefix || prefix.startsWith("/"),
-        "Listener path prefix must start with a slash or be falsy")
-      .refine((prefix) => !prefix.endsWith("/"),
-        "Listener path prefix must NOT end with a slash"),
-    key: z.string().optional(),
-    cert: z.string().optional(),
-    secure: z.enum(["true", "false", "yes", "no"]).optional()
-  }).strict().array().safeParse(listenOptions);
-
-  if (!listenerCheck.success) {
-    console.log("Invalid listener options: ");
-    console.log(listenOptions);
-    console.log(fromError(listenerCheck.error).toString());
-    process.exit();
-  }
-
-  await serverEvents.emitAsync("listen.options", listenerCheck.data);
-
-
-
-  await serverEvents.emitAsync("listen.routes", rootRoute)
-  await serverEvents.emitAsync("listen.routes.fallback", rootRoute)
-
-  const router = new Router(rootRoute);
-
-  await serverEvents.emitAsync("listen.router", router);
-
-  const listenInstances = listenOptions.map(e => {
-
-    if (!e.key !== !e.cert) {
-      throw new Error("Both key and cert are required for HTTPS");
-    }
-
-    return e.key && e.cert
-      ? new ListenerHTTPS(router, e)
-      : new ListenerHTTP(router, e);
-
-  });
-
-  await serverEvents.emitAsync("listen.instances", listenInstances);
-
-
+  
 
 }
 

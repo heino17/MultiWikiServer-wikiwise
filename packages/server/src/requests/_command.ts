@@ -1,9 +1,10 @@
 
 import { z } from "zod";
 import { fromError } from "zod-validation-error";
-import { startListeners } from "../requests/listeners";
+import { ListenerHTTP, ListenerHTTPS, rootRoute, startListeners } from "./listeners";
 import { serverEvents } from "../ServerEvents";
-import { BaseCommand, CommandInfo } from "./BaseCommand";
+import { BaseCommand, CommandInfo } from "../commands/BaseCommand";
+import { Router } from "./router";
 
 serverEvents.on("cli.register", (commands) => {
   commands.listen = { info, Command };
@@ -95,6 +96,8 @@ export class Command extends BaseCommand<[], {
   require_https: boolean;
 }> {
   async execute() {
+    const listenOptions = this.options.listener || [];
+
     const listenerCheck = z.object({
       port: z.string().optional(),
       host: z.string().optional(),
@@ -107,15 +110,36 @@ export class Command extends BaseCommand<[], {
       key: z.string().optional(),
       cert: z.string().optional(),
       secure: z.enum(["true", "false", "yes", "no"]).optional()
-    }).strict().array().safeParse(this.options.listener);
+    }).strict().array().safeParse(listenOptions);
 
     if (!listenerCheck.success) {
       console.log("Invalid listener options: ");
-      console.log(this.options.listener);
+      console.log(listenOptions);
       console.log(fromError(listenerCheck.error).toString());
       process.exit();
     }
 
-    await startListeners(listenerCheck.data);
+    const router = new Router(rootRoute);
+
+    await serverEvents.emitAsync("listen.router", this, router);
+    await serverEvents.emitAsync("listen.routes", this, router, rootRoute)
+    await serverEvents.emitAsync("listen.routes.fallback", this, router, rootRoute)
+    await serverEvents.emitAsync("listen.options", this, listenerCheck.data);
+
+    const listenInstances = listenOptions.map(e => {
+
+      if (!e.key !== !e.cert) {
+        throw new Error("Both key and cert are required for HTTPS");
+      }
+
+      return e.key && e.cert
+        ? new ListenerHTTPS(router, e)
+        : new ListenerHTTP(router, e);
+
+    });
+
+    await serverEvents.emitAsync("listen.instances", this, listenInstances);
+
+
   }
 }

@@ -3,7 +3,7 @@ import * as commander from "commander";
 import pkg from "../package.json";
 import chalk from "chalk";
 import { serverEvents } from "./ServerEvents";
-import "./commands/_command";
+import "./requests/_command";
 import { CommandFile } from "./commands/BaseCommand";
 
 export * from "./commands/BaseCommand";

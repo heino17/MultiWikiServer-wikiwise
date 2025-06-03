@@ -24,11 +24,11 @@ export interface ServerEventsMap {
     options: Record<string, string | boolean>,
     instance: BaseCommand
   ]
-  "listen.options": [listeners: Listener[]]
-  "listen.routes": [rootRoute: ServerRoute]
-  "listen.routes.fallback": [rootRoute: ServerRoute]
-  "listen.router": [router: Router]
-  "listen.instances": [instances: (ListenerHTTPS | ListenerHTTP)[]]
+  "listen.router": [listen: BaseCommand, router: Router]
+  "listen.routes": [listen: BaseCommand, router: Router, rootRoute: ServerRoute]
+  "listen.routes.fallback": [listen: BaseCommand, router: Router, rootRoute: ServerRoute]
+  "listen.options": [listen: BaseCommand, listeners: Listener[]]
+  "listen.instances": [listen: BaseCommand, instances: (ListenerHTTPS | ListenerHTTP)[]]
   "request.middleware": [req: IncomingMessage | Http2ServerRequest, res: ServerResponse | Http2ServerResponse, options: Listener]
   "request.streamer": [streamer: Streamer]
   "request.state": [state: StateObject]
