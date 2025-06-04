@@ -1,6 +1,6 @@
 import "./global";
 import * as opaque from "@serenity-kit/opaque";
-import { serverEvents, runCLI, Router } from "@tiddlywiki/server";
+import { serverEvents, startup, Router, Z2 } from "@tiddlywiki/server";
 import { existsSync, writeFileSync, readFileSync } from "fs";
 import * as path from "path";
 import { TW } from "tiddlywiki";
@@ -9,6 +9,9 @@ import { startupCache } from "./services/cache";
 import { createPasswordService } from "./services/PasswordService";
 import { bootTiddlyWiki } from "./services/tiddlywiki";
 import { AuthUser, SessionManager } from "./services/sessions";
+import { commands } from "./commands";
+import { setupDevServer } from "./services/setupDevServer";
+
 import "./managers";
 import "./managers/admin-recipes";
 import "./managers/admin-users";
@@ -17,9 +20,18 @@ import "./zodAssert";
 import "./StateObject";
 import "./services/tw-routes";
 import "./services/cache";
-import "./commands";
+import { prismaField } from "./zodAssert";
 
-import { setupDevServer } from "./services/setupDevServer";
+
+serverEvents.on("zod.make", (zod: Z2<any>) => {
+  zod.prismaField = prismaField;
+});
+
+serverEvents.on("cli.register", commands2 => {
+  Object.assign(commands2, commands);
+})
+
+
 
 serverEvents.on("cli.execute.before", async (name, params, options, instance) => {
   const wikiPath = process.cwd();
@@ -37,12 +49,12 @@ serverEvents.on("cli.execute.before", async (name, params, options, instance) =>
 
 serverEvents.on("listen.router", async (listen, router) => {
   router.config = listen.config;
-  router.sendDevServer = await setupDevServer(listen.config);
+  router.sendAdmin = await setupDevServer(listen.config);
 });
 serverEvents.on("request.streamer", async (router, streamer) => {
   streamer.user = await SessionManager.parseIncomingRequest(streamer, router.config);
 });
-
+// request.state is handled in StateObject.ts
 serverEvents.on("listen.routes", async (listen, root) => {
   await serverEvents.emitAsync("mws.routes", root, listen.config);
 })
@@ -58,7 +70,7 @@ declare module "@tiddlywiki/server" {
 
   interface Router {
     config: ServerState;
-    sendDevServer: ART<typeof setupDevServer>;
+    sendAdmin: ART<typeof setupDevServer>;
   }
 
   interface Streamer {
@@ -94,12 +106,12 @@ serverEvents.on("mws.routes.fallback", (root, config) => {
     path: /^\/.*/,
     bodyFormat: "stream",
   }, async state => {
-    await state.sendDevServer();
+    await state.sendAdmin();
     return STREAM_ENDED;
   });
 });
 
 export async function runMWS() {
   await opaque.ready;
-  await runCLI();
+  await startup();
 }

@@ -3,9 +3,11 @@
 // postinstall: `PRISMA_CLIENT_FORCE_WASM=true prisma generate`
 
 import { spawn } from "child_process";
+import { resolve } from "path";
 const env = process.env;
-const start = (cmd, args, env2 = {}) => {
+const startDir = (cwd, cmd, args, env2 = {}) => {
   const cp = spawn(cmd, args, {
+    cwd: resolve(cwd),
     env: { ...env, ...env2, },
     shell: true,
     stdio: "inherit",
@@ -15,12 +17,15 @@ const start = (cmd, args, env2 = {}) => {
     cp.on("exit", (code) => { if(code) process.exit(code); r(); })
   });
 }
+const start = (cmd, args, env2 = {}) => {
+  return startDir(process.cwd(), cmd, args, env2)
+}
 switch(process.argv[2]) {
   case "start":
     // don't wait on tsc, it's just for checking types
     // await start("npm run tsc", []);
-    await start("tsup --silent", [], { 
-      SKIPDTS: "1" 
+    await start("tsup --silent", [], {
+      SKIPDTS: "1"
     });
     await start("node --trace-uncaught mws.dev.mjs", process.argv.slice(3), {
       ENABLE_DEV_SERVER: "1",
@@ -34,7 +39,7 @@ switch(process.argv[2]) {
     });
     break;
   case "prisma:generate":
-    start("prisma generate", [], {
+    startDir("../..", "prisma generate", [], {
       PRISMA_CLIENT_FORCE_WASM: "true"
     });
     break;

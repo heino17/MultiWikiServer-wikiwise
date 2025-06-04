@@ -8,9 +8,8 @@ import { readFile } from "fs/promises";
 import { Writable } from "stream";
 import { IncomingHttpHeaders } from "http";
 import { WikiStateStore } from "./WikiStateStore";
-import { ZodTypeAny } from "zod";
 import { Debug } from "@prisma/client/runtime/library";
-import { registerZodRoutes, RouterKeyMap, RouterRouteMap, serverEvents, tryParseJSON, UserError, zodRoute, ZodState } from "@tiddlywiki/server";
+import { registerZodRoutes, RouterKeyMap, RouterRouteMap, serverEvents, tryParseJSON, UserError, zod, zodRoute, ZodState } from "@tiddlywiki/server";
 const debugCORS = Debug("mws:cors");
 
 export const TiddlerKeyMap: RouterKeyMap<WikiRoutes, true> = {
@@ -472,7 +471,7 @@ function parseTiddlerFields(input: string, ctype: string | undefined) {
 }
 
 
-async function recieveTiddlerMultipartUpload(state: ZodState<"POST", "stream", {}, {}, ZodTypeAny>) {
+async function recieveTiddlerMultipartUpload(state: ZodState<"POST", "stream", {}, {}, zod.ZodTypeAny>) {
 
   interface UploadPart {
     name: string | null;

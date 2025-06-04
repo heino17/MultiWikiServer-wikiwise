@@ -24,8 +24,3 @@ export const commands = {
     new(...args: ConstructorParameters<typeof BaseCommand<any, any>>): BaseCommand<any, any>
   }
 }>;
-
-serverEvents.on("cli.register", commands2 => {
-  Object.assign(commands2, commands);
-})
-

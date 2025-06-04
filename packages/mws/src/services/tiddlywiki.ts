@@ -37,7 +37,7 @@ export async function bootTiddlyWiki(wikiPath: string) {
 
   // tiddlywiki [+<pluginname> | ++<pluginpath>] [<wikipath>] ...[--command ...args]
   $tw.boot.argv = [
-    "++" + dist_resolve("../plugins/server"),
+    "++" + dist_resolve("../../../plugins/server"),
     wikiPath, // this should be inert
   ];
 

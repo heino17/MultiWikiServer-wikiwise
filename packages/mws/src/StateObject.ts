@@ -1,5 +1,4 @@
 import { AllowedMethod, BodyFormat } from "./utils";
-import * as z from 'zod';
 import { AuthUser } from './services/sessions';
 import { Prisma } from '@prisma/client';
 import { Types } from '@prisma/client/runtime/library';
@@ -9,14 +8,18 @@ import { serverEvents, ServerRequest } from "@tiddlywiki/server";
 import { setupDevServer } from "./services/setupDevServer";
 
 declare module "@tiddlywiki/server" {
-  interface ServerRequest extends StateObject {
+  interface ServerRequest<
+    B extends BodyFormat = BodyFormat,
+    M extends AllowedMethod = AllowedMethod,
+    D = unknown
+  > extends StateObject {
     config: ServerState;
     user: AuthUser;
     engine: ServerState["engine"];
-    sendDevServer: () => ReturnType<ART<typeof setupDevServer>>;
     asserted: boolean;
     PasswordService: ServerState["PasswordService"];
     pluginCache: ServerState["pluginCache"];
+    sendAdmin: () => ReturnType<Awaited<ReturnType<typeof setupDevServer>>>;
   }
 }
 
@@ -24,7 +27,7 @@ serverEvents.on("request.state", async (router, state, streamer) => {
   state.config = router.config;
   state.user = streamer.user;
   state.engine = router.config.engine;
-  state.sendDevServer = () => router.sendDevServer(state);
+  state.sendAdmin = () => router.sendAdmin(state);
   state.asserted = false;
   state.PasswordService = router.config.PasswordService;
   state.pluginCache = router.config.pluginCache;
@@ -32,11 +35,12 @@ serverEvents.on("request.state", async (router, state, streamer) => {
 
 });
 
-class StateObject<
-  B extends BodyFormat = BodyFormat,
-  M extends AllowedMethod = AllowedMethod,
-  D = unknown
-> {
+// this method is annoying, but it does work
+// the class doesn't get instantiated directly,
+// its prototype just gets set on the request state object
+const test: any = ServerRequest;
+
+class StateObject extends test {
 
   declare engine: ServerState["engine"];
   declare user: AuthUser;
@@ -161,18 +165,4 @@ class StateObject<
 
   }
 
-}
-
-Object.setPrototypeOf(StateObject.prototype, ServerRequest.prototype);
-
-const zodURIComponent = (val: string, ctx: z.RefinementCtx) => {
-  try {
-    return decodeURIComponent(val);
-  } catch (e) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Invalid URI component",
-    });
-    return z.NEVER;
-  }
 }

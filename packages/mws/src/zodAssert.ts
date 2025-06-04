@@ -1,9 +1,10 @@
-import { z, ZodEffects } from "zod";
+
 import { Prisma } from "@prisma/client";
-import { serverEvents, Z2 } from "@tiddlywiki/server";
+import { zod } from "@tiddlywiki/server";
 
 
-type _zod = typeof z;
+type _zod = typeof zod;
+
 type ExtraFieldType = "string" | "number" | "parse-number" | "boolean" | "parse-boolean";
 type FieldTypeGroups = "STRING" | "JSON";
 type FieldTypeStringSelector<T extends FieldTypeGroups> = T extends "STRING" ? "string" : "string";
@@ -32,17 +33,16 @@ declare module "@tiddlywiki/server" {
         boolean extends (PrismaPayloadScalars<Table>[Field]) ? FieldTypeBooleanSelector<T> :
         never,
       nullable?: null extends PrismaPayloadScalars<Table>[Field] ? true : false
-    ): ZodEffects<any, PrismaField<Table, Field>, PrismaPayloadScalars<Table>[Field]>;
+    ): zod.ZodEffects<any, PrismaField<Table, Field>, PrismaPayloadScalars<Table>[Field]>;
 
 
   }
 }
 
-serverEvents.on("zod.make", (zod: Z2<any>) => {
-  zod.prismaField = prismaField;
-});
 
-function prismaField(table: any, field: any, fieldtype: ExtraFieldType, nullable?: boolean): any {
+
+export function prismaField(table: any, field: any, fieldtype: ExtraFieldType, nullable?: boolean): any {
+  const z = zod;
   const check = (() => {
     switch (fieldtype) {
       case "string":

@@ -1,7 +1,6 @@
 
-import { jsonify, JsonValue, registerZodRoutes, RouterKeyMap, serverEvents, Streamer, Z2, ZodRoute, zodRoute, ZodState } from "@tiddlywiki/server";
+import { jsonify, JsonValue, registerZodRoutes, RouterKeyMap, serverEvents, Streamer, Z2, zod, ZodRoute, zodRoute, ZodState } from "@tiddlywiki/server";
 import { createHash, randomBytes } from "node:crypto";
-import { z } from "zod";
 import { ServerState } from "../ServerState";
 
 
@@ -34,10 +33,10 @@ export const SessionKeyMap: RouterKeyMap<SessionManager, true> = {
  * @param inner the handler to call
  * @returns the ZodRoute
  */
-export function zodSession<P extends string, T extends z.ZodTypeAny, R extends JsonValue>(
+export function zodSession<P extends string, T extends zod.ZodTypeAny, R extends JsonValue>(
   path: P,
   zodRequest: (z: Z2<"JSON">) => T,
-  inner: (state: ZodState<"POST", "json", Record<string, z.ZodTypeAny>, {}, T>, prisma: PrismaTxnClient) => Promise<R>
+  inner: (state: ZodState<"POST", "json", Record<string, zod.ZodTypeAny>, {}, T>, prisma: PrismaTxnClient) => Promise<R>
 ): ZodSessionRoute<P, T, R> {
   return {
     ...zodRoute({
@@ -58,7 +57,7 @@ export function zodSession<P extends string, T extends z.ZodTypeAny, R extends J
 
 export interface ZodSessionRoute<
   PATH extends string,
-  T extends z.ZodTypeAny,
+  T extends zod.ZodTypeAny,
   R extends JsonValue
 > extends ZodRoute<"POST", "json", {}, {}, T, R> {
   path: PATH;
@@ -67,7 +66,7 @@ export interface ZodSessionRoute<
 export type RouterPathRouteMap<T> = {
   [K in keyof T as T[K] extends ZodSessionRoute<any, any, any> ? K : never]:
   T[K] extends ZodSessionRoute<infer P, infer REQ, infer RES> ? {
-    (data: z.input<REQ>): Promise<jsonify<RES>>;
+    (data: zod.input<REQ>): Promise<jsonify<RES>>;
     path: P;
     key: K;
   } : never;

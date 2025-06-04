@@ -16,62 +16,46 @@ export * from "./requests/router";
 export * from "./requests/StateObject";
 export * from "./ServerEvents";
 
+export * as zod from "zod";
+
 export { Listener, ListenerBase, ListenerHTTP, ListenerHTTPS, ListenerRaw } from "./requests/listeners";
-
-export async function runCLI() {
-
+/**
+ * 
+ * Runs the following events in order:
+ * - `"zod.make"`
+ * - `"cli.register"`
+ * - `"cli.commander"`
+ * - End here if help is requested or no command is specified
+ * - `"cli.execute.before"`
+ * - The specified command's `execute` method
+ * - `"cli.execute.after"`
+ */
+export async function startup() {
   await serverEvents.emitAsync("zod.make", Z2);
-
   const commands: Record<string, CommandFile> = {};
-
   await serverEvents.emitAsync("cli.register", commands);
-
-  const cmder = getCLI(commands);
-
-  await serverEvents.emitAsync("cli.commander", cmder);
+  const commander = getCLI(commands);
+  await serverEvents.emitAsync("cli.commander", commander);
 
   const cmd = process.argv[2];
+  if (!cmd) return void commander.outputHelp();
+  if (cmd === "help") return void commander.parse();
 
-  if (!cmd) return cmder.outputHelp();
-
-  if (cmd === "help") return cmder.parse();
-
-  // const cmdDef
   const cmdDef: CommandFile | undefined = Object.values(commands).find(e => e.info.name === cmd);
   if (!cmdDef) {
     console.log(chalk.red.bold("Error: "), `Command "${cmd}" not found`);
-    return cmder.outputHelp();
+    return void commander.outputHelp();
   }
 
-  // parse the CLI first since that's easy
-  const { params, options } = parseCLI(cmder, cmd, process.argv.slice(3));
-
+  // parse the CLI options
+  const { params, options } = parseCLI(commander, cmd, process.argv.slice(3));
   const inst = new cmdDef.Command(params, options);
-
   await serverEvents.emitAsync("cli.execute.before", cmd, params, options, inst);
-
   await inst.execute();
-
   await serverEvents.emitAsync("cli.execute.after", cmd, params, options, inst);
 
 }
 
-
-// try {
-//   deepEqual(
-//     parseCLI(getCLI(), "listen", "--listener test=test --listener hello=world hello2=test --require-https".split(" ")),
-//     {
-//       options: {
-//         listener: [{ test: 'test' }, { hello: 'world', hello2: 'test' }],
-//         // 'allow-hosts': ['test'],
-//         'require-https': true
-//       },
-//       params: [],
-//     }
-//   );
-// } catch (e) {
-//   throw new Error(e as any);
-// }
 
 function parseCLI(cmder: commander.Command, cmd: string, cli: string[]) {
 
@@ -231,4 +215,18 @@ function getCLI(commands: Record<string, CommandFile>) {
     return this;
   }
 }
-
+// try {
+//   deepEqual(
+//     parseCLI(getCLI(), "listen", "--listener test=test --listener hello=world hello2=test --require-https".split(" ")),
+//     {
+//       options: {
+//         listener: [{ test: 'test' }, { hello: 'world', hello2: 'test' }],
+//         // 'allow-hosts': ['test'],
+//         'require-https': true
+//       },
+//       params: [],
+//     }
+//   );
+// } catch (e) {
+//   throw new Error(e as any);
+// }

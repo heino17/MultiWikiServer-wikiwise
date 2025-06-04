@@ -1,13 +1,12 @@
-import * as z from "zod";
 import Debug from "debug";
-import { JsonValue, Z2, zodRoute, ZodState } from "@tiddlywiki/server";
+import { JsonValue, Z2, zod, zodRoute, ZodState } from "@tiddlywiki/server";
 const debug = Debug("mws:cors:admin")
 
 
 
-export function admin<T extends z.ZodTypeAny, R extends JsonValue>(
+export function admin<T extends zod.ZodTypeAny, R extends JsonValue>(
   zodRequest: (z: Z2<"JSON">) => T,
-  inner: (state: ZodState<"POST", "json", Record<string, z.ZodTypeAny>, {}, T>, prisma: PrismaTxnClient) => Promise<R>
+  inner: (state: ZodState<"POST", "json", Record<string, zod.ZodTypeAny>, {}, T>, prisma: PrismaTxnClient) => Promise<R>
 ) {
   return zodRoute({
     method: ["POST"],

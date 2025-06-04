@@ -1,5 +1,4 @@
-import type { CommandInfo } from "../utils/BaseCommand";
-import { BaseCommand } from "../utils";
+import { BaseCommand, CommandInfo } from "@tiddlywiki/server";
 
 export const info: CommandInfo = {
   name: "",
