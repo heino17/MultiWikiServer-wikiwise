@@ -31,8 +31,13 @@ export class ServerState {
 
     this.fieldModules = $tw.Tiddler.fieldModules;
     this.contentTypeInfo = $tw.config.contentTypeInfo;
+
     if (!this.contentTypeInfo[DEFAULT_CONTENT_TYPE])
-      throw new Error("The content type info for " + DEFAULT_CONTENT_TYPE + " cannot be found in TW5")
+      throw new Error(
+        "The content type info for "
+        + DEFAULT_CONTENT_TYPE
+        + " cannot be found in TW5"
+      );
 
     if (!existsSync(this.databasePath)) this.setupRequired = true;
 
@@ -71,6 +76,20 @@ export class ServerState {
 
 
   }
+
+  $transaction<R>(
+    fn: (prisma: Omit<ServerState["engine"], ITXClientDenyList>) => Promise<R>,
+    options?: {
+      maxWait?: number;
+      timeout?: number;
+      isolationLevel?: Prisma.TransactionIsolationLevel;
+    }
+  ): Promise<R> {
+    // $transaction doesn't have the client extensions types,
+    // but should have them available (were they not just types).
+    return this.engine.$transaction(fn as (prisma: any) => Promise<any>, options);
+  }
+
 
   storePath;
   cachePath;

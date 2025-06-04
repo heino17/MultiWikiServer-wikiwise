@@ -1,5 +1,6 @@
+import "./global";
 import * as opaque from "@serenity-kit/opaque";
-import { serverEvents, runCLI } from "@tiddlywiki/server";
+import { serverEvents, runCLI, Router } from "@tiddlywiki/server";
 import { existsSync, writeFileSync, readFileSync } from "fs";
 import * as path from "path";
 import { TW } from "tiddlywiki";
@@ -7,6 +8,18 @@ import { ServerState } from "./ServerState";
 import { startupCache } from "./services/cache";
 import { createPasswordService } from "./services/PasswordService";
 import { bootTiddlyWiki } from "./services/tiddlywiki";
+import { AuthUser, SessionManager } from "./services/sessions";
+import "./managers";
+import "./managers/admin-recipes";
+import "./managers/admin-users";
+import "./managers/wiki-routes";
+import "./zodAssert";
+import "./StateObject";
+import "./services/tw-routes";
+import "./services/cache";
+import "./commands";
+
+import { setupDevServer } from "./services/setupDevServer";
 
 serverEvents.on("cli.execute.before", async (name, params, options, instance) => {
   const wikiPath = process.cwd();
@@ -15,25 +28,53 @@ serverEvents.on("cli.execute.before", async (name, params, options, instance) =>
   const passwordService = await createPasswordService(readPasswordMasterKey(wikiPath));
   const cache = await startupCache($tw, path.resolve(wikiPath, "cache"));
   const config = new ServerState(wikiPath, $tw, passwordService, cache);
-  serverEvents.emitAsync("server.init.before", config, $tw);
+  serverEvents.emitAsync("mws.init.before", config, $tw);
   await config.init();
-  serverEvents.emitAsync("server.init.after", config, $tw);
-  instance.serverState = config;
+  serverEvents.emitAsync("mws.init.after", config, $tw);
+  instance.config = config;
   instance.$tw = $tw;
 });
 
+serverEvents.on("listen.router", async (listen, router) => {
+  router.config = listen.config;
+  router.sendDevServer = await setupDevServer(listen.config);
+});
+serverEvents.on("request.streamer", async (router, streamer) => {
+  streamer.user = await SessionManager.parseIncomingRequest(streamer, router.config);
+});
+
+serverEvents.on("listen.routes", async (listen, root) => {
+  await serverEvents.emitAsync("mws.routes", root, listen.config);
+})
+serverEvents.on("listen.routes.fallback", async (listen, root) => {
+  await serverEvents.emitAsync("mws.routes.fallback", root, listen.config);
+})
+
 declare module "@tiddlywiki/server" {
-  export interface BaseCommand {
-    serverState: ServerState;
+  interface BaseCommand {
+    config: ServerState;
     $tw: TW;
   }
+
+  interface Router {
+    config: ServerState;
+    sendDevServer: ART<typeof setupDevServer>;
+  }
+
+  interface Streamer {
+    user: AuthUser;
+  }
+
   interface ServerEventsMap {
-    "server.init.before": [config: ServerState, $tw: TW];
-    "server.init.after": [config: ServerState, $tw: TW];
+    // these two run inside "cli.execute.before" 
+    "mws.init.before": [config: ServerState, $tw: TW];
+    "mws.init.after": [config: ServerState, $tw: TW];
+    "mws.routes": [root: ServerRoute, config: ServerState];
+    "mws.routes.fallback": [root: ServerRoute, config: ServerState];
   }
 }
 
-export function readPasswordMasterKey(wikiPath: string) {
+function readPasswordMasterKey(wikiPath: string) {
   const passwordKeyFile = path.join(wikiPath, "passwords.key");
   if (typeof passwordKeyFile === "string"
     && passwordKeyFile
@@ -46,4 +87,19 @@ export function readPasswordMasterKey(wikiPath: string) {
   return passwordMasterKey;
 }
 
-runCLI().catch(console.log);
+serverEvents.on("mws.routes.fallback", (root, config) => {
+
+  root.defineRoute({
+    method: ['GET'],
+    path: /^\/.*/,
+    bodyFormat: "stream",
+  }, async state => {
+    await state.sendDevServer();
+    return STREAM_ENDED;
+  });
+});
+
+export async function runMWS() {
+  await opaque.ready;
+  await runCLI();
+}
