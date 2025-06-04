@@ -14,7 +14,7 @@
     "resolveJsonModule": true,
     // "emitDeclarationOnly": true,
     // "declaration": true,
-    "outDir": "./react-user-mgmt/server",
+    "outDir": "react-user-mgmt/server",
     "esModuleInterop": true,
     "strict": true,
     "strictNullChecks": true,

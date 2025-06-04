@@ -14,7 +14,7 @@
     "resolveJsonModule": true,
     // "emitDeclarationOnly": true,
     // "declaration": true,
-    "outDir": "./react-user-mgmt/server",
+    "outDir": "../../react-user-mgmt/server",
     "esModuleInterop": true,
     "strict": true,
     "strictNullChecks": true,
@@ -26,13 +26,17 @@
     "checkJs": true,
     "allowJs": true,
     "paths": {
-      "tiddlywiki": ["./tiddlywiki-types"]
+      "tiddlywiki": [
+        "./tiddlywiki-types"
+      ]
     }
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.d.ts",
-    "./mws.*.ts",
+  "files": [
+    // "src/**/*.ts",
+    // "src/**/*.d.ts",
+    // "./mws.*.ts",
+    "./src/index.ts",
+    "./src/global.ts",
   ],
   "exclude": [
     "src/db-node-sqlite3-wasm/api.js",

@@ -1,24 +1,24 @@
 
-import amber from "@mui/material/colors/amber.js";
-import blue from "@mui/material/colors/blue.js";
-import blueGrey from "@mui/material/colors/blueGrey.js";
-import brown from "@mui/material/colors/brown.js";
-import common from "@mui/material/colors/common.js";
-import cyan from "@mui/material/colors/cyan.js";
-import deepOrange from "@mui/material/colors/deepOrange.js";
-import deepPurple from "@mui/material/colors/deepPurple.js";
-import green from "@mui/material/colors/green.js";
-import grey from "@mui/material/colors/grey.js";
-import indigo from "@mui/material/colors/indigo.js";
-import lightBlue from "@mui/material/colors/lightBlue.js";
-import lightGreen from "@mui/material/colors/lightGreen.js";
-import lime from "@mui/material/colors/lime.js";
-import orange from "@mui/material/colors/orange.js";
-import pink from "@mui/material/colors/pink.js";
-import purple from "@mui/material/colors/purple.js";
-import red from "@mui/material/colors/red.js";
-import teal from "@mui/material/colors/teal.js";
-import yellow from "@mui/material/colors/yellow.js";
+import amber from "@mui/material/colors/amber";
+import blue from "@mui/material/colors/blue";
+import blueGrey from "@mui/material/colors/blueGrey";
+import brown from "@mui/material/colors/brown";
+import common from "@mui/material/colors/common";
+import cyan from "@mui/material/colors/cyan";
+import deepOrange from "@mui/material/colors/deepOrange";
+import deepPurple from "@mui/material/colors/deepPurple";
+import green from "@mui/material/colors/green";
+import grey from "@mui/material/colors/grey";
+import indigo from "@mui/material/colors/indigo";
+import lightBlue from "@mui/material/colors/lightBlue";
+import lightGreen from "@mui/material/colors/lightGreen";
+import lime from "@mui/material/colors/lime";
+import orange from "@mui/material/colors/orange";
+import pink from "@mui/material/colors/pink";
+import purple from "@mui/material/colors/purple";
+import red from "@mui/material/colors/red";
+import teal from "@mui/material/colors/teal";
+import yellow from "@mui/material/colors/yellow";
 
 import { Stack } from "@mui/material";
 

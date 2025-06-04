@@ -45,44 +45,13 @@
     "@prisma/adapter-better-sqlite3": "6.7.0-dev.48",
     "@prisma/client": "6.6.0",
     "@serenity-kit/opaque": "^0.8.4",
-    "helmet": "^8.1.0",
     "prisma": "6.6.0",
     "prisma-json-types-generator": "^3.3.1"
   },
   "devDependencies": {
-    "@types/bytes": "^3.1.5",
-    "@types/compression": "^1.8.0",
-    "@types/debug": "^4.1.12",
-    "@types/mime-types": "^2.1.4",
-    "@types/negotiator": "^0.6.3",
-    "@types/node": "^22.13.1",
-    "@types/send": "^0.17.4",
-    "@types/sjcl": "^1.0.34",
-    "@types/tiddlywiki": "file:tiddlywiki-types",
-    "bytes": "^3.1.2",
-    "chalk": "^5.4.1",
-    "commander": "13.1.0",
-    "compressible": "^2.0.18",
-    "compression": "^1.8.0",
-    "debug": "^4.4.1",
-    "esbuild": "0.25.2",
-    "mime-types": "^2.1.35",
-    "negotiator": "^1.0.0",
-    "send": "^1.2.0",
-    "sjcl": "^1.0.8",
-    "source-map-support": "^0.5.21",
-    "supports-color": "^10.0.0",
-    "tiddlywiki": "^5.1.22",
-    "try": "^1.0.0-beta.5",
-    "tsup": "^8.4.0",
-    "typescript": "^5.7.3",
-    "uuid": "^11.1.0",
-    "vary": "^1.1.2",
-    "zod": "^3.25.49",
-    "zod-to-ts": "^1.2.0",
-    "zod-validation-error": "^3.4.1"
+    
   },
   "peerDependencies": {
-    "tiddlywiki": "^5.1.22"
+
   }
 }
