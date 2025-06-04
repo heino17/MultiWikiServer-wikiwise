@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { StateObject } from "./StateObject";
+import { ServerRequest } from "./StateObject";
 import { Streamer } from "./streamer";
 import Debug from "debug";
 import { IncomingMessage, ServerResponse } from "node:http";
@@ -47,7 +47,7 @@ export class Router {
     options: Listener
   ) {
 
-    await serverEvents.emitAsync("request.middleware", req, res, options);
+    await serverEvents.emitAsync("request.middleware", this, req, res, options);
 
     await new Promise<void>((resolve, reject) => this.helmet(
       req as IncomingMessage,
@@ -66,7 +66,7 @@ export class Router {
 
   async handleStreamer(streamer: Streamer) {
 
-    await serverEvents.emitAsync("request.streamer", streamer);
+    await serverEvents.emitAsync("request.streamer", this, streamer);
 
     /** This should always have a length of at least 1 because of the root route. */
     const routePath = this.findRoute(streamer);
@@ -99,12 +99,12 @@ export class Router {
     const bodyFormat = routePath.find(e => e.route.bodyFormat)?.route.bodyFormat || "ignore";
 
     type statetype = {
-      [K in BodyFormat]: StateObject<K>;
+      [K in BodyFormat]: ServerRequest<K>;
     }[BodyFormat];
 
-    const state = new StateObject(streamer, routePath, bodyFormat) as statetype;
+    const state = new ServerRequest(streamer, routePath, bodyFormat, this) as statetype;
 
-    await serverEvents.emitAsync("request.state", state);
+    await serverEvents.emitAsync("request.state", this, state, streamer);
 
     // if headers are already sent, we're supposed to have ended.
     if (streamer.headersSent) return streamer.end();
@@ -137,7 +137,7 @@ export class Router {
       // because it's a union, state becomes never at this point if we matched every route correctly
       // make sure state is never by assigning it to a never const. This will error if something is missed.
       const t: never = state;
-      const state2: StateObject = state as any;
+      const state2: ServerRequest = state as any;
       return state2.sendString(500, {}, "Invalid bodyFormat: " + state2.bodyFormat, "utf8");
     }
 
@@ -147,7 +147,7 @@ export class Router {
 
 
 
-  async handleRoute(state: StateObject<BodyFormat>, route: RouteMatch[]) {
+  async handleRoute(state: ServerRequest<BodyFormat>, route: RouteMatch[]) {
 
     await serverEvents.emitAsync("request.handle", state, route);
 

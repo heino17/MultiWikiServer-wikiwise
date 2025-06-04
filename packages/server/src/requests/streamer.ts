@@ -545,7 +545,7 @@ export class StreamerState {
 
   STREAM_ENDED: typeof STREAM_ENDED = STREAM_ENDED;
 
-  constructor(private streamer: Streamer) {
+  constructor(protected streamer: Streamer) {
     this.readBody = this.streamer.readBody.bind(this.streamer);
     this.sendEmpty = this.streamer.sendEmpty.bind(this.streamer);
     this.sendString = this.streamer.sendString.bind(this.streamer);

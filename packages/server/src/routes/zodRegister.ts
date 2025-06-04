@@ -1,5 +1,5 @@
 import { fromError } from "zod-validation-error";
-import { StateObject } from "../requests/StateObject";
+import { ServerRequest } from "../requests/StateObject";
 import Debug from "debug";
 import z from "zod";
 import { Z2, ZodRoute } from "./zodRoute";
@@ -52,7 +52,7 @@ export const registerZodRoutes = (parent: ServerRoute, router: any, keys: string
 
       checkQuery(state, zodQueryParams);
 
-      await corsRequest(state as any as StateObject<"ignore", "OPTIONS">);
+      await corsRequest(state as any as ServerRequest<"ignore", "OPTIONS">);
 
     });
 
@@ -93,9 +93,9 @@ export const registerZodRoutes = (parent: ServerRoute, router: any, keys: string
 export function checkData<
   T extends z.ZodType
 >(
-  state: StateObject,
-  zodRequestBody: (z: Z2) => T
-): asserts state is StateObject & { data: z.infer<T> } {
+  state: ServerRequest,
+  zodRequestBody: (z: Z2<any>) => T
+): asserts state is ServerRequest & { data: z.infer<T> } {
   const inputCheck = zodRequestBody(Z2).safeParse(state.data);
   if (!inputCheck.success) {
     console.log(inputCheck.error);
@@ -108,9 +108,9 @@ export function checkData<
 export function checkQuery<
   T extends Record<string, z.ZodType<any, z.ZodOptional<z.ZodArray<any>>>>
 >(
-  state: StateObject,
-  zodQueryParams: (z: Z2) => T
-): asserts state is StateObject & { queryParams: z.infer<z.ZodObject<T>> } {
+  state: ServerRequest,
+  zodQueryParams: (z: Z2<"STRING">) => T
+): asserts state is ServerRequest & { queryParams: z.infer<z.ZodObject<T>> } {
   const queryCheck = Z2.object(zodQueryParams(Z2)).safeParse(state.queryParams);
   if (!queryCheck.success) {
     console.log(queryCheck.error);
@@ -123,9 +123,9 @@ export function checkQuery<
 export function checkPath<
   T extends Record<string, z.ZodType>
 >(
-  state: StateObject,
-  zodPathParams: (z: Z2) => T
-): asserts state is StateObject & { pathParams: z.infer<z.ZodObject<T>> } {
+  state: ServerRequest,
+  zodPathParams: (z: Z2<"STRING">) => T
+): asserts state is ServerRequest & { pathParams: z.infer<z.ZodObject<T>> } {
   const pathCheck = Z2.object(zodPathParams(Z2)).safeParse(state.pathParams);
   if (!pathCheck.success) {
     console.log(pathCheck.error);

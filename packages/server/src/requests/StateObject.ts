@@ -1,6 +1,6 @@
 import { Streamer, StreamerState } from './streamer';
 import { PassThrough } from 'node:stream';
-import { AllowedMethod, BodyFormat } from "./router";
+import { AllowedMethod, BodyFormat, Router } from "./router";
 import * as z from 'zod';
 import { RouteMatch } from './router';
 import { ok } from 'assert';
@@ -10,7 +10,7 @@ import { IncomingHttpHeaders } from 'http';
 // This class abstracts the request/response cycle into a single object.
 // It hides most of the details from the routes, allowing us to easily 
 // change the underlying server implementation.
-export class StateObject<
+export class ServerRequest<
   B extends BodyFormat = BodyFormat,
   M extends AllowedMethod = AllowedMethod,
   D = unknown
@@ -48,7 +48,8 @@ export class StateObject<
     /** The array of Route tree nodes the request matched. */
     routePath: RouteMatch[],
     /** The bodyformat that ended up taking precedence. This should be correctly typed. */
-    public bodyFormat: B
+    public bodyFormat: B,
+    protected router: Router,
   ) {
     super(streamer);
 
@@ -75,7 +76,7 @@ export class StateObject<
 
 
   /** type-narrowing helper function. This affects anywhere T is used. */
-  isBodyFormat<T extends B, S extends { [K in B]: StateObject<K, M, D> }[T]>(format: T): this is S {
+  isBodyFormat<T extends B, S extends { [K in B]: ServerRequest<K, M, D> }[T]>(format: T): this is S {
     return this.bodyFormat as BodyFormat === format;
   }
 
@@ -156,7 +157,7 @@ export class StateObject<
                         as it is called immediately before resolving or rejecting the promise.
                         The promise will reject with err if there is an error.
   */
-  readMultipartData(this: StateObject<any, any>, options: {
+  readMultipartData(this: ServerRequest<any, any>, options: {
     cbPartStart: (headers: IncomingHttpHeaders, name: string | null, filename: string | null) => void;
     cbPartChunk: (chunk: Buffer) => void;
     cbPartEnd: () => void;

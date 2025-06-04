@@ -5,6 +5,7 @@ import chalk from "chalk";
 import { serverEvents } from "./ServerEvents";
 import "./requests/_command";
 import { CommandFile } from "./commands/BaseCommand";
+import { Z2 } from "./routes/zodRoute";
 
 export * from "./commands/BaseCommand";
 export * from "./routes/zodRegister";
@@ -18,6 +19,8 @@ export * from "./ServerEvents";
 export { Listener, ListenerBase, ListenerHTTP, ListenerHTTPS, ListenerRaw } from "./requests/listeners";
 
 export async function runCLI() {
+
+  await serverEvents.emitAsync("zod.make", Z2);
 
   const commands: Record<string, CommandFile> = {};
 

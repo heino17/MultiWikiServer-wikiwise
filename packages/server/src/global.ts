@@ -1,6 +1,6 @@
 import * as path from "path";
 import * as fs from "fs";
-import { StateObject } from "./requests/StateObject";
+import { ServerRequest } from "./requests/StateObject";
 import { BodyFormat } from "./requests/router";
 
 declare global {
@@ -19,6 +19,7 @@ const STREAM_ENDED: unique symbol = Symbol("STREAM_ENDED");
 
 declare global {
 
+  /** Awaited Return Type */
   type ART<T extends (...args: any) => any> = Awaited<ReturnType<T>>
   type Complete<T> = { [K in keyof T]-?: T[K] }
   interface ObjectConstructor { keys<T>(t: T): (string & keyof T)[]; }
@@ -65,7 +66,7 @@ declare global {
     /**
      * If this route's handler sends headers, the matched child route will not be called.
      */
-    handler: (state: StateObject) => Promise<typeof STREAM_ENDED>
+    handler: (state: ServerRequest) => Promise<typeof STREAM_ENDED>
 
     /**
      * ### ROUTING
@@ -86,7 +87,7 @@ declare global {
      */
     defineRoute: (
       route: RouteDef,
-      handler: (state: StateObject) => Promise<symbol | void>
+      handler: (state: ServerRequest) => Promise<symbol | void>
     ) => ServerRoute;
   }
 }

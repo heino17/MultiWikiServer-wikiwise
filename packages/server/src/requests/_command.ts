@@ -1,7 +1,7 @@
 
 import { z } from "zod";
 import { fromError } from "zod-validation-error";
-import { ListenerHTTP, ListenerHTTPS, rootRoute, startListeners } from "./listeners";
+import { ListenerHTTP, ListenerHTTPS, rootRoute } from "./listeners";
 import { serverEvents } from "../ServerEvents";
 import { BaseCommand, CommandInfo } from "../commands/BaseCommand";
 import { Router } from "./router";
@@ -121,12 +121,11 @@ export class Command extends BaseCommand<[], {
 
     const router = new Router(rootRoute);
 
-    await serverEvents.emitAsync("listen.router", this, router);
-    await serverEvents.emitAsync("listen.routes", this, router, rootRoute)
-    await serverEvents.emitAsync("listen.routes.fallback", this, router, rootRoute)
+    await serverEvents.emitAsync("listen.routes", this, rootRoute)
+    await serverEvents.emitAsync("listen.routes.fallback", this, rootRoute)
     await serverEvents.emitAsync("listen.options", this, listenerCheck.data);
 
-    const listenInstances = listenOptions.map(e => {
+    const listenInstances = listenerCheck.data.map(e => {
 
       if (!e.key !== !e.cert) {
         throw new Error("Both key and cert are required for HTTPS");
@@ -139,6 +138,7 @@ export class Command extends BaseCommand<[], {
     });
 
     await serverEvents.emitAsync("listen.instances", this, listenInstances);
+    await serverEvents.emitAsync("listen.router", this, router);
 
 
   }

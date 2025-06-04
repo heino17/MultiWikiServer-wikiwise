@@ -3,17 +3,9 @@ import { ok } from "node:assert";
 import { createServer, IncomingMessage, Server, ServerResponse } from "node:http";
 import { createSecureServer, Http2SecureServer, Http2ServerRequest, Http2ServerResponse } from "node:http2";
 import { AllowedMethods, BodyFormats, Router } from "./router";
-import { serverEvents } from '../ServerEvents';
-import { z } from "zod";
-import { fromError } from 'zod-validation-error';
 import Debug from "debug";
-import { StateObject } from './StateObject';
+import { ServerRequest } from './StateObject';
 
-
-export async function startListeners(listenOptions: ListenerRaw[]) {
-  
-
-}
 
 export type ListenerRaw = {
   [key in
@@ -151,6 +143,6 @@ export const rootRoute = defineRoute(ROOT_ROUTE, {
   method: AllowedMethods,
   path: /^/,
   denyFinal: true,
-}, async (state: StateObject) => {
+}, async (state: ServerRequest) => {
 
 });
