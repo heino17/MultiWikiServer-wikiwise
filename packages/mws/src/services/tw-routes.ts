@@ -20,7 +20,7 @@ serverEvents.on("mws.routes", (rootRoute, config) => {
       argv: [
         "+plugins/tiddlywiki/tiddlyweb",
         "+plugins/tiddlywiki/filesystem",
-        dist_resolve("../editions/mws-docs"),
+        dist_resolve("../../../editions/mws-docs"),
       ],
       variables: {
         rootTiddler: "$:/core/save/all",

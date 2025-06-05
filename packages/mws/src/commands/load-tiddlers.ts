@@ -1,7 +1,6 @@
+import { BaseCommand, CommandInfo } from "@tiddlywiki/server";
 import { resolve } from "path";
-import type { CommandInfo } from "../utils/BaseCommand";
-import { BaseCommand } from "../utils/BaseCommand";
-import { TiddlerStore_PrismaStatic } from "../routes/managers/TiddlerStore";
+import { TiddlerStore_PrismaStatic } from "../managers/TiddlerStore";
 
 export const info: CommandInfo = {
 	name: "load-tiddlers",

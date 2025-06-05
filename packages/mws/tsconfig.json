@@ -31,12 +31,12 @@
       ]
     }
   },
-  "files": [
-    // "src/**/*.ts",
+  "include": [
+    "src/**/*.ts",
     // "src/**/*.d.ts",
     // "./mws.*.ts",
-    "./src/index.ts",
-    "./src/global.ts",
+    // "./src/index.ts",
+    // "./src/global.ts",
   ],
   "exclude": [
     "src/db-node-sqlite3-wasm/api.js",

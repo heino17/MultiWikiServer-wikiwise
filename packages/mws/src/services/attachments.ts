@@ -3,8 +3,9 @@ import * as path from "path";
 import * as fs from "fs";
 import { TiddlerFields } from "tiddlywiki";
 import { ServerState } from "../ServerState";
-import sjcl from "sjcl";
+// import sjcl from "sjcl";
 import { tryParseJSON } from "@tiddlywiki/server";
+import { createHash } from "crypto";
 
 /*
 
@@ -144,12 +145,12 @@ export class AttachmentService {
   }) {
 
     // Compute the content hash for naming the attachment
-    const contentHash = sjcl.codec.hex.fromBits(sjcl.hash.sha256.hash(options.text)).slice(0, 64).toString();
+    const contentHash = createHash("sha256").update(options.text).digest("hex");
     // Choose the best file extension for the attachment given its type
     const contentTypeInfo = this.config.getContentType(options.type);
     // Creat the attachment directory
     const attachmentPath = path.resolve(this.config.storePath, "files", contentHash);
-    createDirectory(attachmentPath);
+    fs.mkdirSync(attachmentPath, { recursive: true });
     // Save the data file
     const dataFilename = "data" + contentTypeInfo.extension;
     fs.writeFileSync(
@@ -185,13 +186,13 @@ export class AttachmentService {
     const contentTypeInfo = this.config.getContentType(type);
     // Creat the attachment directory
     const attachmentPath = path.resolve(this.config.storePath, "files", hash);
-    createDirectory(attachmentPath);
+    fs.mkdirSync(attachmentPath, { recursive: true });
     // Rename the data file
     const dataFilename = "data" + contentTypeInfo.extension, dataFilepath = path.resolve(attachmentPath, dataFilename);
     fs.renameSync(incomingFilepath, dataFilepath);
     // Save the meta.json file
     fs.writeFileSync(path.resolve(attachmentPath, "meta.json"), JSON.stringify({
-      _canonical_uri: _canonical_uri,
+      _canonical_uri,
       created: new Date().toISOString(),
       modified: new Date().toISOString(),
       contentHash: hash,
@@ -258,3 +259,8 @@ export class AttachmentService {
 
 }
 
+function encodeURIComponentExtended(s: string) {
+  return encodeURIComponent(s).replace(/[!'()*]/g, function (c) {
+    return "%" + c.charCodeAt(0).toString(16).toUpperCase();
+  });
+}

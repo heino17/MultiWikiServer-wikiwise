@@ -1,7 +1,7 @@
 
 
 import { TiddlerFields } from "tiddlywiki";
-import { createWriteStream } from "fs";
+import { createWriteStream, mkdirSync, rmSync } from "fs";
 import { resolve } from "path";
 import { createHash, Hash } from "crypto";
 import { readFile } from "fs/promises";
@@ -485,7 +485,7 @@ async function recieveTiddlerMultipartUpload(state: ZodState<"POST", "stream", {
   // Process the incoming data
   const inboxName = new Date().toISOString().replace(/:/g, "-");
   const inboxPath = resolve(state.config.storePath, "inbox", inboxName);
-  createDirectory(inboxPath);
+  mkdirSync(inboxPath, { recursive: true });
 
   /** Current file being written */
   let fileStream: Writable | null = null;
@@ -557,7 +557,7 @@ async function recieveTiddlerMultipartUpload(state: ZodState<"POST", "stream", {
 
   tiddlerFields.text = file.toString(contentTypeInfo.encoding as BufferEncoding);
 
-  deleteDirectory(inboxPath);
+  rmSync(inboxPath, { recursive: true, force: true });
 
   return tiddlerFields;
 }
