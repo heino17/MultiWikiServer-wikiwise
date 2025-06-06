@@ -10,7 +10,7 @@ import { DataChecks } from "../utils";
 
 
 serverEvents.on("mws.routes", (root: ServerRoute, config: SiteConfig) => {
-  StatusManager.defineRoutes(root, config);
+  StatusManager.defineRoutes(root);
 });
 
 export const StatusKeyMap: RouterKeyMap<StatusManager, true> = {
@@ -21,21 +21,21 @@ export type StatusManagerMap = RouterRouteMap<StatusManager>;
 
 export class StatusManager {
 
-  static defineRoutes(root: ServerRoute, config: SiteConfig) {
-    registerZodRoutes(root, new StatusManager(config), Object.keys(StatusKeyMap));
+  static defineRoutes(root: ServerRoute) {
+    registerZodRoutes(root, new StatusManager(), Object.keys(StatusKeyMap));
   }
 
   checks: DataChecks;
 
-  constructor(private config: SiteConfig) {
-    this.checks = new DataChecks(config)
+  constructor() {
+    this.checks = new DataChecks()
   }
 
   index_json = admin(z => z.undefined(), async (state, prisma) => {
 
     const { isAdmin, user_id, username, role_ids } = state.user;
 
-    const OR = this.checks.getBagWhereACL({ permission: "READ", user_id, role_ids });
+    const OR = state.getBagWhereACL({ permission: "READ", user_id, role_ids });
 
     const clientPlugins = [...state.pluginCache.pluginFiles.keys()];
     const corePlugins = state.pluginCache.requiredPlugins;

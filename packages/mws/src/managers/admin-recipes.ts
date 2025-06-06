@@ -6,21 +6,17 @@ import { DataChecks } from "../utils";
 
 // https://crates.io/crates/indradb
 
-serverEvents.on("mws.routes", (root, config) => {
-  RecipeManager.defineRoutes(root, config);
+serverEvents.on("mws.routes", (root) => {
+  RecipeManager.defineRoutes(root);
 });
 
 export const RecipeKeyMap: RouterKeyMap<RecipeManager, true> = {
 
-  bag_create: true,
-  bag_update: true,
-  bag_upsert: true,
+  bag_create_or_update: true,
   bag_delete: true,
   bag_acl_update: true,
-
-  recipe_create: true,
-  recipe_update: true,
-  recipe_upsert: true,
+  
+  recipe_create_or_update: true,
   recipe_delete: true,
   recipe_acl_update: true,
 
@@ -30,14 +26,14 @@ export type RecipeManagerMap = RouterRouteMap<RecipeManager>;
 
 export class RecipeManager {
 
-  static defineRoutes(root: ServerRoute, config: ServerState) {
-    registerZodRoutes(root, new RecipeManager(config), Object.keys(RecipeKeyMap));
+  static defineRoutes(root: ServerRoute) {
+    registerZodRoutes(root, new RecipeManager(), Object.keys(RecipeKeyMap));
   }
 
   checks: DataChecks;
 
-  constructor(private config: ServerState) {
-    this.checks = new DataChecks(config)
+  constructor() {
+    this.checks = new DataChecks()
   }
 
 
@@ -138,7 +134,7 @@ export class RecipeManager {
 
     const { bag_name, description, owner_id, create_only: isCreate } = state.data;
 
-    const OR = isAdmin ? undefined : this.checks.getWhereACL({ permission: "ADMIN", user_id });
+    const OR = isAdmin ? undefined : state.getWhereACL({ permission: "ADMIN", user_id });
 
     const existing = await prisma.bags.findUnique({
       where: { bag_name },

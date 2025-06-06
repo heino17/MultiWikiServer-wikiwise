@@ -4,7 +4,7 @@ import { Prisma } from '@prisma/client';
 import { Types } from '@prisma/client/runtime/library';
 import { DataChecks } from './utils';
 import { ServerState } from "./ServerState";
-import { RouteMatch, Router, serverEvents, ServerRequest as ServerRequestBase, Streamer } from "@tiddlywiki/server";
+import { RouteMatch, Router, serverEvents, ServerRequest as ServerRequestBase, ServerRequestClass, Streamer, truthy } from "@tiddlywiki/server";
 import { setupDevServer } from "./services/setupDevServer";
 
 declare module "@tiddlywiki/server" {
@@ -14,9 +14,13 @@ declare module "@tiddlywiki/server" {
   interface ServerEventsMap {
     "mws.router.init": [router: Router, config: ServerState];
   }
-  // interface ServerRequest extends
-    // ServerRequestBase<BodyFormat, AllowedMethod, unknown>,
-    // StateObject<BodyFormat, AllowedMethod, unknown> { }
+  interface ServerRequest<
+    B extends BodyFormat = BodyFormat,
+    M extends AllowedMethod = AllowedMethod,
+    D = unknown
+  > extends StateObject<B, M, D> {
+
+  }
 }
 serverEvents.on("listen.router", async (listen, router) => {
   router.createServerRequest = <B extends BodyFormat>(
@@ -31,7 +35,7 @@ class StateObject<
   B extends BodyFormat = BodyFormat,
   M extends AllowedMethod = AllowedMethod,
   D = unknown
-> extends ServerRequestBase<B, M, D> {
+> extends ServerRequestClass<B, M, D> {
 
   config;
   user;
@@ -90,8 +94,8 @@ class StateObject<
     const { user_id, isAdmin, role_ids } = this.user;
 
     const prisma = this.engine;
-    const read = new DataChecks(this.config).getBagWhereACL({ permission: "READ", user_id, role_ids });
-    const write = new DataChecks(this.config).getBagWhereACL({ permission: "WRITE", user_id, role_ids });
+    const read = this.getBagWhereACL({ permission: "READ", user_id, role_ids });
+    const write = this.getBagWhereACL({ permission: "WRITE", user_id, role_ids });
 
     const [recipe, canRead, canWrite] = await prisma.$transaction([
       prisma.recipes.findUnique({
@@ -110,6 +114,69 @@ class StateObject<
 
     return { recipe, canRead, canWrite };
 
+  }
+
+
+  /** If the user isn't logged in, user_id is 0. */
+  getBagWhereACL({ recipe_id, permission, user_id, role_ids }: {
+    /** Recipe ID can be provided as an extra restriction */
+    recipe_id?: string,
+    permission: ACLPermissionName,
+    user_id: string,
+    role_ids: string[],
+  }) {
+
+    const OR = this.getWhereACL({ permission, user_id, role_ids });
+
+    return ([
+      ...OR,
+      // admin permission doesn't get inherited 
+      permission === "ADMIN" ? undefined : {
+        recipe_bags: {
+          some: {
+            // check if we're in position 0 (for write) or any position (for read)
+            position: permission === "WRITE" ? 0 : undefined,
+            // of a recipe that the user has this permission on
+            recipe: { OR },
+            // if the connection was created with admin permissions
+            with_acl: true,
+            // for the specific recipe, if provided
+            recipe_id,
+          }
+        }
+      }
+    ] satisfies (Prisma.BagsWhereInput | undefined | null | false)[]).filter(truthy)
+
+  }
+  getWhereACL({ permission, user_id, role_ids }: {
+    permission: ACLPermissionName,
+    user_id?: string,
+    role_ids?: string[],
+  }) {
+    // const { allowAnonReads, allowAnonWrites } = this;
+    // const anonRead = allowAnonReads && permission === "READ";
+    // const anonWrite = allowAnonWrites && permission === "WRITE";
+    // const allowAnon = anonRead || anonWrite;
+    const allperms = ["READ", "WRITE", "ADMIN"] as const;
+    const index = allperms.indexOf(permission);
+    if (index === -1) throw new Error("Invalid permission");
+    const checkPerms = allperms.slice(index);
+
+    return ([
+      // allow owner for user 
+      user_id && { owner_id: { equals: user_id, not: null } },
+      // allow acl for user 
+      user_id && role_ids?.length && {
+        acl: {
+          some: {
+            permission: { in: checkPerms },
+            role_id: { in: role_ids },
+          }
+        }
+      },
+      { owner_id: { equals: null, not: null } } // dud to make sure that at least one condition exists
+    ] satisfies ((Prisma.RecipesWhereInput & Prisma.BagsWhereInput) | undefined | null | false | 0 | "")[]
+    ).filter(truthy)
   }
 
 
@@ -135,8 +202,8 @@ class StateObject<
   ) {
     const { user_id, isAdmin, role_ids } = this.user;
     const prisma = this.engine;
-    const read = new DataChecks(this.config).getBagWhereACL({ permission: "READ", user_id, role_ids });
-    const write = new DataChecks(this.config).getBagWhereACL({ permission: "WRITE", user_id, role_ids });
+    const read = this.getBagWhereACL({ permission: "READ", user_id, role_ids });
+    const write = this.getBagWhereACL({ permission: "WRITE", user_id, role_ids });
     const [bag, canRead, canWrite] = await prisma.$transaction([
       prisma.bags.findUnique({
         select: { bag_id: true, owner_id: true },

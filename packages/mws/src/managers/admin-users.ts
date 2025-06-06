@@ -18,16 +18,16 @@ export const UserKeyMap: RouterKeyMap<UserManager, true> = {
 
 export type UserManagerMap = RouterRouteMap<UserManager>;
 
-serverEvents.on("mws.routes", (root, config) => {
-  UserManager.defineRoutes(root, config);
+serverEvents.on("mws.routes", (root) => {
+  UserManager.defineRoutes(root);
 });
 
 export class UserManager {
-  static defineRoutes(root: ServerRoute, config: ServerState) {
-    registerZodRoutes(root, new UserManager(config), Object.keys(UserKeyMap));
+  static defineRoutes(root: ServerRoute) {
+    registerZodRoutes(root, new UserManager(), Object.keys(UserKeyMap));
   }
 
-  constructor(private config: ServerState) { }
+  constructor() { }
 
   user_edit_data = admin(z => z.object({
     user_id: z.prismaField("Users", "user_id", "string")

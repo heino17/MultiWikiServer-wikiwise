@@ -12,7 +12,7 @@ export type BodyFormat = (typeof BodyFormats)[number];
 
 export class DataChecks {
 
-  constructor(private config: SiteConfig) {
+  constructor() {
 
   }
 
@@ -77,69 +77,6 @@ export class DataChecks {
   isEntityType = (x: any): x is "recipe" | "bag" => ["recipe", "bag"].includes(x);
 
   entityTypes: { [K in EntityType]: K } = { recipe: "recipe", bag: "bag" };
-
-  /** If the user isn't logged in, user_id is 0. */
-  getBagWhereACL({ recipe_id, permission, user_id, role_ids }: {
-    /** Recipe ID can be provided as an extra restriction */
-    recipe_id?: string,
-    permission: ACLPermissionName,
-    user_id: string,
-    role_ids: string[],
-  }) {
-
-    const OR = this.getWhereACL({ permission, user_id, role_ids });
-
-    return ([
-      ...OR,
-      // admin permission doesn't get inherited 
-      permission === "ADMIN" ? undefined : {
-        recipe_bags: {
-          some: {
-            // check if we're in position 0 (for write) or any position (for read)
-            position: permission === "WRITE" ? 0 : undefined,
-            // of a recipe that the user has this permission on
-            recipe: { OR },
-            // if the connection was created with admin permissions
-            with_acl: true,
-            // for the specific recipe, if provided
-            recipe_id,
-          }
-        }
-      }
-    ] satisfies (Prisma.BagsWhereInput | undefined | null | false)[]).filter(truthy)
-
-  }
-  getWhereACL({ permission, user_id, role_ids }: {
-    permission: ACLPermissionName,
-    user_id?: string,
-    role_ids?: string[],
-  }) {
-    // const { allowAnonReads, allowAnonWrites } = this;
-    // const anonRead = allowAnonReads && permission === "READ";
-    // const anonWrite = allowAnonWrites && permission === "WRITE";
-    // const allowAnon = anonRead || anonWrite;
-    const allperms = ["READ", "WRITE", "ADMIN"] as const;
-    const index = allperms.indexOf(permission);
-    if (index === -1) throw new Error("Invalid permission");
-    const checkPerms = allperms.slice(index);
-
-    return ([
-      // allow owner for user 
-      user_id && { owner_id: { equals: user_id, not: null } },
-      // allow acl for user 
-      user_id && role_ids?.length && {
-        acl: {
-          some: {
-            permission: { in: checkPerms },
-            role_id: { in: role_ids },
-          }
-        }
-      },
-      { owner_id: { equals: null, not: null } } // dud to make sure that at least one condition exists
-    ] satisfies ((Prisma.RecipesWhereInput & Prisma.BagsWhereInput) | undefined | null | false | 0 | "")[]
-    ).filter(truthy)
-  }
-
 
 
 }

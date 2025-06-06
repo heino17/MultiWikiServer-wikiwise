@@ -37,12 +37,16 @@ export class Command extends BaseCommand<[], {}> {
     });
   }
   getEndpoints() {
+    const status = new StatusManager();
+    const recipe = new RecipeManager();
+    const user = new UserManager();
+    // Note: WikiRoutes is not a manager, but it has the same interface as the others.
     const wiki = new WikiRoutes();
 
     return [
-      ...Object.keys(StatusKeyMap).map(e => [e, new StatusManager(this.config)[e]] as const),
-      ...Object.keys(UserKeyMap).map(e => [e, new UserManager(this.config)[e]] as const),
-      ...Object.keys(RecipeKeyMap).map(e => [e, new RecipeManager(this.config)[e]] as const),
+      ...Object.keys(StatusKeyMap).map(e => [e, status[e]] as const),
+      ...Object.keys(UserKeyMap).map(e => [e, user[e]] as const),
+      ...Object.keys(RecipeKeyMap).map(e => [e, recipe[e]] as const),
       ...Object.keys(WikiRouterKeyMap).map(e => [e, wiki[e]] as const),
     ];
   }

@@ -6,11 +6,16 @@ import { RouteMatch } from './router';
 import { ok } from 'assert';
 import { IncomingHttpHeaders } from 'http';
 
+export interface ServerRequest<
+  B extends BodyFormat = BodyFormat,
+  M extends AllowedMethod = AllowedMethod,
+  D = unknown
+> extends ServerRequestClass<B, M, D> { }
 
 // This class abstracts the request/response cycle into a single object.
 // It hides most of the details from the routes, allowing us to easily 
 // change the underlying server implementation.
-export class ServerRequest<
+export class ServerRequestClass<
   B extends BodyFormat = BodyFormat,
   M extends AllowedMethod = AllowedMethod,
   D = unknown

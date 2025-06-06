@@ -559,7 +559,7 @@ export class StreamerState {
     this.write = this.streamer.write.bind(this.streamer);
     this.end = this.streamer.end.bind(this.streamer);
     this.setCookie = this.streamer.setCookie.bind(this.streamer);
-
+    
   }
 
 

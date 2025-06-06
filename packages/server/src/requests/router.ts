@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { ServerRequest } from "./StateObject";
+import { ServerRequest, ServerRequestClass } from "./StateObject";
 import { Streamer } from "./streamer";
 import Debug from "debug";
 import { IncomingMessage, ServerResponse } from "node:http";
@@ -157,7 +157,7 @@ export class Router {
     /** The bodyformat that ended up taking precedence. This should be correctly typed. */
     bodyFormat: B,
   ) {
-    return new ServerRequest(streamer, routePath, bodyFormat, this);
+    return new ServerRequestClass(streamer, routePath, bodyFormat, this);
   }
 
   async handleRoute(state: ServerRequest<BodyFormat>, route: RouteMatch[]) {

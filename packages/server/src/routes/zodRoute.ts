@@ -89,16 +89,15 @@ export interface ZodRoute<
 //   zodRequestBody?: B extends "string" | "json" | "www-form-urlencoded" ? (z: Z2) => T : undefined;
 // }
 
-export class ZodState<
+export interface ZodState<
   M extends AllowedMethod | "OPTIONS",
   B extends BodyFormat,
   P extends Record<string, z.ZodTypeAny>,
   Q extends Record<string, z.ZodTypeAny>,
   T extends z.ZodTypeAny
 > extends ServerRequest<B, M, z.output<T>> {
-  declare pathParams: z.output<z.ZodObject<P>>;
-  declare queryParams: z.output<z.ZodObject<Q>>;
-  // declare data: z.output<T>;
+  pathParams: z.output<z.ZodObject<P>>;
+  queryParams: z.output<z.ZodObject<Q>>;
 }
 
 
