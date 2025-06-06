@@ -19,15 +19,21 @@ const DEFAULT_CONTENT_TYPE = "application/octet-stream";
 export class ServerState {
 
   constructor(
-    public wikiPath: string,
+    { wikiPath, cachePath, storePath }: {
+      wikiPath: string,
+      cachePath: string,
+      storePath: string
+    },
+    // public wikiPath: string,
     /** The $tw instance needs to be disposable once commands are complete. */
     $tw: TW,
+    public engine: PrismaEngineClient,
     public PasswordService: PasswordService,
     public pluginCache: TiddlerCache
   ) {
-    this.storePath = path.resolve(this.wikiPath, "store");
-    this.cachePath = path.resolve(this.wikiPath, "cache");
-    this.databasePath = path.resolve(this.storePath, "database.sqlite");
+    this.wikiPath = wikiPath;
+    this.cachePath = cachePath;
+    this.storePath = storePath;
 
     this.fieldModules = $tw.Tiddler.fieldModules;
     this.contentTypeInfo = $tw.config.contentTypeInfo;
@@ -38,8 +44,6 @@ export class ServerState {
         + DEFAULT_CONTENT_TYPE
         + " cannot be found in TW5"
       );
-
-    if (!existsSync(this.databasePath)) this.setupRequired = true;
 
     this.enableBrowserCache = true;
     this.enableGzip = true;
@@ -52,29 +56,13 @@ export class ServerState {
     this.enableDocsRoute = !!process.env.ENABLE_DOCS_ROUTE;
 
 
-    this.adapter = new SqliteAdapter(this.databasePath, this.enableDevServer);
-    this.engine = new PrismaClient({
-      log: [
-        ...Debug.enabled("prisma:query") ? ["query" as const] : [],
-        "info", "warn"
-      ],
-      adapter: this.adapter.adapter
-    });
-
     this.versions = { tw5: $tw.packageInfo.version, mws: pkg.version };
 
   }
 
   async init() {
-    mkdirSync(this.storePath, { recursive: true });
-    mkdirSync(this.cachePath, { recursive: true });
-
-    await this.adapter.init();
-    this.setupRequired = false;
     const users = await this.engine.users.count();
     if (!users) { this.setupRequired = true; }
-
-
   }
 
   $transaction<R>(
@@ -90,10 +78,9 @@ export class ServerState {
     return this.engine.$transaction(fn as (prisma: any) => Promise<any>, options);
   }
 
-
+  wikiPath;
   storePath;
   cachePath;
-  databasePath;
 
   versions;
 
@@ -115,8 +102,12 @@ export class ServerState {
     return type && this.contentTypeInfo[type] || this.contentTypeInfo[DEFAULT_CONTENT_TYPE]!;
   }
 
-  adapter!: SqliteAdapter;
-  engine!: PrismaClient<Prisma.PrismaClientOptions, never, {
+
+}
+
+declare global {
+  type PrismaTxnClient = Omit<PrismaEngineClient, ITXClientDenyList>;
+  type PrismaEngineClient = PrismaClient<Prisma.PrismaClientOptions, never, {
     result: {
       [T in Uncapitalize<Prisma.ModelName>]: {
         [K in keyof PrismaPayloadScalars<Capitalize<T>>]: () => {
@@ -127,15 +118,7 @@ export class ServerState {
     client: {};
     model: {};
     query: {};
-  }>;
-
-
-
-}
-
-declare global {
-  type PrismaTxnClient = Omit<ServerState["engine"], ITXClientDenyList>;
-  type PrismaEngineClient = ServerState["engine"];
+  }>
 }
 
 export interface ContentTypeInfo {

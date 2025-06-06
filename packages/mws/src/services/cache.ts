@@ -87,7 +87,7 @@ async function importPlugins(twFolder: string, cacheFolder: string, type: string
   });
 
   plugins.push([
-    dist_resolve("../../../plugins/client"),
+    dist_resolve("../plugins/client"),
     "tiddlywiki/plugins/mws/client"
   ] as const);
 

@@ -79,6 +79,7 @@ export class SqliteAdapter {
       await this.checkMigrationsTable(libsql, hasExisting && !hasMigrationsTable, applied_migrations, "prisma", INIT_0_1);
     } else if (this.isDevMode) {
       console.log([
+        "===============================================================",
         "The database does not match the configured migrations. ",
         "Since you are in dev mode, you probably just need to ",
         "delete the store folder and init a new database.",

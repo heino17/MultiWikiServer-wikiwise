@@ -25,7 +25,7 @@ export async function setupDevServer(
   config: ServerState,
 ) {
   const {enableDevServer} = config;
-  const rootdir = dist_resolve('../../../react-user-mgmt');
+  const rootdir = dist_resolve('../react-user-mgmt');
 
   const make_index_file = async (pathPrefix: string) =>
     Buffer.from(new ExtString(await readFile(join(rootdir, "public/index.html"), "utf8"))
@@ -111,7 +111,7 @@ export async function setupDevServer(
 
 export async function esbuildStartup() {
 
-  const rootdir = dist_resolve('../../../react-user-mgmt');
+  const rootdir = dist_resolve('../react-user-mgmt');
   const esbuild = await import("esbuild");
 
   let ctx = await esbuild.context({

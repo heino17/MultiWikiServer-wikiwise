@@ -13,6 +13,19 @@ serverEvents.on("mws.routes", (root: ServerRoute, config: SiteConfig) => {
   StatusManager.defineRoutes(root);
 });
 
+serverEvents.on("mws.routes.fallback", (root, config) => {
+
+  root.defineRoute({
+    method: ['GET'],
+    path: /^\/.*/,
+    bodyFormat: "stream",
+  }, async state => {
+    await state.sendAdmin();
+    return STREAM_ENDED;
+  });
+});
+
+
 export const StatusKeyMap: RouterKeyMap<StatusManager, true> = {
   index_json: true,
 }
