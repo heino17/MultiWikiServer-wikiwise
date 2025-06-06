@@ -12,7 +12,7 @@ import { Debug } from "@prisma/client/runtime/library";
 import { registerZodRoutes, RouterKeyMap, RouterRouteMap, serverEvents, tryParseJSON, UserError, zod, zodRoute, ZodState } from "@tiddlywiki/server";
 const debugCORS = Debug("mws:cors");
 
-export const TiddlerKeyMap: RouterKeyMap<WikiRoutes, true> = {
+export const WikiRouterKeyMap: RouterKeyMap<WikiRoutes, true> = {
   // recipe status updates
   handleGetRecipeStatus: true,
   handleListRecipeTiddlers: true,
@@ -44,7 +44,7 @@ const WIKI_PREFIX = "/wiki";
 export class WikiRoutes {
   static defineRoutes = (root: ServerRoute) => {
     const router = new WikiRoutes();
-    const keys = Object.keys(TiddlerKeyMap);
+    const keys = Object.keys(WikiRouterKeyMap);
     registerZodRoutes(root, router, keys);
   }
 

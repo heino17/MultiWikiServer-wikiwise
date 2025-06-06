@@ -60,7 +60,7 @@ export async function startup() {
 function parseCLI(cmder: commander.Command, cmd: string, cli: string[]) {
 
   const cmd2 = cmder.commands.find(e => e.name() === cmd);
-  if (!cmd2) throw `Command "${cmd2}" not found in help definition. This is a bug. ${Object.keys(cmder.commands)}`;
+  if (!cmd2) throw `Command "${cmd2}" not found in help definition. This is a bug. ${cmder.commands.map(e => e.name()).join(", ")}`;
 
   const _optionMap = new Map(cmd2.options.map(e => [e.long!, e!] as const));
   const options = {};
@@ -161,7 +161,7 @@ function getCLI(commands: Record<string, CommandFile>) {
 
   Object.keys(commands).forEach(key => {
     const c = commands[key]!;
-    if (c.info.internal) return;
+    // if (c.info.internal) return;
     if (c.info.name === "help") return;
     if (c.info.command) return void c.info.command(program);
     const command = program.command(c.info.name);

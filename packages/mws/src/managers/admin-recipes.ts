@@ -37,11 +37,11 @@ export class RecipeManager {
   checks: DataChecks;
 
   constructor(private config: ServerState) {
-
     this.checks = new DataChecks(config)
   }
 
-  recipe_create = admin(z => z.object({
+
+  recipe_create_or_update = admin(z => z.object({
     recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
     description: z.prismaField("Recipes", "description", "string"),
     bag_names: z.array(z.object({ bag_name: z.string(), with_acl: z.boolean() })),
@@ -49,80 +49,26 @@ export class RecipeManager {
     owner_id: z.prismaField("Recipes", "owner_id", "string", true).optional(),
     skip_required_plugins: z.prismaField("Recipes", "skip_required_plugins", "boolean"),
     skip_core: z.prismaField("Recipes", "skip_core", "boolean"),
-    isCreate: z.literal(true).default(true),
+    create_only: z.boolean(),
   }), async (state, prisma) => {
-    return await this.recipeCreateOrUpdate(state.data, prisma, state.user);
-  });
-  recipe_update = admin(z => z.object({
-    recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
-    description: z.prismaField("Recipes", "description", "string"),
-    bag_names: z.array(z.object({ bag_name: z.string(), with_acl: z.boolean() })),
-    plugin_names: z.string().array(),
-    owner_id: z.prismaField("Recipes", "owner_id", "string", true).optional(),
-    skip_required_plugins: z.prismaField("Recipes", "skip_required_plugins", "boolean"),
-    skip_core: z.prismaField("Recipes", "skip_core", "boolean"),
-    isCreate: z.literal(false).default(false),
-  }), async (state, prisma) => {
-    return await this.recipeCreateOrUpdate(state.data, prisma, state.user);
-  });
-
-  recipe_upsert = admin(z => z.object({
-    recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
-    description: z.prismaField("Recipes", "description", "string"),
-    bag_names: z.array(z.object({ bag_name: z.string(), with_acl: z.boolean() })),
-    plugin_names: z.string().array(),
-    owner_id: z.prismaField("Recipes", "owner_id", "string", true).optional(),
-    skip_required_plugins: z.prismaField("Recipes", "skip_required_plugins", "boolean"),
-    skip_core: z.prismaField("Recipes", "skip_core", "boolean"),
-    isCreate: z.boolean(),
-  }), async (state, prisma) => {
-    return await this.recipeCreateOrUpdate(state.data, prisma, state.user);
-  });
-
-  bag_create = admin(z => z.object({
-    bag_name: z.prismaField("Bags", "bag_name", "string"),
-    description: z.prismaField("Bags", "description", "string"),
-    owner_id: z.prismaField("Bags", "owner_id", "string", true).optional(),
-    isCreate: z.literal(true).default(true),
-  }), async (state, prisma) => {
-    return await this.bagCreateOrUpdate(state.data, prisma, state.user);
-  });
-
-  bag_update = admin(z => z.object({
-    bag_name: z.prismaField("Bags", "bag_name", "string"),
-    description: z.prismaField("Bags", "description", "string"),
-    owner_id: z.prismaField("Bags", "owner_id", "string", true).optional(),
-    isCreate: z.literal(false).default(false),
-  }), async (state, prisma) => {
-    return await this.bagCreateOrUpdate(state.data, prisma, state.user);
-  });
-
-  bag_upsert = admin(z => z.object({
-    bag_name: z.prismaField("Bags", "bag_name", "string"),
-    description: z.prismaField("Bags", "description", "string"),
-    owner_id: z.prismaField("Bags", "owner_id", "string", true).optional(),
-    isCreate: z.boolean(),
-  }), async (state, prisma) => {
-    return await this.bagCreateOrUpdate(state.data, prisma, state.user);
-  });
-
-  async recipeCreateOrUpdate({ bag_names, description, owner_id, recipe_name, isCreate, plugin_names, skip_core, skip_required_plugins }: {
-    recipe_name: PrismaField<"Recipes", "recipe_name">,
-    description: PrismaField<"Recipes", "description">,
-    bag_names: { bag_name: string, with_acl: boolean }[],
-    owner_id?: PrismaField<"Recipes", "owner_id"> | null,
-    plugin_names: PrismaJson.Recipes_plugin_names,
-    skip_required_plugins: PrismaField<"Recipes", "skip_required_plugins">,
-    skip_core: PrismaField<"Recipes", "skip_core">,
-    isCreate: boolean,
-  }, prisma: PrismaTxnClient, user: ServerRequest["user"]) {
+    const {
+      recipe_name, bag_names, description, owner_id,
+      plugin_names, skip_core, skip_required_plugins,
+      create_only,
+    } = state.data;
     const existing = await prisma.recipes.findUnique({ where: { recipe_name }, });
 
-    this.assertCreateOrUpdate({ user, type: "recipe", isCreate, owner_id, existing, });
+    this.assertCreateOrUpdate({
+      user: state.user,
+      type: "recipe",
+      isCreate: create_only,
+      owner_id,
+      existing,
+    });
 
-    const { isAdmin, user_id } = user;
+    const { isAdmin, user_id } = state.user;
 
-    const OR = isAdmin ? undefined : this.checks.getWhereACL({ permission: "ADMIN", user_id, });
+    const OR = isAdmin ? undefined : state.getWhereACL({ permission: "ADMIN", user_id });
 
     const bags = new Map(
       await prisma.bags.findMany({
@@ -178,22 +124,28 @@ export class RecipeManager {
         },
       });
     }
-  }
+  });
 
-  async bagCreateOrUpdate({ bag_name, description, owner_id, isCreate }: {
-    bag_name: PrismaField<"Bags", "bag_name">,
-    description: PrismaField<"Bags", "description">,
-    owner_id?: PrismaField<"Bags", "owner_id"> | null,
-    isCreate: boolean,
-  }, prisma: PrismaTxnClient, user: ServerRequest["user"]) {
+
+  bag_create_or_update = admin(z => z.object({
+    bag_name: z.prismaField("Bags", "bag_name", "string"),
+    description: z.prismaField("Bags", "description", "string"),
+    owner_id: z.prismaField("Bags", "owner_id", "string", true).optional(),
+    create_only: z.boolean(),
+  }), async (state, prisma) => {
+
+    const { isAdmin, user_id } = state.user;
+
+    const { bag_name, description, owner_id, create_only: isCreate } = state.data;
+
+    const OR = isAdmin ? undefined : this.checks.getWhereACL({ permission: "ADMIN", user_id });
+
     const existing = await prisma.bags.findUnique({
       where: { bag_name },
       select: { owner_id: true }
     });
 
-    this.assertCreateOrUpdate({ type: "bag", isCreate, owner_id, existing, user });
-
-    const { isAdmin, user_id } = user;
+    this.assertCreateOrUpdate({ type: "bag", isCreate, owner_id, existing, user: state.user });
 
     return await prisma.bags.upsert({
       where: { bag_name },
@@ -208,8 +160,7 @@ export class RecipeManager {
       },
     });
 
-  }
-
+  });
 
   assertCreateOrUpdate({
     existing, isCreate, owner_id, type, user

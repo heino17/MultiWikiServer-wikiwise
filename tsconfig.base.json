@@ -26,15 +26,12 @@
     "checkJs": true,
     "allowJs": true,
     "paths": {
-      "tiddlywiki": ["./tiddlywiki-types"]
+      "tiddlywiki": [
+        "./tiddlywiki-types"
+      ]
     }
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.d.ts",
-    "./mws.*.ts",
-  ],
   "exclude": [
-    "src/db-node-sqlite3-wasm/api.js",
-  ]
+    "dist"
+  ],
 }

@@ -4,49 +4,55 @@ import { Prisma } from '@prisma/client';
 import { Types } from '@prisma/client/runtime/library';
 import { DataChecks } from './utils';
 import { ServerState } from "./ServerState";
-import { serverEvents, ServerRequest } from "@tiddlywiki/server";
+import { RouteMatch, Router, serverEvents, ServerRequest as ServerRequestBase, Streamer } from "@tiddlywiki/server";
 import { setupDevServer } from "./services/setupDevServer";
 
 declare module "@tiddlywiki/server" {
-  interface ServerRequest<
-    B extends BodyFormat = BodyFormat,
-    M extends AllowedMethod = AllowedMethod,
-    D = unknown
-  > extends StateObject {
-    config: ServerState;
-    user: AuthUser;
-    engine: ServerState["engine"];
-    asserted: boolean;
-    PasswordService: ServerState["PasswordService"];
-    pluginCache: ServerState["pluginCache"];
-    sendAdmin: () => ReturnType<Awaited<ReturnType<typeof setupDevServer>>>;
+  /**
+   * - "mws.router.init" event is emitted during "listen.router" after createServerRequest is set
+   */
+  interface ServerEventsMap {
+    "mws.router.init": [router: Router, config: ServerState];
   }
+  // interface ServerRequest extends
+    // ServerRequestBase<BodyFormat, AllowedMethod, unknown>,
+    // StateObject<BodyFormat, AllowedMethod, unknown> { }
 }
-
-serverEvents.on("request.state", async (router, state, streamer) => {
-  state.config = router.config;
-  state.user = streamer.user;
-  state.engine = router.config.engine;
-  state.sendAdmin = () => router.sendAdmin(state);
-  state.asserted = false;
-  state.PasswordService = router.config.PasswordService;
-  state.pluginCache = router.config.pluginCache;
-  Object.setPrototypeOf(state, StateObject.prototype);
-
+serverEvents.on("listen.router", async (listen, router) => {
+  router.createServerRequest = <B extends BodyFormat>(
+    streamer: Streamer, routePath: RouteMatch[], bodyFormat: B
+  ) => {
+    return new StateObject(streamer, routePath, bodyFormat, router);
+  };
+  await serverEvents.emitAsync("mws.router.init", router, listen.config);
 });
 
-// this method is annoying, but it does work
-// the class doesn't get instantiated directly,
-// its prototype just gets set on the request state object
-const test: any = ServerRequest;
+class StateObject<
+  B extends BodyFormat = BodyFormat,
+  M extends AllowedMethod = AllowedMethod,
+  D = unknown
+> extends ServerRequestBase<B, M, D> {
 
-class StateObject extends test {
+  config;
+  user;
+  engine;
+  sendAdmin;
+  asserted;
+  PasswordService;
+  pluginCache;
 
-  declare engine: ServerState["engine"];
-  declare user: AuthUser;
-  declare config: ServerState;
-  declare asserted: boolean;
-  declare sendEmpty: ServerRequest["sendEmpty"];
+  constructor(streamer: Streamer, routePath: RouteMatch[], bodyFormat: B, router: Router) {
+    super(streamer, routePath, bodyFormat, router);
+
+    this.config = router.config;
+    this.user = streamer.user;
+    this.engine = router.config.engine;
+    this.PasswordService = router.config.PasswordService;
+    this.pluginCache = router.config.pluginCache;
+
+    this.asserted = false;
+    this.sendAdmin = () => router.sendAdmin(this);
+  }
 
   okUser() {
     if (!this.user.isLoggedIn) throw "User not authenticated";

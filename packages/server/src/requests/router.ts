@@ -102,7 +102,7 @@ export class Router {
       [K in BodyFormat]: ServerRequest<K>;
     }[BodyFormat];
 
-    const state = new ServerRequest(streamer, routePath, bodyFormat, this) as statetype;
+    const state = this.createServerRequest(streamer, routePath, bodyFormat) as statetype;
 
     await serverEvents.emitAsync("request.state", this, state, streamer);
 
@@ -146,6 +146,19 @@ export class Router {
   }
 
 
+  /** 
+   * This is for overriding the server request that gets created. It is not async. 
+   * If you need to do anything substantial, use the server events. 
+   */
+  createServerRequest<B extends BodyFormat>(
+    streamer: Streamer,
+    /** The array of Route tree nodes the request matched. */
+    routePath: RouteMatch[],
+    /** The bodyformat that ended up taking precedence. This should be correctly typed. */
+    bodyFormat: B,
+  ) {
+    return new ServerRequest(streamer, routePath, bodyFormat, this);
+  }
 
   async handleRoute(state: ServerRequest<BodyFormat>, route: RouteMatch[]) {
 

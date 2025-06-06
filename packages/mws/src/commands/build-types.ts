@@ -2,6 +2,7 @@ import { BaseCommand, CommandInfo, Z2 } from '@tiddlywiki/server';
 import { StatusKeyMap, StatusManager } from '../managers';
 import { UserKeyMap, UserManager } from '../managers/admin-users';
 import { RecipeKeyMap, RecipeManager } from '../managers/admin-recipes';
+import { WikiRouterKeyMap, WikiRoutes } from '../managers/wiki-routes';
 
 
 export const info: CommandInfo = {
@@ -21,16 +22,28 @@ export class Command extends BaseCommand<[], {}> {
       throw "The NPM package 'zod-to-ts' cannot be found.";
     });
     this.getEndpoints().forEach(([key, endpoint]) => {
-      if (!endpoint.zodRequestBody) return;
-      const { node } = zodToTs(endpoint.zodRequestBody(Z2), 'User');
-      console.log("\ninterface", key, printNode(node));
+      if (endpoint.zodRequestBody) {
+        const { node } = zodToTs(endpoint.zodRequestBody(Z2), 'User');
+        console.log("\ninterface", key + "_RequestBody", printNode(node));
+      }
+      if (endpoint.zodPathParams) {
+        const { node } = zodToTs(Z2.object(endpoint.zodPathParams(Z2)), 'PathParams');
+        console.log("\ninterface", key + "_PathParams", printNode(node));
+      }
+      if (endpoint.zodQueryParams) {
+        const { node } = zodToTs(Z2.object(endpoint.zodQueryParams(Z2)), 'QueryParams');
+        console.log("\ninterface", key + "_QueryParams", printNode(node));
+      }
     });
   }
   getEndpoints() {
+    const wiki = new WikiRoutes();
+
     return [
       ...Object.keys(StatusKeyMap).map(e => [e, new StatusManager(this.config)[e]] as const),
       ...Object.keys(UserKeyMap).map(e => [e, new UserManager(this.config)[e]] as const),
       ...Object.keys(RecipeKeyMap).map(e => [e, new RecipeManager(this.config)[e]] as const),
+      ...Object.keys(WikiRouterKeyMap).map(e => [e, wiki[e]] as const),
     ];
   }
 }

@@ -21,7 +21,7 @@ class ExtString {
   [Symbol.toPrimitive](hint: "string") { return this.str; }
 }
 
-export async function setupDevServer<T extends ServerRequest>(
+export async function setupDevServer(
   config: ServerState,
 ) {
   const {enableDevServer} = config;
@@ -34,7 +34,7 @@ export async function setupDevServer<T extends ServerRequest>(
       , "utf8");
 
   if (!enableDevServer) {
-    return async function sendProdServer(state: T) {
+    return async function sendProdServer(state: ServerRequest) {
       const index_file = await make_index_file(state.pathPrefix);
       const index_hash = createHash("sha1").update(index_file).digest().toString("base64");
       const sendIndex = (): typeof STREAM_ENDED => state.sendBuffer(200, {
@@ -55,7 +55,7 @@ export async function setupDevServer<T extends ServerRequest>(
   } else {
     const { ctx, port } = await esbuildStartup();
 
-    return async function sendDevServer(state: T) {
+    return async function sendDevServer(state: ServerRequest) {
       const index_file = await make_index_file(state.pathPrefix);
       const index_hash = createHash("sha1").update(index_file).digest().toString("base64");
       const sendIndex = (): typeof STREAM_ENDED => state.sendBuffer(200, {

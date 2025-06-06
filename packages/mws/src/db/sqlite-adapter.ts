@@ -6,7 +6,7 @@ import { existsSync } from "fs";
 import { dist_resolve } from "@tiddlywiki/server";
 
 const INIT_0_0 = "20250406213424_init";
-const INIT_0_1 = "20250513012507_init";
+const INIT_0_1 = "20250606001949_init";
 
 export class SqliteAdapter {
   constructor(private databasePath: string, private isDevMode: boolean) {
@@ -20,11 +20,11 @@ export class SqliteAdapter {
     // this is used to test the upgrade path
     if (process.env.RUN_FIRST_MWS_DB_SETUP_FOR_TESTING_0_0) {
       await libsql.executeScript(await readFile(dist_resolve(
-        "../../../prisma-20250406/migrations/" + INIT_0_0 + "/migration.sql"
+        "../prisma-20250406/migrations/" + INIT_0_0 + "/migration.sql"
       ), "utf8"));
     } else if (process.env.RUN_FIRST_MWS_DB_SETUP_FOR_TESTING_0_1) {
       await libsql.executeScript(await readFile(dist_resolve(
-        "../../../prisma/migrations/" + INIT_0_1 + "/migration.sql"
+        "../prisma/migrations/" + INIT_0_1 + "/migration.sql"
       ), "utf8"));
     }
 
@@ -59,6 +59,7 @@ export class SqliteAdapter {
     if (applied_migrations.has(INIT_0_0)) {
       console.log([
         "=======================================================================================",
+        "The database you are trying to open is from a previous version of MWS.",
         "This version of MWS is no longer supported. It is an alpha version",
         "and you shouldn't be using it in production anyway. Please export any",
         "wikis you want to keep by opening them and downloading them as single-file",
@@ -132,7 +133,7 @@ export class SqliteAdapter {
     initMigration: string
   ) {
 
-    const migrations = await readdir(dist_resolve("../../../" + prismaFolder + "/migrations"));
+    const migrations = await readdir(dist_resolve("../" + prismaFolder + "/migrations"));
     migrations.sort();
 
     const new_migrations = migrations.filter(m => !applied_migrations.has(m) && m !== "migration_lock.toml");

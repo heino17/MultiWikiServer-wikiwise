@@ -1,7 +1,7 @@
 //@ts-check
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 //@ts-ignore
-import { runCLI } from "./dist/index.js";
+import { runMWS } from "./dist/index.js";
 import { resolve } from "node:path";
 /** * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
  * For development, it is usually preferred to have a custom configuration that 
@@ -46,6 +46,6 @@ mkdirSync("dev/wiki", { recursive: true })
 // change to the editions/mws directory for development
 process.chdir("dev/wiki");
 // run the cli
-runCLI().catch(console.log);
+runMWS().catch(console.log);
 
 
