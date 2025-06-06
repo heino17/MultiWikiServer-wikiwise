@@ -1,35 +1,8 @@
 import { AllowedMethod, BodyFormat } from "./utils";
-import { AuthUser } from './services/sessions';
 import { Prisma } from '@prisma/client';
 import { Types } from '@prisma/client/runtime/library';
-import { DataChecks } from './utils';
 import { ServerState } from "./ServerState";
-import { RouteMatch, Router, serverEvents, ServerRequest as ServerRequestBase, ServerRequestClass, Streamer, truthy } from "@tiddlywiki/server";
-import { setupDevServer } from "./services/setupDevServer";
-
-declare module "@tiddlywiki/server" {
-  /**
-   * - "mws.router.init" event is emitted during "listen.router" after createServerRequest is set
-   */
-  interface ServerEventsMap {
-    "mws.router.init": [router: Router, config: ServerState];
-  }
-  interface ServerRequest<
-    B extends BodyFormat = BodyFormat,
-    M extends AllowedMethod = AllowedMethod,
-    D = unknown
-  > extends StateObject<B, M, D> {
-
-  }
-}
-serverEvents.on("listen.router", async (listen, router) => {
-  router.createServerRequest = <B extends BodyFormat>(
-    streamer: Streamer, routePath: RouteMatch[], bodyFormat: B
-  ) => {
-    return new StateObject(streamer, routePath, bodyFormat, router);
-  };
-  await serverEvents.emitAsync("mws.router.init", router, listen.config);
-});
+import { RouteMatch, Router, serverEvents, ServerRequestClass, Streamer, truthy } from "@tiddlywiki/server";
 
 class StateObject<
   B extends BodyFormat = BodyFormat,
@@ -117,6 +90,66 @@ class StateObject<
   }
 
 
+
+  async assertRecipeACL(
+    recipe_name: PrismaField<"Recipes", "recipe_name">,
+    needWrite: boolean
+  ) {
+
+    const { recipe, canRead, canWrite } = await this.getRecipeACL(recipe_name, needWrite);
+
+    if (!recipe) throw this.sendEmpty(404, { "x-reason": "recipe not found" });
+    if (!canRead) throw this.sendEmpty(403, { "x-reason": "no read permission" });
+    if (!canWrite) throw this.sendEmpty(403, { "x-reason": "no write permission" });
+
+    this.asserted = true;
+
+  }
+
+  async getBagACL(
+    bag_name: PrismaField<"Bags", "bag_name">,
+    needWrite: boolean
+  ) {
+    const { user_id, isAdmin, role_ids } = this.user;
+    const prisma = this.engine;
+    const read = this.getBagWhereACL({ permission: "READ", user_id, role_ids });
+    const write = this.getBagWhereACL({ permission: "WRITE", user_id, role_ids });
+    const [bag, canRead, canWrite] = await prisma.$transaction([
+      prisma.bags.findUnique({
+        select: { bag_id: true, owner_id: true },
+        where: { bag_name }
+      }),
+      isAdmin ? prisma.$queryRaw`SELECT 1` : prisma.bags.findUnique({
+        select: { bag_id: true },
+        where: { bag_name, OR: read }
+      }),
+      isAdmin ? prisma.$queryRaw`SELECT 1` : needWrite ? prisma.bags.findUnique({
+        select: { bag_id: true },
+        where: { bag_name, OR: write }
+      }) : prisma.$queryRaw`SELECT 2`,
+    ]);
+    return { bag, canRead, canWrite };
+  }
+
+
+  async assertBagACL(
+    bag_name: PrismaField<"Bags", "bag_name">,
+    needWrite: boolean
+  ) {
+    const { bag, canRead, canWrite } = await this.getBagACL(bag_name, needWrite);
+
+    if (!bag) throw this.sendEmpty(404, { "x-reason": "recipe not found" });
+    if (!canRead) throw this.sendEmpty(403, { "x-reason": "no read permission" });
+    if (!canWrite) throw this.sendEmpty(403, { "x-reason": "no write permission" });
+
+    this.asserted = true;
+
+    return bag;
+
+  }
+
+
+
   /** If the user isn't logged in, user_id is 0. */
   getBagWhereACL({ recipe_id, permission, user_id, role_ids }: {
     /** Recipe ID can be provided as an extra restriction */
@@ -180,62 +213,27 @@ class StateObject<
   }
 
 
-
-  async assertRecipeACL(
-    recipe_name: PrismaField<"Recipes", "recipe_name">,
-    needWrite: boolean
-  ) {
-
-    const { recipe, canRead, canWrite } = await this.getRecipeACL(recipe_name, needWrite);
-
-    if (!recipe) throw this.sendEmpty(404, { "x-reason": "recipe not found" });
-    if (!canRead) throw this.sendEmpty(403, { "x-reason": "no read permission" });
-    if (!canWrite) throw this.sendEmpty(403, { "x-reason": "no write permission" });
-
-    this.asserted = true;
-
-  }
-
-  async getBagACL(
-    bag_name: PrismaField<"Bags", "bag_name">,
-    needWrite: boolean
-  ) {
-    const { user_id, isAdmin, role_ids } = this.user;
-    const prisma = this.engine;
-    const read = this.getBagWhereACL({ permission: "READ", user_id, role_ids });
-    const write = this.getBagWhereACL({ permission: "WRITE", user_id, role_ids });
-    const [bag, canRead, canWrite] = await prisma.$transaction([
-      prisma.bags.findUnique({
-        select: { bag_id: true, owner_id: true },
-        where: { bag_name }
-      }),
-      isAdmin ? prisma.$queryRaw`SELECT 1` : prisma.bags.findUnique({
-        select: { bag_id: true },
-        where: { bag_name, OR: read }
-      }),
-      isAdmin ? prisma.$queryRaw`SELECT 1` : needWrite ? prisma.bags.findUnique({
-        select: { bag_id: true },
-        where: { bag_name, OR: write }
-      }) : prisma.$queryRaw`SELECT 2`,
-    ]);
-    return { bag, canRead, canWrite };
-  }
-
-
-  async assertBagACL(
-    bag_name: PrismaField<"Bags", "bag_name">,
-    needWrite: boolean
-  ) {
-    const { bag, canRead, canWrite } = await this.getBagACL(bag_name, needWrite);
-
-    if (!bag) throw this.sendEmpty(404, { "x-reason": "recipe not found" });
-    if (!canRead) throw this.sendEmpty(403, { "x-reason": "no read permission" });
-    if (!canWrite) throw this.sendEmpty(403, { "x-reason": "no write permission" });
-
-    this.asserted = true;
-
-    return bag;
-
-  }
-
 }
+
+declare module "@tiddlywiki/server" {
+  /**
+   * - "mws.router.init" event is emitted during "listen.router" after createServerRequest is set
+   */
+  interface ServerEventsMap {
+    "mws.router.init": [router: Router, config: ServerState];
+  }
+  interface ServerRequest<
+    B extends BodyFormat = BodyFormat,
+    M extends AllowedMethod = AllowedMethod,
+    D = unknown
+  > extends StateObject<B, M, D> { }
+}
+
+serverEvents.on("listen.router", async (listen, router) => {
+  router.createServerRequest = <B extends BodyFormat>(
+    streamer: Streamer, routePath: RouteMatch[], bodyFormat: B
+  ) => {
+    return new StateObject(streamer, routePath, bodyFormat, router);
+  };
+  await serverEvents.emitAsync("mws.router.init", router, listen.config);
+});
