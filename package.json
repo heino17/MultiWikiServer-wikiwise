@@ -2,26 +2,26 @@
   "name": "@tiddlywiki/mws",
   "description": "TiddlyWiki Multiple Wiki Server",
   "private": false,
-  "version": "0.0.21",
+  "version": "0.0.0",
   "type": "module",
   "workspaces": [
     "packages/server",
     "packages/mws",
     "packages/react-admin",
+    "packages/tiddlywiki-types",
     "plugins/client"
   ],
   "exports": {
     ".": {
-      "types": "./src/index.ts",
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    },
-    "./src/*": "./src/*"
+    }
   },
   "files": [
     "dist",
     "prisma",
+    "packages/tiddlywiki-types",
     "packages/react-admin/public",
-    "tiddlywiki-types",
     "editions/mws-docs",
     "plugins/client",
     "scripts.mjs"
