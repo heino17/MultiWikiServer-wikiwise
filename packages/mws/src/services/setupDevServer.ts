@@ -21,14 +21,17 @@ class ExtString {
   [Symbol.toPrimitive](hint: "string") { return this.str; }
 }
 
+const rootdir = dist_resolve('../packages/react-admin');
+const publicdir = resolve(rootdir, "public");
+
 export async function setupDevServer(
   config: ServerState,
 ) {
   const {enableDevServer} = config;
-  const rootdir = dist_resolve('../react-user-mgmt');
+  
 
   const make_index_file = async (pathPrefix: string) =>
-    Buffer.from(new ExtString(await readFile(join(rootdir, "public/index.html"), "utf8"))
+    Buffer.from(new ExtString(await readFile(join(publicdir, "index.html"), "utf8"))
       .replaceAll("`$$js:pathPrefix:stringify$$`", JSON.stringify(pathPrefix))
       .replaceAll("$$js:pathPrefix$$", pathPrefix)
       , "utf8");
@@ -47,7 +50,7 @@ export async function setupDevServer(
 
       // use sendFile directly instead of having the dev server send it
       return state.sendFile(200, {}, {
-        root: resolve(rootdir, "public"),
+        root: publicdir,
         reqpath: state.url,
         on404: async () => sendIndex()
       });
@@ -110,8 +113,6 @@ export async function setupDevServer(
 }
 
 export async function esbuildStartup() {
-
-  const rootdir = dist_resolve('../react-user-mgmt');
   const esbuild = await import("esbuild");
 
   let ctx = await esbuild.context({
@@ -120,7 +121,7 @@ export async function esbuildStartup() {
     target: 'es2020',
     platform: 'browser',
     jsx: 'automatic',
-    outdir: resolve(rootdir, 'public'),
+    outdir: publicdir,
     minify: true,
     sourcemap: true,
     metafile: true,
@@ -129,14 +130,14 @@ export async function esbuildStartup() {
   });
 
   const { port } = await ctx.serve({
-    servedir: resolve(rootdir, 'public'),
+    servedir: publicdir,
     host: "127.0.0.20"
   });
 
   const result = await ctx.rebuild();
 
-  writeFileSync(resolve(rootdir, 'public/stats.json'), JSON.stringify(result.metafile));
+  writeFileSync(resolve(publicdir, 'stats.json'), JSON.stringify(result.metafile));
 
 
-  return { ctx, port, result, rootdir };
+  return { ctx, port, result, rootdir, publicdir };
 }
