@@ -52,7 +52,7 @@ export class ServerState {
     this.csrfDisable = false;
 
     this.enableExternalPlugins = !!process.env.ENABLE_EXTERNAL_PLUGINS;
-    this.enableDevServer = !!process.env.ENABLE_DEV_SERVER;
+    this.enableDevServer = process.env.ENABLE_DEV_SERVER === "mws";
     this.enableDocsRoute = !!process.env.ENABLE_DOCS_ROUTE;
 
 

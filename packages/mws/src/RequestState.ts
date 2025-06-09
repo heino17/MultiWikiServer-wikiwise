@@ -217,7 +217,7 @@ class StateObject<
 
 declare module "@tiddlywiki/server" {
   /**
-   * - "mws.router.init" event is emitted during "listen.router" after createServerRequest is set
+   * - "mws.router.init" event is emitted during "listen.router" after createServerRequest is set by MWS. 
    */
   interface ServerEventsMap {
     "mws.router.init": [router: Router, config: ServerState];

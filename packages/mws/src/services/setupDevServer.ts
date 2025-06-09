@@ -3,7 +3,7 @@ import { request } from "http";
 import { join, resolve } from "path";
 import { createHash } from "crypto";
 import { readFile } from "fs/promises";
-import { writeFileSync } from "fs";
+import { existsSync, writeFileSync } from "fs";
 import { ServerState } from "../ServerState";
 import { dist_resolve, ServerRequest } from "@tiddlywiki/server";
 
@@ -114,6 +114,12 @@ export async function setupDevServer(
 
 export async function esbuildStartup() {
   const esbuild = await import("esbuild");
+
+  const entry = resolve(rootdir, 'src/main.tsx');
+
+  if(!existsSync(entry)) {
+    throw new Error(`Entry file ${entry} does not exist. You might be running this in production via the ENABLE_DEV_SERVER=mws environment variable, which is only valid in the git repo.`);
+  }
 
   let ctx = await esbuild.context({
     entryPoints: [resolve(rootdir, 'src/main.tsx')],

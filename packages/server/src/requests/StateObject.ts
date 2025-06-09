@@ -84,7 +84,14 @@ export class ServerRequestClass<
   isBodyFormat<T extends B, S extends { [K in B]: ServerRequest<K, M, D> }[T]>(format: T): this is S {
     return this.bodyFormat as BodyFormat === format;
   }
-
+  /** 
+   * Checks the request and response headers and calculates the appropriate 
+   * encoding to use for the response. This may be checked early if you 
+   * can only support a subset of normal encodings or have precompressed data.
+   */
+  acceptsEncoding(encoding: ('br' | 'gzip' | 'deflate' | 'identity')[]) {
+    return this.streamer.compressor.getEncodingMethod(encoding);
+  }
 
   /**
    *

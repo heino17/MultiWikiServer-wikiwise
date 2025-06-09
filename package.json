@@ -4,6 +4,12 @@
   "private": false,
   "version": "0.0.21",
   "type": "module",
+  "workspaces": [
+    "packages/server",
+    "packages/mws",
+    "packages/react-admin",
+    "plugins/client"
+  ],
   "exports": {
     ".": {
       "types": "./src/index.ts",
@@ -14,7 +20,7 @@
   "files": [
     "dist",
     "prisma",
-    "react-user-mgmt",
+    "packages/react-admin/public",
     "tiddlywiki-types",
     "editions/mws-docs",
     "plugins/client",
@@ -41,21 +47,13 @@
     "prepublishOnly": "npm run build",
     "prisma:migrate": "DATABASE_URL=file:test.sqlite npx prisma migrate dev"
   },
-  "dependencies": {
-    "@prisma/adapter-better-sqlite3": "6.7.0-dev.48",
-    "@prisma/client": "6.6.0",
-    "@serenity-kit/opaque": "^0.8.4",
-    "prisma": "6.6.0",
-    "prisma-json-types-generator": "^3.3.1",
-    "source-map-support": "^0.5.21",
-    "tiddlywiki": "^5.3.6"
-  },
   "devDependencies": {
-    "@types/debug": "^4.1.12",
-    "@types/tiddlywiki": "file:tiddlywiki-types",
-    "debug": "^4.4.1",
+    "prisma": "6.6.0",
+    "prisma-json-types-generator": "~3.3.1",
     "tsup": "^8.5.0",
-    "typescript": "^5.8.3",
-    "zod-to-ts": "^1.2.0"
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.6.0"
   }
 }

@@ -28,8 +28,8 @@ const hasBrotliSupport = 'createBrotliCompress' in zlib
  * @private
  */
 const cacheControlNoTransformRegExp = /(?:^|,)\s*?no-transform\s*?(?:,|$)/
-const SUPPORTED_ENCODING = hasBrotliSupport ? ['br', 'gzip', 'deflate', 'identity'] : ['gzip', 'deflate', 'identity']
-const PREFERRED_ENCODING = hasBrotliSupport ? ['br', 'gzip'] : ['gzip']
+const SUPPORTED_ENCODING = hasBrotliSupport ? ['br', 'gzip', 'deflate', 'identity'] as const : ['gzip', 'deflate', 'identity'] as const
+const PREFERRED_ENCODING = hasBrotliSupport ? ['br', 'gzip'] as const : ['gzip'] as const
 
 
 export interface CompressorOptions {
@@ -49,7 +49,7 @@ export interface CompressorOptions {
    */
   threshold?: number | string;
   /** use a specific encoding if the accept-encoding header is not present, defaults to identity */
-  defaultEncoding?: string;
+  defaultEncoding?: 'br' | 'gzip' | 'deflate' | 'identity';
 
 }
 
@@ -118,7 +118,7 @@ export class Compressor {
   beforeWriteHead() {
     const { req, res } = this;
 
-    this.method = this.getEncodingMethod()
+    this.method = this.getEncodingMethod(SUPPORTED_ENCODING)
 
     // compression stream
     debug('using %s compression', this.method)
@@ -151,7 +151,7 @@ export class Compressor {
     });
   }
 
-  getEncodingMethod(): string {
+  getEncodingMethod(supportedEncoding: readonly ('br' | 'gzip' | 'deflate' | 'identity')[]): 'br' | 'gzip' | 'deflate' | 'identity' | 'gzip-stream' | '' {
     const { req, res } = this;
 
     if (res.getHeader("content-type") === "application/gzip"
@@ -192,14 +192,14 @@ export class Compressor {
     }
 
     // if no accept-encoding header is found, use the default encoding
-    if (!req.headers['accept-encoding'] && SUPPORTED_ENCODING.includes(this.defaultEncoding)) {
+    if (!req.headers['accept-encoding'] && supportedEncoding.includes(this.defaultEncoding)) {
       debug("no accept-encoding header, using default encoding %s", this.defaultEncoding)
       return this.defaultEncoding
     }
 
     // determine the compression method to use for this request
     var negotiator = new Negotiator(req)
-    var method = negotiator.encoding(SUPPORTED_ENCODING, PREFERRED_ENCODING)
+    var method = negotiator.encoding(supportedEncoding, PREFERRED_ENCODING)
 
     // negotiation failed, just pretend we never checked.
     if (!method) {

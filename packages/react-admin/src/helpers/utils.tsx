@@ -4,9 +4,9 @@ import React, { ReactNode, useCallback, useId, useMemo, useState } from "react";
 import { FieldValues, useForm, UseFormRegisterReturn } from "react-hook-form";
 import { proxy } from "./prisma-proxy";
 import { z } from "zod";
-import type { RecipeManagerMap } from "@tiddlywiki/mws/src/routes/managers/admin-recipes.ts";
-import type { UserManagerMap } from "@tiddlywiki/mws/src/routes/managers/admin-users.ts";
-import type { StatusManagerMap } from "@tiddlywiki/mws/src/routes/managers/index.ts";
+import type { RecipeManagerMap } from "@tiddlywiki/mws/src/managers/admin-recipes.ts";
+import type { UserManagerMap } from "@tiddlywiki/mws/src/managers/admin-users.ts";
+import type { StatusManagerMap } from "@tiddlywiki/mws/";
 import { Button, ButtonProps } from "@mui/material";
 
 

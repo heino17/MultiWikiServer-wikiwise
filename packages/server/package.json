@@ -7,18 +7,14 @@
   "exports": {
     ".": {
       "types": "./src/index.ts",
-      "import": "./src/index.ts"
+      "tsup": "./src/index.ts",
+      "import": "./dist/index.js"
     },
     "./src/*": "./src/*"
   },
   "files": [
     "dist",
-    "prisma",
-    "react-user-mgmt",
-    "tiddlywiki-types",
-    "editions/mws-docs",
-    "plugins/client",
-    "scripts.mjs"
+    "src"
   ],
   "engines": {
     "node": ">=18"

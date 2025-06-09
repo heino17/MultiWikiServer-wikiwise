@@ -28,4 +28,11 @@ export default defineConfig({
   } : {
     js: `require('source-map-support/register');`,
   },
+  esbuildOptions(options, context) {
+    options.conditions = [
+      "tsup",
+      "esbuild",
+      "build",
+    ]
+  },
 });

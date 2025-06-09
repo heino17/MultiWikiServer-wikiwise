@@ -52,14 +52,24 @@ serverEvents.on("mws.routes", (root, config) => {
     pathParams: ["plugin"]
   }, async state => {
     checkPath(state, z => ({ plugin: z.string() }));
+
+    const accepts = state.acceptsEncoding(["gzip", "identity"]);
+
     state.setHeader("Content-Type", "application/javascript");
     // setting this will disable the server gzip streaming so we save CPU cycles
-    state.setHeader("Content-Encoding", "gzip");
-    return state.sendFile(200, {}, {
-      root: path.join(config.wikiPath, "cache"),
-      reqpath: state.pathParams.plugin + "/plugin.js.gz",
+    if (accepts === "gzip") {
+      state.setHeader("Content-Encoding", "gzip");
+      return state.sendFile(200, {}, {
+        root: path.join(config.wikiPath, "cache"),
+        reqpath: state.pathParams.plugin + "/plugin.js.gz",
+      });
+    } else {
+      return state.sendFile(200, {}, {
+        root: path.join(config.wikiPath, "cache"),
+        reqpath: state.pathParams.plugin + "/plugin.js",
+      });
+    }
 
-    });
   })
 })
 
@@ -91,19 +101,10 @@ async function importPlugins(twFolder: string, cacheFolder: string, type: string
     "tiddlywiki/plugins/mws/client"
   ] as const);
 
-  // plugins.forEach(oldPath => {
-  //   console.log(oldPath);
-  //   const relativePluginPath = path.normalize(path.relative(twFolder, oldPath));
-  //   console.log(relativePluginPath);
-  //   const newPath = path.join(cacheFolder, relativePluginPath);
-  //   console.log(newPath);
-  //   console.log();
-  // });
-
 
   // it is recommended to add <link rel="preload" to the header since these cannot be deferred
-  // <link rel="preload" href="main.js" as="script" />
-
+  // <link rel="preload" href="main.js" as="script" integrity="..." crossorigin="anonymous" />
+  
   // and recommended to specify the hashes for each file in their script tag. 
   // <cript
   //   src="https://example.com/example-framework.js"
@@ -146,11 +147,9 @@ async function importPlugins(twFolder: string, cacheFolder: string, type: string
         const json = Buffer.from(JSON.stringify(plugin).replace(/<\//gi, "\\u003c/"), "utf8");
         fs.writeFileSync(path.join(newPath, "plugin.json"), json);
         const js = Buffer.concat([prefix, json, suffix]);
+        fs.writeFileSync(path.join(newPath, "plugin.js"), js);
         const hash = crypto.createHash("sha384").update(js).digest("base64");
-        const gz = gzipSync(js, { level: 4, memLevel: 4 });
-        // const js2 = gunzipSync(gz);
-        // const hash2 = crypto.createHash("sha384").update(js2).digest("base64");
-        // if(hash !== hash2) throw "hash not match";
+        const gz = gzipSync(js, {});
         fs.writeFileSync(path.join(newPath, "plugin.js.gz"), gz);
         tiddlerFiles.set(plugin.title, relativePluginPath);
         tiddlerHashes.set(plugin.title, "sha384-" + hash);
