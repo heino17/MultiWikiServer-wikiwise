@@ -1,12 +1,12 @@
-import "../global";
 import * as http2 from 'node:http2';
 import send from 'send';
 import { Readable } from 'stream';
 import { IncomingMessage, ServerResponse, IncomingHttpHeaders as NodeIncomingHeaders, OutgoingHttpHeaders } from 'node:http';
-import { is } from '../utils';
+import { is } from './utils';
 import { createReadStream } from 'node:fs';
 import { Writable } from 'node:stream';
 import Debug from "debug";
+import { Compressor } from "./compression";
 
 declare module 'node:net' {
   interface Socket {
@@ -35,7 +35,7 @@ export type StreamerChunk = { data: string, encoding: NodeJS.BufferEncoding } | 
  */
 export class Streamer {
   host: string;
-  method: AllowedMethod;
+  method: string;
   urlInfo: URL;
   url: string;
   headers: IncomingHttpHeaders;
@@ -72,11 +72,11 @@ export class Streamer {
     this.host = req.headers.host;
 
     if (!req.method) throw new Error("This should never happen");
-    if (!is<AllowedMethod>(req.method, AllowedMethods.includes(req.method as any))) {
-      //https://httpwg.org/specs/rfc9110.html#status.501
-      res.writeHead(501, {}).end("Method not supported", "utf8");
-      throw STREAM_ENDED;
-    }
+    // if (!is<AllowedMethod>(req.method, AllowedMethods.includes(req.method as any))) {
+    //   //https://httpwg.org/specs/rfc9110.html#status.501
+    //   res.writeHead(501, {}).end("Method not supported", "utf8");
+    //   throw STREAM_ENDED;
+    // }
     this.method = req.method;
 
     this.urlInfo = new URL(`https://${this.headers.host}${this.url}`);
@@ -564,7 +564,7 @@ export class StreamerState {
 
 
   get url() { return this.streamer.url; }
-  get method(): AllowedMethod | "OPTIONS" { return this.streamer.method; }
+  get method(): string { return this.streamer.method; }
   get headers() { return this.streamer.headers; }
   get host() { return this.streamer.host; }
   get urlInfo() { return this.streamer.urlInfo; }
@@ -590,6 +590,5 @@ export class StreamerState {
 
 }
 
-import { AllowedMethod, AllowedMethods } from "./router";
-import { Compressor } from "./compression";
+
 

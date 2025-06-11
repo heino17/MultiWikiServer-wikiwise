@@ -1,7 +1,8 @@
-import { registerZodRoutes, RouterKeyMap, RouterRouteMap, serverEvents, ServerRequest } from "@tiddlywiki/server";
+import { registerZodRoutes, RouterKeyMap, RouterRouteMap, ServerRequest, ServerRoute } from "@tiddlywiki/server";
 import { admin } from "./admin-utils";
 import { ServerState } from "../ServerState";
 import { DataChecks } from "../utils";
+import { serverEvents } from "@tiddlywiki/events";
 
 
 // https://crates.io/crates/indradb

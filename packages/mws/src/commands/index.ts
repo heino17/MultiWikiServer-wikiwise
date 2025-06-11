@@ -6,10 +6,12 @@ import * as manager from "./manager";
 import * as tests_complete from "./tests-complete";
 import * as build_client from "./build-client";
 import * as build_types from "./build-types";
-import { BaseCommand, CommandInfo, serverEvents } from "@tiddlywiki/server";
+import * as listen from "./listen";
+import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
 
 
 export const commands = {
+  listen,
   load_wiki_folder,
   load_archive,
   save_archive,

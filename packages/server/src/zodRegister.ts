@@ -1,8 +1,9 @@
 import { fromError } from "zod-validation-error";
-import { ServerRequest } from "../requests/StateObject";
+import { ServerRequest } from "./StateObject";
 import Debug from "debug";
 import z from "zod";
 import { Z2, ZodRoute } from "./zodRoute";
+import { ServerRoute } from "./router";
 const debugCORS = Debug("mws:cors");
 
 
@@ -19,6 +20,7 @@ export const registerZodRoutes = (parent: ServerRoute, router: any, keys: string
         ? z => z.undefined() : (z => z.any() as any),
       inner,
       corsRequest = async state => {
+        state.pathParams
         const headers = state.headers["access-control-request-headers"]
         const method = state.headers["access-control-request-method"]
         debugCORS("OPTIONS default %s %s %s", state.urlInfo.pathname, method, headers);

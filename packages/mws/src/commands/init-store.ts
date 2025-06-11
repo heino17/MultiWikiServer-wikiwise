@@ -1,4 +1,5 @@
-import { BaseCommand, CommandInfo, dist_require_resolve, dist_resolve } from "@tiddlywiki/server";
+import { dist_require_resolve, dist_resolve } from "@tiddlywiki/server";
+import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
 import { resolve } from "path";
 import { Command as LoadWikiFolderCommand } from "./load-wiki-folder";
 

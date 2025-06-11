@@ -7,6 +7,7 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { ErrorBoundary } from "react-error-boundary";
 import { TestColors } from './colors';
+import { } from "@tiddlywiki/mws";
 const theme = createTheme({
   palette: {
     background: {
@@ -34,7 +35,7 @@ export const App = DataLoader(async () => {
       <ThemeProvider theme={theme} defaultMode="system" noSsr>
         <CssBaseline enableColorScheme />
         <IndexJsonContext.Provider value={[indexJson, refresh]}>
-          <ErrorBoundary fallback={null} > 
+          <ErrorBoundary fallback={null} >
             {route === "/login" ? <Login /> : <PageRoot />}
           </ErrorBoundary>
         </IndexJsonContext.Provider>

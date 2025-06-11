@@ -172,7 +172,7 @@ export const useRecipeEditForm = createDialogForm({
           
           const { plugin_names, skip_required_plugins = false, skip_core = false } = formData;
 
-          const { recipe_id } = await serverRequest.recipe_upsert({
+          const { recipe_id } = await serverRequest.recipe_create_or_update({
             recipe_name,
             description: formData.description,
             owner_id: formData.owner_id,
@@ -182,7 +182,7 @@ export const useRecipeEditForm = createDialogForm({
             plugin_names,
             skip_required_plugins,
             skip_core,
-            isCreate,
+            create_only: isCreate,
           });
 
           const newJson = await globalRefresh();

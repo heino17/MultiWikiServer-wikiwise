@@ -1,4 +1,4 @@
-import { BaseCommand, CommandInfo } from "@tiddlywiki/server";
+import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
 
 
 export const info: CommandInfo = {

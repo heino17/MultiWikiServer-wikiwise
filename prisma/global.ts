@@ -3,6 +3,7 @@ import * as fs from "fs";
 import type { Prisma } from "@prisma/client";
 
 
+
 declare global {
   namespace PrismaJson {
     type Recipes_plugin_names = string[];
@@ -24,7 +25,7 @@ declare global {
     }
   }
 }
-
+const uselessSymbol = Symbol.for("PrismaField");
 declare global {
 
 
@@ -37,10 +38,11 @@ declare global {
   */
   type PrismaField<T extends Prisma.ModelName, K extends keyof PrismaPayloadScalars<T>> =
     // manually map foriegn keys to their corresponding primary key so comparisons work
-    // this should remove the need for any global helper functions to convert between types
+    // this should remove the need for any global helper functions to convert between types.
+
+    // I've tried to prevent this from being flattened, but I can't figure out how.
+    // It doesn't really matter, just annoying.
     (
-      // [T, K] extends ["Acl", "role_id"] ? PrismaField<"Roles", "role_id"> :
-      // [T, K] extends ["", "role_id"] ? PrismaField<"Roles", "role_id"> :
       [T, K] extends ["Tiddlers", "bag_id"] ? PrismaField<"Bags", "bag_id"> :
       [T, K] extends ["Sessions", "user_id"] ? PrismaField<"Users", "user_id"> :
       [T, K] extends ["Recipe_bags", "bag_id"] ? PrismaField<"Bags", "bag_id"> :

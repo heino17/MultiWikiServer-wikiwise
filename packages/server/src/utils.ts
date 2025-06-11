@@ -129,11 +129,6 @@ export async function filterAsync<T, V>(array: T[], callback: (this: V, value: T
 }
 
 
-export function truthy<T>(
-  obj: T
-): obj is Exclude<T, false | null | undefined | 0 | '' | void> {
-  return !!obj;
-}
 
 
 export class UserError extends Error {

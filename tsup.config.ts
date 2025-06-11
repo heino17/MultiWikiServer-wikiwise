@@ -1,6 +1,9 @@
 import { defineConfig } from 'tsup';
 export default defineConfig({
-  entry: ['packages/mws/src/index.ts'],
+  entry: [
+    // 'packages/server/src/index.ts',
+    'packages/mws/src/index.ts',
+  ],
   tsconfig: "tsconfig.base.json",
   format: ['esm'],
   outDir: "dist",
@@ -14,7 +17,7 @@ export default defineConfig({
     "@prisma/adapter-better-sqlite3",
     "@serenity-kit/opaque",
   ],
-  dts: process.env.SKIPDTS ? false : true,
+  dts: false,
   keepNames: true,
   sourcemap: true,
   clean: true,
@@ -24,10 +27,16 @@ export default defineConfig({
   shims: true,
   metafile: true,
   banner: (ctx) => ctx.format === "esm" ? {
-    js: `import {createRequire as __createRequire} from 'module'; const require=__createRequire(import.meta.url);import 'source-map-support/register.js';`,
-  } : {
-    js: `require('source-map-support/register');`,
-  },
+    js: [
+      "import {createRequire as __createRequire} from 'module';",
+      "const require=__createRequire(import.meta.url);",
+      "import 'source-map-support/register.js';",
+    ].join("\n")
+  } :ctx.format === "cjs" ? {
+    js: [
+      "require('source-map-support/register');",
+    ].join("\n")
+  } : {},
   esbuildOptions(options, context) {
     options.conditions = [
       "tsup",

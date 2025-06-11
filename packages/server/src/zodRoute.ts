@@ -1,10 +1,11 @@
 import * as z from "zod";
-import { JsonValue } from "../utils";
-import { AllowedMethod, BodyFormat } from "../requests/router";
-import { ServerRequest } from "../requests/StateObject";
+import { JsonValue } from "./utils";
+import { BodyFormat } from "./router";
+import { ServerRequest } from "./StateObject";
+import { RouteDef } from "./router";
 
 export function zodRoute<
-  M extends Exclude<AllowedMethod, 'OPTIONS'>,
+  M extends string,
   B extends "GET" | "HEAD" extends M ? "ignore" : BodyFormat,
   P extends Record<string, z.ZodTypeAny>,
   Q extends Record<string, z.ZodType<any, any, string[] | undefined>>,
@@ -30,7 +31,7 @@ type FieldTypeNumberSelector<T extends FieldTypeGroups> = T extends "STRING" ? "
 type FieldTypeBooleanSelector<T extends FieldTypeGroups> = T extends "STRING" ? "parse-boolean" : "boolean";
 
 export interface ZodRoute<
-  M extends AllowedMethod,
+  M extends string,
   B extends BodyFormat,
   P extends Record<string, z.ZodTypeAny>,
   Q extends Record<string, z.ZodTypeAny>,
@@ -90,7 +91,7 @@ export interface ZodRoute<
 // }
 
 export interface ZodState<
-  M extends AllowedMethod | "OPTIONS",
+  M extends string,
   B extends BodyFormat,
   P extends Record<string, z.ZodTypeAny>,
   Q extends Record<string, z.ZodTypeAny>,

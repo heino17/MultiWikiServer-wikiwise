@@ -9,7 +9,8 @@ import { Writable } from "stream";
 import { IncomingHttpHeaders } from "http";
 import { WikiStateStore } from "./WikiStateStore";
 import { Debug } from "@prisma/client/runtime/library";
-import { registerZodRoutes, RouterKeyMap, RouterRouteMap, serverEvents, tryParseJSON, UserError, zod, zodRoute, ZodState } from "@tiddlywiki/server";
+import { registerZodRoutes, RouterKeyMap, RouterRouteMap, ServerRoute, tryParseJSON, UserError, zod, zodRoute, ZodState } from "@tiddlywiki/server";
+import { serverEvents } from "@tiddlywiki/events";
 const debugCORS = Debug("mws:cors");
 
 export const WikiRouterKeyMap: RouterKeyMap<WikiRoutes, true> = {
@@ -253,7 +254,11 @@ export class WikiRoutes {
         const server = new WikiStateStore(state, prisma);
         const bag = await server.getRecipeBagWithTiddler({ recipe_name, title });
         if (!bag) return state.sendEmpty(404, { "x-reason": "tiddler not found" });
-        return await server.serveBagTiddler(bag.bag_id, bag.bag.bag_name, title);
+        return await server.serveBagTiddler(
+          bag.bag_id, 
+          bag.bag.bag_name, 
+          title
+        );
       });
 
     }

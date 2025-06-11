@@ -1,3 +1,6 @@
 {
-  "name": "@types/tiddlywiki"
+  "name": "@types/tiddlywiki",
+  "scripts": {
+    "tsc": "exit 0"
+  }
 }

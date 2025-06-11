@@ -1,5 +1,5 @@
 /*\
-title: $:/plugins/tiddlywiki/tiddlyweb/tiddlywebadaptor.js
+title: $:/plugins/mws/client/tiddlywebadaptor.js
 type: application/javascript
 module-type: syncadaptor
 
@@ -19,9 +19,10 @@ previous operation to complete before sending a new one.
 // the blank line is important, and so is the following use strict
 "use strict";
 
-import type { Syncer, Tiddler, ITiddlyWiki } from "tiddlywiki";
-import type { WikiRoutes } from "@tiddlywiki/mws/src/routes/managers/wiki-routes";
-import type { ZodRoute } from "@tiddlywiki/mws/src/utils";
+import "@tiddlywiki/mws";
+import type { Syncer, Tiddler } from "tiddlywiki";
+import type { WikiRoutes } from "@tiddlywiki/mws/src/managers/wiki-routes.ts";
+import type { ZodRoute } from "@tiddlywiki/mws/src/index.ts";
 
 declare global {
 	const fflate: typeof import("fflate");
@@ -237,7 +238,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 			{ name: "pathname", value: document.location.pathname }
 		];
 		for (var t = 0; t < substitutions.length; t++) {
-			var s = substitutions[t];
+			var s = substitutions[t]!;
 			text = $tw.utils.replaceString(text, new RegExp("\\$" + s.name + "\\$", "mg"), s.value);
 		}
 		return text;
@@ -263,7 +264,11 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 				false, new Error(
 					`The server return a status code ${e.status} with the following reason: `
 					+ `${e.headers.get("x-reason") ?? "(no reason given)"}`
-				), e
+				), {
+					...e,
+					responseString: "",
+					responseJSON: undefined,
+				}
 			] as const;
 			let responseString: string = "";
 			if (e.headers.get("x-gzip-stream") === "yes") {
@@ -509,7 +514,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		});
 	}
 	private async pollServer() {
-		type t = TiddlerRouterResponse["handleGetBagStates"]
+		type t = WikiRoutes["handleGetBagStates"];
 		const [ok, err, result] = await this.recipeRequest({
 			key: "handleGetBagStates",
 			url: "/bag-states",
@@ -719,7 +724,7 @@ interface HttpRequestOptions<TYPE extends "arraybuffer" | "blob" | "text"> {
 	url: string;
 	/** The response types */
 	responseType: TYPE;
-	headers?: ParamsInput;
+	headers?: HeadersInit;
 	/** This is parsed separately from the url and appended to it. */
 	queryParams?: ParamsInput;
 	/** 
@@ -741,7 +746,7 @@ function httpRequest<TYPE extends "arraybuffer" | "blob" | "text">(options: Http
 		ok: boolean;
 		status: number;
 		statusText: string;
-		headers: URLSearchParams;
+		headers: Headers;
 		response:
 		TYPE extends "arraybuffer" ? ArrayBuffer :
 		TYPE extends "blob" ? Blob :
@@ -760,8 +765,7 @@ function httpRequest<TYPE extends "arraybuffer" | "blob" | "text">(options: Http
 		const query = paramsInput(options.queryParams);
 		query.forEach((v, k) => { url.searchParams.append(k, v); });
 
-		const headers = paramsInput(options.headers);
-		normalizeHeaders(headers);
+		const headers = new Headers(options.headers || {});
 
 		const request = new XMLHttpRequest();
 		request.responseType = options.responseType || "text";
@@ -786,7 +790,7 @@ function httpRequest<TYPE extends "arraybuffer" | "blob" | "text">(options: Http
 		request.onreadystatechange = function () {
 			if (this.readyState !== 4) return;
 
-			const headers = new URLSearchParams();
+			const headers = new Headers();
 			request.getAllResponseHeaders()?.trim().split(/[\r\n]+/).forEach((line) => {
 				const parts = line.split(": ");
 				const header = parts.shift()?.toLowerCase();
@@ -817,19 +821,6 @@ function httpRequest<TYPE extends "arraybuffer" | "blob" | "text">(options: Http
 		if (input instanceof URLSearchParams) return input;
 		if (Array.isArray(input) || typeof input === "string") return new URLSearchParams(input);
 		return new URLSearchParams(Object.entries(input));
-	}
-
-	function normalizeHeaders(headers: URLSearchParams) {
-		[...headers.keys()].forEach(([k, v]) => {
-			const k2 = k.toLowerCase();
-			if (k2 !== k) {
-				headers.getAll(k).forEach(e => {
-					headers.append(k2, e);
-				})
-				headers.delete(k);
-				console.log(k, k2);
-			}
-		})
 	}
 
 }

@@ -3,10 +3,9 @@ import { useAsyncEffect } from "./useAsyncEffect";
 import React, { ReactNode, useCallback, useId, useMemo, useState } from "react";
 import { FieldValues, useForm, UseFormRegisterReturn } from "react-hook-form";
 import { proxy } from "./prisma-proxy";
-import { z } from "zod";
 import type { RecipeManagerMap } from "@tiddlywiki/mws/src/managers/admin-recipes.ts";
 import type { UserManagerMap } from "@tiddlywiki/mws/src/managers/admin-users.ts";
-import type { StatusManagerMap } from "@tiddlywiki/mws/";
+import type { StatusManagerMap } from "@tiddlywiki/mws/src/managers/index.ts";
 import { Button, ButtonProps } from "@mui/material";
 
 
@@ -20,11 +19,6 @@ export function toSearchParams(formData: MapLike | Record<string, any>): URLSear
   });
   return new URLSearchParams(data);
 }
-
-
-
-
-
 
 export function DataLoader<T, P>(
   loader: (props: P) => Promise<T>,
@@ -85,7 +79,7 @@ export type IndexJson = ART<typeof getIndexJson>;
 
 
 declare global {
-  // see setupDevServer.ts
+  // see packages/mws/services/setupDevServer.ts
   const pathPrefix: string;
 }
 type t = StatusManagerMap["index_json"]
@@ -124,15 +118,11 @@ export const serverRequest: ManagerMap = {
   user_update: postManager("user_update"),
   user_update_password: postManager("user_update_password"),
 
-  recipe_create: postManager("recipe_create"),
-  recipe_update: postManager("recipe_update"),
-  recipe_upsert: postManager("recipe_upsert"),
+  recipe_create_or_update: postManager("recipe_create_or_update"),
   recipe_delete: postManager("recipe_delete"),
   recipe_acl_update: postManager("recipe_acl_update"),
 
-  bag_create: postManager("bag_create"),
-  bag_update: postManager("bag_update"),
-  bag_upsert: postManager("bag_upsert"),
+  bag_create_or_update: postManager("bag_create_or_update"),
   bag_delete: postManager("bag_delete"),
   bag_acl_update: postManager("bag_acl_update"),
 

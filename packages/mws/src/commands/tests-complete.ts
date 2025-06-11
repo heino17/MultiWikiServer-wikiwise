@@ -1,7 +1,7 @@
-import { BaseCommand, CommandInfo } from "@tiddlywiki/server";
+import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
 
 export const info: CommandInfo = {
-  name: "tests-complete",
+  name: "done",
   description: "Tests completed successfully.",
   arguments: [],
   internal: true,

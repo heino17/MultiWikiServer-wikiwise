@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "jsx": "preserve",
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true,
+  },
+  "files":[
+    "./packages/mws/src/index.ts",
+  ],
+  "include":[
+    "./packages/**/src/**/*.ts",
+  ],
+  "exclude":[
+    "dist",
+  ]
+}

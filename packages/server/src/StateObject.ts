@@ -1,6 +1,6 @@
 import { Streamer, StreamerState } from './streamer';
 import { PassThrough } from 'node:stream';
-import { AllowedMethod, BodyFormat, Router } from "./router";
+import { BodyFormat, Router } from "./router";
 import * as z from 'zod';
 import { RouteMatch } from './router';
 import { ok } from 'assert';
@@ -8,7 +8,7 @@ import { IncomingHttpHeaders } from 'http';
 
 export interface ServerRequest<
   B extends BodyFormat = BodyFormat,
-  M extends AllowedMethod = AllowedMethod,
+  M extends string = string,
   D = unknown
 > extends ServerRequestClass<B, M, D> { }
 
@@ -17,7 +17,7 @@ export interface ServerRequest<
 // change the underlying server implementation.
 export class ServerRequestClass<
   B extends BodyFormat = BodyFormat,
-  M extends AllowedMethod = AllowedMethod,
+  M extends string = string,
   D = unknown
 > extends StreamerState {
 

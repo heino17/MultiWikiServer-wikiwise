@@ -3,7 +3,8 @@ import { basename } from "path";
 import EventEmitter from "events";
 import { IncomingMessage, ServerResponse } from "http";
 import { Http2ServerRequest, Http2ServerResponse } from "http2";
-import { dist_resolve, serverEvents, ServerRequest } from "@tiddlywiki/server";
+import { dist_resolve, ServerRequest } from "@tiddlywiki/server";
+import { serverEvents } from "@tiddlywiki/events";
 
 serverEvents.on("mws.routes", (rootRoute, config) => {
 

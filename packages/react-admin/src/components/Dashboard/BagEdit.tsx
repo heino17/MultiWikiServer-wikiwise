@@ -63,11 +63,11 @@ export const useBagEditForm = createDialogForm({
           ok(bag_name);
           ok(formData.description);
 
-          const { bag_id } = await serverRequest.bag_upsert({
+          const { bag_id } = await serverRequest.bag_create_or_update({
             bag_name,
             description: formData.description,
             owner_id: isAdmin ? formData.owner_id : undefined,
-            isCreate,
+            create_only: isCreate,
           });
 
           const newJson = await globalRefresh();

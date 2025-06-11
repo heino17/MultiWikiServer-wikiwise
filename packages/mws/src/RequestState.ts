@@ -1,12 +1,11 @@
-import { AllowedMethod, BodyFormat } from "./utils";
 import { Prisma } from '@prisma/client';
 import { Types } from '@prisma/client/runtime/library';
 import { ServerState } from "./ServerState";
-import { RouteMatch, Router, serverEvents, ServerRequestClass, Streamer, truthy } from "@tiddlywiki/server";
+import { BodyFormat, RouteMatch, Router, ServerRequestClass, Streamer } from "@tiddlywiki/server";
 
-class StateObject<
+export class StateObject<
   B extends BodyFormat = BodyFormat,
-  M extends AllowedMethod = AllowedMethod,
+  M extends string = string,
   D = unknown
 > extends ServerRequestClass<B, M, D> {
 
@@ -215,25 +214,3 @@ class StateObject<
 
 }
 
-declare module "@tiddlywiki/server" {
-  /**
-   * - "mws.router.init" event is emitted during "listen.router" after createServerRequest is set by MWS. 
-   */
-  interface ServerEventsMap {
-    "mws.router.init": [router: Router, config: ServerState];
-  }
-  interface ServerRequest<
-    B extends BodyFormat = BodyFormat,
-    M extends AllowedMethod = AllowedMethod,
-    D = unknown
-  > extends StateObject<B, M, D> { }
-}
-
-serverEvents.on("listen.router", async (listen, router) => {
-  router.createServerRequest = <B extends BodyFormat>(
-    streamer: Streamer, routePath: RouteMatch[], bodyFormat: B
-  ) => {
-    return new StateObject(streamer, routePath, bodyFormat, router);
-  };
-  await serverEvents.emitAsync("mws.router.init", router, listen.config);
-});

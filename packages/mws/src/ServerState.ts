@@ -1,11 +1,7 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import { ITXClientDenyList } from "@prisma/client/runtime/library";
-import Debug from "debug";
-import * as path from "path";
-import { existsSync, mkdirSync } from "fs";
 import { TW } from "tiddlywiki";
 import pkg from "../package.json";
-import { SqliteAdapter } from "./db/sqlite-adapter";
 import { createPasswordService } from "./services/PasswordService";
 import { startupCache } from "./services/cache";
 

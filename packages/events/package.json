@@ -1,0 +1,15 @@
+{
+  "name": "@tiddlywiki/events",
+  "description": "TiddlyWiki Web Server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "types": "./src/index.ts",
+  "module": "./src/index.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "dependencies": {},
+  "devDependencies": {}
+}

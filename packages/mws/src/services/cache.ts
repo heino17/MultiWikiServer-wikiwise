@@ -4,7 +4,8 @@ import * as path from "path";
 import * as crypto from "crypto";
 import { TW } from "tiddlywiki";
 import { gzipSync } from "zlib";
-import { checkPath, dist_resolve, serverEvents } from "@tiddlywiki/server";
+import { checkPath, dist_resolve } from "@tiddlywiki/server";
+import { serverEvents } from "@tiddlywiki/events";
 
 const prefix = Buffer.from(`$tw.preloadTiddler(`, "utf8");
 const suffix = Buffer.from(`);`, "utf8");
@@ -104,7 +105,7 @@ async function importPlugins(twFolder: string, cacheFolder: string, type: string
 
   // it is recommended to add <link rel="preload" to the header since these cannot be deferred
   // <link rel="preload" href="main.js" as="script" integrity="..." crossorigin="anonymous" />
-  
+
   // and recommended to specify the hashes for each file in their script tag. 
   // <cript
   //   src="https://example.com/example-framework.js"

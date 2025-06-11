@@ -1,4 +1,4 @@
-import { CommandInfo, BaseCommand } from "@tiddlywiki/server";
+import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
 import { TiddlerStore_PrismaStatic } from "../managers/TiddlerStore";
 
 

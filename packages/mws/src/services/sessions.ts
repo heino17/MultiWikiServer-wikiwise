@@ -1,7 +1,8 @@
 
-import { jsonify, JsonValue, registerZodRoutes, RouterKeyMap, serverEvents, Streamer, Z2, zod, ZodRoute, zodRoute, ZodState } from "@tiddlywiki/server";
+import { jsonify, JsonValue, registerZodRoutes, RouterKeyMap, ServerRoute, Streamer, Z2, zod, ZodRoute, zodRoute, ZodState } from "@tiddlywiki/server";
 import { createHash, randomBytes } from "node:crypto";
 import { ServerState } from "../ServerState";
+import { serverEvents } from "@tiddlywiki/events";
 
 
 export interface AuthUser {

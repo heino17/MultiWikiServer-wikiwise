@@ -1,8 +1,10 @@
-import { BaseCommand, CommandInfo, Z2 } from '@tiddlywiki/server';
+import { Z2 } from '@tiddlywiki/server';
+import { BaseCommand, CommandInfo } from '@tiddlywiki/commander';
 import { StatusKeyMap, StatusManager } from '../managers';
 import { UserKeyMap, UserManager } from '../managers/admin-users';
 import { RecipeKeyMap, RecipeManager } from '../managers/admin-recipes';
 import { WikiRouterKeyMap, WikiRoutes } from '../managers/wiki-routes';
+import { PrinterOptions } from 'typescript';
 
 
 export const info: CommandInfo = {
@@ -17,24 +19,29 @@ export class Command extends BaseCommand<[], {}> {
 
 
   async execute() {
+    //@ts-ignore
     const { zodToTs, printNode } = await import('zod-to-ts').catch(e => {
       console.log("The NPM package 'zod-to-ts' cannot be found.");
       throw "The NPM package 'zod-to-ts' cannot be found.";
-    });
+    }) as any; // was giving an ""excessively deep type" error
+    console.log("interface ClientTypes {")
     this.getEndpoints().forEach(([key, endpoint]) => {
+      console.log(`  ${key}: {`);
       if (endpoint.zodRequestBody) {
         const { node } = zodToTs(endpoint.zodRequestBody(Z2), 'User');
-        console.log("\ninterface", key + "_RequestBody", printNode(node));
+        console.log("    RequestBody: ", printNode(node));
       }
       if (endpoint.zodPathParams) {
         const { node } = zodToTs(Z2.object(endpoint.zodPathParams(Z2)), 'PathParams');
-        console.log("\ninterface", key + "_PathParams", printNode(node));
+        console.log("    PathParams: ", printNode(node));
       }
       if (endpoint.zodQueryParams) {
         const { node } = zodToTs(Z2.object(endpoint.zodQueryParams(Z2)), 'QueryParams');
-        console.log("\ninterface", key + "_QueryParams", printNode(node));
+        console.log("    QueryParams: ", printNode(node));
       }
+      console.log("  }");
     });
+    console.log("}");
   }
   getEndpoints() {
     const status = new StatusManager();

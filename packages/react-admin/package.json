@@ -1,11 +1,11 @@
 {
-  "name": "react-user-mgmt2",
+  "name": "@tiddlywiki/react-admin",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "lint": "eslint",
-    "tsc": "tsc --noEmit --isolatedModules false"
+    "tsc": "tsc --noEmit"
   },
   "dependencies": {
     "@mui/icons-material": "^6.4.7",
@@ -18,6 +18,7 @@
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
+    "@tiddlywiki/mws": "file:../mws",
     "@eslint/js": "^9.21.0",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
@@ -25,9 +26,6 @@
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^15.15.0",
-    "typescript": "~5.7.2",
-    "typescript-eslint": "^8.24.1",
-    "@tiddlywiki/mws": "file:../mws",
-    "@types/tiddlywiki": "file:../tiddlywiki-types"
+    "typescript-eslint": "^8.24.1"
   }
 }

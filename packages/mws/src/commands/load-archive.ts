@@ -6,7 +6,8 @@ import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { existsSync } from "fs";
 import { v7 as uuidv7 } from "uuid";
 import { SiteConfig } from "../ServerState";
-import { BaseCommand, CommandInfo, createStrictAwaitProxy } from "@tiddlywiki/server";
+import { createStrictAwaitProxy } from "@tiddlywiki/server";
+import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
 const fsp = createStrictAwaitProxy(_fsp);
 
 export const info: CommandInfo = {

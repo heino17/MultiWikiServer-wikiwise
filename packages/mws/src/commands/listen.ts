@@ -1,15 +1,24 @@
 
+import { Listener, ListenerHTTP, ListenerHTTPS, Router } from "@tiddlywiki/server";
+import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
 import { z } from "zod";
 import { fromError } from "zod-validation-error";
-import { ListenerHTTP, ListenerHTTPS, rootRoute } from "./listeners";
-import { serverEvents } from "../ServerEvents";
-import { BaseCommand, CommandInfo } from "../commands/BaseCommand";
-import { Router } from "./router";
+import { serverEvents } from "@tiddlywiki/events";
+import { ServerRoute } from "@tiddlywiki/server";
+import { createRootRoute } from "@tiddlywiki/server";
 
 serverEvents.on("cli.register", (commands) => {
   commands.listen = { info, Command };
 });
-
+declare module "@tiddlywiki/events" {
+  interface ServerEventsMap {
+    "listen.router": [listen: BaseCommand, router: Router]
+    "listen.routes": [listen: BaseCommand, rootRoute: ServerRoute]
+    "listen.routes.fallback": [listen: BaseCommand, rootRoute: ServerRoute]
+    "listen.options": [listen: BaseCommand, listeners: Listener[]]
+    "listen.instances": [listen: BaseCommand, instances: (ListenerHTTPS | ListenerHTTP)[]]
+  }
+}
 export const info: CommandInfo = {
   name: "listen",
   description: "Listen for web requests. ",
@@ -75,6 +84,8 @@ export const info: CommandInfo = {
   }
 };
 
+export const AllowedMethods = [...["GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"] as const];
+export type AllowedMethod = (typeof AllowedMethods)[number];
 
 
 export type ListenerRaw = {
@@ -118,6 +129,8 @@ export class Command extends BaseCommand<[], {
       console.log(fromError(listenerCheck.error).toString());
       process.exit();
     }
+
+    const rootRoute = createRootRoute([], (state) => { });
 
     const router = new Router(rootRoute);
 

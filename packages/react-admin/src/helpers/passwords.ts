@@ -1,5 +1,5 @@
 
-import type { SessionManagerMap } from "../../../src/services/sessions";
+import { SessionManagerMap } from "@tiddlywiki/mws/src/services/sessions.js";
 import { serverRequest } from "./utils";
 const LOGIN_FAILED = 'Login failed. Please check your credentials.';
 

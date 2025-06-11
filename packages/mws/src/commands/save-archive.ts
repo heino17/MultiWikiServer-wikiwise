@@ -1,5 +1,5 @@
-import { BaseCommand } from "@tiddlywiki/server";
-import { CommandInfo, createStrictAwaitProxy,  } from "@tiddlywiki/server";
+import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
+import { createStrictAwaitProxy,  } from "@tiddlywiki/server";
 import { resolve } from "path";
 import * as _fsp from "fs/promises";
 const fsp = createStrictAwaitProxy(_fsp);

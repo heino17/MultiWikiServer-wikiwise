@@ -6,7 +6,7 @@ import { IncomingMessage, ServerResponse } from "node:http";
 import { Http2ServerRequest, Http2ServerResponse } from "node:http2";
 import { Listener } from "./listeners";
 import helmet from "helmet";
-import { serverEvents } from "../ServerEvents";
+import { serverEvents } from "@tiddlywiki/events";
 
 
 const debug = Debug("mws:router:matching");
@@ -74,8 +74,11 @@ export class Router {
     // return 400 rather than 404 to protect the semantic meaning of 404 NOT FOUND,
     // because if the request does not match a route, we have no way of knowing what
     // resource they thought they were requesting and whether or not it exists.
-    if (!routePath.length || routePath[routePath.length - 1]?.route.denyFinal)
+    if (!routePath.length || routePath[routePath.length - 1]?.route.denyFinal) {
+      console.log("No route found for", streamer.method, streamer.urlInfo.pathname, routePath.length);
+      routePath.forEach(e => console.log(e.route.method, e.route.path.source, e.route.denyFinal));
       return streamer.sendEmpty(400, { "x-reason": "no-route" });
+    }
 
     // A basic CSRF prevention so that basic HTML forms and AJAX requests
     // cannot be submitted unless custom headers can be sent.
@@ -180,19 +183,19 @@ export class Router {
   findRouteRecursive(
     routes: ServerRoute[],
     testPath: string,
-    method: AllowedMethod | null,
+    method: string | null,
     returnAll: boolean
   ): RouteMatch[][] {
     const results: RouteMatch[][] = [];
     for (const potentialRoute of routes) {
       // Skip if the method doesn't match.
-      if (method && !potentialRoute.method.includes(method)) continue;
+      if (method && potentialRoute.method.length && !potentialRoute.method.includes(method)) continue;
 
       // Try to match the path.
       const match = potentialRoute.path.exec(testPath);
 
       if (match) {
-        debug.extend("matching")(potentialRoute.path.source, testPath, match?.[0]);
+        debug(potentialRoute.path.source, testPath, match?.[0]);
         // The matched portion of the path.
         const matchedPortion = match[0];
         // Remove the matched portion from the testPath.
@@ -247,7 +250,7 @@ export class Router {
     //   ).flat()
     // );
     // console.log(matchedMethods);
-    return routes.find(e => e.every(f => f.route.method.includes(method))) ?? [];
+    return routes.find(e => e.every(f => !f.route.method.length || f.route.method.includes(method))) ?? [];
   }
 
 }
@@ -279,10 +282,122 @@ export const zodTransformJSON = (arg: string, ctx: z.RefinementCtx) => {
     return z.NEVER;
   }
 };
-export const AllowedMethods = [...["GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"] as const];
-export type AllowedMethod = (typeof AllowedMethods)[number];
 
 export const BodyFormats = ["stream", "string", "json", "buffer", "www-form-urlencoded", "www-form-urlencoded-urlsearchparams", "ignore"] as const;
 export type BodyFormat = (typeof BodyFormats)[number];
 
 
+
+
+export interface RouteDef {
+
+  /** 
+   * Regex to test the pathname on. It must start with `^`. If this is a child route, 
+   * it will be tested against the remaining portion of the parent route.  
+   */
+  path: RegExp;
+  pathParams?: string[];
+  /** 
+   * The uppercase method names to match this route.
+   * 
+   * If the array is empty and denyFinal is true, it will match all methods.
+   * 
+   * If the array is empty and denyFinal is false, it will throw an error.
+   */
+  method: string[];
+  /** 
+   * The highest bodyformat in the chain always takes precedent. Type-wise, only one is allowed, 
+   * but at runtime the first one found is the one used. 
+   * 
+   * Note that bodyFormat is completely ignored for GET and HEAD requests.
+   */
+  bodyFormat?: BodyFormat;
+  /** If this route is the last one matched, it will NOT be called, and a 404 will be returned. */
+  denyFinal?: boolean;
+
+  securityChecks?: {
+    /**
+     * If true, the request must have the "x-requested-with" header set to "XMLHttpRequest".
+     * This is a common way to check if the request is an AJAX request.
+     * If the header is not set, the request will be rejected with a 403 Forbidden.
+     */
+    requestedWithHeader?: boolean;
+  };
+
+
+}
+export interface ServerRoute extends RouteDef {
+
+  /**
+   * If this route's handler sends headers, the matched child route will not be called.
+   */
+  handler: (state: ServerRequest) => Promise<typeof STREAM_ENDED>
+
+  /**
+   * ### ROUTING
+   *
+   * @param route The route definition.
+   *
+   * If the parent route sends headers, or returns the STREAM_ENDED symbol, 
+   * this route will not be called.
+   *
+   * Inner routes are matched on the remaining portion of the parent route
+   * using `pathname.slice(match[0].length)`. If the parent route entirely 
+   * matches the pathname, this route will be matched on "/".
+   * 
+   * If the body format is "stream", "buffer", "ignore" or not yet defined at this level in the tree,
+   * then zod cannot be used. 
+   * 
+   * Note that GET and HEAD are always bodyFormat: "ignore", regardless of what is set here.
+   */
+  defineRoute: (
+    route: RouteDef,
+    handler: (state: ServerRequest) => Promise<symbol | void>
+  ) => ServerRoute;
+}
+
+
+const debugDefining = Debug("mws:router:defining");
+function defineRoute(
+  parent: { $o?: any; method: any; } | typeof ROOT_ROUTE,
+  route: RouteDef,
+  handler: (state: any) => any
+) {
+
+  if (route.bodyFormat && !BodyFormats.includes(route.bodyFormat))
+    throw new Error("Invalid bodyFormat: " + route.bodyFormat);
+  if (!route.method.length && !route.denyFinal)
+    throw new Error("Route must have at least one method or have denyFinal set to true");
+  if (parent !== ROOT_ROUTE && parent.method.length && !route.method.every(e => parent.method.includes(e)))
+    throw new Error("Invalid method: " + route.method);
+  if (route.path.source[0] !== "^")
+    throw new Error("Path regex must start with ^");
+
+  if (parent !== ROOT_ROUTE) {
+    // the typing is too complicated if we add childRoutes
+    if (!(parent as any).childRoutes) (parent as any).childRoutes = [];
+    (parent as any).childRoutes.push(route);
+  }
+
+  (route as ServerRoute).defineRoute = (...args: [any, any]) => defineRoute(route, ...args);
+
+  (route as ServerRoute).handler = handler;
+
+  debugDefining(route.method, route.path.source);
+
+  return route as any;
+}
+
+export const ROOT_ROUTE: unique symbol = Symbol("ROOT_ROUTE");
+
+export function createRootRoute(
+  method: string[],
+  handler: (state: ServerRequest) => void
+) {
+  console.log("Creating root route with methods", method);
+  return defineRoute(ROOT_ROUTE, {
+    method,
+    path: /^/,
+    denyFinal: true,
+  }, handler);
+}

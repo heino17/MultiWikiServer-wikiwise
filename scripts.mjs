@@ -3,24 +3,73 @@
 // postinstall: `PRISMA_CLIENT_FORCE_WASM=true prisma generate`
 
 import { spawn } from "child_process";
+import { writeFileSync } from "fs";
 const env = process.env;
+const workspaces = [
+  "packages/server",
+  "packages/mws",
+  "packages/react-admin",
+  "packages/tiddlywiki-types",
+  "plugins/client"
+];
+
 const start = (cmd, args, env2 = {}) => {
+  return startOpts(cmd, args, env2);
+}
+const startOpts = (cmd, args, env2 = {}, { cwd = process.cwd(), pipeOut } = {}) => {
   const cp = spawn(cmd, args, {
+    cwd,
     env: { ...env, ...env2, },
     shell: true,
-    stdio: "inherit",
+    stdio: ["pipe", pipeOut ? "pipe" : "inherit", "inherit"],
   });
-  return new Promise((r) => {
-    // if any process errors it will immediately exit the script
-    cp.on("exit", (code) => { if(code) process.exit(code); r(); })
-  });
+  cp.stdin.end();
+  if(pipeOut) {
+
+    return new Promise((r, c) => {
+      const chunks = [];
+      cp.stdout.on("data", (data) => {
+        chunks.push(data);
+      });
+      cp.stdout.on("end", () => {
+        r(chunks.map(e => e.toString()).join(""));
+      });
+      // if any process errors it will immediately exit the script
+      cp.on("exit", (code) => {
+        if(code) c(code);
+      });
+    });
+  } else {
+    return new Promise((r, c) => {
+      // if any process errors it will immediately exit the script
+      cp.on("exit", (code) => { if(code) c(code); else r(); })
+    });
+  }
+
+
 }
 switch(process.argv[2]) {
+  case "install":
+    // run npm install in each workspace
+    await start("npm install", []);
+    for(const ws of workspaces) {
+      console.log("================================")
+      await startOpts("npm install", [], {}, { cwd: ws });
+    }
+    break;
+  case "tsc":
+    // run tsc in each workspace
+    await start("npm run tsc", []).catch(console.log);
+    for(const ws of workspaces) {
+      console.log("================================")
+      await startOpts("npm run tsc", [], {}, { cwd: ws }).catch(console.log);
+    }
+    break;
   case "start":
     // don't wait on tsc, it's just for checking types
     // await start("npm run tsc", []);
-    await start("tsup --silent", [], { 
-      SKIPDTS: "1" 
+    await start("tsup --silent", [], {
+      SKIPDTS: "1"
     });
     await start("node --trace-uncaught mws.dev.mjs", process.argv.slice(3), {
       ENABLE_DEV_SERVER: "1",
@@ -38,6 +87,14 @@ switch(process.argv[2]) {
       PRISMA_CLIENT_FORCE_WASM: "true"
     });
     break;
+  case "client-types": {
+    // node mws.dev.mjs build-types > packages/react-admin/server-types.ts
+    const res = await startOpts("node --trace-uncaught mws.dev.mjs", ["build-types"], {}, {
+      pipeOut: true,
+    });
+    writeFileSync("packages/react-admin/src/server-types.ts", res);
+    break;
+  }
   default:
     console.log("nothing ran");
 }

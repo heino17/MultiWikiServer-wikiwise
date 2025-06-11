@@ -1,6 +1,19 @@
-import "./global";
+import "../../../prisma/global";
+import { serverEvents } from "@tiddlywiki/events";
+import "@tiddlywiki/commander";
+import "@tiddlywiki/server";
+
+import "./managers";
+import "./managers/admin-recipes";
+import "./managers/admin-users";
+import "./managers/wiki-routes";
+import "./zodAssert";
+import "./RequestState";
+import "./ServerState";
+import "./services/tw-routes";
+import "./services/cache";
 import * as opaque from "@serenity-kit/opaque";
-import { serverEvents, startup, Router, Z2 } from "@tiddlywiki/server";
+import { startup, Router, Z2, ServerRoute, BodyFormat, RouteMatch } from "@tiddlywiki/server";
 import { existsSync, writeFileSync, readFileSync, mkdirSync } from "fs";
 import * as path from "path";
 import { TW } from "tiddlywiki";
@@ -11,20 +24,24 @@ import { bootTiddlyWiki } from "./services/tiddlywiki";
 import { AuthUser, SessionManager } from "./services/sessions";
 import { commands } from "./commands";
 import { setupDevServer } from "./services/setupDevServer";
+import { runCLI } from "@tiddlywiki/commander";
 
-import "./managers";
-import "./managers/admin-recipes";
-import "./managers/admin-users";
-import "./managers/wiki-routes";
-import "./zodAssert";
-import "./RequestState";
-import "./services/tw-routes";
-import "./services/cache";
 import { prismaField } from "./zodAssert";
 import { Debug } from "@prisma/client/runtime/library";
 import { SqliteAdapter } from "./db/sqlite-adapter";
 import { PrismaClient } from "@prisma/client";
+import pkg from "../package.json";
+import { StateObject } from "./RequestState";
+import { Streamer } from "@tiddlywiki/server";
 
+export { ZodRoute } from "@tiddlywiki/server";
+export * from "./managers";
+
+export async function runMWS() {
+  await opaque.ready;
+  await startup();
+  await runCLI();
+}
 
 serverEvents.on("zod.make", (zod: Z2<any>) => {
   zod.prismaField = prismaField;
@@ -32,15 +49,22 @@ serverEvents.on("zod.make", (zod: Z2<any>) => {
 
 serverEvents.on("cli.register", commands2 => {
   Object.assign(commands2, commands);
-})
-serverEvents.on("listen.routes", async (listen, root) => {
-  await serverEvents.emitAsync("mws.routes", root, listen.config);
-})
-serverEvents.on("listen.routes.fallback", async (listen, root) => {
-  await serverEvents.emitAsync("mws.routes.fallback", root, listen.config);
+});
+
+serverEvents.on("cli.commander", (program) => {
+  program.description("Multi-User Multi-Wiki Server for TiddlyWiki.");
 })
 
-declare module "@tiddlywiki/server" {
+serverEvents.on("listen.routes", async (listen, root) => {
+  await serverEvents.emitAsync("mws.routes", root, listen.config);
+});
+
+serverEvents.on("listen.routes.fallback", async (listen, root) => {
+  await serverEvents.emitAsync("mws.routes.fallback", root, listen.config);
+});
+
+
+declare module "@tiddlywiki/events" {
   interface ServerEventsMap {
     "mws.init.before": [config: ServerState, $tw: TW];
     "mws.init.after": [config: ServerState, $tw: TW];
@@ -92,30 +116,57 @@ serverEvents.on("cli.execute.before", async (name, params, options, instance) =>
   instance.$tw = $tw;
 });
 
+
 serverEvents.on("listen.router", async (listen, router) => {
   router.config = listen.config;
   router.sendAdmin = await setupDevServer(listen.config);
 });
+
 serverEvents.on("request.streamer", async (router, streamer) => {
   streamer.user = await SessionManager.parseIncomingRequest(streamer, router.config);
 });
 
+declare module "@tiddlywiki/events" {
+  /**
+   * - "mws.router.init" event is emitted during "listen.router" after createServerRequest is set by MWS. 
+   */
+  interface ServerEventsMap {
+    "mws.router.init": [router: Router, config: ServerState];
+  }
+
+}
 declare module "@tiddlywiki/server" {
+  interface ServerRequest<
+    B extends BodyFormat = BodyFormat,
+    M extends string = string,
+    D = unknown
+  > extends StateObject<B, M, D> { }
+}
+
+serverEvents.on("listen.router", async (listen, router) => {
+  router.createServerRequest = <B extends BodyFormat>(
+    streamer: Streamer, routePath: RouteMatch[], bodyFormat: B
+  ) => {
+    return new StateObject(streamer, routePath, bodyFormat, router);
+  };
+  await serverEvents.emitAsync("mws.router.init", router, listen.config);
+});
+
+
+declare module "@tiddlywiki/commander" {
   interface BaseCommand {
     config: ServerState;
     $tw: TW;
   }
-
+}
+declare module "@tiddlywiki/server" {
   interface Router {
     config: ServerState;
     sendAdmin: ART<typeof setupDevServer>;
   }
-
   interface Streamer {
     user: AuthUser;
   }
-
-
 }
 
 function readPasswordMasterKey(wikiPath: string) {
@@ -131,7 +182,26 @@ function readPasswordMasterKey(wikiPath: string) {
   return passwordMasterKey;
 }
 
-export async function runMWS() {
-  await opaque.ready;
-  await startup();
+
+
+declare global {
+
+  /** Awaited Return Type */
+  type ART<T extends (...args: any) => any> = Awaited<ReturnType<T>>
+  type Complete<T> = { [K in keyof T]-?: T[K] }
+  interface ObjectConstructor { keys<T>(t: T): (string & keyof T)[]; }
+
 }
+declare global {
+  /** helper function which returns the arguments as an array, but typed as a tuple, which is still an array, but positional. */
+  function tuple<P extends any[]>(...arg: P): P;
+}
+(global as any).tuple = function (...args: any[]) { return args; }
+
+declare global {
+  /** Helper function which narrows the type to only truthy values */
+  function truthy<T>(obj: T): obj is Exclude<T, false | null | undefined | 0 | '' | void>
+}
+(global as any).truthy = function truthy(obj: any) { return !!obj; }
+
+

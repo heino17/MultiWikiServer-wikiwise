@@ -26,12 +26,16 @@
     "checkJs": true,
     "allowJs": true,
     "paths": {
-      "tiddlywiki": [
-        "./tiddlywiki-types"
-      ]
+      // "@tiddlywiki/server": [
+      //   "./packages/server/src"
+      // ],
     }
   },
+  "include":[
+    "prisma/global.ts",
+  ],
   "exclude": [
-    "dist"
+    "dist",
+    "packages/**/dist"
   ],
 }

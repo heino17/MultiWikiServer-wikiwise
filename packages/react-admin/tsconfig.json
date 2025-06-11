@@ -1,40 +1,32 @@
 {
   "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "target": "ES2020",
-    "useDefineForClassFields": true,
     "lib": [
       "ES2020",
       "DOM",
       "DOM.Iterable"
     ],
-    "module": "ESNext",
+    "module": "esnext",
     "skipLibCheck": true,
-    // "rootDir": ".", // useful for auditing the imports from outside the src folder
     "types": [],
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
-    "isolatedModules": true,
+    "isolatedModules": false,
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
-    "allowArbitraryExtensions": true,
     /* Linting */
     "strict": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
-    "paths": {
-      "tiddlywiki": ["../tiddlywiki-types"]
-    }
+    "allowArbitraryExtensions": true,
+    "useDefineForClassFields": true,
   },
   "include": [
     "src",
     "./types.d.ts"
   ],
-  "exclude": [
-    "src/helpers/forms-rjsf.tsx"
-  ]
 }
