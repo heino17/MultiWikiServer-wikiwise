@@ -38,8 +38,8 @@ serverEvents.on("mws.routes.fallback", (root, config) => {
   WikiRoutes.defineRoutes(root);
 })
 
-const BAG_PREFIX = "/bags";
-const RECIPE_PREFIX = "/wiki";
+const BAG_PREFIX = "/bag";
+const RECIPE_PREFIX = "/recipe";
 const WIKI_PREFIX = "/wiki";
 
 export class WikiRoutes {

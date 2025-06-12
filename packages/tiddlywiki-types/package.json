@@ -1,6 +1,5 @@
 {
   "name": "@types/tiddlywiki",
-  "scripts": {
-    "tsc": "exit 0"
-  }
+  "description": "TiddlyWiki Definitely Typed (sort of)",
+  "private": true
 }

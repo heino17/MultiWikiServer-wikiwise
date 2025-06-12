@@ -45,17 +45,7 @@ printFile("package.json", `
 printFile("mws.run.mjs", `
 #!/usr/bin/env node
 //@ts-check
-import startServer from "@tiddlywiki/mws";
-startServer({
-  passwordMasterKeyFile: "./localpass.key",
-  wikiPath: "./wiki",
-  listeners: [{
-    // key: "./localhost.key",
-    // cert: "./localhost.crt",
-    // host: "::",
-    port: 8080,
-  }],
-}).catch(console.log);
+
 `.trimStart());
 
 printFile("localhost_certs.sh", `

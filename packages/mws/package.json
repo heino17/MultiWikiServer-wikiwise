@@ -1,18 +1,10 @@
 {
   "name": "@tiddlywiki/mws",
   "description": "TiddlyWiki Multiple Wiki Server",
-  "private": false,
-  "version": "0.1.0",
+  "private": true,
   "type": "module",
   "types": "./src/index.ts",
   "module": "./src/index.ts",
-  "engines": {
-    "node": ">=18"
-  },
-  "scripts": {
-    "start": "node scripts.mjs start",
-    "tsc": "tsc -p tsconfig.json --skipLibCheck"
-  },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "6.7.0-dev.48",
     "@prisma/client": "6.6.0",

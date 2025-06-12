@@ -1,7 +1,7 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import { ITXClientDenyList } from "@prisma/client/runtime/library";
 import { TW } from "tiddlywiki";
-import pkg from "../package.json";
+import pkg from "../../../package.json";
 import { createPasswordService } from "./services/PasswordService";
 import { startupCache } from "./services/cache";
 

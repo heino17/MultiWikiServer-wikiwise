@@ -1,7 +1,6 @@
 {
   "name": "@tiddlywiki/react-admin",
   "private": true,
-  "version": "0.0.0",
   "type": "module",
   "scripts": {
     "lint": "eslint",
@@ -18,7 +17,6 @@
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
-    "@tiddlywiki/mws": "file:../mws",
     "@eslint/js": "^9.21.0",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",

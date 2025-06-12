@@ -2,8 +2,13 @@
   "name": "@tiddlywiki/mws",
   "description": "TiddlyWiki Multiple Wiki Server",
   "private": false,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
+  "repository": {
+    "url": "https://github.com/TiddlyWiki/MultiWikiServer"
+  },
+  "license": "BSD-3-Clause",
+  "author": "TiddlyWiki Community",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -11,19 +16,19 @@
     }
   },
   "workspaces": [
+    "packages/events",
+    "packages/commander",
     "packages/server",
     "packages/mws",
     "packages/react-admin",
-    "packages/tiddlywiki-types",
-    "packages/commander",
-    "packages/events"
+    "packages/tiddlywiki-types"
   ],
   "files": [
     "dist",
-    "prisma",
-    "packages/react-admin/public",
     "editions/mws-docs",
     "plugins",
+    "prisma",
+    "public",
     "scripts.mjs"
   ],
   "engines": {
@@ -32,11 +37,8 @@
   "scripts": {
     "docs": "node scripts.mjs docs",
     "start": "node scripts.mjs start",
-    "certs": "(cd runtime-config && bash localhost_certs.sh)",
+    "certs": "(cd dev && bash localhost_certs.sh)",
     "tsc": "tsc -p tsconfig.tsc.json --noEmit",
-    "tsc:all": "npm run tsc --workspaces",
-    "tsc:admin": "cd react-user-mgmt && npm run tsc",
-    "tsc:client": "cd plugins/client && npm run tsc || true",
     "build": "npm run tsc && tsup && node mws.dev.mjs --client-build",
     "install-android": "GYP_DEFINES=\"android_ndk_path=''\" npm install",
     "postinstall": "node scripts.mjs prisma:generate",

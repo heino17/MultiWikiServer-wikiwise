@@ -19,14 +19,11 @@ previous operation to complete before sending a new one.
 // the blank line is important, and so is the following use strict
 "use strict";
 
-import "@tiddlywiki/mws";
+import type { } from "@tiddlywiki/mws";
 import type { Syncer, Tiddler } from "tiddlywiki";
 import type { WikiRoutes } from "@tiddlywiki/mws/src/managers/wiki-routes.ts";
 import type { ZodRoute } from "@tiddlywiki/mws/src/index.ts";
-
-declare global {
-	const fflate: typeof import("fflate");
-}
+declare global { const fflate: typeof import("./fflate"); }
 
 declare class Logger {
 	constructor(componentName: any, options: any);

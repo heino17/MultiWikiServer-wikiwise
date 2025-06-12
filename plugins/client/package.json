@@ -3,12 +3,5 @@
   "version": "1.0.0",
   "scripts": {
     "tsc": "tsc"
-  },
-  "devDependencies": {
-    "@types/tiddlywiki": "file:../../packages/tiddlywiki-types",
-    "@tiddlywiki/mws": "file:../../packages/mws",
-    "fflate": "^0.8.2",
-    "tw5-typed": "*",
-    "typescript": "^5.8.3"
   }
 }

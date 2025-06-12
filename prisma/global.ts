@@ -25,7 +25,7 @@ declare global {
     }
   }
 }
-const uselessSymbol = Symbol.for("PrismaField");
+
 declare global {
 
 

@@ -1,5 +1,14 @@
+## user interface
 
-## Explanation of package layout
+The user experience involves three separate interfaces working together: the cli, the admin, and the wiki. 
+
+- The cli handles settings specific to the webserver, especially those which could make the site unreachable if configured incorrectly. It also has some commands to help with server maintenance. 
+- The admin manages users, roles, bags, recipes, site settings, and anything else that needs to be configured for the site. 
+- The wiki handles all tiddler and TW5-related routes. 
+
+
+
+## packages folder
 
 MWS is divided into separate packages mostly because they are logically separate concerns. The server package handles all the web request related logic, and could easily be used in something entirely unrelated. Same with the commander package. 
 
@@ -15,7 +24,13 @@ The react-admin package builds the browsers client, but it does use types from M
 
 The tiddlywiki-types package is an `@types/tiddlywiki` style package. 
 
-## Explanation of the repo files
+## plugins folder
+
+The server plugin is loaded into the TW5 instance that is used for generating the cache files, which are then used when serving wikis. `library: yes` tiddlers in the plugin are "hoisted" to normal tiddlers to make it easier to add library tiddlers when required. 
+
+The client plugin is loaded into the wiki and has the sync adapter and related tiddlers. It is loaded and cached on startup with the rest of the tiddlywiki plugins. 
+
+## overview of entire repo
 
 - dev - development related files
   - wiki - the dev wiki folder (cwd for a project)

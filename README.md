@@ -2,8 +2,8 @@
 
 ## Dev-0.1 Notes
 
-- URL rewriting (`/recipes/:recipe_name/index.html` to `/wiki/:recipe_name`)
-
+- URL rewriting
+- Security 
 
 ## Readme
 
@@ -16,12 +16,6 @@
 The best way to save your information is to open each wiki and click the cloud status icon, then click "save snapshot for offline use". 
 
 The 0.1 database is incompatible with the 0.0 database. Version 0.1 will detect this and exit immediately to prevent corruption.
-
-### Breaking changes to the archive
-
-- Specifically, if you have modified a TiddlyWiki plugin and then saved the modified plugin back to its plugin bag, this will be lost. TiddlyWiki plugins will no longer be served via plugin bags. 
-- Any other tiddlers in the plugin bags will be preserved in a new plugin bag with a temporary name, and the recipe will be updated to import the corresponding TiddlyWiki plugin according to the new system. 
-- Plugin bags will no longer be writable in recipes. Instead, plugin bags will be modified by opening them directly in a virtual recipe containing only that bag so that the contents can be modified as desired. 
 
 -----
 
@@ -90,5 +84,3 @@ If you want to work on the project,
 The development wiki will be active at http://localhost:8080/dev
 
 You can change the listeners as explained in the mws.dev.mjs file.
-
-While I'm working on the new v0.1.0 version, the repo does not contain the necessary files to create the database, since they're constantly changing, so you won't be able to run it. I'll commit those files once I publish 0.1.0.

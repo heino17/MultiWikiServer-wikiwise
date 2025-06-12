@@ -2,20 +2,9 @@
   "name": "@tiddlywiki/server",
   "description": "TiddlyWiki Web Server",
   "private": true,
-  "version": "0.1.0",
   "type": "module",
   "types": "./src/index.ts",
   "module": "./src/index.ts",
-  "files": [
-    "dist",
-    "src"
-  ],
-  "engines": {
-    "node": ">=18"
-  },
-  "scripts": {
-
-  },
   "dependencies": {
     "@types/bytes": "^3.1.5",
     "@types/compression": "^1.8.0",
