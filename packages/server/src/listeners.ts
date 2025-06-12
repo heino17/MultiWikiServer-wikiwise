@@ -4,34 +4,14 @@ import { createServer, IncomingMessage, Server, ServerResponse } from "node:http
 import { createSecureServer, Http2SecureServer, Http2ServerRequest, Http2ServerResponse } from "node:http2";
 import { Router } from "./router";
 
-
-export type ListenerRaw = {
-  [key in
-  | "port"
-  | "host"
-  | "prefix"
-  | "key"
-  | "cert"
-  | "secure"
-  | "redirect"
-  ]?: string | undefined
-};
-
-export interface Listener extends ListenerRaw {
-  prefix: string; // this is always a string
-}
-
 export class ListenerBase {
-  public options: Listener;
+
   constructor(
     public server: Http2SecureServer | Server,
     public router: Router,
     public bindInfo: string,
-    options: ListenerRaw,
+    public options: ListenOptions,
   ) {
-
-
-    this.options = options as Listener;
 
     this.server.on("request", (
       req: IncomingMessage | Http2ServerRequest,
@@ -84,8 +64,8 @@ export class ListenerBase {
 }
 
 export class ListenerHTTPS extends ListenerBase {
-  constructor(router: Router, config: ListenerRaw) {
-    const { port = process.env.PORT, host, prefix } = config;
+  constructor(router: Router, config: ListenOptions) {
+    const { port = process.env.PORT, host, prefix = "" } = config;
     const bindInfo = host ? `HTTP ${host} ${port} ${prefix}` : `HTTP ${port} ${prefix}`;
     ok(config.key && existsSync(config.key), "Key file not found at " + config.key);
     ok(config.cert && existsSync(config.cert), "Cert file not found at " + config.cert);
@@ -98,10 +78,21 @@ export class ListenerHTTPS extends ListenerBase {
 
 export class ListenerHTTP extends ListenerBase {
   /** Create an http1 server */
-  constructor(router: Router, config: ListenerRaw) {
-    const { port, host, prefix } = config;
+  constructor(router: Router, config: ListenOptions) {
+    const { port, host, prefix = "" } = config;
     const bindInfo = host ? `HTTP ${host} ${port} ${prefix}` : `HTTP ${port} ${prefix}`;
     super(createServer(), router, bindInfo, config);
   }
 }
+
+export interface ListenOptions {
+  port?: string;
+  host?: string;
+  prefix?: string;
+  key?: string;
+  cert?: string;
+  secure?: boolean;
+  redirect?: number;
+}
+
 

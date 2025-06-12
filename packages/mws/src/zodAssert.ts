@@ -1,6 +1,7 @@
 
 import { Prisma } from "@prisma/client";
-import { zod } from "@tiddlywiki/server";
+import { serverEvents } from "@tiddlywiki/events";
+import { Z2, zod } from "@tiddlywiki/server";
 
 
 type _zod = typeof zod;
@@ -67,3 +68,6 @@ export function prismaField(table: any, field: any, fieldtype: ExtraFieldType, n
 
 }
 
+serverEvents.on("zod.make", (zod: Z2<any>) => {
+  zod.prismaField = prismaField;
+});

@@ -1,24 +1,17 @@
 
-import { Listener, ListenerHTTP, ListenerHTTPS, Router } from "@tiddlywiki/server";
+import { BodyFormat, ListenerHTTP, ListenerHTTPS, Router, startListening } from "@tiddlywiki/server";
 import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
 import { z } from "zod";
 import { fromError } from "zod-validation-error";
 import { serverEvents } from "@tiddlywiki/events";
 import { ServerRoute } from "@tiddlywiki/server";
 import { createRootRoute } from "@tiddlywiki/server";
+import { ServerState } from "../ServerState";
 
 serverEvents.on("cli.register", (commands) => {
   commands.listen = { info, Command };
 });
-declare module "@tiddlywiki/events" {
-  interface ServerEventsMap {
-    "listen.router": [listen: BaseCommand, router: Router]
-    "listen.routes": [listen: BaseCommand, rootRoute: ServerRoute]
-    "listen.routes.fallback": [listen: BaseCommand, rootRoute: ServerRoute]
-    "listen.options": [listen: BaseCommand, listeners: Listener[]]
-    "listen.instances": [listen: BaseCommand, instances: (ListenerHTTPS | ListenerHTTP)[]]
-  }
-}
+
 export const info: CommandInfo = {
   name: "listen",
   description: "Listen for web requests. ",
@@ -100,6 +93,12 @@ export type ListenerRaw = {
   ]?: string | undefined
 };
 
+declare module "@tiddlywiki/events" {
+  interface ServerEventsMap {
+    "listen.router.init": [command: Command, router: Router];
+  }
+}
+
 export class Command extends BaseCommand<[], {
   listener: ListenerRaw[];
   allow_hosts: string[];
@@ -121,6 +120,8 @@ export class Command extends BaseCommand<[], {
       key: z.string().optional(),
       cert: z.string().optional(),
       secure: z.enum(["true", "false", "yes", "no"]).optional()
+        .transform(e => e === "true" || e === "yes"),
+      redirect: z.string().transform((v) => +v).refine(truthy).optional(),
     }).strict().array().safeParse(listenOptions);
 
     if (!listenerCheck.success) {
@@ -130,29 +131,12 @@ export class Command extends BaseCommand<[], {
       process.exit();
     }
 
-    const rootRoute = createRootRoute([], (state) => { });
-
+    const rootRoute = createRootRoute([], (state) => { })
     const router = new Router(rootRoute);
-
-    await serverEvents.emitAsync("listen.routes", this, rootRoute)
-    await serverEvents.emitAsync("listen.routes.fallback", this, rootRoute)
-    await serverEvents.emitAsync("listen.options", this, listenerCheck.data);
-
-    const listenInstances = listenerCheck.data.map(e => {
-
-      if (!e.key !== !e.cert) {
-        throw new Error("Both key and cert are required for HTTPS");
-      }
-
-      return e.key && e.cert
-        ? new ListenerHTTPS(router, e)
-        : new ListenerHTTP(router, e);
-
-    });
-
-    await serverEvents.emitAsync("listen.instances", this, listenInstances);
-    await serverEvents.emitAsync("listen.router", this, router);
-
+    // listeners on here setup all the request handling
+    await serverEvents.emitAsync("listen.router.init", this, router);
+    // tell the server to start listeners for this router
+    await startListening(router, listenerCheck.data);
 
   }
 }

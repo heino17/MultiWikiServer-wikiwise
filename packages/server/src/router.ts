@@ -4,7 +4,7 @@ import { Streamer } from "./streamer";
 import Debug from "debug";
 import { IncomingMessage, ServerResponse } from "node:http";
 import { Http2ServerRequest, Http2ServerResponse } from "node:http2";
-import { Listener } from "./listeners";
+import { ListenOptions } from "./listeners";
 import helmet from "helmet";
 import { serverEvents } from "@tiddlywiki/events";
 
@@ -14,7 +14,7 @@ const debug = Debug("mws:router:matching");
 export class Router {
   helmet;
   constructor(
-    private rootRoute: ServerRoute
+    public rootRoute: ServerRoute
   ) {
     //https://helmetjs.github.io/
     // we'll start with the defaults and go from there
@@ -29,9 +29,9 @@ export class Router {
   handle(
     req: IncomingMessage | Http2ServerRequest,
     res: ServerResponse | Http2ServerResponse,
-    options: Listener
+    options: ListenOptions
   ) {
-
+    // the sole purpose of this method is to catch errors
     this.handleRequest(req, res, options).catch(err2 => {
       if (err2 === STREAM_ENDED) return;
       res.writeHead(500, { "x-reason": "handle incoming request" }).end();
@@ -44,7 +44,7 @@ export class Router {
   async handleRequest(
     req: IncomingMessage | Http2ServerRequest,
     res: ServerResponse | Http2ServerResponse,
-    options: Listener
+    options: ListenOptions
   ) {
 
     await serverEvents.emitAsync("request.middleware", this, req, res, options);
@@ -56,7 +56,7 @@ export class Router {
     ));
 
     const streamer = new Streamer(
-      req, res, options.prefix,
+      req, res, options.prefix ?? "",
       !!(options.key && options.cert || options.secure)
     );
 

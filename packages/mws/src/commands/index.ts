@@ -8,6 +8,7 @@ import * as build_client from "./build-client";
 import * as build_types from "./build-types";
 import * as listen from "./listen";
 import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
+import { serverEvents } from "@tiddlywiki/events";
 
 
 export const commands = {
@@ -26,3 +27,7 @@ export const commands = {
     new(...args: ConstructorParameters<typeof BaseCommand<any, any>>): BaseCommand<any, any>
   }
 }>;
+
+serverEvents.on("cli.register", commands2 => {
+  Object.assign(commands2, commands);
+});

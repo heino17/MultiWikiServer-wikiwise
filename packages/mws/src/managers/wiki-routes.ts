@@ -34,7 +34,7 @@ export const WikiRouterKeyMap: RouterKeyMap<WikiRoutes, true> = {
 
 export type TiddlerManagerMap = RouterRouteMap<WikiRoutes>;
 
-serverEvents.on("listen.routes.fallback", (listen, root) => {
+serverEvents.on("mws.routes.fallback", (root, config) => {
   WikiRoutes.defineRoutes(root);
 })
 
