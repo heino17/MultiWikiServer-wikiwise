@@ -22,6 +22,7 @@ declare module "tiddlywiki" {
     modules: TWModules;
     passwordPrompt?: PasswordPrompt;
     sjcl: any;
+    version: string;
 
     // Node.js specific file loading functions
     loadTiddlersFromFile(filepath: string, fields?: TiddlerFields): FileInfoTiddlers;

@@ -93,13 +93,13 @@ async function importPlugins(twFolder: string, cacheFolder: string, type: string
     'core'
   ].map(e => {
     const oldPath = path.join(twFolder, e);
-    const relativePluginPath = path.join("tiddlywiki", path.relative(twFolder, oldPath));
+    const relativePluginPath = path.join("tiddlywiki", $tw.version, path.relative(twFolder, oldPath));
     return [oldPath, relativePluginPath] as const;
   });
 
   plugins.push([
     dist_resolve("../plugins/client"),
-    "tiddlywiki/plugins/mws/client"
+    "mws/client"
   ] as const);
 
 
