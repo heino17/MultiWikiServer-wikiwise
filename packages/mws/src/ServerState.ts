@@ -9,7 +9,6 @@ import { startupCache } from "./services/cache";
 export type SiteConfig = ServerState;
 
 /** Pre command server setup */
-
 const DEFAULT_CONTENT_TYPE = "application/octet-stream";
 
 export class ServerState {

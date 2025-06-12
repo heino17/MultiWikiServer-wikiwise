@@ -5,7 +5,7 @@ import * as _fsp from "fs/promises";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { existsSync } from "fs";
 import { v7 as uuidv7 } from "uuid";
-import { SiteConfig } from "../ServerState";
+import { ServerState } from "../ServerState";
 import { createStrictAwaitProxy } from "@tiddlywiki/server";
 import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
 const fsp = createStrictAwaitProxy(_fsp);
@@ -145,7 +145,7 @@ export interface Archiver2Saves {
 }
 
 class Archiver2 {
-	constructor(public config: SiteConfig) { }
+	constructor(public config: ServerState) { }
 
 	/** This generates UUIDv7 keys since version 2 used integers */
 	getNewUUIDv7(map: Map<any, string>, oldkey: any): string {

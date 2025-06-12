@@ -1,11 +1,12 @@
-
-
+//these use serverEvents
 import "./admin-recipes";
 import "./admin-users";
 import "./wiki-routes";
+
+// other imports
 import { admin } from "./admin-utils";
 import { RouterKeyMap, RouterRouteMap, ServerRoute, registerZodRoutes } from "@tiddlywiki/server";
-import { SiteConfig } from "../ServerState";
+import { ServerState } from "../ServerState";
 import { DataChecks } from "../utils";
 import { serverEvents } from "@tiddlywiki/events";
 
@@ -13,7 +14,7 @@ export * from "./admin-recipes";
 export * from "./admin-users";
 export * from "./wiki-routes";
 
-serverEvents.on("mws.routes", (root: ServerRoute, config: SiteConfig) => {
+serverEvents.on("mws.routes", (root: ServerRoute, config: ServerState) => {
   StatusManager.defineRoutes(root);
 });
 
