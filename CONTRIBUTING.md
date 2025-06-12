@@ -1,4 +1,19 @@
 
+## Explanation of package layout
+
+MWS is divided into separate packages mostly because they are logically separate concerns. The server package handles all the web request related logic, and could easily be used in something entirely unrelated. Same with the commander package. 
+
+The events package is separate so that all the other packages can use it without stepping on each other, so commander and server can each be copied into a different project and used alone without the others.
+
+The server provides the request routing, handling, validation, response, compression, and all the other web-related, request/response stuff. It is designed to be flexible and useful. 
+
+Commander is pretty simple and just parses the cli and calls the appropriate commands, which are registered using events. 
+
+MWS uses the events provided by server and commander to extend the types provided by server and commander. Most of this can be seen in the `packages/mws/src/register*.ts`files. All the database logic is in the mws package. 
+
+The react-admin package builds the browsers client, but it does use types from MWS for the server request and response types. 
+
+The tiddlywiki-types package is an `@types/tiddlywiki` style package. 
 
 ## Explanation of the repo files
 
@@ -26,3 +41,5 @@
 - tsconfig.bundle.json - an attempt at getting typescript to generate a d.ts file
 - tsconfig.tsc.json - called by `npm run tsc`, used to check for errors across the project.
 - tsup.config.ts - The build config used by `npx tsup`.
+
+
