@@ -44,10 +44,10 @@ export class ListenerBase {
       const address = this.server.address();
       console.log(`Listening on`, address, options.prefix);
     });
-    const { host = "localhost", port = "" } = options;
+    const { host = "localhost", port = process.env.PORT } = options;
     if (port === "0") {
       this.server.listen(undefined, host);
-    } else if (+port) {
+    } else if (port && +port) {
       this.server.listen(+port, host);
     } else {
       this.server.listen(8080, host);

@@ -2,8 +2,7 @@
 
 ## Dev-0.1 Notes
 
-- wiki index 304 response may have invalid headers
-- add the tiddlywiki version to the tiddler cache URLs
+
 
 ## Readme
 

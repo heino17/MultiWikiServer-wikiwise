@@ -28,11 +28,11 @@ export const info: CommandInfo = {
     // ["subdomains", "Change root paths to subdomains, (so domain.com/wiki/ becomes wiki.domain.com). "
     //   + "Listener prefix is ignored. Use allow-hosts to set valid hostnames (domain.com)"
     // ],
-    ["require-https", "The server will do everything it can to redirect HTTP to HTTPS. "
-      + "Setting this without an HTTPS endpoint to redirect to can make the site unreachable. "
-      + "The login form will refuse to login from http URLs and will attempt to redirect if possible. "
-      + "If the x-forward-proto header is available, it will be used as well. "
-    ],
+    // ["require-https", "The server will do everything it can to redirect HTTP to HTTPS. "
+    //   + "Setting this without an HTTPS endpoint to redirect to can make the site unreachable. "
+    //   + "The login form will refuse to login from http URLs and will attempt to redirect if possible. "
+    //   + "If the x-forward-proto header is available, it will be used as well. "
+    // ],
     ["listener [key=val...]", "Listen for web requests. Multiple listeners are allowed. "
       + "You may specify multiple --listener options, one for each listener you want to start in NodeJS. "
       + "All requests are funneled into one request stream. "
@@ -57,10 +57,10 @@ export const info: CommandInfo = {
       "                           a reverse proxy with SSL termination). Specifying this without",
       "                           HTTPS will definitely cause problems with login cookies.",
       "",
-      "    redirect=<number>      Redirect to an https URL at the specified port. Generally ",
-      "                           intended to redirect 80 to 443. Always specify the public port",
-      "                           not the listener port as the value here.",
-      "",
+      // "    redirect=<number>      Redirect to an https URL at the specified port. Generally ",
+      // "                           intended to redirect 80 to 443. Always specify the public port",
+      // "                           not the listener port as the value here.",
+      // "",
       "Examples: ",
       "    Listen on two reverse-proxy ports, redirecting the insecure one. ",
       "    $  mws listen \\",
