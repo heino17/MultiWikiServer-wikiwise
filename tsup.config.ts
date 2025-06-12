@@ -1,9 +1,13 @@
 import { defineConfig } from 'tsup';
+const entry = [
+  // 'packages/events/src/index.ts',
+  // 'packages/commander/src/index.ts',
+  // 'packages/server/src/index.ts',
+  'packages/mws/src/index.ts',
+
+];
 export default defineConfig({
-  entry: [
-    // 'packages/server/src/index.ts',
-    'packages/mws/src/index.ts',
-  ],
+  entry,
   tsconfig: "tsconfig.base.json",
   format: ['esm'],
   outDir: "dist",
@@ -17,7 +21,7 @@ export default defineConfig({
     "@prisma/adapter-better-sqlite3",
     "@serenity-kit/opaque",
   ],
-  dts: false,
+  // dts: { entry, },
   keepNames: true,
   sourcemap: true,
   clean: true,
@@ -32,7 +36,7 @@ export default defineConfig({
       "const require=__createRequire(import.meta.url);",
       "import 'source-map-support/register.js';",
     ].join("\n")
-  } :ctx.format === "cjs" ? {
+  } : ctx.format === "cjs" ? {
     js: [
       "require('source-map-support/register');",
     ].join("\n")
