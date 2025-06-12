@@ -2,9 +2,7 @@
 
 **This is not ready for primetime. Do not use it to protect feelings or intellectual property. Seriously. The security mechanisms required are not built yet.**
 
-----
-
-*You really shouldn't be using it to store anything important yet. It is still in the VERY early stages of development and we don't even have proper tests verifying the security mechanisms yet. So please try it out, kick the tires, import your multi-gigabyte wikis and play around with it, but don't actually store anything you want to keep. We'll hopefully get there soon, but even the database schema itself is still in flux as we figure out what the best layout is for all the stuff we have planned.*
+*So please try it out, kick the tires, import your multi-gigabyte wikis and play around with it, but don't actually store anything you want to keep. We'll hopefully get there soon, but even the database schema itself is still in flux as we figure out what the best layout is for all the stuff we have planned.*
 
 -----
 
@@ -59,6 +57,8 @@ If there are any database changes, MWS should pick them up and apply them. The c
 The 0.1 database is incompatible with the 0.0 database. Version 0.1 will detect this and exit immediately to prevent data loss.
 
 ### Development
+
+In 0.1, the data folder is `/dev/wiki`. 
 
 If you want to work on the project, 
 

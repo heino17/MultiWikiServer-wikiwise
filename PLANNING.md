@@ -26,3 +26,7 @@ Internal notes by core developers
 - Forbidden characters in recipe and bag names
 - All the settings
 - 
+
+## Wiki
+
+- Storing large binary tiddlers on the file system
