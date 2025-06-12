@@ -1,4 +1,32 @@
-## user interface
+# MWS Server Architecture Explained
+
+The MWS server architecture follows a clean separation of concerns with three distinct layers:
+
+## 1. Interface Layers
+- **CLI Commands**: Command-line interface for server configuration and maintenance tasks
+- **Web Routes**: HTTP endpoints that handle incoming requests for admin and wiki functionality
+- **Database**: Application logic that reads from and writes to the database. 
+
+## 2. Data Flow
+The architecture follows this pattern:
+1. **Request Reception**: Commands or HTTP requests arrive at their respective interface
+2. **Data Normalization**: Input is validated and transformed into a consistent format
+3. **Core Logic Execution**: Normalized data is passed to the appropriate methods in the database layer.
+4. **Response Delivery**: Results from the database layer are returned to the client
+
+## 3. Package Organization
+- **Commander Package**: Handles CLI parsing and command execution
+- **Server Package**: Manages web request routing, validation, and responses
+- **MWS Package**: Contains the database logic and business rules
+- **Events Package**: Provides communication between the other packages
+
+## 4. Independence and Reusability
+Each layer has clear boundaries and responsibilities, allowing the components to be:
+- Developed together but maintained separately
+- Reused in different contexts
+- Published as independent packages
+
+## User Interface
 
 The user experience involves three separate interfaces working together: the cli, the admin, and the wiki. 
 
@@ -6,55 +34,42 @@ The user experience involves three separate interfaces working together: the cli
 - The admin manages users, roles, bags, recipes, site settings, and anything else that needs to be configured for the site. 
 - The wiki handles all tiddler and TW5-related routes. 
 
+## Package Details
 
+MWS is divided into separate packages mostly because they are logically separate concerns:
 
-## packages folder
+- **Server Package**: Provides request routing, handling, validation, response, compression, and all web-related request/response functionality. Designed to be flexible and reusable.
+- **Commander Package**: Handles CLI parsing and command execution through registered events.
+- **Events Package**: Provides communication between packages, allowing commander and server to be used independently.
+- **MWS Package**: Contains database logic and extends server/commander types. Most logic can be found in `packages/mws/src/register*.ts`.
+- **React-Admin Package**: Builds the browser client, using MWS types for server requests/responses.
+- **TiddlyWiki-Types Package**: Provides TypeScript definitions for TiddlyWiki.
 
-MWS is divided into separate packages mostly because they are logically separate concerns. The server package handles all the web request related logic, and could easily be used in something entirely unrelated. Same with the commander package. 
+## Plugins Architecture
 
-The events package is separate so that all the other packages can use it without stepping on each other, so commander and server can each be copied into a different project and used alone without the others.
+- **Server Plugin**: Loaded into TW5 instance for cache file generation. Library tiddlers with `library: yes` are "hoisted".
+- **Client Plugin**: Contains sync adapter and related tiddlers, loaded and cached on startup.
 
-The server provides the request routing, handling, validation, response, compression, and all the other web-related, request/response stuff. It is designed to be flexible and useful. 
+## Repository Structure
 
-Commander is pretty simple and just parses the cli and calls the appropriate commands, which are registered using events. 
+- **dev/**
+  - Development-related files
+  - Contains dev wiki folder and SSL certificate generation scripts
+- **dist/**
+  - Build folder for server code
+- **editions/**
+  - Contains MWS site tiddlers in mws-docs
+- **packages/**
+  - Core MWS code modules
+- **plugins/**
+  - Client and server TiddlyWiki plugins
+- **prisma/**
+  - Database schema and migration files
+- **Root Files**
+  - mws.dev.mjs: Development binary
+  - scripts.mjs: Cross-platform operation scripts
+  - tsconfig files: TypeScript configuration
+  - tsup.config.ts: Build configuration
 
-MWS uses the events provided by server and commander to extend the types provided by server and commander. Most of this can be seen in the `packages/mws/src/register*.ts`files. All the database logic is in the mws package. 
-
-The react-admin package builds the browsers client, but it does use types from MWS for the server request and response types. 
-
-The tiddlywiki-types package is an `@types/tiddlywiki` style package. 
-
-## plugins folder
-
-The server plugin is loaded into the TW5 instance that is used for generating the cache files, which are then used when serving wikis. `library: yes` tiddlers in the plugin are "hoisted" to normal tiddlers to make it easier to add library tiddlers when required. 
-
-The client plugin is loaded into the wiki and has the sync adapter and related tiddlers. It is loaded and cached on startup with the rest of the tiddlywiki plugins. 
-
-## overview of entire repo
-
-- dev - development related files
-  - wiki - the dev wiki folder (cwd for a project)
-  - localhost_certs.sh - a script to generate a quick localhost SSL key and cert for use during development. Note that using an invalid HTTPS certificate usually disables a browser's cache, which typically doesn't matter during development anyway unless you're testing caching behavior. There are workarounds, but they're not recommended. 
-- dist - the build folder for the server code
-- editions - TiddlyWiki5 editions-like folder
-  - mws-docs - The mws site tiddlers. 
-- packages - The MWS code split into logical units to aid development.
-  - events - The server event bus which the other code ties into.
-  - commander - The cli parser and command runner.
-  - server - The web server: request routing and validation. 
-  - tiddlywiki-types - contains some basic TW5 types.
-  - mws - The MWS routes and database logic. 
-  - react-admin - The React client UI
-- plugins
-  - client - The sync adapter and other client-side tiddlers.
-  - server - Added to the TiddlyWiki5 instance on the server used during startup for caching plugins and rendering the wiki page. 
-- prisma - database schema and migration files.
-- prisma-2025-04-06 - the prisma files for version 0.0
-- mws.dev.mjs - The dev "bin" file. 
-- scripts.mjs - Called from package.json to improve cross-platform operation.
-- tsconfig.base.json - The base ts config for the project.
-- tsconfig.bundle.json - an attempt at getting typescript to generate a d.ts file
-- tsconfig.tsc.json - called by `npm run tsc`, used to check for errors across the project.
-- tsup.config.ts - The build config used by `npx tsup`.
-
+This architecture promotes code maintainability, testability, and separation of concerns while providing flexibility as the API matures.
 

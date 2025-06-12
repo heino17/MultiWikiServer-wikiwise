@@ -1,3 +1,4 @@
+Internal notes by core developers
 
 ## Prisma
 
@@ -10,6 +11,7 @@
 - All the headers 
 - CORS
 
+
 ## CLI
 
 - Save and load archive (for backup purposes)
@@ -17,3 +19,10 @@
 - Import wiki folder to recipe or bag (tw boot node).
 - Support includeWikis
 - Automated export.
+
+## Admin
+
+- Some kind of URL mapping menu
+- Forbidden characters in recipe and bag names
+- All the settings
+- 
