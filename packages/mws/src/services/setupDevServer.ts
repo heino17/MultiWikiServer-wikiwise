@@ -22,7 +22,7 @@ class ExtString {
 }
 
 const rootdir = dist_resolve('../packages/react-admin');
-const publicdir = resolve(rootdir, "public");
+const publicdir = dist_resolve('../public/react-admin');
 
 export async function setupDevServer(
   config: ServerState,

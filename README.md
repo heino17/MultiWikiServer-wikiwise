@@ -2,6 +2,7 @@
 
 ## Dev-0.1 Notes
 
+- URL rewriting (`/recipes/:recipe_name/index.html` to `/wiki/:recipe_name`)
 
 
 ## Readme
