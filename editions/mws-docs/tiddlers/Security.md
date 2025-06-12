@@ -7,11 +7,15 @@ The primary use cases for MWS are
 - Classroom scenarios
 - Unrestricted trusted collaboration
 
+## Still in Development
+
+While these are the goals of MWS, it is still in early development, so none of these security restraints have actually been put in place yet. This is a work in progress, and the direction we're headed. 
+
 ## Potential weaknesses
 
 - **Not using HTTPS**
 - **Oracles** that leak information through observable side-effects, such as network traffic, without directly revealing the contents. 
-- **Multi-user**: Users with write access can modify bags to gain access to tiddlers other tiddlers in a recipe that are supposed to be private. 
+- **Multi-user**: Users with write access can modify bags to gain access to other tiddlers in a different recipe that are supposed to be private. 
 
 ## Don't add untrusted bags to your recipe. 
 
@@ -38,7 +42,6 @@ I just needed some place to list all the different things we could do to secure 
 
 - Secure, HttpOnly, SameSite=strict, attributes
 - Setting separate session cookies for the admin and wiki paths doesn't work because it's based on the request path, not the page path.
-- Using separate subdomains for admin and wiki paths is also an option. 
 - Having a separate login subdomain and using oauth is a more complicated option.
 
 ### `no-cors`
@@ -53,7 +56,7 @@ I just needed some place to list all the different things we could do to secure 
 
 ### `Referer` header
 
-- Only allow a wiki to access its own recipe endpoints. 
+- Only allow a wiki to access its own recipe endpoints for extra tight security. It is difficult to predict when a specific request might be malicious if tools are allowed to make requests from one recipe to another on a user's behalf. Specific referer headers could be white-listed as approved tool wikis. 
 - Don't allow wiki pages to access admin APIs.
 
 ### `Content-Security-Policy` header
@@ -62,5 +65,5 @@ I just needed some place to list all the different things we could do to secure 
 
 ### Other site configuration
 
-- Don't allow admins to edit a wiki unless they are added to the ACL. This prevents JavaScript from taking advantage of a site admin's credentials when randomly browsing, and also prevents the admins themselves from making unintentional changes to a wiki. The CSP header could be used to disable all network requests if the admin role does not have read permission. 
-- If compression is used, do not compress two bags in the same compression stream. 
+- Don't allow admins to edit a wiki unless they are added to the ACL. The CSP header could be used to disable all network requests if the admin role does not have read permission, thus giving them true read-only access to the wiki. 
+- If compression is used, do not compress two bags in the same compression stream. This is a fairly extreme precaution with a limited likelihood. 

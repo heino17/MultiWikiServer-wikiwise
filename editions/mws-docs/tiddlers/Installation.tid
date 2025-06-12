@@ -1,5 +1,5 @@
 created: 20241105133737778
-modified: 20250428144159846
+modified: 20250612223020213
 tags: TableOfContents
 title: Installation
 type: text/vnd.tiddlywiki
@@ -30,4 +30,4 @@ It is optionally recommended to save a history of your project configuration usi
 * On Windows you can use [[GitHub Desktop|https://github.com/apps/desktop]]. 
 * On Linux, git is usually preinstalled or available via the default package manager for your distro. 
 
-If you decide to do this, you should move the wiki folder out of the project folder, and change the `wikiPath` setting accordingly. 
+You probably want to add the `store` and `cache` folders to `.gitignore`. 

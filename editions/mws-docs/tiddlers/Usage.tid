@@ -1,5 +1,5 @@
 created: 20241105133737778
-modified: 20250428144341860
+modified: 20250612223124466
 tags: TableOfContents
 title: Usage
 type: text/vnd.tiddlywiki
@@ -11,4 +11,4 @@ On first start, a default user is created with username `admin` and password `12
 If you intend to make an MWS installation available on the Internet, the server should first be secured with the following steps:
 
 * Change the administrator password
-* Install HTTPS server certificates.
+* Install HTTPS server certificates from an online certificate service like [[Let's Encrypt|https://letsencrypt.org/]].
