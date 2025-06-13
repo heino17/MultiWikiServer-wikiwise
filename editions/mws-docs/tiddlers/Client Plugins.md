@@ -1,6 +1,6 @@
 [[Client Plugins]] are normal [[TiddlyWiki]] plugins. They are cached on the server and served directly to the client as needed. [[Server Plugins]], perhaps acting as third-party plugin libraries, may register additional [[Client Plugins]] and either add them to the cache immediately (if it's some small built-in plugin) or only when a recipe requires them (like a plugin library would). 
 
-On startup, all server plugins are called to generate their client plugins. The client plugins are saved in `cache/${path}/plugin.json`, using a relative path of the plugin's choosing. The same thing happens when a recipe's list of plugins changes. Plugins do not have to be generated fresh each time if the server plugin has a way of verifying that all of its client plugins are up to date on the file system, perhaps by reading and hashing them. 
+On startup, all server plugins are called to generate their client plugins. The client plugins are saved in `cache/${path}/plugin.*`, using a relative path of the plugin's choosing. The same thing happens when a recipe's list of plugins changes.
 
 The wiki index file itself is also rendered with an empty store and saved at `cache/tiddlywiki5.html`.
 

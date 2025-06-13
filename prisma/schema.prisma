@@ -109,21 +109,10 @@ model Fields {
   @@map("fields")
 }
 
-model Groups {
-  group_id    Int     @id @default(autoincrement())
-  group_name  String  @unique()
-  description String?
-  roles       Roles[]
-  users       Users[]
-
-  @@map("groups")
-}
-
 model Roles {
   role_id     String   @id @default(uuid(7))
   role_name   String   @unique()
   description String?
-  groups      Groups[]
   users       Users[]
 
   @@map("roles")
@@ -137,7 +126,6 @@ model Users {
   created_at DateTime   @default(now())
   last_login DateTime?
   sessions   Sessions[]
-  groups     Groups[]
   roles      Roles[]
 
   @@map("users")

@@ -10,6 +10,3 @@
 - Verify that all admin permissions are based on the admin role, not the first user.
 - Verify that admin's cannot remove the admin role from themselves. 
 
-## Recipes
-
-- 

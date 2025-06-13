@@ -193,7 +193,7 @@ type: text/css
   /* --------------------------------------------------------------------- */
   --code-background: var(--color-grey-100);
   --code-border: var(--color-grey-300);
-  --code-foreground: var(--color-error);
+  --code-foreground: var(--foreground);
   --pre-background: var(--code-background);
   --pre-border: var(--code-border);
 
