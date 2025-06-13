@@ -4,7 +4,7 @@
 
 import { spawn } from "child_process";
 import { writeFileSync } from "fs";
-const env = process.env;
+
 const workspaces = [
   "packages/server",
   "packages/mws",
@@ -13,48 +13,13 @@ const workspaces = [
   "plugins/client"
 ];
 
-const start = (cmd, args, env2 = {}) => {
-  return startOpts(cmd, args, env2);
-}
-const startOpts = (cmd, args, env2 = {}, { cwd = process.cwd(), pipeOut } = {}) => {
-  const cp = spawn(cmd, args, {
-    cwd,
-    env: { ...env, ...env2, },
-    shell: true,
-    stdio: ["pipe", pipeOut ? "pipe" : "inherit", "inherit"],
-  });
-  cp.stdin.end();
-  if(pipeOut) {
-
-    return new Promise((r, c) => {
-      const chunks = [];
-      cp.stdout.on("data", (data) => {
-        chunks.push(data);
-      });
-      cp.stdout.on("end", () => {
-        r(chunks.map(e => e.toString()).join(""));
-      });
-      // if any process errors it will immediately exit the script
-      cp.on("exit", (code) => {
-        if(code) c(code);
-      });
-    });
-  } else {
-    return new Promise((r, c) => {
-      // if any process errors it will immediately exit the script
-      cp.on("exit", (code) => { if(code) c(code); else r(); })
-    });
-  }
-
-
-}
 switch(process.argv[2]) {
   case "install":
     // run npm install in each workspace
     await start("npm install", []);
     for(const ws of workspaces) {
       console.log("================================")
-      await startOpts("npm install", [], {}, { cwd: ws });
+      await start("npm install", [], {}, { cwd: ws });
     }
     break;
   case "tsc":
@@ -62,7 +27,7 @@ switch(process.argv[2]) {
     await start("npm run tsc", []).catch(console.log);
     for(const ws of workspaces) {
       console.log("================================")
-      await startOpts("npm run tsc", [], {}, { cwd: ws }).catch(console.log);
+      await start("npm run tsc", [], {}, { cwd: ws }).catch(console.log);
     }
     break;
   case "start":
@@ -88,14 +53,50 @@ switch(process.argv[2]) {
     });
     break;
   case "client-types": {
-    // node mws.dev.mjs build-types > packages/react-admin/server-types.ts
-    const res = await startOpts("node --trace-uncaught mws.dev.mjs", ["build-types"], {}, {
+    const res = await start("node --trace-uncaught mws.dev.mjs", ["build-types"], {}, {
       pipeOut: true,
     });
     writeFileSync("packages/react-admin/src/server-types.ts", res);
+    break;
+  }
+  case "build:types": {
+    await start("npx tsc -p tsconfig.types.json", []);
     break;
   }
   default:
     console.log("nothing ran");
 }
 
+
+function start(cmd, args, env2 = {}, { cwd = process.cwd(), pipeOut } = {}) {
+  const cp = spawn(cmd, args, {
+    cwd,
+    env: { ...process.env, ...env2, },
+    shell: true,
+    stdio: ["pipe", pipeOut ? "pipe" : "inherit", "inherit"],
+  });
+  cp.stdin.end();
+  if(pipeOut) {
+
+    return new Promise((r, c) => {
+      const chunks = [];
+      cp.stdout.on("data", (data) => {
+        chunks.push(data);
+      });
+      cp.stdout.on("end", () => {
+        r(chunks.map(e => e.toString()).join(""));
+      });
+      // if any process errors it will immediately exit the script
+      cp.on("exit", (code) => {
+        if(code) c(code);
+      });
+    });
+  } else {
+    return new Promise((r, c) => {
+      // if any process errors it will immediately exit the script
+      cp.on("exit", (code) => { if(code) c(code); else r(); });
+    });
+  }
+
+
+}

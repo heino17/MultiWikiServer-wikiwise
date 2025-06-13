@@ -1,8 +1,4 @@
-import * as path from "path";
-import * as fs from "fs";
 import type { Prisma } from "@prisma/client";
-
-
 
 declare global {
   namespace PrismaJson {
@@ -54,13 +50,4 @@ declare global {
 
   type PrismaPayloadScalars<T extends Prisma.ModelName>
     = Prisma.TypeMap["model"][T]["payload"]["scalars"]
-
-  type EntityName<T extends EntityType> =
-    T extends "bag" ? PrismaField<"Bags", "bag_name"> :
-    T extends "recipe" ? PrismaField<"Recipes", "recipe_name"> :
-    never;
-
-  type EntityType = "recipe" | "bag";
-
-  type ACLPermissionName = "READ" | "WRITE" | "ADMIN";
 }

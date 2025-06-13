@@ -46,6 +46,13 @@ serverEvents.on("cli.execute.before", async (name, params, options, instance) =>
   mkdirSync(storePath, { recursive: true });
   const databasePath = path.resolve(storePath, "database.sqlite");
 
+  writeFileSync(path.join(storePath, "KEEP_ALL_THESE_FILES.txt"), [
+    "It is incredibly important that you do not delete any files ",
+    "in the store folder, as they are all part of the sqlite database. ",
+    "If you delete any of them, you will definitely lose data. ",
+    "They are not temporary files, they are part of the database.",
+  ].join("\n"));
+
   const adapter = new SqliteAdapter(databasePath, !!process.env.ENABLE_DEV_SERVER);
   serverEvents.emitAsync("mws.adapter.init.before", adapter);
   await adapter.init();

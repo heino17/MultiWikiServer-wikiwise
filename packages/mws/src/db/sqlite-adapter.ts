@@ -2,8 +2,9 @@ import { PrismaBetterSQLite3 } from "@prisma/adapter-better-sqlite3";
 import { SqlDriverAdapter, SqlMigrationAwareDriverAdapterFactory } from "@prisma/driver-adapter-utils";
 import { readdir, readFile } from "fs/promises";
 import { createHash, randomUUID } from "crypto";
-import { existsSync } from "fs";
+import { existsSync, writeFileSync } from "fs";
 import { dist_resolve } from "@tiddlywiki/server";
+import { dirname } from "path";
 
 const INIT_0_0 = "20250406213424_init";
 const INIT_0_1 = "20250606001949_init";

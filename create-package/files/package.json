@@ -1,0 +1,10 @@
+{
+  "name": "mws-wiki-instance",
+  "private": true,
+  "bin": {
+    "mws": "./mws.run.mjs"
+  },
+  "scripts": {
+    "start": "node mws.run.mjs"
+  }
+}

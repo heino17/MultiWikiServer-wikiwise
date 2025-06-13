@@ -3,6 +3,9 @@
   "description": "TiddlyWiki Multiple Wiki Server",
   "private": false,
   "version": "0.1.0",
+  "bin": {
+    "mws": "./mws.run.mjs"
+  },
   "type": "module",
   "repository": {
     "url": "https://github.com/TiddlyWiki/MultiWikiServer"
@@ -29,7 +32,8 @@
     "plugins",
     "prisma",
     "public",
-    "scripts.mjs"
+    "scripts.mjs",
+    "mws.run.mjs"
   ],
   "engines": {
     "node": ">=18"
@@ -39,7 +43,8 @@
     "start": "node scripts.mjs start",
     "certs": "(cd dev && bash localhost_certs.sh)",
     "tsc": "tsc -p tsconfig.tsc.json --noEmit",
-    "build": "npm run tsc && tsup && node mws.dev.mjs --client-build",
+    "build": "npm run tsc && tsup && npm run build:admin",
+    "build:admin": "node scripts.mjs client-build",
     "install-android": "GYP_DEFINES=\"android_ndk_path=''\" npm install",
     "postinstall": "node scripts.mjs prisma:generate",
     "env": "env",
@@ -49,10 +54,21 @@
     "prepublishOnly": "npm run build",
     "prisma:migrate": "DATABASE_URL=file:test.sqlite npx prisma migrate dev"
   },
-  "dependencies": {},
+  "dependencies": {
+    "source-map-support": "^0.5.21",
+    "@prisma/adapter-better-sqlite3": "6.7.0-dev.48",
+    "@prisma/client": "6.6.0",
+    "@serenity-kit/opaque": "^0.8.4",
+    "prisma": "6.6.0",
+    "prisma-json-types-generator": "~3.3.1",
+    "tiddlywiki": "^5.1.22"
+  },
   "devDependencies": {
     "@types/node": "^24.0.0",
     "tsup": "^8.5.0",
     "typescript": "^5.8.3"
+  },
+  "peerDependencies": {
+    "tiddlywiki": "^5.1.22"
   }
 }

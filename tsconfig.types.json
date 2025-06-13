@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "module": "es2020",
+    "moduleResolution": "bundler",
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    // emit the declarations as a single file
+    "outFile": "./dist/types",
+    // this just catches mistakes
+    "outDir": "./dist/types",
+  },
+  "files": [
+    // we have to list all of them, paths would probably also work
+    "./packages/mws/src/index.ts",
+    "./packages/server/src/index.ts",
+    "./packages/commander/src/index.ts",
+    "./packages/events/src/index.ts",
+    "./packages/tiddlywiki-types/index.d.ts",
+  ],
+  "exclude": [
+    "dist",
+  ]
+}

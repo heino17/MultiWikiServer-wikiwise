@@ -5,6 +5,7 @@
   "files":[
     "create.js",
     "package.json",
-    "README.md"
+    "README.md",
+    "files"
   ]
 }

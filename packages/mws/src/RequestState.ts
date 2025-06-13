@@ -214,3 +214,4 @@ export class StateObject<
 
 }
 
+export type ACLPermissionName = "READ" | "WRITE" | "ADMIN";

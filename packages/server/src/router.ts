@@ -394,7 +394,6 @@ export function createRootRoute(
   method: string[],
   handler: (state: ServerRequest) => void
 ) {
-  console.log("Creating root route with methods", method);
   return defineRoute(ROOT_ROUTE, {
     method,
     path: /^/,

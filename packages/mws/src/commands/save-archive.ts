@@ -46,10 +46,7 @@ export class Command extends BaseCommand {
 		}));
 	}
 	async getUsers() {
-		return await this.prisma!.users.findMany({ include: { roles: true, sessions: true, groups: true } });
-	}
-	async getGroups() {
-		return await this.prisma!.groups.findMany({ include: { roles: true } });
+		return await this.prisma!.users.findMany({ include: { roles: true, sessions: true } });
 	}
 	async getRoles() {
 		return await this.prisma!.roles.findMany({});
@@ -77,8 +74,6 @@ export class Command extends BaseCommand {
 		}));
 		const users = await this.getUsers();
 		await fsp.writeFile(resolve(this.archivePath, "users.json"), JSON.stringify(users, null, "\t"));
-		const groups = await this.getGroups();
-		await fsp.writeFile(resolve(this.archivePath, "groups.json"), JSON.stringify(groups, null, "\t"));
 		const roles = await this.getRoles();
 		await fsp.writeFile(resolve(this.archivePath, "roles.json"), JSON.stringify(roles, null, "\t"));
 

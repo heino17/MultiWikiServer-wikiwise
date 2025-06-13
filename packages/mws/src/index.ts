@@ -24,7 +24,27 @@ import { runCLI } from "@tiddlywiki/commander";
 export { ZodRoute } from "@tiddlywiki/server";
 export * from "./managers";
 
-export async function runMWS() {
+export default async function runMWS(oldOptions: any) {
+  // detect version 0.0 and exit
+  if (oldOptions && oldOptions.passwordMasterKeyFile) {
+    console.log([
+      "=======================================================================================",
+      "The wiki you are trying to open was created in a previous version of MWS.",
+      "To return to a usable version of this wiki, you may run ",
+      "",
+      "npm install @tiddlywiki/mws@0.0",
+      "",
+      "Please export any wikis you want to keep by opening them and downloading them as single-file",
+      "wikis by clicking on the cloud status icon and then 'save snapshot for offline use'.",
+      "",
+      "If you have custom options set up, we have moved to CLI commands instead of options.",
+      "You can run `npx mws help` to see the available commands and `npx mws help listen` to ",
+      "see the available options for the listen command. The password master key file is now",
+      "stored in this folder as `passwords.key`.",
+      "=======================================================================================",
+    ].join("\n"));
+    process.exit(1);
+  }
   await opaque.ready;
   await startup();
   await runCLI();

@@ -1,13 +1,14 @@
+import { spawn } from 'child_process';
+import { writeFileSync } from 'fs';
 import { defineConfig } from 'tsup';
-const entry = [
-  // 'packages/events/src/index.ts',
-  // 'packages/commander/src/index.ts',
-  // 'packages/server/src/index.ts',
-  'packages/mws/src/index.ts',
 
-];
 export default defineConfig({
-  entry,
+  entry: {
+    // events: 'packages/events/src/index.ts',
+    // commander: 'packages/commander/src/index.ts',
+    // server: 'packages/server/src/index.ts',
+    mws: 'packages/mws/src/index.ts',
+  },
   tsconfig: "tsconfig.base.json",
   format: ['esm'],
   outDir: "dist",
@@ -21,7 +22,7 @@ export default defineConfig({
     "@prisma/adapter-better-sqlite3",
     "@serenity-kit/opaque",
   ],
-  // dts: { entry, },
+  dts: false,
   keepNames: true,
   sourcemap: true,
   clean: true,
@@ -48,4 +49,29 @@ export default defineConfig({
       "build",
     ]
   },
+  async onSuccess() {
+    const tag = "TSC ⚡️ done";
+    console.time(tag);
+    writeFileSync("dist/mws.d.ts", [
+      "import './types.d.ts';",
+      "export * from 'packages/mws/src/index';",
+    ].join("\n"));
+    console.log("TSC dist/mws.d.ts");
+    await start("node scripts.mjs build:types", []);
+    console.log("TSC dist/types.d.ts");
+    console.timeEnd(tag);
+  },
 });
+
+function start(cmd, args, env2 = {}, { cwd = process.cwd() } = {}) {
+  const cp = spawn(cmd, args, {
+    cwd,
+    env: { ...process.env, ...env2, },
+    shell: true,
+    stdio: ["inherit", "inherit", "inherit"],
+  });
+  return new Promise<void>((r, c) => {
+    // if any process errors it will immediately exit the script
+    cp.on("exit", (code) => { if (code) c(code); else r(); });
+  });
+}
