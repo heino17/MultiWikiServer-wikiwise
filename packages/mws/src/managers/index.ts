@@ -7,7 +7,6 @@ import "./wiki-routes";
 import { admin } from "./admin-utils";
 import { RouterKeyMap, RouterRouteMap, ServerRoute, registerZodRoutes } from "@tiddlywiki/server";
 import { ServerState } from "../ServerState";
-import { DataChecks } from "../utils";
 import { serverEvents } from "@tiddlywiki/events";
 
 export * from "./admin-recipes";
@@ -43,10 +42,9 @@ export class StatusManager {
     registerZodRoutes(root, new StatusManager(), Object.keys(StatusKeyMap));
   }
 
-  checks: DataChecks;
 
   constructor() {
-    this.checks = new DataChecks()
+
   }
 
   index_json = admin(z => z.undefined(), async (state, prisma) => {

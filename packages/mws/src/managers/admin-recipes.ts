@@ -1,7 +1,5 @@
 import { registerZodRoutes, RouterKeyMap, RouterRouteMap, ServerRequest, ServerRoute } from "@tiddlywiki/server";
 import { admin } from "./admin-utils";
-import { ServerState } from "../ServerState";
-import { DataChecks } from "../utils";
 import { serverEvents } from "@tiddlywiki/events";
 
 
@@ -31,10 +29,10 @@ export class RecipeManager {
     registerZodRoutes(root, new RecipeManager(), Object.keys(RecipeKeyMap));
   }
 
-  checks: DataChecks;
+  // checks: DataChecks;
 
   constructor() {
-    this.checks = new DataChecks()
+    // this.checks = new DataChecks()
   }
 
 
