@@ -20,6 +20,9 @@ enum Permission {
   ADMIN
 }
 
+// The `packages/mws/src/managers/` folder is the primary place this schema is used. 
+// SQLite initialization is done in `packages/mws/src/db/sqlite-adapter.ts`.
+
 model Recipes {
   recipe_id             String        @id @default(uuid(7))
   recipe_name           String        @unique
