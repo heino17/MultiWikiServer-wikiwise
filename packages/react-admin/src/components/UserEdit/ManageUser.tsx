@@ -91,7 +91,7 @@ const ManageUser = DataLoader(async (props: { userID: string }) => {
   const userIsAdmin = indexJson.isAdmin;
   const theme = useTheme();
 
-  const userInitials = user.username?.[0].toUpperCase();
+  const userInitials = user.username?.[0]?.toUpperCase();
 
   return (
     <>

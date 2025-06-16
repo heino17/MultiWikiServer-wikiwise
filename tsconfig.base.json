@@ -20,8 +20,10 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "forceConsistentCasingInFileNames": true,
+    "allowImportingTsExtensions": true,
     "checkJs": true,
     "allowJs": true,
+    "jsx": "preserve",
     "paths": {
       // "@tiddlywiki/server": [
       //   "./packages/server/src"
@@ -30,6 +32,7 @@
   },
   "include":[
     "prisma/global.ts",
+    "packages/**/src",
   ],
   "exclude": [
     "dist",

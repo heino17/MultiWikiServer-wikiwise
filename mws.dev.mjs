@@ -1,7 +1,6 @@
-//@ts-check
+
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
-//@ts-ignore
-import { runMWS } from "./dist/index.js";
+import runMWS from "./dist/mws.js";
 import { resolve } from "node:path";
 /** * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
  * For development, it is usually preferred to have a custom configuration that 

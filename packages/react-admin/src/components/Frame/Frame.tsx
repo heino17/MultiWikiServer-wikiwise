@@ -118,13 +118,13 @@ export function PageRoot() {
     [/^\/admin\/bags$/, () => <Bags />, "Bags"],
     [/^\/admin\/client-plugins$/, () => <ClientPlugins />, "Plugins"],
     [/^\/admin\/users\/?$/, () => <UserManagement />, "User Management"],
-    [/^\/admin\/users\/(.*)$/, ([, user_id]) => <ManageUser userID={user_id} />, "Manage User"],
+    [/^\/admin\/users\/(.*)$/, ([, user_id]) => <ManageUser userID={user_id!} />, "Manage User"],
     [/^\/admin\/roles$/, () => <UsersScreen />, "Roles"],
   ];
   const route = location.pathname.slice(pathPrefix.length);
   const matches = pages.map(([re]) => re.exec(route));
   const index = matches.findIndex(m => m !== null);
-  const page = index > -1 && pages[index][1](matches[index]!) || null;
+  const page = index > -1 && pages[index]![1](matches[index]!) || null;
   const navigateTo = (path: string) => {
     window.location.href = pathPrefix + path;
   };

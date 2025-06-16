@@ -56,6 +56,8 @@ export function OwnerSelection({ isCreate, control, helperText, type }: {
     {helperText && <FormHelperText>{helperText}</FormHelperText>}
   </>);
 
+  return null;
+
 }
 
 
