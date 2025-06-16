@@ -2,86 +2,244 @@
 
 ## Overview
 
-MWS provides a comprehensive REST API for managing users, wikis, content, and administrative functions. All APIs use JSON for data exchange and follow RESTful principles.
+MWS provides multiple API layers for different use cases:
 
-## Base URL
+1. **Admin API** - Administrative functions via `/admin/{command}` endpoints
+2. **Session API** - Authentication and session management
+3. **Wiki API** - TiddlyWiki-compatible content API for recipes and bags
+4. **Status API** - System status and configuration
 
-- Development: `http://localhost:8080/api`
-- Production: `https://your-domain.com/api`
+All APIs use JSON for data exchange unless otherwise specified. Authentication is handled via session cookies after login.
+
+## Base URLs
+
+- Development: `http://localhost:8080`
+- The API endpoints don't use a common `/api` prefix - each has its own path structure
 
 ## Authentication
 
 ### Session-Based Authentication
 
-MWS uses session cookies for authentication. After logging in, the session cookie is automatically included in subsequent requests.
+MWS uses session cookies for authentication. After logging in via the admin interface or session endpoints, the session cookie is automatically included in subsequent requests.
 
-```typescript
-// Login request
-POST /api/auth/login
-{
-  "username": "admin",
-  "password": "password"
-}
+### Required Headers
 
-// Response
-{
-  "success": true,
-  "user": {
-    "id": "user_123",
-    "username": "admin",
-    "email": "admin@example.com",
-    "roles": ["ADMIN"]
-  }
-}
-```
-
-### Headers
-
-All API requests should include:
+For state-changing operations (POST, PUT, DELETE), requests must include:
 
 ```
 Content-Type: application/json
-Accept: application/json
+X-Requested-With: fetch
 ```
 
-For authenticated requests, the session cookie is automatically included.
+The `X-Requested-With` header provides basic CSRF protection.
 
 ## Error Handling
 
-All API errors follow a consistent format:
+### Error Response Format
 
 ```typescript
+// String errors (400/404 responses)
+"Error description"
+
+// JSON errors (structured responses)  
 {
   "error": "Error message",
-  "code": "ERROR_CODE",
-  "details": {
-    // Additional error details
-  }
+  "details": "Additional context"
 }
 ```
 
 ### HTTP Status Codes
 
 - `200` - Success
-- `201` - Created
-- `400` - Bad Request (validation error)
-- `401` - Unauthorized
-- `403` - Forbidden
-- `404` - Not Found
-- `409` - Conflict
+- `204` - Success (no content)
+- `400` - Bad Request (validation error, malformed request)
+- `401` - Unauthorized (not logged in)
+- `403` - Forbidden (insufficient permissions)
+- `404` - Not Found (resource doesn't exist, path validation failed)
 - `500` - Internal Server Error
 
-## Authentication API
+### Special Headers
 
-### POST /api/auth/login
+Error responses may include `x-reason` headers for debugging:
+- `x-reason: json` - JSON parsing failed
+- `x-reason: zod-path` - Path parameter validation failed
+- `x-reason: zod-query` - Query parameter validation failed
+- `x-reason: zod-request` - Request body validation failed
+- `x-reason: no-route` - No matching route found
 
-Authenticate a user and create a session.
+## Admin API
+
+All admin endpoints follow the pattern `POST /admin/{command}` and require authentication and admin privileges.
+
+### POST /admin/index_json
+
+Get system overview data for the admin interface.
+
+**Request:**
+```typescript
+undefined  // No request body
+```
+
+**Response:**
+```typescript
+{
+  user_id: string;
+  username: string;
+  isAdmin: boolean;
+  isLoggedIn: boolean;
+  // System configuration and available resources
+  bags: Array<{
+    bag_id: string;
+    bag_name: string;
+    // ACL and metadata
+  }>;
+  recipes: Array<{
+    recipe_id: string;
+    recipe_name: string;
+    // Configuration and bag relationships
+  }>;
+  plugins: {
+    client: string[];
+    core: string[];
+  };
+}
+```
+
+### POST /admin/user_create
+
+Create a new user account.
 
 **Request:**
 ```typescript
 {
   username: string;
+  email: string;
   password: string;
+  role_id: string;  // UUID of the role to assign
+}
+```
+
+**Response:**
+```typescript
+{
+  user_id: string;
+  username: string;
+  email: string;
+  created_at: string;  // ISO date
+}
+```
+
+### POST /admin/user_list
+
+Get list of all users (admin only).
+
+**Request:**
+```typescript
+undefined
+```
+
+**Response:**
+```typescript
+Array<{
+  user_id: string;
+  username: string;
+  email: string;
+  created_at: string;
+  last_login: string | null;
+}>
+```
+
+### POST /admin/user_edit_data
+
+Get detailed user information for editing.
+
+**Request:**
+```typescript
+{
+  user_id: string;
+}
+```
+
+**Response:**
+```typescript
+{
+  user: {
+    user_id: string;
+    username: string;
+    email: string;
+    roles: string;        // Role ID
+    last_login: string | null;
+    created_at: string;
+  };
+  allRoles: Array<{
+    role_id: string;
+    role_name: string;
+    description: string;
+  }>;
+}
+```
+
+### POST /admin/recipe_create_or_update
+
+Create or update a recipe configuration.
+
+**Request:**
+```typescript
+{
+  recipe_name: string;
+  description: string;
+  bag_names: Array<{
+    bag_name: string;
+    with_acl: boolean;
+  }>;
+  plugin_names: string[];
+  owner_id?: string;
+  skip_required_plugins: boolean;
+  skip_core: boolean;
+  create_only: boolean;
+}
+```
+
+**Response:**
+```typescript
+{
+  recipe_id: string;
+  recipe_name: string;
+  // Updated recipe configuration
+}
+```
+
+## Session API
+
+Authentication and session management endpoints.
+
+### POST /auth/login (First phase)
+
+Initiate login process.
+
+**Request:**
+```typescript
+{
+  username: string;
+}
+```
+
+**Response:**
+```typescript
+{
+  challenge: string;  // Cryptographic challenge for second phase
+}
+```
+
+### POST /auth/login (Second phase)
+
+Complete login with password verification.
+
+**Request:**
+```typescript
+{
+  username: string;
+  challenge_response: string;  // Response to challenge
 }
 ```
 
@@ -90,11 +248,26 @@ Authenticate a user and create a session.
 {
   success: boolean;
   user: {
-    id: string;
+    user_id: string;
     username: string;
-    email: string;
-    roles: string[];
+    isAdmin: boolean;
   };
+}
+```
+
+### POST /auth/logout
+
+End the current session.
+
+**Request:**
+```typescript
+undefined
+```
+
+**Response:**
+```typescript
+{
+  success: boolean;
 }
 ```
 
@@ -699,3 +872,221 @@ curl -X PUT http://localhost:8080/api/wikis/wiki_123/tiddlers/HelloWorld \
   -b cookies.txt \
   -d '{"fields":{"text":"Hello, World!","type":"text/vnd.tiddlywiki"}}'
 ```
+
+## Wiki API
+
+TiddlyWiki-compatible API for content management. These endpoints follow TiddlyWiki's standard sync adaptor protocol.
+
+### GET /recipes/{recipe_name}/status
+
+Get recipe status and user permissions.
+
+**Path Parameters:**
+- `recipe_name` - Name of the recipe
+
+**Response:**
+```typescript
+{
+  username: string;
+  isAdmin: boolean;
+  isLoggedIn: boolean;
+  isReadOnly: boolean;  // True if user has no write access
+}
+```
+
+### GET /recipes/{recipe_name}/tiddlers.json
+
+Get list of all tiddlers in a recipe (skinny list).
+
+**Path Parameters:**
+- `recipe_name` - Name of the recipe
+
+**Response:**
+```typescript
+Array<{
+  title: string;
+  revision_id: string;
+  is_deleted: boolean;
+  bag_name: string;
+  bag_id: string;
+}>
+```
+
+### GET /recipes/{recipe_name}/tiddlers/{title}
+
+Get a specific tiddler from a recipe.
+
+**Path Parameters:**
+- `recipe_name` - Name of the recipe
+- `title` - Title of the tiddler
+
+**Response:**
+Raw tiddler content in TiddlyWiki format or JSON, depending on content type.
+
+### PUT /recipes/{recipe_name}/tiddlers/{title}
+
+Save a tiddler to a recipe (writes to the recipe's writable bag).
+
+**Path Parameters:**
+- `recipe_name` - Name of the recipe
+- `title` - Title of the tiddler
+
+**Headers:**
+- `Content-Type`: `application/json` or `application/x-tiddler`
+- `X-Requested-With`: `fetch` (required)
+
+**Request Body:**
+Tiddler content as JSON object or TiddlyWiki tiddler format.
+
+**Response:**
+```typescript
+{
+  bag_name: string;
+  revision_id: string;
+}
+```
+
+### DELETE /recipes/{recipe_name}/tiddlers/{title}
+
+Delete a tiddler from a recipe.
+
+**Path Parameters:**
+- `recipe_name` - Name of the recipe
+- `title` - Title of the tiddler
+
+**Headers:**
+- `X-Requested-With`: `fetch` (required)
+
+**Response:**
+```typescript
+{
+  bag_name: string;
+  revision_id: string;
+}
+```
+
+### GET /recipes/{recipe_name}/bag-states
+
+Get aggregated state information for all bags in a recipe.
+
+**Path Parameters:**
+- `recipe_name` - Name of the recipe
+
+**Query Parameters:**
+- `last_known_revision_id[]` - Array of known revision IDs for optimization
+- `include_deleted[]` - Include deleted tiddlers (`"yes"` or `"no"`)
+- `gzip_stream[]` - Enable streaming compression (`"yes"` or `"no"`)
+
+**Response:**
+Streaming JSON array of tiddler states with optional compression.
+
+### Bag-Specific Endpoints
+
+#### GET /bags/{bag_name}/tiddlers/{title}
+
+Get a tiddler directly from a specific bag.
+
+#### PUT /bags/{bag_name}/tiddlers/{title}
+
+Save a tiddler directly to a specific bag.
+
+#### DELETE /bags/{bag_name}/tiddlers/{title}
+
+Delete a tiddler from a specific bag.
+
+#### POST /bags/{bag_name}/tiddlers
+
+Upload tiddler via multipart form (for file uploads).
+
+### Wiki Index
+
+#### GET /wikis/{recipe_name}
+
+Serve the complete TiddlyWiki HTML file for a recipe. This returns the full TiddlyWiki application with the recipe's configuration and initial tiddler state.
+
+**Path Parameters:**
+- `recipe_name` - Name of the recipe
+
+**Response:**
+Complete HTML document with embedded TiddlyWiki application.
+
+## Access Control
+
+### Recipe ACL
+
+Recipes have read and write permissions that are checked for each request:
+- **Read access** - Required for GET operations
+- **Write access** - Required for PUT, POST, DELETE operations
+
+### Bag ACL  
+
+Individual bags can have their own access controls that override recipe permissions.
+
+### Permission Checking
+
+The API automatically checks permissions using:
+- User roles and IDs
+- Recipe and bag ACL entries
+- Admin privileges (admins bypass most restrictions)
+
+Access denied results in:
+- `403 Forbidden` - User is authenticated but lacks permission
+- `404 Not Found` - Resource doesn't exist or user can't see it
+
+## Content Formats
+
+### Tiddler JSON Format
+
+```typescript
+{
+  title: string;
+  text?: string;
+  tags?: string;
+  type?: string;
+  created?: string;    // TiddlyWiki date format
+  modified?: string;   // TiddlyWiki date format
+  [field: string]: any; // Custom fields
+}
+```
+
+### TiddlyWiki Tiddler Format
+
+Text-based format used by TiddlyWiki:
+```
+title: MyTiddler
+tags: [[Tag One]] [[Tag Two]]
+type: text/vnd.tiddlywiki
+
+This is the text content of the tiddler.
+```
+
+### Field Types
+
+TiddlyWiki supports various field types:
+- `text/plain` - Plain text
+- `text/vnd.tiddlywiki` - TiddlyWiki markup
+- `text/html` - HTML content
+- `application/json` - JSON data
+- `image/*` - Binary image data
+
+## Streaming and Performance
+
+### Chunked Responses
+
+Large dataset endpoints support streaming JSON to improve performance:
+- `/recipes/{recipe_name}/bag-states` with `gzip_stream=yes`
+- Progressive loading of tiddler lists
+
+### Compression
+
+Optional gzip compression available for:
+- Large tiddler lists
+- Streaming responses
+- Static file serving
+
+### Caching
+
+Response caching based on:
+- ETags derived from revision IDs
+- Last-Modified headers
+- Content-based cache validation

@@ -49,32 +49,158 @@ The rest of the route definers are used by creating a class with the route defin
 
 ## `zodRoute`
 
-`method`
-: A subset of the [[Allowed Methods]]. 
+The `zodRoute` function creates type-safe route definitions with Zod validation. It takes a single configuration object with the following properties:
 
-`path`
-: A slash-separated string of folders including variables prefixed with a `:`
-: `"path/to/route/:var/route/:var2"`
+`method: string[]`
+: An array of HTTP methods (e.g., `["GET", "POST"]`). Must be a subset of allowed methods.
 
-`zodPathParams` - zod check on `state.pathParams`
-: A [[Zod Callback]] which returns an object with keys the same as the `path` variables, and values being the zod check for that specific variable. If this fails, the server will return a `404 NOT FOUND` response. 
+`path: string`
+: A slash-separated string path with optional parameters prefixed with `:` (e.g., `"/recipes/:recipe_name/tiddlers/:title"`).
 
-`bodyFormat`
-: The body format which the request wishes to receive. If the method is only GET and HEAD, this is ignored, as no request body is expected. 
+`bodyFormat: BodyFormat`
+: The expected body format: `"ignore"`, `"string"`, `"json"`, `"buffer"`, `"www-form-urlencoded"`, `"www-form-urlencoded-urlsearchparams"`, or `"stream"`. For GET and HEAD requests, this is always treated as `"ignore"`.
 
-`zodRequest` - zod check on `state.data`
-: A [[Zod Callback]] which returns the expected shape of the request body after it is done being parsed. If this fails, the server will return a `400 INVALID` response. 
+`zodPathParams: (z: Z2<"STRING">) => Record<string, ZodType>`
+: A function that returns an object defining Zod validations for path parameters. The keys must match the parameter names in the path. If validation fails, returns 404.
 
-`inner`
-: The handler, which receives a [[StateObject]] instance with the generics set according to the above parameters. See also [[ZodAssert]]
+`zodQueryParams?: (z: Z2<"STRING">) => Record<string, ZodType>`
+: Optional function defining Zod validations for query parameters. Query params are arrays of strings by default.
 
+`zodRequestBody?: (z: Z2<BodyFormat>) => ZodType`
+: Optional function defining Zod validation for the request body. Only valid for `"string"`, `"json"`, and `"www-form-urlencoded"` body formats. If validation fails, returns 400.
 
+`securityChecks?: { requestedWithHeader?: boolean }`
+: Optional security checks. If `requestedWithHeader` is true, requires the `x-requested-with: fetch` header for non-GET/HEAD/OPTIONS requests.
 
-## `zodManage`
+`corsRequest?: (state: ZodState<"OPTIONS", "ignore", P, Q, ZodUndefined>) => Promise<symbol>`
+: Optional CORS preflight handler for OPTIONS requests. Cannot authenticate but can provide endpoint information.
 
-`zodManage` is a shortcut for a specific use case of `zodRoute` which is used for the admin UI. 
+`inner: (state: ZodState<Method, BodyFormat, PathParams, QueryParams, RequestBody>) => Promise<JsonValue>`
+: The main route handler that receives a fully validated and typed state object.
 
-<div style="color: rgb(212, 212, 212); background-color: rgb(30, 30, 30); font-family: &quot;Fira Code&quot;, &quot;Cascadia Code&quot;, Consolas, &quot;Courier New&quot;, monospace, Consolas, &quot;Courier New&quot;, monospace; font-size: 15px; line-height: 20px; white-space: pre;"><div>&nbsp; <span style="color: #dcdcaa;">zodRoute</span>(</div><div>&nbsp; &nbsp; [<span style="color: #ce9178;">"POST"</span>],</div><div>&nbsp; &nbsp; <span style="color: #ce9178;">"/manager/$key"</span>,</div><div>&nbsp; &nbsp; <span style="color: #9cdcfe;">z</span> <span style="color: #569cd6;">=&gt;</span> ({}),</div><div>&nbsp; &nbsp; <span style="color: #ce9178;">"json"</span>,</div><div>&nbsp; &nbsp; <span style="color: #dcdcaa;">zodRequest</span>,</div><div>&nbsp; &nbsp; <span style="color: #569cd6;">async</span> <span style="color: #9cdcfe;">state</span> <span style="color: #569cd6;">=&gt;</span> {</div><div>&nbsp; &nbsp; &nbsp; <span style="color: #c586c0;">return</span> <span style="color: #9cdcfe;">state</span>.<span style="color: #dcdcaa;">$transaction</span>(<span style="color: #569cd6;">async</span> (<span style="color: #9cdcfe;">prisma</span>) <span style="color: #569cd6;">=&gt;</span> <span style="color: #c586c0;">await</span> <span style="color: #dcdcaa;">inner</span>(<span style="color: #9cdcfe;">state</span>, <span style="color: #9cdcfe;">prisma</span>));</div><div>&nbsp; &nbsp; }</div><div>&nbsp; );</div></div>
+### Example
 
-`$key` is a shortcut that refers to the key of the class the route is registered on. It is not a path param, so `zodPathParams` is empty. 
+```typescript
+const getUser = zodRoute({
+  method: ["GET"],
+  path: "/users/:user_id",
+  bodyFormat: "ignore",
+  zodPathParams: z => ({
+    user_id: z.string().uuid()
+  }),
+  zodQueryParams: z => ({
+    include_roles: z.enum(["yes", "no"]).array().optional()
+  }),
+  inner: async (state) => {
+    const { user_id } = state.pathParams; // typed as { user_id: string }
+    const { include_roles } = state.queryParams; // typed as { include_roles?: ("yes"|"no")[] }
+    
+    return await getUserById(user_id, include_roles?.[0] === "yes");
+  }
+});
+```
+
+## `admin` Helper Function
+
+The `admin` function is a convenience wrapper around `zodRoute` specifically for admin API endpoints. It automatically sets up:
+
+- Method: `["POST"]`
+- Path: `"/admin/$key"` (where `$key` is replaced with the property name)
+- Body format: `"json"`
+- Security: Requires `x-requested-with: fetch` header
+- Database transactions: Automatically wraps the handler in a Prisma transaction
+- Authentication: Provides access to authenticated user state
+
+### Signature
+
+```typescript
+function admin<T extends ZodTypeAny, R extends JsonValue>(
+  zodRequest: (z: Z2<"JSON">) => T,
+  inner: (state: ZodState<"POST", "json", {}, {}, T>, prisma: PrismaTxnClient) => Promise<R>
+): ZodRoute<"POST", "json", {}, {}, T, R>
+```
+
+### Parameters
+
+`zodRequest: (z: Z2<"JSON">) => ZodType`
+: Function defining the expected shape of the JSON request body.
+
+`inner: (state, prisma) => Promise<JsonValue>`
+: Handler function that receives the validated state and a Prisma transaction client.
+
+### Example
+
+```typescript
+const user_create = admin(z => z.object({
+  username: z.string().min(3),
+  email: z.string().email(),
+  role_id: z.string().uuid()
+}), async (state, prisma) => {
+  // state.data is typed based on the zodRequest schema
+  const { username, email, role_id } = state.data;
+  
+  // Create user within the automatic transaction
+  const user = await prisma.users.create({
+    data: { username, email, role_id }
+  });
+  
+  return { user_id: user.user_id, username, email };
+});
+```
+
+## `registerZodRoutes` Function
+
+This function registers multiple Zod routes from a class instance to a parent route. It's the bridge between route definitions and the actual router.
+
+### Signature
+
+```typescript
+function registerZodRoutes(
+  parent: ServerRoute,
+  router: object,
+  keys: string[]
+): void
+```
+
+### Parameters
+
+`parent: ServerRoute`
+: The parent route to register child routes under.
+
+`router: object`
+: An instance of a class containing route definitions as properties.
+
+`keys: string[]`
+: Array of property names to register as routes. Usually `Object.keys(RouterKeyMap)`.
+
+### Usage Pattern
+
+```typescript
+export class UserManager {
+  static defineRoutes(root: ServerRoute) {
+    registerZodRoutes(root, new UserManager(), Object.keys(UserKeyMap));
+  }
+
+  user_create = admin(z => z.object({
+    username: z.string(),
+    email: z.string().email()
+  }), async (state, prisma) => {
+    // Implementation
+  });
+
+  user_list = admin(z => z.undefined(), async (state, prisma) => {
+    // Implementation  
+  });
+}
+
+export const UserKeyMap: RouterKeyMap<UserManager, true> = {
+  user_create: true,
+  user_list: true,
+};
+
+// Register during server startup
+serverEvents.on("mws.routes", (root) => {
+  UserManager.defineRoutes(root);
+});
+``` 
 

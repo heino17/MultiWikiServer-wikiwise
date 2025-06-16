@@ -7,11 +7,13 @@
 3. [Project Structure](#project-structure)
 4. [Core Packages](#core-packages)
 5. [Setup and Development](#setup-and-development)
-6. [API Reference](#api-reference)
-7. [Database Schema](#database-schema)
-8. [CLI Commands](#cli-commands)
-9. [Configuration](#configuration)
-10. [Deployment](#deployment)
+6. [Routing System](./ROUTING.md) - Type-safe API routing with Zod validation
+7. [Development Patterns](./DEVELOPMENT_PATTERNS.md) - Code examples and best practices
+8. [API Reference](./API.md) - Complete API documentation
+9. [Database Schema](#database-schema)
+10. [CLI Commands](#cli-commands)
+11. [Configuration](#configuration)
+12. [Deployment](#deployment)
 
 ## Overview
 
