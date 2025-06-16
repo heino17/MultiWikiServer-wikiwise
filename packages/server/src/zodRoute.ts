@@ -1,29 +1,24 @@
-import * as z from "zod";
+
 import { JsonValue } from "./utils";
 import { BodyFormat } from "./router";
 import { ServerRequest } from "./StateObject";
 import { RouteDef } from "./router";
+import { Z2, zod as z } from "./Z2";
+import * as core from "zod/v4/core";
 
 export function zodRoute<
   M extends string,
   B extends "GET" | "HEAD" extends M ? "ignore" : BodyFormat,
-  P extends Record<string, z.ZodTypeAny>,
-  Q extends Record<string, z.ZodType<any, any, string[] | undefined>>,
+  P extends Record<string, z.ZodType<any, string | undefined>>,
+  Q extends Record<string, z.ZodType<any, string[] | undefined>>,
   T extends z.ZodTypeAny,
   R extends JsonValue
 >(route: ZodRoute<M, B, P, Q, T, R>): ZodRoute<M, B, P, Q, T, R> {
   return route;
 }
 
-export interface Z2<T extends FieldTypeGroups> extends _zod {
 
-}
-
-
-export const Z2: Z2<any> = Object.create(z);
-
-type _zod = typeof z;
-type FieldTypeGroups = "STRING" | "JSON";
+export type FieldTypeGroups = "STRING" | "JSON";
 
 type ExtraFieldType = "string" | "number" | "parse-number" | "boolean" | "parse-boolean";
 type FieldTypeStringSelector<T extends FieldTypeGroups> = T extends "STRING" ? "string" : "string";
@@ -33,8 +28,8 @@ type FieldTypeBooleanSelector<T extends FieldTypeGroups> = T extends "STRING" ? 
 export interface ZodRoute<
   M extends string,
   B extends BodyFormat,
-  P extends Record<string, z.ZodTypeAny>,
-  Q extends Record<string, z.ZodTypeAny>,
+  P extends Record<string, z.ZodType<any, string | undefined>>,
+  Q extends Record<string, z.ZodType<any, string[] | undefined>>,
   T extends z.ZodTypeAny,
   R extends JsonValue
 > {
@@ -93,12 +88,12 @@ export interface ZodRoute<
 export interface ZodState<
   M extends string,
   B extends BodyFormat,
-  P extends Record<string, z.ZodTypeAny>,
-  Q extends Record<string, z.ZodTypeAny>,
+  P extends Record<string, z.ZodType<any, string | undefined>>,
+  Q extends Record<string, z.ZodType<any, string[] | undefined>>,
   T extends z.ZodTypeAny
 > extends ServerRequest<B, M, z.output<T>> {
-  pathParams: z.output<z.ZodObject<P>>;
-  queryParams: z.output<z.ZodObject<Q>>;
+  pathParams: z.output<z.ZodObject<P, core.$strict>> & Record<string, any>;
+  queryParams: z.output<z.ZodObject<Q, core.$strict>> & Record<string, any>;
 }
 
 

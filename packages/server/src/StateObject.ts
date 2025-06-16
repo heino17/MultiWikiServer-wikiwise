@@ -1,10 +1,10 @@
 import { Streamer, StreamerState } from './streamer';
 import { PassThrough } from 'node:stream';
 import { BodyFormat, Router } from "./router";
-import * as z from 'zod';
 import { RouteMatch } from './router';
 import { ok } from 'assert';
 import { IncomingHttpHeaders } from 'http';
+import { zod } from './Z2';
 
 export interface ServerRequest<
   B extends BodyFormat = BodyFormat,
@@ -44,7 +44,7 @@ export class ServerRequestClass<
    * the value includes undefined since it will be that if 
    * the key is not specified at all. 
    * 
-   * This will always satisfy the zod schema: `z.record(z.array(z.string()))`
+   * This will always satisfy the zod schema: `z.record(z.string(), z.array(z.string()))`
    */
   queryParams: Record<string, string[] | undefined>;
 
@@ -65,14 +65,14 @@ export class ServerRequestClass<
       ?? []
     ).flat()) as any;
 
-    const pathParamsZodCheck = z.record(z.string().transform(zodURIComponent).optional()).safeParse(this.pathParams);
+    const pathParamsZodCheck = zod.record(zod.string(), zod.string().transform(zodURIComponent).optional()).safeParse(this.pathParams);
     if (!pathParamsZodCheck.success) console.log("BUG: Path params zod error", pathParamsZodCheck.error, this.pathParams);
     else this.pathParams = pathParamsZodCheck.data;
 
     this.queryParams = Object.fromEntries([...this.urlInfo.searchParams.keys()]
       .map(key => [key, this.urlInfo.searchParams.getAll(key)] as const));
 
-    const queryParamsZodCheck = z.record(z.array(z.string())).safeParse(this.queryParams);
+    const queryParamsZodCheck = zod.record(zod.string(), zod.array(zod.string())).safeParse(this.queryParams);
     if (!queryParamsZodCheck.success) console.log("BUG: Query params zod error", queryParamsZodCheck.error, this.queryParams);
     else this.queryParams = queryParamsZodCheck.data;
 
@@ -280,14 +280,14 @@ export class ServerRequestClass<
 
 }
 
-const zodURIComponent = (val: string, ctx: z.RefinementCtx) => {
+const zodURIComponent = (val: string, ctx: zod.RefinementCtx) => {
   try {
     return decodeURIComponent(val);
   } catch (e) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: zod.ZodIssueCode.custom,
       message: "Invalid URI component",
     });
-    return z.NEVER;
+    return zod.NEVER;
   }
 }

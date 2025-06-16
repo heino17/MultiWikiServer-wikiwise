@@ -5,8 +5,7 @@ import type { Streamer } from "./streamer";
 import type { IncomingMessage, ServerResponse } from "http";
 import type { Http2ServerRequest, Http2ServerResponse } from "http2";
 import type { ServerRequest } from "./StateObject";
-import { Z2 } from "./zodRoute";
-import { z } from "zod";
+import { Z2, zod as z } from "./Z2";
 import { fromError } from "zod-validation-error";
 
 export * from "./listeners";
@@ -16,7 +15,7 @@ export * from "./streamer";
 export * from "./utils";
 export * from "./zodRegister";
 export * from "./zodRoute";
-export * as zod from "zod";
+export * from "./Z2";
 
 /**
  * 

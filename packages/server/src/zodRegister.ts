@@ -1,9 +1,11 @@
 import { fromError } from "zod-validation-error";
 import { ServerRequest } from "./StateObject";
 import Debug from "debug";
-import z from "zod";
-import { Z2, ZodRoute } from "./zodRoute";
+import { ZodRoute } from "./zodRoute";
+import { Z2 } from "./Z2";
 import { ServerRoute } from "./router";
+import { zod } from "@tiddlywiki/server";
+import * as core from "zod/v4/core";
 const debugCORS = Debug("mws:cors");
 
 
@@ -93,12 +95,12 @@ export const registerZodRoutes = (parent: ServerRoute, router: any, keys: string
 }
 
 export function checkData<
-  T extends z.ZodType
+  T extends core.$ZodType
 >(
   state: ServerRequest,
   zodRequestBody: (z: Z2<any>) => T
-): asserts state is ServerRequest & { data: z.infer<T> } {
-  const inputCheck = zodRequestBody(Z2).safeParse(state.data);
+): asserts state is ServerRequest & { data: zod.infer<T> } {
+  const inputCheck = Z2.any().pipe(zodRequestBody(Z2)).safeParse(state.data);
   if (!inputCheck.success) {
     console.log(inputCheck.error);
     throw state.sendString(400, { "x-reason": "zod-request" },
@@ -108,34 +110,32 @@ export function checkData<
 }
 
 export function checkQuery<
-  T extends Record<string, z.ZodType<any, z.ZodOptional<z.ZodArray<any>>>>
+  T extends { [x: string]: core.$ZodType<unknown, string[] | undefined>; }
 >(
   state: ServerRequest,
   zodQueryParams: (z: Z2<"STRING">) => T
-): asserts state is ServerRequest & { queryParams: z.infer<z.ZodObject<T>> } {
-  const queryCheck = Z2.object(zodQueryParams(Z2)).safeParse(state.queryParams);
+): asserts state is ServerRequest & { queryParams: zod.infer<zod.ZodObject<T>> } {
+  const queryCheck = Z2.strictObject(zodQueryParams(Z2)).safeParse(state.queryParams);
   if (!queryCheck.success) {
     console.log(queryCheck.error);
     throw state.sendString(400, { "x-reason": "zod-query" },
       fromError(queryCheck.error).toString(), "utf8");
   }
-  state.queryParams = queryCheck.data;
+  state.queryParams = queryCheck.data as any;
 }
 
 export function checkPath<
-  T extends Record<string, z.ZodType>
+  T extends { [x: string]: core.$ZodType<unknown, string | undefined>; }
 >(
   state: ServerRequest,
   zodPathParams: (z: Z2<"STRING">) => T
-): asserts state is ServerRequest & { pathParams: z.infer<z.ZodObject<T>> } {
-  const pathCheck = Z2.object(zodPathParams(Z2)).safeParse(state.pathParams);
+): asserts state is ServerRequest & { pathParams: zod.infer<zod.ZodObject<T>> } {
+  const pathCheck = Z2.strictObject(zodPathParams(Z2)).safeParse(state.pathParams);
   if (!pathCheck.success) {
     console.log(pathCheck.error);
     throw state.sendString(404, { "x-reason": "zod-path" },
       fromError(pathCheck.error).toString(), "utf8");
   }
-  state.pathParams = pathCheck.data;
+  state.pathParams = pathCheck.data as any;
 }
-
-
 

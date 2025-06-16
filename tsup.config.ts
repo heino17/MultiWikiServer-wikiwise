@@ -57,9 +57,10 @@ export default defineConfig({
       "export * from 'packages/mws/src/index';",
     ].join("\n"));
     console.log("TSC dist/mws.d.ts");
-    await start("node scripts.mjs build:types", []);
+    const code = await start("node scripts.mjs build:types", []).catch((code) => code);
     console.log("TSC dist/types.d.ts");
     console.timeEnd(tag);
+    if(code) process.exit(code);
   },
 });
 

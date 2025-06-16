@@ -1,7 +1,7 @@
 
-import { BodyFormat, ListenerHTTP, ListenerHTTPS, Router, startListening } from "@tiddlywiki/server";
+import { BodyFormat, ListenerHTTP, ListenerHTTPS, Router, startListening, zod } from "@tiddlywiki/server";
 import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
-import { z } from "zod";
+
 import { fromError } from "zod-validation-error";
 import { serverEvents } from "@tiddlywiki/events";
 import { ServerRoute } from "@tiddlywiki/server";
@@ -108,20 +108,20 @@ export class Command extends BaseCommand<[], {
   async execute() {
     const listenOptions = this.options.listener || [];
 
-    const listenerCheck = z.object({
-      port: z.string().optional(),
-      host: z.string().optional(),
-      prefix: z.string().optional()
+    const listenerCheck = zod.object({
+      port: zod.string().optional(),
+      host: zod.string().optional(),
+      prefix: zod.string().optional()
         .transform(prefix => prefix || "")
         .refine((prefix) => !prefix || prefix.startsWith("/"),
           "Listener path prefix must start with a slash or be falsy")
         .refine((prefix) => !prefix.endsWith("/"),
           "Listener path prefix must NOT end with a slash"),
-      key: z.string().optional(),
-      cert: z.string().optional(),
-      secure: z.enum(["true", "false", "yes", "no"]).optional()
+      key: zod.string().optional(),
+      cert: zod.string().optional(),
+      secure: zod.enum(["true", "false", "yes", "no"]).optional()
         .transform(e => e === "true" || e === "yes"),
-      redirect: z.string().transform((v) => +v).refine(truthy).optional(),
+      redirect: zod.string().transform((v) => +v).refine(truthy).optional(),
     }).strict().array().safeParse(listenOptions);
 
     if (!listenerCheck.success) {

@@ -34,7 +34,7 @@ declare module "@tiddlywiki/server" {
         boolean extends (PrismaPayloadScalars<Table>[Field]) ? FieldTypeBooleanSelector<T> :
         never,
       nullable?: null extends PrismaPayloadScalars<Table>[Field] ? true : false
-    ): zod.ZodEffects<any, PrismaField<Table, Field>, PrismaPayloadScalars<Table>[Field]>;
+    ): zod.ZodType<PrismaField<Table, Field>, PrismaPayloadScalars<Table>[Field]>;
 
 
   }
@@ -51,15 +51,14 @@ export function prismaField(table: any, field: any, fieldtype: ExtraFieldType, n
           .refine(x => x.length, { message: "String must have length" });
       case "parse-number":
         return z.string().min(1)
-          .pipe(z.bigint({ coerce: true }))
-          .pipe(z.number({ coerce: true }).finite())
+          .pipe(z.coerce.number())
           .refine(x => !isNaN(x), { message: "Invalid number" });
       case "parse-boolean":
         return z.enum(["true", "false", "null"]).transform(x => x === "null" ? null : x === "true");
       case "boolean":
         return z.boolean();
       case "number":
-        return z.number().finite().int();
+        return z.number().refine(x => !isNaN(x), { message: "Invalid number" });
       default:
         throw new Error("Invalid field type");
     }

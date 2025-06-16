@@ -1,4 +1,4 @@
-import * as z from "zod";
+import { zod } from "./Z2";
 import { ServerRequest, ServerRequestClass } from "./StateObject";
 import { Streamer } from "./streamer";
 import Debug from "debug";
@@ -126,7 +126,7 @@ export class Router {
       state.data = (await state.readBody()).toString("utf8");
       if (state.bodyFormat === "json") {
         // make sure this parses as valid data
-        const { success, data } = z.string().transform(zodTransformJSON).safeParse(state.data);
+        const { success, data } = zod.string().transform(zodTransformJSON).safeParse(state.data);
         if (!success) return state.sendEmpty(400, { "x-reason": "json" });
         state.data = data;
       }
@@ -262,7 +262,7 @@ export interface RouteMatch {
 }
 
 
-export const zodTransformJSON = (arg: string, ctx: z.RefinementCtx) => {
+export const zodTransformJSON = (arg: string, ctx: zod.RefinementCtx) => {
   try {
     if (arg === "") return undefined;
     return JSON.parse(arg, (key, value) => {
@@ -275,11 +275,11 @@ export const zodTransformJSON = (arg: string, ctx: z.RefinementCtx) => {
     });
   } catch (e) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: zod.ZodIssueCode.custom,
       message: e instanceof Error ? e.message : `${e}`,
       fatal: true,
     });
-    return z.NEVER;
+    return zod.NEVER;
   }
 };
 

@@ -476,7 +476,7 @@ function parseTiddlerFields(input: string, ctype: string | undefined) {
 }
 
 
-async function recieveTiddlerMultipartUpload(state: ZodState<"POST", "stream", {}, {}, zod.ZodTypeAny>) {
+async function recieveTiddlerMultipartUpload(state: ZodState<"POST", "stream", any, any, zod.ZodTypeAny>) {
 
   interface UploadPart {
     name: string | null;

@@ -1,9 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": "./src",
+    // "rootDir": "./src",
   },
   "files": [
     "src/index.ts",
+    "./src/Z2.ts",
   ],
 }

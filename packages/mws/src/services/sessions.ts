@@ -37,7 +37,7 @@ export const SessionKeyMap: RouterKeyMap<SessionManager, true> = {
 export function zodSession<P extends string, T extends zod.ZodTypeAny, R extends JsonValue>(
   path: P,
   zodRequest: (z: Z2<"JSON">) => T,
-  inner: (state: ZodState<"POST", "json", Record<string, zod.ZodTypeAny>, {}, T>, prisma: PrismaTxnClient) => Promise<R>
+  inner: (state: ZodState<"POST", "json", {}, {}, T>, prisma: PrismaTxnClient) => Promise<R>
 ): ZodSessionRoute<P, T, R> {
   return {
     ...zodRoute({
