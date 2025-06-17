@@ -1,7 +1,8 @@
 {
   "name": "@tiddlywiki/mws-instance",
   "private": true,
+  "version": "0.1.0",
   "scripts": {
-    "start": "mws"
+    "start": "mws listen --listener"
   }
 }
