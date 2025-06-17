@@ -11,7 +11,6 @@ Internal notes by core developers
 - All the headers 
 - CORS
 
-
 ## CLI
 
 - Save and load archive (for backup purposes)
@@ -30,3 +29,6 @@ Internal notes by core developers
 ## Wiki
 
 - Storing large binary tiddlers on the file system
+- Guest access to wiki
+- Very tempted to remove READ privilege and just allow everyone to read because of the imsurmountable security issues that come with it otherwise.
+

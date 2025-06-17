@@ -522,7 +522,6 @@ exports.handler = function(request, response, state) {
 const handleGetRecipeTiddler = zodRoute({
   method: ["GET"],
   path: "/recipes/:recipe_name/tiddlers/:title",
-  bodyFormat: "ignore",
   zodPathParams: z => ({
     recipe_name: z.string().min(1),
     title: z.string().min(1)
