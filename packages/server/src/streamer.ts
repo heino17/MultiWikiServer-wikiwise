@@ -20,11 +20,10 @@ declare module 'node:net' {
 
 
 export interface IncomingHttpHeaders extends NodeIncomingHeaders {
-  "accept-encoding"?: string;
+  "x-requested-with"?: string;
 }
 
 export const SYMBOL_IGNORE_ERROR: unique symbol = Symbol("IGNORE_ERROR");
-
 
 
 export type StreamerChunk = { data: string, encoding: NodeJS.BufferEncoding } | NodeJS.ReadableStream | Readable | Buffer;
@@ -559,7 +558,7 @@ export class StreamerState {
     this.write = this.streamer.write.bind(this.streamer);
     this.end = this.streamer.end.bind(this.streamer);
     this.setCookie = this.streamer.setCookie.bind(this.streamer);
-    
+
   }
 
 

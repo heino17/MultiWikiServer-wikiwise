@@ -36,7 +36,7 @@ declare module "@tiddlywiki/server" {
   }
 }
 serverEvents.on("listen.router.init", async (listen, router) => {
-
+  router.allowedRequestedWithHeaders.push("TiddlyWiki");
   router.config = listen.config;
   router.sendAdmin = await setupDevServer(listen.config);
   router.createServerRequest = <B extends BodyFormat>(

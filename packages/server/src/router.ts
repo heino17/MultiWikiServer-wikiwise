@@ -12,6 +12,8 @@ import { serverEvents } from "@tiddlywiki/events";
 const debug = Debug("mws:router:matching");
 
 export class Router {
+  allowedRequestedWithHeaders = ["fetch", "XMLHttpRequest"];
+
   helmet;
   constructor(
     public rootRoute: ServerRoute
@@ -88,15 +90,15 @@ export class Router {
     // 3. The server checks the CSRF token against the session.
     // 4. If the CSRF token is valid, the request is processed.
     // 5. If the CSRF token is invalid, the request is rejected with a 403 Forbidden.
-
+    const reqwith = streamer.headers["x-requested-with"];
     // If the route requires a CSRF check,
     if (routePath.some(e => e.route.securityChecks?.requestedWithHeader))
       // If the method is not GET, HEAD, or OPTIONS, 
       if (!["GET", "HEAD", "OPTIONS"].includes(streamer.method))
         // If the x-requested-with header is not set to "fetch", 
-        if (streamer.headers["x-requested-with"] !== "fetch")
+        if (!reqwith || !this.allowedRequestedWithHeaders.includes(reqwith))
           // we reject the request with a 403 Forbidden.
-          return streamer.sendEmpty(403, { "x-reason": "x-requested-with missing" });
+          return streamer.sendEmpty(403, { "x-reason": "x-requested-with invalid" });
 
     // if no bodyFormat is specified, we default to ignore
     const bodyFormat = routePath.find(e => e.route.bodyFormat)?.route.bodyFormat || "ignore";
@@ -117,9 +119,9 @@ export class Router {
 
     if (state.bodyFormat === "stream" || state.bodyFormat === "ignore") {
       // this starts dumping bytes early, rather than letting node do it once the res finishes.
-      // the only advantage is that it eases congestion on the socket.
+      // the only advantage is letting the request end faster.
       if (state.bodyFormat === "ignore") streamer.reader.resume();
-
+      // no further body handling required
       return await this.handleRoute(state, routePath);
     }
     if (state.bodyFormat === "string" || state.bodyFormat === "json") {
