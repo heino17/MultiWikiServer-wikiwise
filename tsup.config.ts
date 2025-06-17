@@ -50,17 +50,22 @@ export default defineConfig({
     ]
   },
   async onSuccess() {
-    const tag = "TSC ⚡️ done";
-    console.time(tag);
     writeFileSync("dist/mws.d.ts", [
-      "import './types.d.ts';",
-      "export * from 'packages/mws/src/index';",
+      "export default function startServer(): Promise<void>;",
     ].join("\n"));
     console.log("TSC dist/mws.d.ts");
-    const code = await start("node scripts.mjs build:types", []).catch((code) => code);
-    console.log("TSC dist/types.d.ts");
-    console.timeEnd(tag);
-    if(code) process.exit(code);
+    // this still doesn't work quite right, as it doesn't include node_modules types
+    // const tag = "TSC ⚡️ done";
+    // console.time(tag);
+    // writeFileSync("dist/mws.d.ts", [
+    //   "import './types.d.ts';",
+    //   "export * from 'packages/mws/src/index';",
+    // ].join("\n"));
+    // console.log("TSC dist/mws.d.ts");
+    // const code = await start("node scripts.mjs build:types", []).catch((code) => code);
+    // console.log("TSC dist/types.d.ts");
+    // console.timeEnd(tag);
+    // if(code) process.exit(code);
   },
 });
 

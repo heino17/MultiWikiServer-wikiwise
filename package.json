@@ -14,8 +14,8 @@
   "author": "TiddlyWiki Community",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./dist/mws.d.ts",
+      "import": "./dist/mws.js"
     }
   },
   "workspaces": [
@@ -43,7 +43,7 @@
     "start": "node scripts.mjs start",
     "certs": "(cd dev && bash localhost_certs.sh)",
     "tsc": "tsc -p tsconfig.tsc.json --noEmit",
-    "build": "npm run tsc && tsup && npm run build:admin",
+    "build": "tsup && npm run build:admin",
     "build:admin": "node scripts.mjs client-build",
     "install-android": "GYP_DEFINES=\"android_ndk_path=''\" npm install",
     "postinstall": "node scripts.mjs prisma:generate",

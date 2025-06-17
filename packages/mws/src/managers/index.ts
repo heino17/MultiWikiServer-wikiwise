@@ -29,7 +29,6 @@ serverEvents.on("mws.routes.fallback", (root, config) => {
   });
 });
 
-
 export const StatusKeyMap: RouterKeyMap<StatusManager, true> = {
   index_json: true,
 }

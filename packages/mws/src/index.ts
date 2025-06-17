@@ -24,7 +24,7 @@ import { runCLI } from "@tiddlywiki/commander";
 export { ZodRoute } from "@tiddlywiki/server";
 export * from "./managers";
 
-export default async function runMWS(oldOptions: any) {
+export default async function runMWS(oldOptions?: any) {
   // detect version 0.0 and exit
   if (oldOptions && oldOptions.passwordMasterKeyFile) {
     console.log([

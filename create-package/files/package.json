@@ -1,10 +1,7 @@
 {
-  "name": "mws-wiki-instance",
+  "name": "@tiddlywiki/mws-instance",
   "private": true,
-  "bin": {
-    "mws": "./mws.run.mjs"
-  },
   "scripts": {
-    "start": "node mws.run.mjs"
+    "start": "mws"
   }
 }

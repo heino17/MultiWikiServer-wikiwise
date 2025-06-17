@@ -4,6 +4,8 @@
 
 *So please try it out, kick the tires, import your multi-gigabyte wikis and play around with it, but don't actually store anything you want to keep. We'll hopefully get there soon, but even the database schema itself is still in flux as we figure out what the best layout is for all the stuff we have planned.*
 
+Storing data is safe enough, but upgrading to new versions is where the problem comes in. That's why your package.json file has the exact version number saved. You can upgrade your TiddlyWiki version separate from the MWS version. Once you upgrade to a new MWS version, you might not be able to revert to the previous version. **Always make backups.**
+
 -----
 
 Multiple users, multiple wikis for TiddlyWiki.
