@@ -37,7 +37,7 @@ switch(process.argv[2]) {
       SKIPDTS: "1"
     });
     await start("node --trace-uncaught mws.dev.mjs", process.argv.slice(3), {
-      ENABLE_DEV_SERVER: "1",
+      ENABLE_DEV_SERVER: "mws",
       ENABLE_EXTERNAL_PLUGINS: "1",
     });
     break;

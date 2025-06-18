@@ -45,7 +45,7 @@
     "tsc": "tsc -p tsconfig.tsc.json --noEmit",
     "build": "tsup && npm run build:admin",
     "build:admin": "node scripts.mjs client-build",
-    "build:client": "cd plugins/client && tsc",
+    "build:client": "PLUGINDTS=1 tsup && cd plugins/client && tsc",
     "install-android": "GYP_DEFINES=\"android_ndk_path=''\" npm install",
     "postinstall": "node scripts.mjs prisma:generate",
     "env": "env",

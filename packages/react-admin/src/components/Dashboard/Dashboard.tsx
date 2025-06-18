@@ -61,7 +61,7 @@ export function Recipes() {
                   </Tooltip>}
                   <ListItemAvatar>
                     {bagsReadable ? (
-                      <Avatar src={`${pathPrefix}/wiki/${encodeURIComponent(recipe.recipe_name)}/tiddlers/%24%3A%2Ffavicon.ico`}>
+                      <Avatar src={`${pathPrefix}/recipe/${encodeURIComponent(recipe.recipe_name)}/tiddlers/%24%3A%2Ffavicon.ico`}>
                         <MissingFavicon />
                       </Avatar>
                     ) : (
@@ -141,7 +141,7 @@ export function Recipes() {
                     {recipe.recipe_bags.map(bag => (
                       <ListItem key={getBagName(bag.bag_id)}>
                         <ListItemAvatar>
-                          <Avatar src={`${pathPrefix}/bags/${encodeURIComponent(getBagName(bag.bag_id)!)}/tiddlers/%24%3A%2Ffavicon.ico`}>
+                          <Avatar src={`${pathPrefix}/bag/${encodeURIComponent(getBagName(bag.bag_id)!)}/tiddlers/%24%3A%2Ffavicon.ico`}>
                             <MissingFavicon />
                           </Avatar>
                         </ListItemAvatar>
@@ -197,7 +197,7 @@ export function Bags() {
             {indexJson.bagList.map(bag => (
               <ListItemButton key={bag.bag_name} disableRipple>
                 <ListItemAvatar>
-                  <Avatar src={`bags/${encodeURIComponent(bag.bag_name)}/tiddlers/%24%3A%2Ffavicon.ico`}>
+                  <Avatar src={`${pathPrefix}/bag/${encodeURIComponent(bag.bag_name)}/tiddlers/%24%3A%2Ffavicon.ico`}>
                     <MissingFavicon />
                   </Avatar>
                 </ListItemAvatar>

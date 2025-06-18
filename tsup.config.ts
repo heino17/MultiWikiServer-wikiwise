@@ -50,18 +50,21 @@ export default defineConfig({
     ]
   },
   async onSuccess() {
+
     writeFileSync("dist/mws.d.ts", [
       "export default function startServer(): Promise<void>;",
     ].join("\n"));
     console.log("TSC dist/mws.d.ts");
-    // this still doesn't work quite right, as it doesn't include node_modules types
-    const tag = "TSC ⚡️ done";
-    console.time(tag);
-    start("node scripts.mjs build:types", [
-      "--outFile", "./plugins/client/src/types.d.ts"
-    ], {}, { detached: true }).catch((code) => code);
-    console.log("TSC plugins/client/src/types.d.ts");
-    console.timeEnd(tag);
+
+    if (process.env.PLUGINDTS) {
+      const tag = "TSC ⚡️ done";
+      console.time(tag);
+      await start("node scripts.mjs build:types", [
+        "--outFile", "./plugins/client/src/types.d.ts"
+      ]).catch((code) => code);
+      console.log("TSC plugins/client/src/types.d.ts");
+      console.timeEnd(tag);
+    }
   },
 });
 
@@ -73,7 +76,7 @@ function start(cmd, args, env2 = {}, { cwd = process.cwd(), detached = false } =
     stdio: ["inherit", "inherit", "inherit"],
     detached,
   });
-  if(detached) cp.unref();
+  if (detached) cp.unref();
   return new Promise<void>((r, c) => {
     // if any process errors it will immediately exit the script
     cp.on("exit", (code) => { if (code) c(code); else r(); });

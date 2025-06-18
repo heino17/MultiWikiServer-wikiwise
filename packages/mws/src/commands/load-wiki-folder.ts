@@ -93,7 +93,7 @@ function loadWikiFolder({ $tw, store, cache, ...options }: {
 
 
 	const plugins = pluginNamesTW5.map(e => ({
-		plugin: cache.filePlugins.get(path.join("tiddlywiki", e)),
+		plugin: cache.filePlugins.get(path.join("tiddlywiki", $tw.version, e)),
 		folder: e,
 	}));
 
