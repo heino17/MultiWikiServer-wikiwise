@@ -67,3 +67,9 @@ I just needed some place to list all the different things we could do to secure 
 
 - Don't allow admins to edit a wiki unless they are added to the ACL. The CSP header could be used to disable all network requests if the admin role does not have read permission, thus giving them true read-only access to the wiki. 
 - If compression is used, do not compress two bags in the same compression stream. This is a fairly extreme precaution with a limited likelihood. 
+
+## Other ideas
+
+When you visit a page, you visit with page permissions only, and the page has to ask permission to use your full account permissions. The request could also be granular. 
+
+

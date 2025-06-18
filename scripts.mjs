@@ -60,7 +60,7 @@ switch(process.argv[2]) {
     break;
   }
   case "build:types": {
-    await start("npx tsc -p tsconfig.types.json", []);
+    await start("npx tsc -p tsconfig.types.json", process.argv.slice(3));
     break;
   }
   default:

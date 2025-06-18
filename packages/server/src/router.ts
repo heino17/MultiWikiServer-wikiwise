@@ -5,26 +5,17 @@ import Debug from "debug";
 import { IncomingMessage, ServerResponse } from "node:http";
 import { Http2ServerRequest, Http2ServerResponse } from "node:http2";
 import { ListenOptions } from "./listeners";
-import helmet from "helmet";
 import { serverEvents } from "@tiddlywiki/events";
 
 
 const debug = Debug("mws:router:matching");
+const debugnomatch = Debug("mws:router:nomatch");
 
 export class Router {
   allowedRequestedWithHeaders = ["fetch", "XMLHttpRequest"];
-
-  helmet;
   constructor(
     public rootRoute: ServerRoute
   ) {
-    //https://helmetjs.github.io/
-    // we'll start with the defaults and go from there
-    // feel free to open issues on Github for this
-    this.helmet = helmet({
-      contentSecurityPolicy: false,
-      strictTransportSecurity: false,
-    });
 
   }
 
@@ -50,12 +41,6 @@ export class Router {
   ) {
 
     await serverEvents.emitAsync("request.middleware", this, req, res, options);
-
-    await new Promise<void>((resolve, reject) => this.helmet(
-      req as IncomingMessage,
-      res as ServerResponse,
-      err => err ? reject(err) : resolve()
-    ));
 
     const streamer = new Streamer(
       req, res, options.prefix ?? "",
@@ -197,7 +182,7 @@ export class Router {
       const match = potentialRoute.path.exec(testPath);
 
       if (match) {
-        debug(potentialRoute.path.source, testPath, match?.[0]);
+
         // The matched portion of the path.
         const matchedPortion = match[0];
         // Remove the matched portion from the testPath.
@@ -209,7 +194,7 @@ export class Router {
           remainingPath,
         };
         const { childRoutes = [] } = potentialRoute as any; // see this.defineRoute
-
+        debug(potentialRoute.path.source, testPath, match[0], match[0].length, remainingPath, childRoutes.length);
         // If there are inner routes, try to match them recursively.
         if (childRoutes.length > 0) {
           const innerMatches = this.findRouteRecursive(
@@ -224,6 +209,9 @@ export class Router {
         }
         // we have a match
         if (!returnAll) return results;
+      } else {
+        // If the path doesn't match, we can skip this route.
+        debugnomatch(potentialRoute.path.source, testPath);
       }
     }
     return results;

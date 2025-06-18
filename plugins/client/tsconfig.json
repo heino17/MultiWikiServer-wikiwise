@@ -5,11 +5,12 @@
       "es2015",
       "DOM",
     ],
-    "module": "es2020",
-    "moduleResolution": "bundler",
+    "module": "commonjs",
     "outDir": "tiddlers/syncer",
     /* Linting */
     "strict": true,
+    "rootDir": "./src",
+    "esModuleInterop": true,
     // "noUnusedLocals": false,
     // "noUnusedParameters": false,
     // "noFallthroughCasesInSwitch": true,
@@ -18,7 +19,7 @@
     // "useDefineForClassFields": true,
   
   },
-  "include": [
-    "src"
+  "files": [
+    "src/multiwikiclientadaptor.ts"
   ],
 }

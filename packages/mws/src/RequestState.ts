@@ -90,10 +90,12 @@ export class StateObject<
 
 
 
-  async assertRecipeACL(
+  async assertRecipeAccess(
     recipe_name: PrismaField<"Recipes", "recipe_name">,
     needWrite: boolean
   ) {
+
+    // if (this.headers.referer) this.setHeader("x-found-referer", "true");
 
     const { recipe, canRead, canWrite } = await this.getRecipeACL(recipe_name, needWrite);
 
@@ -102,6 +104,26 @@ export class StateObject<
     if (!canWrite) throw this.sendEmpty(403, { "x-reason": "no write permission" });
 
     this.asserted = true;
+
+  }
+
+
+  async assertBagAccess(
+    bag_name: PrismaField<"Bags", "bag_name">,
+    needWrite: boolean
+  ) {
+
+    // if (this.headers.referer) this.setHeader("x-found-referer", "true");
+
+    const { bag, canRead, canWrite } = await this.getBagACL(bag_name, needWrite);
+
+    if (!bag) throw this.sendEmpty(404, { "x-reason": "recipe not found" });
+    if (!canRead) throw this.sendEmpty(403, { "x-reason": "no read permission" });
+    if (!canWrite) throw this.sendEmpty(403, { "x-reason": "no write permission" });
+
+    this.asserted = true;
+
+    return bag;
 
   }
 
@@ -131,21 +153,6 @@ export class StateObject<
   }
 
 
-  async assertBagACL(
-    bag_name: PrismaField<"Bags", "bag_name">,
-    needWrite: boolean
-  ) {
-    const { bag, canRead, canWrite } = await this.getBagACL(bag_name, needWrite);
-
-    if (!bag) throw this.sendEmpty(404, { "x-reason": "recipe not found" });
-    if (!canRead) throw this.sendEmpty(403, { "x-reason": "no read permission" });
-    if (!canWrite) throw this.sendEmpty(403, { "x-reason": "no write permission" });
-
-    this.asserted = true;
-
-    return bag;
-
-  }
 
 
 

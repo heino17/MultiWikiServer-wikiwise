@@ -19,10 +19,8 @@ previous operation to complete before sending a new one.
 // the blank line is important, and so is the following use strict
 "use strict";
 
-import type { } from "@tiddlywiki/mws";
-import type { Syncer, Tiddler } from "tiddlywiki";
-import type { WikiRoutes } from "@tiddlywiki/mws/src/managers/wiki-routes.ts";
-import type { ZodRoute } from "@tiddlywiki/mws/src/index.ts";
+import type { WikiRoutes, ZodRoute } from './mws';
+import type { Syncer, Tiddler } from 'tiddlywiki';
 declare global { const fflate: typeof import("./fflate"); }
 
 declare class Logger {
@@ -255,7 +253,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		return await httpRequest({
 			...options,
 			responseType: "blob",
-			url: this.host + "wiki/" + encodeURIComponent(this.recipe) + options.url,
+			url: this.host + "recipe/" + encodeURIComponent(this.recipe) + options.url,
 		}).then(async e => {
 			if (!e.ok) return [
 				false, new Error(

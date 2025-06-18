@@ -4,7 +4,8 @@ import { StateObject } from "./RequestState";
 import { ServerState } from "./ServerState";
 import { AuthUser, SessionManager } from "./services/sessions";
 import { setupDevServer } from "./services/setupDevServer";
-
+import helmet from "helmet";
+import { IncomingMessage, ServerResponse } from "http";
 
 declare module "@tiddlywiki/events" {
   /**
@@ -29,6 +30,7 @@ declare module "@tiddlywiki/server" {
   interface Router {
     config: ServerState;
     sendAdmin: ART<typeof setupDevServer>;
+    helmet: ART<typeof helmet>;
   }
 
   interface Streamer {
@@ -44,12 +46,27 @@ serverEvents.on("listen.router.init", async (listen, router) => {
   ) => {
     return new StateObject(streamer, routePath, bodyFormat, router);
   };
+  //https://helmetjs.github.io/
+  // we'll start with the defaults and go from there
+  // feel free to open issues on Github for this
+  router.helmet = helmet({
+    contentSecurityPolicy: false,
+    strictTransportSecurity: false,
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  });
 
   await serverEvents.emitAsync("mws.router.init", router);
 
   await serverEvents.emitAsync("mws.routes.important", router.rootRoute, router.config);
   await serverEvents.emitAsync("mws.routes", router.rootRoute, router.config);
   await serverEvents.emitAsync("mws.routes.fallback", router.rootRoute, router.config);
+});
+serverEvents.on("request.middleware", async (router, req, res, options) => {
+  await new Promise<void>((resolve, reject) => router.helmet(
+    req as IncomingMessage,
+    res as ServerResponse,
+    err => err ? reject(err) : resolve()
+  ));
 });
 serverEvents.on("request.streamer", async (router, streamer) => {
   // This is picked up by our StateObject class

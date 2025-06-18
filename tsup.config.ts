@@ -55,27 +55,25 @@ export default defineConfig({
     ].join("\n"));
     console.log("TSC dist/mws.d.ts");
     // this still doesn't work quite right, as it doesn't include node_modules types
-    // const tag = "TSC ⚡️ done";
-    // console.time(tag);
-    // writeFileSync("dist/mws.d.ts", [
-    //   "import './types.d.ts';",
-    //   "export * from 'packages/mws/src/index';",
-    // ].join("\n"));
-    // console.log("TSC dist/mws.d.ts");
-    // const code = await start("node scripts.mjs build:types", []).catch((code) => code);
-    // console.log("TSC dist/types.d.ts");
-    // console.timeEnd(tag);
-    // if(code) process.exit(code);
+    const tag = "TSC ⚡️ done";
+    console.time(tag);
+    start("node scripts.mjs build:types", [
+      "--outFile", "./plugins/client/src/types.d.ts"
+    ], {}, { detached: true }).catch((code) => code);
+    console.log("TSC plugins/client/src/types.d.ts");
+    console.timeEnd(tag);
   },
 });
 
-function start(cmd, args, env2 = {}, { cwd = process.cwd() } = {}) {
+function start(cmd, args, env2 = {}, { cwd = process.cwd(), detached = false } = {}) {
   const cp = spawn(cmd, args, {
     cwd,
     env: { ...process.env, ...env2, },
     shell: true,
     stdio: ["inherit", "inherit", "inherit"],
+    detached,
   });
+  if(detached) cp.unref();
   return new Promise<void>((r, c) => {
     // if any process errors it will immediately exit the script
     cp.on("exit", (code) => { if (code) c(code); else r(); });

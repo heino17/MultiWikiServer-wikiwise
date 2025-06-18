@@ -31,4 +31,4 @@ Internal notes by core developers
 - Storing large binary tiddlers on the file system
 - Guest access to wiki
 - Very tempted to remove READ privilege and just allow everyone to read because of the imsurmountable security issues that come with it otherwise.
-
+- When you visit a page, you visit with page permissions only, and the page has to ask permission to use your full account permissions. The request could also be granular. 

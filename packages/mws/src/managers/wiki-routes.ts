@@ -9,7 +9,7 @@ import { Writable } from "stream";
 import { IncomingHttpHeaders } from "http";
 import { WikiStateStore } from "./WikiStateStore";
 import { Debug } from "@prisma/client/runtime/library";
-import { registerZodRoutes, RouterKeyMap, RouterRouteMap, ServerRoute, tryParseJSON, UserError, zod, zodRoute, ZodState } from "@tiddlywiki/server";
+import { BodyFormat, JsonValue, registerZodRoutes, RouterKeyMap, RouterRouteMap, ServerRoute, tryParseJSON, UserError, zod, ZodRoute, zodRoute, ZodState } from "@tiddlywiki/server";
 import { serverEvents } from "@tiddlywiki/events";
 const debugCORS = Debug("mws:cors");
 
@@ -34,6 +34,18 @@ export const WikiRouterKeyMap: RouterKeyMap<WikiRoutes, true> = {
 
 export type TiddlerManagerMap = RouterRouteMap<WikiRoutes>;
 
+export interface WikiRoute<
+  M extends string,
+  B extends BodyFormat,
+  P extends Record<string, zod.ZodType<any, string | undefined>>,
+  Q extends Record<string, zod.ZodType<any, string[] | undefined>>,
+  T extends zod.ZodTypeAny,
+  R extends JsonValue
+> extends ZodRoute<M, B, P, Q, T, R> {
+  routeType: "wiki" | "recipe" | "bag";
+  routeName: string;
+}
+
 serverEvents.on("mws.routes.fallback", (root, config) => {
   WikiRoutes.defineRoutes(root);
 })
@@ -46,7 +58,14 @@ export class WikiRoutes {
   static defineRoutes = (root: ServerRoute) => {
     const router = new WikiRoutes();
     const keys = Object.keys(WikiRouterKeyMap);
-    registerZodRoutes(root, router, keys);
+    const parent = root.defineRoute({
+      method: [],
+      denyFinal: true,
+      path: new RegExp(`^(?=${BAG_PREFIX}|${RECIPE_PREFIX}|${WIKI_PREFIX})(?=/)`),
+    }, async state => {
+
+    })
+    registerZodRoutes(parent, router, keys);
   }
 
 
@@ -59,7 +78,7 @@ export class WikiRoutes {
     }),
     inner: async (state) => {
 
-      await state.assertRecipeACL(state.pathParams.recipe_name, false);
+      await state.assertRecipeAccess(state.pathParams.recipe_name, false);
 
       await state.$transaction(async (prisma) => {
         const server = new WikiStateStore(state, prisma);
@@ -149,7 +168,7 @@ export class WikiRoutes {
 
       const { recipe_name } = state.pathParams;
 
-      await state.assertRecipeACL(recipe_name, false);
+      await state.assertRecipeAccess(recipe_name, false);
 
       const result = await state.$transaction(async (prisma) => {
         const server = new WikiStateStore(state, prisma);
@@ -187,7 +206,7 @@ export class WikiRoutes {
     inner: async (state) => {
 
       const { recipe_name } = state.pathParams;
-      await state.assertRecipeACL(recipe_name, false);
+      await state.assertRecipeAccess(recipe_name, false);
 
       const
         last_known_revision_id = state.queryParams.last_known_revision_id?.[0],
@@ -248,7 +267,7 @@ export class WikiRoutes {
     inner: async (state) => {
       const { recipe_name, title } = state.pathParams;
 
-      await state.assertRecipeACL(recipe_name, false);
+      await state.assertRecipeAccess(recipe_name, false);
       // we can only throw STREAM_ENDED outside the transaction
       throw await state.$transaction(async (prisma) => {
         const server = new WikiStateStore(state, prisma);
@@ -279,7 +298,7 @@ export class WikiRoutes {
 
       const { recipe_name } = state.pathParams;
 
-      await state.assertRecipeACL(recipe_name, true);
+      await state.assertRecipeAccess(recipe_name, true);
 
       const fields = parseTiddlerFields(state.data, state.headers["content-type"]);
 
@@ -316,7 +335,7 @@ export class WikiRoutes {
       const { recipe_name, title } = state.pathParams;
       if (!recipe_name || !title) throw state.sendEmpty(404, { "x-reason": "bag_name or title not found" });
 
-      await state.assertRecipeACL(recipe_name, true);
+      await state.assertRecipeAccess(recipe_name, true);
 
       const { bag_name, revision_id } = await state.$transaction(async (prisma) => {
 
@@ -348,7 +367,7 @@ export class WikiRoutes {
     }),
     inner: async (state) => {
 
-      await state.assertRecipeACL(state.pathParams.recipe_name, true);
+      await state.assertRecipeAccess(state.pathParams.recipe_name, true);
 
       const recipe_name = state.pathParams.recipe_name;
 
@@ -377,7 +396,7 @@ export class WikiRoutes {
     }),
     inner: async (state) => {
       const { bag_name, title } = state.pathParams;
-      const bag = await state.assertBagACL(bag_name, false);
+      const bag = await state.assertBagAccess(bag_name, false);
       throw await state.$transaction(async (prisma) => {
         const server = new WikiStateStore(state, prisma);
         return await server.serveBagTiddler(bag.bag_id, bag_name, title);
@@ -398,7 +417,7 @@ export class WikiRoutes {
     zodRequestBody: z => z.string(),
     inner: async (state) => {
       const { bag_name, title } = state.pathParams;
-      await state.assertBagACL(bag_name, true);
+      await state.assertBagAccess(bag_name, true);
       const fields = parseTiddlerFields(state.data, state.headers["content-type"]);
       if (fields === undefined)
         throw state.sendEmpty(400, {
@@ -421,7 +440,7 @@ export class WikiRoutes {
     }),
     inner: async (state) => {
       const { bag_name, title } = state.pathParams;
-      await state.assertBagACL(bag_name, true);
+      await state.assertBagAccess(bag_name, true);
       return await state.$transaction(async (prisma) => {
         const server = new WikiStateStore(state, prisma);
         return server.deleteBagTiddler(bag_name, title);
@@ -437,7 +456,7 @@ export class WikiRoutes {
     }),
     inner: async (state) => {
       const { bag_name } = state.pathParams;
-      await state.assertBagACL(bag_name, true);
+      await state.assertBagAccess(bag_name, true);
       const tiddlerFields = await recieveTiddlerMultipartUpload(state);
       return await state.$transaction(async (prisma) => {
         const server = new WikiStateStore(state, prisma);
