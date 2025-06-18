@@ -7,15 +7,17 @@ import { gzipSync } from "zlib";
 import { checkPath, dist_resolve } from "@tiddlywiki/server";
 import { serverEvents } from "@tiddlywiki/events";
 
+
 const prefix = Buffer.from(`$tw.preloadTiddler(`, "utf8");
 const suffix = Buffer.from(`);`, "utf8");
 
 export async function startupCache($tw: TW, cachePath: string) {
 
+  const pkg = JSON.parse(fs.readFileSync(dist_resolve("../package.json"), "utf8"));
 
   // we only need the client since we don't load plugins server-side
   const { tiddlerFiles: pluginFiles, tiddlerHashes: pluginHashes } =
-    await importPlugins(path.join($tw.boot.corePath, ".."), cachePath, "client", $tw,);
+    await importPlugins(path.join($tw.boot.corePath, ".."), cachePath, "client", $tw, pkg.version);
 
   const filePlugins = new Map([...pluginFiles.entries()].map(e => e.reverse() as [string, string]));
 
@@ -74,7 +76,7 @@ serverEvents.on("mws.routes", (root, config) => {
   })
 })
 
-async function importPlugins(twFolder: string, cacheFolder: string, type: string, $tw: TW) {
+async function importPlugins(twFolder: string, cacheFolder: string, type: string, $tw: TW, mwsVersion: string) {
 
 
   const readLevel = (d: string) => {
@@ -97,10 +99,8 @@ async function importPlugins(twFolder: string, cacheFolder: string, type: string
     return [oldPath, relativePluginPath] as const;
   });
 
-  plugins.push([
-    dist_resolve("../plugins/client"),
-    "mws/client"
-  ] as const);
+  const mwsRelative = `mws/${mwsVersion}/client`;
+  plugins.push([dist_resolve("../plugins/client"), mwsRelative] as const);
 
 
   // it is recommended to add <link rel="preload" to the header since these cannot be deferred
@@ -125,9 +125,13 @@ async function importPlugins(twFolder: string, cacheFolder: string, type: string
 
   plugins.forEach(([oldPath, relativePluginPath]) => {
     const plugin = $tw.loadPluginFolder(oldPath);
+
     const newPath = path.join(cacheFolder, relativePluginPath);
     fs.mkdirSync(newPath, { recursive: true });
     if (plugin && plugin.title && plugin.text) {
+      if (relativePluginPath === mwsRelative) {
+        plugin.version = mwsVersion;
+      }
       // need to compare sizes of various configurations
 
       // plugin.text = JSON.stringify(JSON.parse(plugin.text as string));

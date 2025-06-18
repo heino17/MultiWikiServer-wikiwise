@@ -31,4 +31,9 @@ Internal notes by core developers
 - Storing large binary tiddlers on the file system
 - Guest access to wiki
 - Very tempted to remove READ privilege and just allow everyone to read because of the imsurmountable security issues that come with it otherwise.
-- When you visit a page, you visit with page permissions only, and the page has to ask permission to use your full account permissions. The request could also be granular. 
+- When you visit a page, you visit with page permissions only, and the page has to ask permission before it can read or write to any other wiki or bag you have access to. It would be like a GitHub app requesting permission to access one of your repos on Github. This can be enforced with the referer header. API keys could also be used for similar restricted access. 
+
+## other
+
+- Not planed, but https://crates.io/crates/indradb
+

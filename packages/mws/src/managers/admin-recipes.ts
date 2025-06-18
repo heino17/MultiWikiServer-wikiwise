@@ -3,8 +3,6 @@ import { admin } from "./admin-utils";
 import { serverEvents } from "@tiddlywiki/events";
 
 
-// https://crates.io/crates/indradb
-
 serverEvents.on("mws.routes", (root) => {
   RecipeManager.defineRoutes(root);
 });

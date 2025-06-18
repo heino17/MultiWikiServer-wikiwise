@@ -26,7 +26,9 @@ export function admin<T extends zod.ZodTypeAny, R extends JsonValue>(
       const url = new URL(state.headers.referer);
 
       const allowed = url.pathname.startsWith(state.pathPrefix + "/admin/")
-        || url.pathname === state.pathPrefix + "/";
+        || url.pathname === state.pathPrefix + "/"
+        || url.pathname === state.pathPrefix + "/login";
+
 
       if (!allowed)
         throw state.sendEmpty(400, { "x-reason": "Referer header must start with /admin/" });
