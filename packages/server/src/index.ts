@@ -25,6 +25,23 @@ export * from "./Z2";
 export async function startup() {
   await serverEvents.emitAsync("zod.make", Z2);
 }
+let exiting = false;
+const exit = async (signal: any) => {
+  if (exiting) return;
+  exiting = true;
+  console.log(` Server exiting due to ${signal}...`);
+  console.time("Server exit");
+  await serverEvents.emitAsync("exit");
+  console.timeEnd("Server exit");
+  await new Promise<void>((r) => setTimeout(r, 5000));
+  console.log("Server exit timeout reached, forcing exit.");
+  console.log("Exiting process...");
+  process.exit(0);
+};
+
+// process.on("SIGINT", exit);
+// process.on("SIGTERM", exit);
+// process.on("SIGHUP", exit);
 
 const listenOptionsCheck = z.object({
   port: z.string().optional(),

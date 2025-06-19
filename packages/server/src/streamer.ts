@@ -349,8 +349,6 @@ export class Streamer {
       if (typeof retryMilliseconds !== "number" || retryMilliseconds < 0)
         throw new Error("Invalid retryMilliseconds: must be a non-negative number");
 
-    // const stream = new PassThrough();
-
     this.writeHead(200, {
       "content-type": "text/event-stream",
       "cache-control": "no-cache, max-age=0",
@@ -384,7 +382,7 @@ export class Streamer {
         `data: ${JSON.stringify(eventData)}`,
         eventId && `id: ${eventId}`,
         retryMilliseconds && `retry: ${retryMilliseconds}`,
-      ].filter(e => e).join("\n") + "\n\n");
+      ].filter(truthy).join("\n") + "\n\n");
     }
     const emitComment = (comment: string) => {
       this.writer.write(`: ${comment}\n\n`);
@@ -398,7 +396,6 @@ export class Streamer {
     
     serverEvents.on("exit", close);
     this.writer.on("finish", () => {
-      console.log("SSE stream closed");
       serverEvents.off("exit", close);
     });
 

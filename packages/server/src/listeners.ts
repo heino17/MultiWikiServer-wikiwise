@@ -3,6 +3,7 @@ import { ok } from "node:assert";
 import { createServer, IncomingMessage, Server, ServerResponse } from "node:http";
 import { createSecureServer, Http2SecureServer, Http2ServerRequest, Http2ServerResponse } from "node:http2";
 import { Router } from "./router";
+import { serverEvents } from '@tiddlywiki/events';
 
 export class ListenerBase {
 
@@ -12,7 +13,12 @@ export class ListenerBase {
     public bindInfo: string,
     public options: ListenOptions,
   ) {
-
+    serverEvents.on("exit", async () => {
+      await new Promise<any>((resolve) => {
+        this.server.close(resolve);
+      });
+      console.log("HTTPS server closed");
+    });
     this.server.on("request", (
       req: IncomingMessage | Http2ServerRequest,
       res: ServerResponse | Http2ServerResponse
@@ -52,6 +58,7 @@ export class ListenerBase {
     } else {
       this.server.listen(8080, host);
     }
+
   }
 
   handleRequest(
