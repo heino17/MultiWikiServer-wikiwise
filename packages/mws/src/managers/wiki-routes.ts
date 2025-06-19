@@ -10,12 +10,13 @@ import { IncomingHttpHeaders } from "http";
 import { WikiStateStore } from "./WikiStateStore";
 import { Debug } from "@prisma/client/runtime/library";
 import { BodyFormat, checkPath, JsonValue, registerZodRoutes, RouterKeyMap, RouterRouteMap, ServerRoute, tryParseJSON, UserError, zod, ZodRoute, zodRoute, ZodState } from "@tiddlywiki/server";
-import { serverEvents } from "@tiddlywiki/events";
+import { serverEvents, ServerEventsMap } from "@tiddlywiki/events";
 const debugCORS = Debug("mws:cors");
 
 export const WikiRouterKeyMap: RouterKeyMap<WikiRoutes, true> = {
   // recipe status updates
   handleGetRecipeStatus: true,
+  handleGetRecipeEvents: true,
   handleGetBags: true,
   handleGetBagState: true,
   handleListRecipeTiddlers: true,
@@ -44,6 +45,23 @@ export interface WikiRoute<
 > extends ZodRoute<M, B, P, Q, T, R> {
   routeType: "wiki" | "recipe" | "bag";
   routeName: string;
+}
+
+declare module "@tiddlywiki/events" {
+  interface ServerEventsMap {
+    "mws.tiddler.save": [{
+      recipe_name?: string;
+      bag_name: string;
+      title: string;
+      revision_id: string;
+    }];
+    "mws.tiddler.delete": [{
+      recipe_name?: string;
+      bag_name: string;
+      title: string;
+      revision_id: string;
+    }];
+  }
 }
 
 serverEvents.on("mws.routes.fallback", (root, config) => {
@@ -166,6 +184,58 @@ export class WikiRoutes {
       };
     }
   });
+
+  handleGetRecipeEvents = zodRoute({
+    method: ["GET", "HEAD"],
+    path: RECIPE_PREFIX + "/:recipe_name/events",
+    bodyFormat: "ignore",
+    zodPathParams: z => ({
+      recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
+    }),
+    inner: async (state) => {
+
+      const { recipe_name } = state.pathParams;
+
+      await state.assertRecipeAccess(recipe_name, false);
+      console.log("SSE connection for recipe events", recipe_name);
+      const events = state.sendSSE();
+      serverEvents.on("mws.tiddler.delete", onDelete);
+      serverEvents.on("mws.tiddler.save", onSave);
+      events.onClose(() => {
+        console.log("SSE connection closed for recipe events", recipe_name);
+        serverEvents.off("mws.tiddler.delete", onDelete);
+        serverEvents.off("mws.tiddler.save", onSave);
+      });
+
+      throw STREAM_ENDED;
+
+      function onSave(data: ServerEventsMap["mws.tiddler.save"][0]) {
+        console.log("SSE tiddler.save", data);
+        if (data.recipe_name === recipe_name) {
+          events.emitEvent("tiddler.save", {
+            recipe_name: data.recipe_name,
+            bag_name: data.bag_name,
+            title: data.title,
+            revision_id: data.revision_id,
+          }, "");
+        }
+      }
+
+      function onDelete(data: ServerEventsMap["mws.tiddler.delete"][0]) {
+        console.log("SSE tiddler.save", data);
+        if (data.recipe_name === recipe_name) {
+          events.emitEvent("tiddler.delete", {
+            recipe_name: data.recipe_name,
+            bag_name: data.bag_name,
+            title: data.title,
+            revision_id: data.revision_id,
+          }, "");
+        }
+      }
+
+
+    }
+  })
 
   handleListRecipeTiddlers = zodRoute({
     method: ["GET", "HEAD"],
@@ -388,6 +458,13 @@ export class WikiRoutes {
         return { revision_id, bag_name: bag.bag_name };
       });
 
+      await serverEvents.emitAsync("mws.tiddler.save", {
+        recipe_name,
+        bag_name,
+        title: fields.title,
+        revision_id,
+      });
+
       return { bag_name, revision_id };
 
     }
@@ -425,6 +502,13 @@ export class WikiRoutes {
 
       });
 
+      await serverEvents.emitAsync("mws.tiddler.delete", {
+        recipe_name,
+        bag_name,
+        title,
+        revision_id,
+      });
+
       return { bag_name, revision_id };
 
     }
@@ -447,13 +531,22 @@ export class WikiRoutes {
 
       const tiddlerFields = await recieveTiddlerMultipartUpload(state);
 
-      return await state.$transaction(async (prisma) => {
+      const res = await state.$transaction(async (prisma) => {
         const server = new WikiStateStore(state, prisma);
         const { bag_name } = await server.getRecipeWritableBag(recipe_name) ?? {};
         if (!bag_name) throw state.sendEmpty(404, { "x-reason": "bag not found" });
         const { revision_id } = await server.saveBagTiddlerFields(tiddlerFields, bag_name, null);
         return { bag_name, results: { revision_id, bag_name } };
       });
+
+      await serverEvents.emitAsync("mws.tiddler.save", {
+        recipe_name,
+        bag_name: res.results.bag_name,
+        title: tiddlerFields.title,
+        revision_id: res.results.revision_id,
+      });
+
+      return res;
 
     }
   });
@@ -497,10 +590,18 @@ export class WikiRoutes {
         throw state.sendEmpty(400, {
           "x-reason": "PUT tiddler expects a valid json or x-mws-tiddler body"
         });
-      return await state.$transaction(async (prisma) => {
+      const res = await state.$transaction(async (prisma) => {
         const server = new WikiStateStore(state, prisma);
         return server.saveBagTiddlerFields(fields, bag_name, null);
       });
+
+      await serverEvents.emitAsync("mws.tiddler.save", {
+        bag_name,
+        title: fields.title,
+        revision_id: res.revision_id,
+      });
+
+      return res;
     }
   });
   handleDeleteBagTiddler = zodRoute({
@@ -515,10 +616,16 @@ export class WikiRoutes {
     inner: async (state) => {
       const { bag_name, title } = state.pathParams;
       await state.assertBagAccess(bag_name, true);
-      return await state.$transaction(async (prisma) => {
+      const res = await state.$transaction(async (prisma) => {
         const server = new WikiStateStore(state, prisma);
         return server.deleteBagTiddler(bag_name, title);
       });
+      await serverEvents.emitAsync("mws.tiddler.delete", {
+        bag_name,
+        title,
+        revision_id: res.revision_id,
+      });
+      return res;
     }
   });
   handleFormMultipartBagTiddler = zodRoute({
@@ -532,10 +639,16 @@ export class WikiRoutes {
       const { bag_name } = state.pathParams;
       await state.assertBagAccess(bag_name, true);
       const tiddlerFields = await recieveTiddlerMultipartUpload(state);
-      return await state.$transaction(async (prisma) => {
+      const res = await state.$transaction(async (prisma) => {
         const server = new WikiStateStore(state, prisma);
         return await server.saveBagTiddlerFields(tiddlerFields, bag_name, null);
       });
+      await serverEvents.emitAsync("mws.tiddler.save", {
+        bag_name,
+        title: tiddlerFields.title,
+        revision_id: res.revision_id,
+      });
+      return res;
     }
   });
 

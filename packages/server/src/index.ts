@@ -80,6 +80,7 @@ declare module "@tiddlywiki/events" {
     "request.state": [router: Router, state: ServerRequest, streamer: Streamer]
     "request.handle": [state: ServerRequest, route: RouteMatch[]]
     "request.fallback": [state: ServerRequest, route: RouteMatch[]]
+    "exit": []
   }
 }
 

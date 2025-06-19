@@ -5,6 +5,7 @@ import { RouteMatch } from './router';
 import { ok } from 'assert';
 import { IncomingHttpHeaders } from 'http';
 import { zod } from './Z2';
+import { serverEvents } from '@tiddlywiki/events';
 
 export interface ServerRequest<
   B extends BodyFormat = BodyFormat,
@@ -111,57 +112,6 @@ export class ServerRequestClass<
     return this.sendEmpty(302, { 'Location': this.pathPrefix + location });
   }
 
-  sendSSE(retryMilliseconds?: number) {
-    if (retryMilliseconds !== undefined)
-      if (typeof retryMilliseconds !== "number" || retryMilliseconds < 0)
-        throw new Error("Invalid retryMilliseconds: must be a non-negative number");
-
-    const stream = new PassThrough();
-
-    this.sendStream(200, {
-      "content-type": "text/event-stream",
-      "cache-control": "no-cache",
-      "connection": "keep-alive",
-      "x-accel-buffering": "no",
-    }, stream);
-
-    stream.write(": This page is a server-sent event stream. It will continue loading until you close it.\n");
-    stream.write(": https://html.spec.whatwg.org/multipage/server-sent-events.html#server-sent-events\n");
-    stream.write("\n");
-
-    /**
-     * 
-     * @param {string} eventName The event name. If zero-length, the field is omitted
-     * @param eventData The data to send. Must be stringify-able to JSON.
-     * @param {string} eventId The event id. If zero-length, the field is omitted.
-     */
-    const emitEvent = (eventName: string, eventData: any, eventId: string) => {
-      if (typeof eventName !== "string")
-        throw new Error("Event name must be a string (a zero-length string disables the field)");
-      if (eventName.includes("\n"))
-        throw new Error("Event name cannot contain newlines");
-      if (typeof eventId !== "string")
-        throw new Error("Event ID must be a string");
-      if (eventId.includes("\n"))
-        throw new Error("Event ID cannot contain newlines");
-
-      stream.write([
-        eventName && `event: ${eventName}`,
-        `data: ${JSON.stringify(eventData)}`,
-        eventId && `id: ${eventId}`,
-        retryMilliseconds && `retry: ${retryMilliseconds}`,
-      ].filter(e => e).join("\n") + "\n\n");
-    }
-
-    return {
-      /** Emit an SSE event */
-      emitEvent,
-      emitComment: (comment: string) => stream.write(`: ${comment}\n\n`),
-      close: () => stream.end(),
-      onClose: (callback: () => void) => stream.on("close", callback),
-    };
-
-  }
   /**
   Options include:
   - `cbPartStart(headers,name,filename)` - invoked when a file starts being received

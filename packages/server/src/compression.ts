@@ -90,6 +90,11 @@ export class Compressor {
 
     this.finisher = () => this.res.end();
 
+    this.res.on("close", () => {
+      if (this.stream) this.stream.end();
+      this.ended = true;
+    });
+
   }
   /** Ends the response. Shortcut for easy removal when switching streams. */
   finisher;
