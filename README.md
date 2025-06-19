@@ -80,6 +80,3 @@ The development wiki will be active at http://localhost:8080/dev
 
 You can change the listeners as explained in the mws.dev.mjs file.
 
-## Experimental DeepWiki Documentation
-
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/TiddlyWiki/MultiWikiServer)
