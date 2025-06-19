@@ -1,7 +1,7 @@
 import { TiddlerFields } from "tiddlywiki";
 import { Prisma } from "@prisma/client";
 import * as runtime from "@prisma/client/runtime/library";
-import { UserError } from "@tiddlywiki/server";
+import { UserError, zod } from "@tiddlywiki/server";
 
 abstract class TiddlerStore_PrismaBase {
 
@@ -278,7 +278,7 @@ export class TiddlerStore_PrismaTransaction extends TiddlerStore_PrismaBase {
   }
 
   async getRecipeBagWithTiddler({ recipe_name, title }: {
-    recipe_name: string; 
+    recipe_name: string;
     title: string;
   }) {
 
@@ -335,6 +335,85 @@ export class TiddlerStore_PrismaTransaction extends TiddlerStore_PrismaBase {
       position: e.position,
       tiddlers: e.bag.tiddlers
     }));
+
+  }
+
+
+  async getRecipeBags(
+    recipe_name: PrismaField<"Recipes", "recipe_name">,
+  ) {
+    // In prisma it's easy to get the top bag for a specific title. 
+    // To get all titles we basically have to get all bags and manually find the top one. 
+    const bags = await this.prisma.recipe_bags.findMany({
+      where: { recipe: { recipe_name } },
+      select: {
+        position: true,
+        bag: {
+          select: {
+            bag_id: true,
+            bag_name: true,
+          }
+        }
+      },
+    });
+
+    bags.sort((a, b) => a.position - b.position);
+
+    return bags.map(e => ({
+      bag_id: e.bag.bag_id,
+      bag_name: e.bag.bag_name,
+      position: e.position,
+    }));
+
+  }
+
+
+  async getBagTiddlers(
+    bag_name: PrismaField<"Bags", "bag_name">,
+    options: {
+      last_known_revision_id?: PrismaField<"Tiddlers", "revision_id">;
+      include_deleted?: boolean;
+    } = {}
+  ) {
+    // In prisma it's easy to get the top bag for a specific title. 
+    // To get all titles we basically have to get all bags and manually find the top one. 
+    const lastid = options.last_known_revision_id;
+    const withDeleted = options.include_deleted;
+    const bag = await this.prisma.bags.findUnique({
+      where: { bag_name },
+      select: {
+        tiddlers: {
+          select: {
+            title: true,
+            revision_id: true,
+            is_deleted: true,
+          },
+          where: {
+            is_deleted: withDeleted ? undefined : false,
+            revision_id: lastid ? { gt: lastid } : undefined
+          },
+        },
+        bag_id: true,
+        bag_name: true,
+      }
+    });
+
+    const { success, error, data } = zod.strictObject({
+      bag_id: zod.string(),
+      bag_name: zod.string(),
+      tiddlers: zod.strictObject({
+        title: zod.string(),
+        revision_id: zod.string(),
+        is_deleted: zod.boolean()
+      }).array()
+    }).safeParse(bag);
+
+    if (!success) {
+      console.error("Invalid bag data", bag, error);
+      throw new UserError("The server tried to send an invalid response, but it was intercepted by the response checker.");
+    }
+
+    return data;
 
   }
 

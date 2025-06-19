@@ -1,5 +1,5 @@
 
-import { BodyFormat, ListenerHTTP, ListenerHTTPS, Router, startListening, zod } from "@tiddlywiki/server";
+import { BodyFormat, ListenerHTTP, ListenerHTTPS, Router, startListening, Z2, zod } from "@tiddlywiki/server";
 import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
 
 import { fromError } from "zod-validation-error";
@@ -127,7 +127,7 @@ export class Command extends BaseCommand<[], {
     if (!listenerCheck.success) {
       console.log("Invalid listener options: ");
       console.log(listenOptions);
-      console.log(fromError(listenerCheck.error).toString());
+      console.log(Z2.prettifyError(listenerCheck.error).toString());
       process.exit();
     }
 

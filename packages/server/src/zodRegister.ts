@@ -73,9 +73,11 @@ export const registerZodRoutes = (parent: ServerRoute, router: any, keys: string
       checkQuery(state, zodQueryParams);
 
       checkData(state, zodRequestBody);
-
+      const timekey = `handler ${state.bodyFormat} ${state.method} ${state.urlInfo.pathname}`;
+      if (Debug.enabled("server:handler:timing")) console.time(timekey);
       const [good, error, res] = await inner(state)
         .then(e => [true, undefined, e] as const, e => [false, e, undefined] as const);
+      if (Debug.enabled("server:handler:timing")) console.timeEnd(timekey);
 
       if (!good) {
         if (error === STREAM_ENDED) {
@@ -104,7 +106,7 @@ export function checkData<
   if (!inputCheck.success) {
     console.log(inputCheck.error);
     throw state.sendString(400, { "x-reason": "zod-request" },
-      fromError(inputCheck.error).toString(), "utf8");
+      Z2.prettifyError(inputCheck.error).toString(), "utf8");
   }
   state.data = inputCheck.data;
 }
@@ -119,7 +121,7 @@ export function checkQuery<
   if (!queryCheck.success) {
     console.log(queryCheck.error);
     throw state.sendString(400, { "x-reason": "zod-query" },
-      fromError(queryCheck.error).toString(), "utf8");
+      Z2.prettifyError(queryCheck.error).toString(), "utf8");
   }
   state.queryParams = queryCheck.data as any;
 }
@@ -134,7 +136,7 @@ export function checkPath<
   if (!pathCheck.success) {
     console.log(pathCheck.error);
     throw state.sendString(404, { "x-reason": "zod-path" },
-      fromError(pathCheck.error).toString(), "utf8");
+      Z2.prettifyError(pathCheck.error).toString(), "utf8");
   }
   state.pathParams = pathCheck.data as any;
 }

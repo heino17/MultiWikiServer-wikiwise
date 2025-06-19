@@ -37,6 +37,8 @@ export class ServerRequestClass<
    * Object.fromEntries takes the last value if there are duplicates, so conflicting names will have the last value in the path. 
    * 
    * Conflicting names would be defined on the route definitions, so just change the name there if there is a conflict.
+   * 
+   * pathParams are parsed with `decodeURIComponent` one time.
    */
   pathParams: Record<string, string | undefined>;
   /** 

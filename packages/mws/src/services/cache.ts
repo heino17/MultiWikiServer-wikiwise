@@ -4,7 +4,7 @@ import * as path from "path";
 import * as crypto from "crypto";
 import { TW } from "tiddlywiki";
 import { gzipSync } from "zlib";
-import { checkPath, dist_resolve } from "@tiddlywiki/server";
+import { BodyFormat, checkPath, dist_resolve, SendFileOptions, ServerRequest } from "@tiddlywiki/server";
 import { serverEvents } from "@tiddlywiki/events";
 
 
@@ -53,23 +53,38 @@ serverEvents.on("mws.routes", (root, config) => {
     path: /^\/\$cache\/(.*)\/plugin\.js$/,
     bodyFormat: "ignore",
     pathParams: ["plugin"]
-  }, async state => {
+  }, async (state: ServerRequest<BodyFormat, string, unknown>) => {
+
     checkPath(state, z => ({ plugin: z.string() }));
+
+    const plugin = state.pluginCache.filePlugins.get(state.pathParams.plugin);
+    if (!plugin) throw state.sendEmpty(404, { "x-reason": "Plugin not found" });
+
+    state.setHeader("Content-Type", "application/javascript");
+    // state.setHeader("Cache-Control", "public, max-age=60");
+    state.setHeader("Cache-Control", "public, max-age=6, stale-while-revalidate=86400");
+
+    const etag = `"${state.pluginCache.pluginHashes.get(plugin)}"`;
+    state.setHeader("Etag", etag);
+
+    const match = state.headers["if-none-match"] === etag;
+    if (match) throw state.sendEmpty(304, { "x-reason": "Etag Match" });
 
     const accepts = state.acceptsEncoding(["gzip", "identity"]);
 
-    state.setHeader("Content-Type", "application/javascript");
     // setting this will disable the server gzip streaming so we save CPU cycles
     if (accepts === "gzip") {
       state.setHeader("Content-Encoding", "gzip");
       return state.sendFile(200, {}, {
         root: path.join(config.wikiPath, "cache"),
         reqpath: state.pathParams.plugin + "/plugin.js.gz",
+        cacheControl: false,
       });
     } else {
       return state.sendFile(200, {}, {
         root: path.join(config.wikiPath, "cache"),
         reqpath: state.pathParams.plugin + "/plugin.js",
+        cacheControl: false,
       });
     }
 

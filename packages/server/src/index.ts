@@ -51,7 +51,7 @@ export async function startListening(
   if (!listenerCheck.success) {
     console.log("Invalid listener options: ");
     console.log(options);
-    const errorString = fromError(listenerCheck.error).toString();
+    const errorString = Z2.prettifyError(listenerCheck.error).toString();
     console.log(errorString);
     throw new Error("Invalid listener options: " + errorString);
   }

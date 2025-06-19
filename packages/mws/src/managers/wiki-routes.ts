@@ -9,21 +9,21 @@ import { Writable } from "stream";
 import { IncomingHttpHeaders } from "http";
 import { WikiStateStore } from "./WikiStateStore";
 import { Debug } from "@prisma/client/runtime/library";
-import { BodyFormat, JsonValue, registerZodRoutes, RouterKeyMap, RouterRouteMap, ServerRoute, tryParseJSON, UserError, zod, ZodRoute, zodRoute, ZodState } from "@tiddlywiki/server";
+import { BodyFormat, checkPath, JsonValue, registerZodRoutes, RouterKeyMap, RouterRouteMap, ServerRoute, tryParseJSON, UserError, zod, ZodRoute, zodRoute, ZodState } from "@tiddlywiki/server";
 import { serverEvents } from "@tiddlywiki/events";
 const debugCORS = Debug("mws:cors");
 
 export const WikiRouterKeyMap: RouterKeyMap<WikiRoutes, true> = {
   // recipe status updates
   handleGetRecipeStatus: true,
+  handleGetBags: true,
+  handleGetBagState: true,
   handleListRecipeTiddlers: true,
   handleGetBagStates: true,
   // individual tiddlers
   handleLoadRecipeTiddler: true,
   handleSaveRecipeTiddler: true,
   handleDeleteRecipeTiddler: true,
-  // wiki index
-  handleGetWikiIndex: true,
   // external tools
   handleDeleteBagTiddler: true,
   handleFormMultipartBagTiddler: true,
@@ -61,22 +61,28 @@ export class WikiRoutes {
     const parent = root.defineRoute({
       method: [],
       denyFinal: true,
-      path: new RegExp(`^(?=${BAG_PREFIX}|${RECIPE_PREFIX}|${WIKI_PREFIX})(?=/)`),
+      path: new RegExp(`^(?=${BAG_PREFIX}|${RECIPE_PREFIX})(?=/)`),
     }, async state => {
 
     })
     registerZodRoutes(parent, router, keys);
-  }
 
+    // the wiki index route
+    root.defineRoute({
+      method: ["GET", "HEAD"],
+      path: /^\/wiki\/(.*)$/,
+      pathParams: ["recipe_name"],
+      bodyFormat: "ignore",
+    }, async (state) => {
+      const timekey = `handler ${state.bodyFormat} ${state.method} ${state.urlInfo.pathname}`;
+      if (Debug.enabled("server:handler:timing")) console.time(timekey);
 
-  handleGetWikiIndex = zodRoute({
-    method: ["GET", "HEAD"],
-    path: WIKI_PREFIX + "/:recipe_name",
-    bodyFormat: "ignore",
-    zodPathParams: z => ({
-      recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
-    }),
-    inner: async (state) => {
+      if (!state.pathParams.recipe_name)
+        throw state.sendEmpty(404, { "x-reason": "recipe name not found" });
+
+      checkPath(state, z => ({
+        recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
+      }));
 
       await state.assertRecipeAccess(state.pathParams.recipe_name, false);
 
@@ -85,9 +91,13 @@ export class WikiRoutes {
         await server.serveIndexFile(state.pathParams.recipe_name);
       });
 
+      if (Debug.enabled("server:handler:timing")) console.timeEnd(timekey);
+
       throw STREAM_ENDED;
-    }
-  });
+    });
+  }
+
+
 
   // lets start with the scenarios from the sync adapter
   // 1. Status - The wiki status that gets sent to the TW5 client
@@ -105,37 +115,37 @@ export class WikiRoutes {
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
     }),
-    corsRequest: async state => {
+    // corsRequest: async state => {
 
-      // "Access-Control-Expose-Headers"
-      // https://developer.mozilla.org/en-US/docs/Glossary/CORS-safelisted_response_header
-      // https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Access-Control-Expose-Headers
-      // The following headers are exposed by default: 
-      // Cache-Control
-      // Content-Language
-      // Content-Length
-      // Content-Type
-      // Expires
-      // Last-Modified
-      // Pragma
+    //   // "Access-Control-Expose-Headers"
+    //   // https://developer.mozilla.org/en-US/docs/Glossary/CORS-safelisted_response_header
+    //   // https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Access-Control-Expose-Headers
+    //   // The following headers are exposed by default: 
+    //   // Cache-Control
+    //   // Content-Language
+    //   // Content-Length
+    //   // Content-Type
+    //   // Expires
+    //   // Last-Modified
+    //   // Pragma
 
-      const headers = state.headers["access-control-request-headers"]
-      const method = state.headers["access-control-request-method"]
-      debugCORS("OPTIONS %s %s %s", state.urlInfo.pathname, method, headers);
-      // CORS is currently disabled, so send an empty response
-      throw state.sendEmpty(204, {
-        // SameSite=strict should prevent the request from being credentialed
-        // Allow-Origin * prevents credentialed requests
-        // https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Access-Control-Allow-Credentials
-        // "Access-Control-Allow-Credentials": "true",
-        // "Access-Control-Allow-Origin": "*",
-        // "Access-Control-Allow-Methods": "POST",
-        // "Access-Control-Allow-Headers": "Content-Type, X-Requested-With",
-        // "Access-Control-Expose-Headers": "*",
-      });
-      // https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request
+    //   const headers = state.headers["access-control-request-headers"]
+    //   const method = state.headers["access-control-request-method"]
+    //   debugCORS("OPTIONS %s %s %s", state.urlInfo.pathname, method, headers);
+    //   // CORS is currently disabled, so send an empty response
+    //   throw state.sendEmpty(204, {
+    //     // SameSite=strict should prevent the request from being credentialed
+    //     // Allow-Origin * prevents credentialed requests
+    //     // https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Access-Control-Allow-Credentials
+    //     // "Access-Control-Allow-Credentials": "true",
+    //     // "Access-Control-Allow-Origin": "*",
+    //     // "Access-Control-Allow-Methods": "POST",
+    //     // "Access-Control-Allow-Headers": "Content-Type, X-Requested-With",
+    //     // "Access-Control-Expose-Headers": "*",
+    //   });
+    //   // https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request
 
-    },
+    // },
     inner: async (state) => {
 
       const { recipe_name } = state.pathParams;
@@ -190,6 +200,68 @@ export class WikiRoutes {
     }
   })
 
+  handleGetBags = zodRoute({
+    method: ["GET", "HEAD"],
+    path: RECIPE_PREFIX + "/:recipe_name/bags",
+    bodyFormat: "ignore",
+    zodPathParams: z => ({
+      recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
+    }),
+    inner: async (state) => {
+
+      const { recipe_name } = state.pathParams;
+      await state.assertRecipeAccess(recipe_name, false);
+
+      const result = await state.$transaction(async (prisma) => {
+        const server = new WikiStateStore(state, prisma);
+        return await server.getRecipeBags(recipe_name);
+      });
+
+      return result;
+
+    }
+  })
+
+  handleGetBagState = zodRoute({
+    method: ["GET", "HEAD"],
+    path: RECIPE_PREFIX + "/:recipe_name/bags/:bag_name/state",
+    bodyFormat: "ignore",
+    zodPathParams: z => ({
+      recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
+      bag_name: z.prismaField("Bags", "bag_name", "string"),
+    }),
+    zodQueryParams: z => ({
+      last_known_revision_id: z.prismaField("Tiddlers", "revision_id", "string").array().optional(),
+      include_deleted: z.enum(["yes", "no"]).array().optional(),
+    }),
+    inner: async (state) => {
+
+      const { recipe_name, bag_name } = state.pathParams;
+      await state.assertRecipeAccess(recipe_name, false);
+
+      const last_known_revision_id = state.queryParams.last_known_revision_id?.[0];
+      const include_deleted = state.queryParams.include_deleted?.[0] === "yes";
+
+      const result = await state.$transaction(async (prisma) => {
+        const server = new WikiStateStore(state, prisma);
+        return await server.getBagTiddlers(bag_name, { include_deleted, last_known_revision_id });
+      });
+
+      let etag = "";
+      for (const t of result.tiddlers) {
+        if (etag < t.revision_id) etag = t.revision_id;
+      }
+      const newEtag = `"${etag}"`;
+      const match = state.headers["if-none-match"] === newEtag;
+      state.setHeader("etag", newEtag);
+
+      if (match) throw state.sendEmpty(304, {});
+
+      return result;
+
+    }
+  });
+
 
   handleGetBagStates = zodRoute({
     method: ["GET", "HEAD"],
@@ -240,7 +312,9 @@ export class WikiRoutes {
           "content-encoding": "identity",
           "etag": newEtag,
         });
-      if (match) throw state.end();
+      if (match)
+        throw state.end();
+
       state.write("[");
       for (let i = 0; i < result.length; i++) {
         await state.write((i > 0 ? "," : "") + JSON.stringify(result[i]));
@@ -274,8 +348,8 @@ export class WikiRoutes {
         const bag = await server.getRecipeBagWithTiddler({ recipe_name, title });
         if (!bag) return state.sendEmpty(404, { "x-reason": "tiddler not found" });
         return await server.serveBagTiddler(
-          bag.bag_id, 
-          bag.bag.bag_name, 
+          bag.bag_id,
+          bag.bag.bag_name,
           title
         );
       });

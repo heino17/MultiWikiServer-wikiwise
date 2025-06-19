@@ -70,6 +70,6 @@ I just needed some place to list all the different things we could do to secure 
 
 ## Other ideas
 
-When you visit a page, you visit with page permissions only, and the page has to ask permission to use your full account permissions. The request could also be granular. 
+When you visit a page, you visit with page permissions only, and the page has to ask permission to use your full account permissions. The request could also be granular, where the page has to request the specific bag or wiki it wants access to. 
 
 

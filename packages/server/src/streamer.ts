@@ -1,5 +1,5 @@
 import * as http2 from 'node:http2';
-import send from 'send';
+import send, { SendOptions } from 'send';
 import { Readable } from 'stream';
 import { IncomingMessage, ServerResponse, IncomingHttpHeaders as NodeIncomingHeaders, OutgoingHttpHeaders } from 'node:http';
 import { is } from './utils';
@@ -25,6 +25,20 @@ export interface IncomingHttpHeaders extends NodeIncomingHeaders {
 
 export const SYMBOL_IGNORE_ERROR: unique symbol = Symbol("IGNORE_ERROR");
 
+export interface SendFileOptions extends Omit<SendOptions, "root" | "dotfiles" | "index" | "start" | "end"> {
+  root: string;
+  reqpath: string;
+  offset?: number;
+  length?: number;
+  on404?: () => Promise<typeof STREAM_ENDED>;
+  onDir?: () => Promise<typeof STREAM_ENDED>;
+  /** Index file to send, defaults to false. */
+  index?: SendOptions["index"];
+  /** @deprecated not implemented */
+  prefix?: Buffer;
+  /** @deprecated not implemented */
+  suffix?: Buffer;
+}
 
 export type StreamerChunk = { data: string, encoding: NodeJS.BufferEncoding } | NodeJS.ReadableStream | Readable | Buffer;
 
@@ -266,25 +280,17 @@ export class Streamer {
 
    * @returns STREAM_ENDED
    */
-  sendFile(status: number, headers: OutgoingHttpHeaders, options: {
-    root: string;
-    reqpath: string;
-    offset?: number;
-    length?: number;
-    index?: string | boolean | string[] | undefined,
-    on404?: () => Promise<typeof STREAM_ENDED>;
-    onDir?: () => Promise<typeof STREAM_ENDED>;
-    /** @deprecated not implemented */
-    prefix?: Buffer;
-    /** @deprecated not implemented */
-    suffix?: Buffer;
-  }) {
+  sendFile(status: number, headers: OutgoingHttpHeaders, options: SendFileOptions) {
 
     // the headers and status have to be set on the response object before piping the stream
     this.res.statusCode = status;
     this.toHeadersMap(headers).forEach((v, k) => { this.res.appendHeader(k, v); });
 
-    const { root, reqpath, offset, length, prefix, suffix } = options;
+    const {
+      root, reqpath, offset, length, prefix, suffix, on404, onDir, index = false,
+      acceptRanges, cacheControl, immutable, etag, extensions, lastModified, maxAge
+
+    } = options;
 
     if (prefix || suffix) throw new Error("prefix and suffix are not implemented");
 
@@ -294,17 +300,19 @@ export class Streamer {
 
     const sender = send(this.req, reqpath, {
       dotfiles: "ignore",
-      index: false,
+      index,
       root,
       start: offset,
       end: length && length - 1,
+
+      acceptRanges, cacheControl, immutable, etag, extensions, lastModified, maxAge,
     });
     return new Promise<typeof STREAM_ENDED>((resolve, reject) => {
 
       sender.on("error", (err) => Promise.resolve().then(async (): Promise<typeof STREAM_ENDED> => {
         console.log(err);
         if (err === 404 || err?.statusCode === 404) {
-          return (await options.on404?.()) ?? this.sendEmpty(404);
+          return (await on404?.()) ?? this.sendEmpty(404);
         } else {
           console.log(err);
           throw this.sendEmpty(500);
@@ -312,7 +320,7 @@ export class Streamer {
       }).then(resolve, reject));
 
       sender.on("directory", () => Promise.resolve().then(async (): Promise<typeof STREAM_ENDED> => {
-        return (await options.onDir?.())
+        return (await onDir?.())
           ?? this.sendEmpty(404, { "x-reason": "Directory listing not allowed" })
       }).then(resolve, reject));
 

@@ -39,6 +39,8 @@ export interface ZodRoute<
    * If a path variable is not set in the request, the path will not match.
    *
    * Expects a Record of zod checks. Every path variable must be included.
+   * 
+   * pathParams are parsed with `decodeURIComponent` one time before being passed to the zod check.
   */
   zodPathParams: (z: Z2<"STRING">) => P;
   /**

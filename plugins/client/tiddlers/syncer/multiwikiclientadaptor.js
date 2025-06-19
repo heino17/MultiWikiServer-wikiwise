@@ -112,12 +112,12 @@ class MultiWikiClientAdaptor {
                         // this has to be on a separate line
                         gunzip.push(new Uint8Array(), true);
                     }));
+                    if (this.isDevMode)
+                        console.log("gunzip result", responseString.length);
                 }
                 else {
                     responseString = fflate.strFromU8(new Uint8Array(yield readBlobAsArrayBuffer(e.response)));
                 }
-                if (this.isDevMode)
-                    console.log("gunzip result", responseString.length);
                 return [true, void 0, Object.assign(Object.assign({}, e), { responseString, 
                         /** this is undefined if status is not 200 */
                         responseJSON: e.status === 200
@@ -215,7 +215,7 @@ class MultiWikiClientAdaptor {
         if (this.offline)
             return callback(null);
         if (!this.useServerSentEvents) {
-            this.pollServer().then(changes => {
+            this.pollServer2().then(changes => {
                 callback(null, changes);
                 setTimeout(() => {
                     // If Browswer Storage tiddlers were cached on reloading the wiki, add them after sync from server completes in the above callback.
@@ -245,7 +245,7 @@ class MultiWikiClientAdaptor {
                     self.logger.log("Error connecting SSE stream", err);
                     // If the stream didn't work, try polling
                     self.setUpdateConnectionStatus(SERVER_POLLING);
-                    const changes = yield self.pollServer();
+                    const changes = yield self.pollServer2();
                     self.setUpdateConnectionStatus(SERVER_NOT_CONNECTED);
                     callback(null, changes);
                     setTimeout(() => {
@@ -318,6 +318,58 @@ class MultiWikiClientAdaptor {
                     options.syncer.storeTiddler(data.tiddler);
                 }
             }
+        });
+    }
+    pollServer2() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const [ok, err, result] = yield this.recipeRequest({
+                key: "handleGetBags",
+                url: "/bags",
+                method: "GET",
+            });
+            if (!ok)
+                throw err;
+            if (!result.responseJSON)
+                throw new Error("no result returned");
+            const bags = yield Promise.all(result.responseJSON.map(e => this.recipeRequest({
+                key: "handleGetBagState",
+                url: "/bags/" + encodeURIComponent(e.bag_name) + "/state",
+                method: "GET",
+                queryParams: { include_deleted: "yes" },
+            }).then(([ok, err, f]) => {
+                if (!ok)
+                    throw err;
+                if (!f.responseJSON)
+                    throw new Error("no result returned");
+                return Object.assign(Object.assign({}, f.responseJSON), { position: e.position });
+            })));
+            bags.sort((a, b) => b.position - a.position);
+            const modified = new Set(), deleted = new Set();
+            const incomingTitles = new Set(bags.map(
+            // get the titles in each layer that aren't deleted
+            e => e.tiddlers.filter(f => !f.is_deleted).map(f => f.title)
+            // and flatten them for Set
+            ).flat());
+            let last_revision = this.last_known_revision_id;
+            bags.forEach(bag => {
+                bag.tiddlers.forEach(tid => {
+                    // if the revision is old, ignore, since deletions create a new revision
+                    if (tid.revision_id <= this.last_known_revision_id)
+                        return;
+                    if (tid.revision_id > last_revision)
+                        last_revision = tid.revision_id;
+                    // check if this title still exists in any layer
+                    if (incomingTitles.has(tid.title))
+                        modified.add(tid.title);
+                    else
+                        deleted.add(tid.title);
+                });
+            });
+            this.last_known_revision_id = last_revision;
+            return {
+                modifications: [...modified.keys()],
+                deletions: [...deleted.keys()],
+            };
         });
     }
     pollServer() {

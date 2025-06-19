@@ -4,6 +4,7 @@ import { resolve, join } from "path";
 import { TiddlerFields } from "tiddlywiki";
 import { TiddlerStore_PrismaTransaction } from "./TiddlerStore";
 import { ServerRequest, UserError } from "@tiddlywiki/server";
+import { readFile } from "fs/promises";
 
 /** Basically a bunch of methods to help with wiki routes. */
 export class WikiStateStore extends TiddlerStore_PrismaTransaction {
@@ -46,35 +47,43 @@ export class WikiStateStore extends TiddlerStore_PrismaTransaction {
       return state.sendEmpty(404);
     }
 
-    const lastTiddlerId = await this.prisma.tiddlers.aggregate({
-      _max: { revision_id: true },
-      where: { bag_id: { in: recipe.recipe_bags.map(e => e.bag.bag_id) } }
-    });
 
     const { cachePath, pluginFiles, pluginHashes, requiredPlugins } = state.pluginCache;
 
     const plugins = [
       ...new Set([
-        ...(!recipe.skip_required_plugins) ? requiredPlugins : [],
         ...(!recipe.skip_core) ? ["$:/core"] : [],
+        ...(!recipe.skip_required_plugins) ? requiredPlugins : [],
         ...recipe.plugin_names,
       ]).values()
     ];
+    
+    // using early hints actually helps stale-while-revalidate
+    // we could also use the hash in the url
+    
 
     if (state.config.enableExternalPlugins) {
       state.writeEarlyHints({
         'link': plugins.map(e => {
           const plugin = pluginFiles.get(e);
           return `<${state.pathPrefix}/$cache/${plugin}/plugin.js>; rel=preload; as=script`
-        }).reverse(),
-        'x-trace-id': 'id for diagnostics',
+        }),
+        // 'x-trace-id': 'id for diagnostics',
       });
-      // for testing only, wait for a second
-      await new Promise<void>(r => setTimeout(r, 2000));
     }
 
 
-    const template = readFileSync(resolve(state.config.cachePath, "tiddlywiki5.html"), "utf8");
+    const [
+      lastTiddlerId,
+      template
+    ] = await Promise.all([
+      this.prisma.tiddlers.aggregate({
+        _max: { revision_id: true },
+        where: { bag_id: { in: recipe.recipe_bags.map(e => e.bag.bag_id) } }
+      }),
+      readFile(resolve(state.config.cachePath, "tiddlywiki5.html"), "utf8")
+    ]);
+
     const hash = createHash('md5');
     // Put everything into the hash that could change and invalidate the page
     // the rendered template
@@ -94,8 +103,6 @@ export class WikiStateStore extends TiddlerStore_PrismaTransaction {
     headers["content-type"] = "text/html";
     headers["etag"] = newEtag;
     headers["cache-control"] = "max-age=0, private, no-cache";
-
-
 
     // headers['content-security-policy'] = [
     //   // This header should prevent any external data from being pulled into the page 
@@ -267,7 +274,8 @@ $tw.preloadTiddler = function(fields) {
     // this determines which bag takes precedence
     // Map overwrites earlier entries with later entries,
     // so the topmost bag comes last, i.e. the position numbers are in descending order.
-    const recipeTiddlers = Array.from(new Map(bagTiddlers.flatMap(bag => bag.tiddlers.map(tiddler => [tiddler.title, { bag, tiddler }])
+    const recipeTiddlers = Array.from(new Map(bagTiddlers.flatMap(bag =>
+      bag.tiddlers.map(tiddler => [tiddler.title, { bag, tiddler }])
     )).values());
 
     const

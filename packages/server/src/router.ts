@@ -24,13 +24,17 @@ export class Router {
     res: ServerResponse | Http2ServerResponse,
     options: ListenOptions
   ) {
+
+    const timekey = `request ${(req as Http2ServerRequest)?.stream?.id} ${req.method} ${req.url}`;
+    if (Debug.enabled("server:timing:handle")) console.time(timekey);
     // the sole purpose of this method is to catch errors
     this.handleRequest(req, res, options).catch(err2 => {
       if (err2 === STREAM_ENDED) return;
       res.writeHead(500, { "x-reason": "handle incoming request" }).end();
-      console.log(req.url, err2);
+      console.log(timekey, err2);
+    }).finally(() => {
+      if (Debug.enabled("server:timing:handle")) console.timeEnd(timekey);
     });
-
 
   }
 

@@ -20,6 +20,7 @@ previous operation to complete before sending a new one.
 "use strict";
 
 import type { WikiRoutes, ZodRoute } from './mws';
+// import type { WikiRoutes, ZodRoute } from '@tiddlywiki/mws';
 import type { Syncer, Tiddler } from 'tiddlywiki';
 declare global { const fflate: typeof import("./fflate"); }
 
@@ -286,11 +287,11 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 
 				});
 
+				if (this.isDevMode) console.log("gunzip result", responseString.length);
+
 			} else {
 				responseString = fflate.strFromU8(new Uint8Array(await readBlobAsArrayBuffer(e.response)));
 			}
-
-			if (this.isDevMode) console.log("gunzip result", responseString.length);
 
 			return [true, void 0, {
 				...e,
@@ -509,22 +510,29 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		});
 	}
 	private async pollServer() {
-		type t = WikiRoutes["handleGetBagStates"];
+		type t1 = WikiRoutes["handleGetBags"];
 		const [ok, err, result] = await this.recipeRequest({
-			key: "handleGetBagStates",
-			url: "/bag-states",
+			key: "handleGetBags",
+			url: "/bags",
 			method: "GET",
-			queryParams: {
-				include_deleted: "yes",
-				...this.useGzipStream ? { gzip_stream: "yes" } : {},
-			}
 		});
-
 		if (!ok) throw err;
+		if (!result.responseJSON) throw new Error("no result returned");
+		type t2 = WikiRoutes["handleGetBagState"];
+		const bags = await Promise.all(result.responseJSON.map(e => this.recipeRequest({
+			key: "handleGetBagState",
+			url: "/bags/" + encodeURIComponent(e.bag_name) + "/state",
+			method: "GET",
+			queryParams: { include_deleted: "yes" },
+		}).then(([ok, err, f]) => {
+			if (!ok) throw err;
+			if (!f.responseJSON) throw new Error("no result returned");
+			return {
+				...f.responseJSON,
+				position: e.position,
+			};
+		})));
 
-		const bags = result.responseJSON;
-
-		if (!bags) throw new Error("no result returned");
 
 		bags.sort((a, b) => b.position - a.position);
 		const modified = new Set<string>(),
@@ -557,8 +565,8 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 			modifications: [...modified.keys()],
 			deletions: [...deleted.keys()],
 		}
-
 	}
+
 
 	/*
 	Queue a load for a tiddler if there has been an update for it since the specified revision
