@@ -23,6 +23,13 @@ enum Permission {
 // The `packages/mws/src/managers/` folder is the primary place this schema is used. 
 // SQLite initialization is done in `packages/mws/src/db/sqlite-adapter.ts`.
 
+model Settings {
+  key   String @id
+  value String
+
+  @@map("settings")
+}
+
 model Recipes {
   recipe_id             String        @id @default(uuid(7))
   recipe_name           String        @unique
@@ -49,11 +56,11 @@ model RecipeAcl {
 }
 
 model Recipe_bags {
-  recipe_id       String
-  bag_id          String
-  position        Int
-  with_acl        Boolean @default(false)
-  load_modules    Boolean @default(false)
+  recipe_id    String
+  bag_id       String
+  position     Int
+  with_acl     Boolean @default(false)
+  load_modules Boolean @default(false)
 
   bag    Bags    @relation(fields: [bag_id], references: [bag_id], onDelete: Cascade)
   recipe Recipes @relation(fields: [recipe_id], references: [recipe_id], onDelete: Cascade)
@@ -113,8 +120,8 @@ model Fields {
 }
 
 model Roles {
-  role_id     String   @id @default(uuid(7))
-  role_name   String   @unique()
+  role_id     String  @id @default(uuid(7))
+  role_name   String  @unique()
   description String?
   users       Users[]
 

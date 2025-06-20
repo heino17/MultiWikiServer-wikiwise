@@ -7,6 +7,8 @@ import type { RecipeManagerMap } from "@tiddlywiki/mws/src/managers/admin-recipe
 import type { UserManagerMap } from "@tiddlywiki/mws/src/managers/admin-users.ts";
 import type { StatusManagerMap } from "@tiddlywiki/mws/src/managers/index.ts";
 import { Button, ButtonProps } from "@mui/material";
+import { SessionManagerMap } from "@tiddlywiki/mws/src/services/sessions";
+import { SettingsManagerMap } from "@tiddlywiki/mws/src/managers/admin-settings";
 
 
 type MapLike = { entries: () => Iterable<[string, any]> };
@@ -87,6 +89,7 @@ type t = StatusManagerMap["index_json"]
 function postManager<K extends keyof StatusManagerMap>(key: K): StatusManagerMap[K]
 function postManager<K extends keyof RecipeManagerMap>(key: K): RecipeManagerMap[K]
 function postManager<K extends keyof UserManagerMap>(key: K): UserManagerMap[K]
+function postManager<K extends keyof SettingsManagerMap>(key: K): SettingsManagerMap[K]
 function postManager(key: string) {
   return async (data: any) => {
     const req = await fetch(pathPrefix + "/admin/" + key, {
@@ -103,7 +106,7 @@ function postManager(key: string) {
 
 }
 
-interface ManagerMap extends RecipeManagerMap, UserManagerMap, StatusManagerMap {
+interface ManagerMap extends RecipeManagerMap, UserManagerMap, StatusManagerMap, SettingsManagerMap {
   prisma: typeof proxy;
 }
 
@@ -129,6 +132,9 @@ export const serverRequest: ManagerMap = {
   role_create: postManager("role_create"),
   role_update: postManager("role_update"),
   // role_delete: postManager("role_delete"),
+
+  settings_read: postManager("settings_read"),
+  settings_update: postManager("settings_update"),
 
   prisma: proxy,
 }

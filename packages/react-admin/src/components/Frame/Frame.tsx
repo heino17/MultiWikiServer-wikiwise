@@ -17,7 +17,6 @@ import MenuIcon from '@mui/icons-material/Menu';
 import { Avatar, Card, CardContent, CardHeader, Menu, MenuItem, Tooltip } from '@mui/material';
 import SettingsIcon from '@mui/icons-material/Settings';
 import PersonAdd from '@mui/icons-material/PersonAdd';
-import Settings from '@mui/icons-material/Settings';
 import Logout from '@mui/icons-material/Logout';
 import BackpackIcon from '@mui/icons-material/Backpack';
 import LuggageRoundedIcon from '@mui/icons-material/LuggageRounded';
@@ -27,6 +26,7 @@ import GroupsIcon from '@mui/icons-material/Groups';
 import ExtensionIcon from '@mui/icons-material/Extension';
 import { sessionRequest } from '../../helpers';
 import { ClientPlugins } from '../Dashboard/ClientPlugins';
+import Settings from './Settings';
 
 
 function Message({ children }: PropsWithChildren<{}>) {
@@ -120,6 +120,7 @@ export function PageRoot() {
     [/^\/admin\/users\/?$/, () => <UserManagement />, "User Management"],
     [/^\/admin\/users\/(.*)$/, ([, user_id]) => <ManageUser userID={user_id!} />, "Manage User"],
     [/^\/admin\/roles$/, () => <UsersScreen />, "Roles"],
+    [/^\/admin\/settings$/, () => <Settings/>, "Settings"],
   ];
   const route = location.pathname.slice(pathPrefix.length);
   const matches = pages.map(([re]) => re.exec(route));
@@ -171,7 +172,10 @@ export function PageRoot() {
           <Divider />
           <FrameMenuLine onClick={handleManageUsers} icon={<PersonIcon />} text1="Users" />
           <FrameMenuLine onClick={handleManageRoles} icon={<GroupsIcon />} text1="Roles" />
+          <Divider />
+          <FrameMenuLine onClick={() => navigateTo('/admin/settings')} icon={<SettingsIcon />} text1="Settings" />
         </> : null}
+        
       </>}
       right={userIsLoggedIn ? <>
         {/* <IconButton onClick={() => { }} sx={{ padding: 2 }} size="large"><SettingsIcon /></IconButton> */}

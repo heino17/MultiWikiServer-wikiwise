@@ -1,6 +1,7 @@
 //these use serverEvents
 import "./admin-recipes";
 import "./admin-users";
+import "./admin-settings";
 import "./wiki-routes";
 
 // other imports

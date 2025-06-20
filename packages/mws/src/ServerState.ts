@@ -40,25 +40,61 @@ export class ServerState {
         + " cannot be found in TW5"
       );
 
-    this.enableBrowserCache = true;
-    this.enableGzip = true;
-    this.attachmentsEnabled = false;
-    this.attachmentSizeLimit = 100 * 1024;
-    this.csrfDisable = false;
 
-    this.enableExternalPlugins = !!process.env.ENABLE_EXTERNAL_PLUGINS;
-    this.enableDevServer = process.env.ENABLE_DEV_SERVER === "mws";
-    this.enableDocsRoute = !!process.env.ENABLE_DOCS_ROUTE;
 
 
     this.versions = { tw5: $tw.packageInfo.version, mws: pkg.version };
 
   }
 
+  settings: {
+    key: string;
+    description: string;
+    valueType: "string" | "boolean" | "number";
+    value?: any;
+  }[] = [
+      // { key: "siteTitle", description: "Title for the site", valueType: "string" },
+      // { key: "siteDescription", description: "Description for the site", valueType: "string" },
+      { key: "enableExternalPlugins", description: "Serve TiddlyWiki plugins via script tags", valueType: "boolean" },
+      { key: "enableGzip", description: "Enable gzip compression for responses", valueType: "boolean" },
+      // { key: "enableResponseCompression", description: "Compress server responses", valueType: "boolean" },
+      // { key: "enableBrowserCache", description: "Enable browser caching of static assets", valueType: "boolean" },
+      // { key: "attachmentsEnabled", description: "Enable attachments in the wiki", valueType: "boolean" },
+      // { key: "attachmentSizeLimit", description: "Maximum size for attachments in bytes", valueType: "number" },
+      // { key: "csrfDisable", description: "Disable CSRF protection (not recommended)", valueType: "boolean" },
+      // { key: "enableDevServer", description: "Enable development server features (not recommended for production)", valueType: "boolean" },
+      // { key: "enableDocsRoute", description: "Enable documentation route for the server API", valueType: "boolean" }
+    ];
+
   async init() {
     const users = await this.engine.users.count();
     if (!users) { this.setupRequired = true; }
+
+    const existing = Object.fromEntries((await this.engine.settings.findMany()).map(e => [e.key, e.value]));
+
+    for (const { key, valueType } of this.settings) {
+      const value = valueType === "boolean" ? "false" : valueType === "number" ? "0" : "";
+      if (typeof existing[key] === "undefined") {
+        await this.engine.settings.create({ data: { key, value } });
+        existing[key] = value as any;
+      }
+    }
+
+    this.enableExternalPlugins = existing.enableExternalPlugins === "true";
+    this.enableGzip = existing.enableGzip === "true";
+
+    this.attachmentsEnabled = false;
+    this.attachmentSizeLimit = 100 * 1024;
+
+    this.enableDevServer = process.env.ENABLE_DEV_SERVER === "mws";
+    this.enableDocsRoute = !!process.env.ENABLE_DOCS_ROUTE;
+
+    if (this.enableDevServer) {
+      this.enableExternalPlugins = true;
+      this.enableGzip = true;
+    }
   }
+
 
   $transaction<R>(
     fn: (prisma: Omit<ServerState["engine"], ITXClientDenyList>) => Promise<R>,
@@ -81,14 +117,13 @@ export class ServerState {
 
   setupRequired = false;
 
-  enableBrowserCache;
-  enableGzip;
-  attachmentsEnabled;
-  attachmentSizeLimit;
-  enableExternalPlugins;
-  enableDevServer;
-  enableDocsRoute;
-  csrfDisable;
+  enableExternalPlugins = true;
+  enableGzip = true;
+
+  attachmentsEnabled = false;
+  attachmentSizeLimit = 0; // 100 * 1024; // 100 KB
+  enableDevServer = false;
+  enableDocsRoute = false;
 
   fieldModules;
   contentTypeInfo: Record<string, ContentTypeInfo>;
