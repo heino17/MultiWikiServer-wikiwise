@@ -71,4 +71,6 @@ serverEvents.on("request.middleware", async (router, req, res, options) => {
 serverEvents.on("request.streamer", async (router, streamer) => {
   // This is picked up by our StateObject class
   streamer.user = await SessionManager.parseIncomingRequest(streamer, router.config);
+  // this tells the server whether to use compression (it still allows gzip-stream)
+  streamer.compressor.enabled = router.config.enableGzip;
 });

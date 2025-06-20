@@ -47,6 +47,7 @@ export class WikiStateStore extends TiddlerStore_PrismaTransaction {
       return state.sendEmpty(404);
     }
 
+    const { enableExternalPlugins } = state.config;
 
     const { cachePath, pluginFiles, pluginHashes, requiredPlugins } = state.pluginCache;
 
@@ -57,12 +58,12 @@ export class WikiStateStore extends TiddlerStore_PrismaTransaction {
         ...recipe.plugin_names,
       ]).values()
     ];
-    
+
     // using early hints actually helps stale-while-revalidate
     // we could also use the hash in the url
-    
 
-    if (state.config.enableExternalPlugins) {
+
+    if (enableExternalPlugins) {
       state.writeEarlyHints({
         'link': plugins.map(e => {
           const plugin = pluginFiles.get(e);
@@ -131,7 +132,7 @@ export class WikiStateStore extends TiddlerStore_PrismaTransaction {
     const headPos = template.indexOf("</head>");
     await state.write(template.substring(0, headPos));
 
-    if (state.config.enableExternalPlugins) {
+    if (enableExternalPlugins) {
       await state.write("\n" + plugins.map(e => {
         const plugin = pluginFiles.get(e)!;
         const hash = pluginHashes.get(e)!;
@@ -155,7 +156,7 @@ export class WikiStateStore extends TiddlerStore_PrismaTransaction {
         console.log(`Recipe ${recipe_name} uses unknown plugin ${e}`);
     });
 
-    if (state.config.enableExternalPlugins) {
+    if (enableExternalPlugins) {
 
       await state.write(`
 <script>

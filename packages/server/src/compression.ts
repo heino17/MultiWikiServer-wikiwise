@@ -98,6 +98,7 @@ export class Compressor {
   }
   /** Ends the response. Shortcut for easy removal when switching streams. */
   finisher;
+  enabled: boolean = true;
   method: string = "";
   threshold;
   defaultEncoding;
@@ -164,11 +165,15 @@ export class Compressor {
       && res.getHeader("x-gzip-stream") === "yes"
     ) return "gzip-stream";
 
+    if (!this.enabled) return "";
+
     const encoding = res.getHeader('Content-Encoding');
     if (encoding) {
       debug('encoding already set');
       return "";
     }
+
+
 
     // determine if request is filtered
     if (!this.shouldCompress()) {

@@ -80,8 +80,7 @@ export class ServerState {
       }
     }
 
-    this.enableExternalPlugins = existing.enableExternalPlugins === "true";
-    this.enableGzip = existing.enableGzip === "true";
+    await this.initSettings(existing);
 
     this.attachmentsEnabled = false;
     this.attachmentSizeLimit = 100 * 1024;
@@ -93,6 +92,12 @@ export class ServerState {
       this.enableExternalPlugins = true;
       this.enableGzip = true;
     }
+  }
+
+  async initSettings(existing: Record<string, string>) {
+
+    this.enableExternalPlugins = existing.enableExternalPlugins === "true";
+    this.enableGzip = existing.enableGzip === "true";
   }
 
 

@@ -56,11 +56,11 @@ class SettingsManager {
     }
 
     // Update or create the setting
-    await prisma.settings.upsert({
-      where: { key },
-      update: { value },
-      create: { key, value },
-    });
+    await prisma.settings.update({ where: { key }, data: { value }, });
+
+    const existing = Object.fromEntries((await prisma.settings.findMany()).map(e => [e.key, e.value]));
+
+    await state.config.initSettings(existing);
 
     return { success: true };
   });
