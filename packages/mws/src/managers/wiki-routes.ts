@@ -21,7 +21,6 @@ export const WikiRouterKeyMap: RouterKeyMap<WikiRoutes, true> = {
   handleGetBags: true,
   handleGetBagState: true,
   handleGetAllBagStates: true,
-  handleSSEtest: true,
   // individual tiddlers
   handleLoadRecipeTiddler: true,
   handleSaveRecipeTiddler: true,
@@ -160,43 +159,6 @@ export class WikiRoutes {
     }
   });
 
-  handleSSEtest = zodRoute({
-    method: ["GET", "HEAD"],
-    path: RECIPE_PREFIX + "/:recipe_name/ssetest",
-    bodyFormat: "ignore",
-    zodPathParams: z => ({
-      recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
-    }),
-    inner: async (state) => {
-
-      const { recipe_name } = state.pathParams;
-
-      console.log(state.headers, state.queryParams)
-      const lastEventID = state.headers['last-event-id'];
-
-
-
-      await state.assertRecipeAccess(recipe_name, false);
-      debugSSE("connection opened", recipe_name);
-      const events = state.sendSSE();
-
-      const cancel = setInterval(() => {
-        debugSSE("test event", recipe_name);
-        events.emitEvent("test", {
-          message: "This is a test message",
-          timestamp: new Date().toISOString(),
-        }, new Date().toISOString());
-      }, 1000);
-
-      events.onClose(() => {
-        debugSSE("connection closed", recipe_name);
-        clearInterval(cancel);
-      });
-
-      throw STREAM_ENDED;
-
-    }
-  })
   handleGetRecipeEvents = zodRoute({
     method: ["GET", "HEAD"],
     path: RECIPE_PREFIX + "/:recipe_name/events",
