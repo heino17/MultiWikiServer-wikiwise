@@ -254,7 +254,8 @@ export class WikiRoutes {
             if (newlastevent < tiddler.revision_id) newlastevent = tiddler.revision_id;
           })
         });
-        events.emitEvent("tiddler.since-last-event", updates, newlastevent);
+        // if there were no updates, just use the same last event id
+        events.emitEvent("tiddler.since-last-event", updates, newlastevent || lastEventID);
       }
 
 
