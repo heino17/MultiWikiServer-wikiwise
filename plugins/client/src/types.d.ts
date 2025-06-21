@@ -253,6 +253,7 @@ declare module "packages/server/src/compression" {
         constructor(req: import("http").IncomingMessage | import("http2").Http2ServerRequest, res: import("http").ServerResponse | import("http2").Http2ServerResponse, { identity, brotli, threshold, defaultEncoding, deflate, gzip }: CompressorOptions);
         /** Ends the response. Shortcut for easy removal when switching streams. */
         finisher: () => import("http").ServerResponse<import("http").IncomingMessage> | import("http2").Http2ServerResponse<import("http2").Http2ServerRequest>;
+        enabled: boolean;
         method: string;
         threshold: any;
         defaultEncoding: "deflate" | "gzip" | "br" | "identity";
@@ -360,32 +361,39 @@ declare module "packages/server/src/streamer" {
          * @returns STREAM_ENDED
          */
         sendFile(status: number, headers: OutgoingHttpHeaders, options: SendFileOptions): Promise<typeof STREAM_ENDED>;
+        sendSSE(retryMilliseconds?: number): {
+            /** Emit an SSE event */
+            emitEvent: (eventName: string, eventData: any, eventId: string) => void;
+            emitComment: (comment: string) => void;
+            onClose: (callback: () => void) => void;
+            close: () => void;
+        };
         setCookie(name: string, value: string, options: {
             /**
-        
+         
               Defines the host to which the cookie will be sent.
-        
+         
               Only the current domain can be set as the value, or a domain of a higher order, unless it is a public suffix. Setting the domain will make the cookie available to it, as well as to all its subdomains.
-        
+         
               If omitted, this attribute defaults to the host of the current document URL, not including subdomains.
-        
+         
               Contrary to earlier specifications, leading dots in domain names (.example.com) are ignored.
-        
+         
               Multiple host/domain values are not allowed, but if a domain is specified, then subdomains are always included.
-        
+         
              */
             domain?: string;
             /**
-        
+         
             Indicates the path that must exist in the requested URL for the browser to send the Cookie header.
-        
+         
             The forward slash (`/`) character is interpreted as a directory separator, and subdirectories are matched as well.
             
             For example, for `Path=/docs`,
-        
+         
             - the request paths `/docs`,` /docs/`, `/docs/Web/`, and `/docs/Web/HTTP` will all match.
             - the request paths `/`, `/docsets`, `/fr/docs` will not match.
-        
+         
              */
             path?: string;
             expires?: Date;
@@ -394,31 +402,31 @@ declare module "packages/server/src/streamer" {
             httpOnly?: boolean;
             /**
               Controls whether or not a cookie is sent with cross-site requests: that is, requests originating from a different site, including the scheme, from the site that set the cookie. This provides some protection against certain cross-site attacks, including cross-site request forgery (CSRF) attacks.
-        
+         
               The possible attribute values are:
-        
+         
               ### Strict
-        
+         
               Send the cookie only for requests originating from the same site that set the cookie.
-        
+         
               ### Lax
-        
+         
               Send the cookie only for requests originating from the same site that set the cookie, and for cross-site requests that meet both of the following criteria:
-        
+         
               - The request is a top-level navigation: this essentially means that the request causes the URL shown in the browser's address bar to change.
-        
+         
                 - This would exclude, for example, requests made using the fetch() API, or requests for subresources from <img> or <script> elements, or navigations inside <iframe> elements.
-        
+         
                 - It would include requests made when the user clicks a link in the top-level browsing context from one site to another, or an assignment to document.location, or a <form> submission.
-        
+         
               - The request uses a safe method: in particular, this excludes POST, PUT, and DELETE.
-        
+         
               Some browsers use Lax as the default value if SameSite is not specified: see Browser compatibility for details.
-        
+         
               > Note: When Lax is applied as a default, a more permissive version is used. In this more permissive version, cookies are also included in POST requests, as long as they were set no more than two minutes before the request was made.
-        
+         
               ### None
-        
+         
               Send the cookie with both cross-site and same-site requests. The Secure attribute must also be set when using this value.
              */
             sameSite?: "Strict" | "Lax" | "None";
@@ -468,32 +476,39 @@ declare module "packages/server/src/streamer" {
         sendBuffer: (status: number, headers: OutgoingHttpHeaders, data: Buffer) => typeof STREAM_ENDED;
         sendStream: (status: number, headers: OutgoingHttpHeaders, stream: Readable) => typeof STREAM_ENDED;
         sendFile: (status: number, headers: OutgoingHttpHeaders, options: SendFileOptions) => Promise<typeof STREAM_ENDED>;
+        sendSSE: (retryMilliseconds?: number) => {
+            /** Emit an SSE event */
+            emitEvent: (eventName: string, eventData: any, eventId: string) => void;
+            emitComment: (comment: string) => void;
+            onClose: (callback: () => void) => void;
+            close: () => void;
+        };
         setCookie: (name: string, value: string, options: {
             /**
-        
+         
               Defines the host to which the cookie will be sent.
-        
+         
               Only the current domain can be set as the value, or a domain of a higher order, unless it is a public suffix. Setting the domain will make the cookie available to it, as well as to all its subdomains.
-        
+         
               If omitted, this attribute defaults to the host of the current document URL, not including subdomains.
-        
+         
               Contrary to earlier specifications, leading dots in domain names (.example.com) are ignored.
-        
+         
               Multiple host/domain values are not allowed, but if a domain is specified, then subdomains are always included.
-        
+         
              */
             domain?: string;
             /**
-        
+         
             Indicates the path that must exist in the requested URL for the browser to send the Cookie header.
-        
+         
             The forward slash (`/`) character is interpreted as a directory separator, and subdirectories are matched as well.
             
             For example, for `Path=/docs`,
-        
+         
             - the request paths `/docs`,` /docs/`, `/docs/Web/`, and `/docs/Web/HTTP` will all match.
             - the request paths `/`, `/docsets`, `/fr/docs` will not match.
-        
+         
              */
             path?: string;
             expires?: Date;
@@ -502,31 +517,31 @@ declare module "packages/server/src/streamer" {
             httpOnly?: boolean;
             /**
               Controls whether or not a cookie is sent with cross-site requests: that is, requests originating from a different site, including the scheme, from the site that set the cookie. This provides some protection against certain cross-site attacks, including cross-site request forgery (CSRF) attacks.
-        
+         
               The possible attribute values are:
-        
+         
               ### Strict
-        
+         
               Send the cookie only for requests originating from the same site that set the cookie.
-        
+         
               ### Lax
-        
+         
               Send the cookie only for requests originating from the same site that set the cookie, and for cross-site requests that meet both of the following criteria:
-        
+         
               - The request is a top-level navigation: this essentially means that the request causes the URL shown in the browser's address bar to change.
-        
+         
                 - This would exclude, for example, requests made using the fetch() API, or requests for subresources from <img> or <script> elements, or navigations inside <iframe> elements.
-        
+         
                 - It would include requests made when the user clicks a link in the top-level browsing context from one site to another, or an assignment to document.location, or a <form> submission.
-        
+         
               - The request uses a safe method: in particular, this excludes POST, PUT, and DELETE.
-        
+         
               Some browsers use Lax as the default value if SameSite is not specified: see Browser compatibility for details.
-        
+         
               > Note: When Lax is applied as a default, a more permissive version is used. In this more permissive version, cookies are also included in POST requests, as long as they were set no more than two minutes before the request was made.
-        
+         
               ### None
-        
+         
               Send the cookie with both cross-site and same-site requests. The Secure attribute must also be set when using this value.
              */
             sameSite?: "Strict" | "Lax" | "None";
@@ -584,7 +599,6 @@ declare module "packages/server/src/streamer" {
 }
 declare module "packages/server/src/StateObject" {
     import { Streamer, StreamerState } from "packages/server/src/streamer";
-    import { PassThrough } from 'node:stream';
     import { BodyFormat, Router } from "packages/server/src/router";
     import { RouteMatch } from "packages/server/src/router";
     import { IncomingHttpHeaders } from 'http';
@@ -642,13 +656,6 @@ declare module "packages/server/src/StateObject" {
          * - **308 Permanent Redirect:** The resource has permanently moved; the client should use the new URL in future requests.
          */
         redirect(location: string): typeof STREAM_ENDED;
-        sendSSE(retryMilliseconds?: number): {
-            /** Emit an SSE event */
-            emitEvent: (eventName: string, eventData: any, eventId: string) => void;
-            emitComment: (comment: string) => boolean;
-            close: () => PassThrough;
-            onClose: (callback: () => void) => PassThrough;
-        };
         /**
         Options include:
         - `cbPartStart(headers,name,filename)` - invoked when a file starts being received
@@ -926,6 +933,7 @@ declare module "packages/server/src/index" {
             "request.state": [router: Router, state: ServerRequest, streamer: Streamer];
             "request.handle": [state: ServerRequest, route: RouteMatch[]];
             "request.fallback": [state: ServerRequest, route: RouteMatch[]];
+            "exit": [];
         }
     }
     global {
@@ -1001,7 +1009,14 @@ declare module "packages/mws/src/ServerState" {
         }, 
         /** The $tw instance needs to be disposable once commands are complete. */
         $tw: TW, engine: PrismaEngineClient, PasswordService: PasswordService, pluginCache: TiddlerCache);
+        settings: {
+            key: string;
+            description: string;
+            valueType: "string" | "boolean" | "number";
+            value?: any;
+        }[];
         init(): Promise<void>;
+        initSettings(existing: Record<string, string>): Promise<void>;
         $transaction<R>(fn: (prisma: Omit<ServerState["engine"], ITXClientDenyList>) => Promise<R>, options?: {
             maxWait?: number;
             timeout?: number;
@@ -1015,14 +1030,12 @@ declare module "packages/mws/src/ServerState" {
             mws: string;
         };
         setupRequired: boolean;
-        enableBrowserCache: boolean;
+        enableExternalPlugins: boolean;
         enableGzip: boolean;
         attachmentsEnabled: boolean;
         attachmentSizeLimit: number;
-        enableExternalPlugins: boolean;
         enableDevServer: boolean;
         enableDocsRoute: boolean;
-        csrfDisable: boolean;
         fieldModules: Record<string, import("tiddlywiki").TiddlerFieldModule>;
         contentTypeInfo: Record<string, ContentTypeInfo>;
         getContentType(type?: string): ContentTypeInfo;
@@ -1665,34 +1678,6 @@ declare module "packages/mws/src/managers/TiddlerStore" {
             with_acl: PrismaField<"Recipe_bags", "with_acl">;
             load_modules: PrismaField<"Recipe_bags", "load_modules">;
         }) | null>;
-        getRecipeTiddlersByBag(recipe_name: PrismaField<"Recipes", "recipe_name">, options?: {
-            last_known_revision_id?: PrismaField<"Tiddlers", "revision_id">;
-            include_deleted?: boolean;
-        }): Promise<{
-            bag_id: string & {
-                __prisma_table: "Bags";
-                __prisma_field: "bag_id";
-            };
-            bag_name: string & {
-                __prisma_table: "Bags";
-                __prisma_field: "bag_name";
-            };
-            position: number & {
-                __prisma_table: "Recipe_bags";
-                __prisma_field: "position";
-            };
-            tiddlers: {
-                title: string & {
-                    __prisma_table: "Tiddlers";
-                    __prisma_field: "title";
-                };
-                revision_id: string & {
-                    __prisma_table: "Tiddlers";
-                    __prisma_field: "revision_id";
-                };
-                is_deleted: PrismaField<"Tiddlers", "is_deleted">;
-            }[];
-        }[]>;
         getRecipeBags(recipe_name: PrismaField<"Recipes", "recipe_name">): Promise<{
             bag_id: string & {
                 __prisma_table: "Bags";
@@ -1719,6 +1704,37 @@ declare module "packages/mws/src/managers/TiddlerStore" {
                 is_deleted: boolean;
             }[];
         }>;
+        getBagTiddlers_PrismaQuery(bag_name: PrismaField<"Bags", "bag_name">, options?: {
+            last_known_revision_id?: PrismaField<"Tiddlers", "revision_id">;
+            include_deleted?: boolean;
+        }): Prisma.Prisma__BagsClient<{
+            bag_id: string & {
+                __prisma_table: "Bags";
+                __prisma_field: "bag_id";
+            };
+            bag_name: string & {
+                __prisma_table: "Bags";
+                __prisma_field: "bag_name";
+            };
+            tiddlers: {
+                title: string & {
+                    __prisma_table: "Tiddlers";
+                    __prisma_field: "title";
+                };
+                revision_id: string & {
+                    __prisma_table: "Tiddlers";
+                    __prisma_field: "revision_id";
+                };
+                is_deleted: PrismaField<"Tiddlers", "is_deleted">;
+            }[];
+        } | null, null, {
+            result: { [T in Uncapitalize<Prisma.ModelName>]: { [K in keyof PrismaPayloadScalars<Capitalize<T>>]: () => {
+                compute: () => PrismaField<Capitalize<T>, K>;
+            }; }; };
+            client: {};
+            model: {};
+            query: {};
+        }, Prisma.PrismaClientOptions>;
     }
 }
 declare module "packages/mws/src/commands/load-wiki-folder" {
@@ -2391,6 +2407,29 @@ declare module "packages/mws/src/managers/admin-users" {
         }>;
     }
 }
+declare module "packages/mws/src/managers/admin-settings" {
+    import { RouterKeyMap, RouterRouteMap, ServerRoute } from "packages/server/src/index";
+    export const SettingsKeyMap: RouterKeyMap<SettingsManager, true>;
+    export type SettingsManagerMap = RouterRouteMap<SettingsManager>;
+    class SettingsManager {
+        static defineRoutes(root: ServerRoute): void;
+        settings_read: import("@tiddlywiki/server").ZodRoute<"POST", "json", {}, {}, import("zod/v4").ZodUndefined, {
+            value: (string & {
+                __prisma_table: "Settings";
+                __prisma_field: "value";
+            }) | undefined;
+            key: string;
+            description: string;
+            valueType: "string" | "boolean" | "number";
+        }[]>;
+        settings_update: import("@tiddlywiki/server").ZodRoute<"POST", "json", {}, {}, import("zod/v4").ZodObject<{
+            key: import("zod/v4").ZodString;
+            value: import("zod/v4").ZodString;
+        }, import("zod/v4/core").$strip>, {
+            success: true;
+        }>;
+    }
+}
 declare module "packages/mws/src/managers/WikiStateStore" {
     import { TiddlerStore_PrismaTransaction } from "packages/mws/src/managers/TiddlerStore";
     import { ServerRequest } from "packages/server/src/index";
@@ -2410,6 +2449,26 @@ declare module "packages/mws/src/managers/wiki-routes" {
     export interface WikiRoute<M extends string, B extends BodyFormat, P extends Record<string, zod.ZodType<any, string | undefined>>, Q extends Record<string, zod.ZodType<any, string[] | undefined>>, T extends zod.ZodTypeAny, R extends JsonValue> extends ZodRoute<M, B, P, Q, T, R> {
         routeType: "wiki" | "recipe" | "bag";
         routeName: string;
+    }
+    module "packages/events/src/index" {
+        interface ServerEventsMap {
+            "mws.tiddler.save": [
+                {
+                    recipe_name?: string;
+                    bag_name: string;
+                    title: string;
+                    revision_id: string;
+                }
+            ];
+            "mws.tiddler.delete": [
+                {
+                    recipe_name?: string;
+                    bag_name: string;
+                    title: string;
+                    revision_id: string;
+                }
+            ];
+        }
     }
     export class WikiRoutes {
         static defineRoutes: (root: ServerRoute) => void;
@@ -2434,7 +2493,7 @@ declare module "packages/mws/src/managers/wiki-routes" {
             isLoggedIn: boolean;
             isReadOnly: boolean;
         }>;
-        handleListRecipeTiddlers: ZodRoute<"GET" | "HEAD", "ignore", {
+        handleSSEtest: ZodRoute<"GET" | "HEAD", "ignore", {
             recipe_name: zod.ZodType<string & {
                 __prisma_table: "Recipes";
                 __prisma_field: "recipe_name";
@@ -2442,25 +2501,16 @@ declare module "packages/mws/src/managers/wiki-routes" {
                 __prisma_table: "Recipes";
                 __prisma_field: "recipe_name";
             }, string>>;
-        }, Record<string, zod.ZodType<any, string[] | undefined, zod.z.core.$ZodTypeInternals<any, string[] | undefined>>>, zod.ZodType<unknown, unknown, zod.z.core.$ZodTypeInternals<unknown, unknown>>, {
-            title: string & {
-                __prisma_table: "Tiddlers";
-                __prisma_field: "title";
-            };
-            revision_id: string & {
-                __prisma_table: "Tiddlers";
-                __prisma_field: "revision_id";
-            };
-            is_deleted: PrismaField<"Tiddlers", "is_deleted">;
-            bag_name: string & {
-                __prisma_table: "Bags";
-                __prisma_field: "bag_name";
-            };
-            bag_id: string & {
-                __prisma_table: "Bags";
-                __prisma_field: "bag_id";
-            };
-        }[]>;
+        }, Record<string, zod.ZodType<any, string[] | undefined, zod.z.core.$ZodTypeInternals<any, string[] | undefined>>>, zod.ZodType<unknown, unknown, zod.z.core.$ZodTypeInternals<unknown, unknown>>, never>;
+        handleGetRecipeEvents: ZodRoute<"GET" | "HEAD", "ignore", {
+            recipe_name: zod.ZodType<string & {
+                __prisma_table: "Recipes";
+                __prisma_field: "recipe_name";
+            }, string, zod.z.core.$ZodTypeInternals<string & {
+                __prisma_table: "Recipes";
+                __prisma_field: "recipe_name";
+            }, string>>;
+        }, Record<string, zod.ZodType<any, string[] | undefined, zod.z.core.$ZodTypeInternals<any, string[] | undefined>>>, zod.ZodType<unknown, unknown, zod.z.core.$ZodTypeInternals<unknown, unknown>>, never>;
         handleGetBags: ZodRoute<"GET" | "HEAD", "ignore", {
             recipe_name: zod.ZodType<string & {
                 __prisma_table: "Recipes";
@@ -2519,7 +2569,7 @@ declare module "packages/mws/src/managers/wiki-routes" {
                 is_deleted: boolean;
             }[];
         }>;
-        handleGetBagStates: ZodRoute<"GET" | "HEAD", "ignore", {
+        handleGetAllBagStates: ZodRoute<"GET" | "HEAD", "ignore", {
             recipe_name: zod.ZodType<string & {
                 __prisma_table: "Recipes";
                 __prisma_field: "recipe_name";
@@ -2544,28 +2594,13 @@ declare module "packages/mws/src/managers/wiki-routes" {
                 no: "no";
             }>>>;
         }, zod.ZodType<unknown, unknown, zod.z.core.$ZodTypeInternals<unknown, unknown>>, {
-            bag_id: string & {
-                __prisma_table: "Bags";
-                __prisma_field: "bag_id";
-            };
-            bag_name: string & {
-                __prisma_table: "Bags";
-                __prisma_field: "bag_name";
-            };
-            position: number & {
-                __prisma_table: "Recipe_bags";
-                __prisma_field: "position";
-            };
+            bag_id: string;
+            bag_name: string;
+            position: number;
             tiddlers: {
-                title: string & {
-                    __prisma_table: "Tiddlers";
-                    __prisma_field: "title";
-                };
-                revision_id: string & {
-                    __prisma_table: "Tiddlers";
-                    __prisma_field: "revision_id";
-                };
-                is_deleted: PrismaField<"Tiddlers", "is_deleted">;
+                title: string;
+                revision_id: string;
+                is_deleted: boolean;
             }[];
         }[]>;
         handleLoadRecipeTiddler: ZodRoute<"GET" | "HEAD", "ignore", {
@@ -2735,6 +2770,7 @@ declare module "packages/mws/src/managers/wiki-routes" {
 declare module "packages/mws/src/managers/index" {
     import "packages/mws/src/managers/admin-recipes";
     import "packages/mws/src/managers/admin-users";
+    import "packages/mws/src/managers/admin-settings";
     import "packages/mws/src/managers/wiki-routes";
     import { RouterKeyMap, RouterRouteMap, ServerRoute } from "packages/server/src/index";
     export * from "packages/mws/src/managers/admin-recipes";
@@ -3375,7 +3411,7 @@ declare module "packages/mws/src/commands/build-types" {
                     ADMIN: "ADMIN";
                 }>;
             }, import("zod/v4/core").$strip>>;
-        }, import("zod/v4/core").$strip>, null>] | readonly ["handleGetRecipeStatus" | "handleListRecipeTiddlers" | "handleGetBags" | "handleGetBagState" | "handleGetBagStates" | "handleLoadRecipeTiddler" | "handleSaveRecipeTiddler" | "handleDeleteRecipeTiddler" | "handleFormMultipartRecipeTiddler" | "handleLoadBagTiddler" | "handleSaveBagTiddler" | "handleDeleteBagTiddler" | "handleFormMultipartBagTiddler", import("@tiddlywiki/server").ZodRoute<"GET" | "HEAD", "ignore", {
+        }, import("zod/v4/core").$strip>, null>] | readonly ["handleGetRecipeStatus" | "handleSSEtest" | "handleGetRecipeEvents" | "handleGetBags" | "handleGetBagState" | "handleGetAllBagStates" | "handleLoadRecipeTiddler" | "handleSaveRecipeTiddler" | "handleDeleteRecipeTiddler" | "handleFormMultipartRecipeTiddler" | "handleLoadBagTiddler" | "handleSaveBagTiddler" | "handleDeleteBagTiddler" | "handleFormMultipartBagTiddler", import("@tiddlywiki/server").ZodRoute<"GET" | "HEAD", "ignore", {
             recipe_name: import("zod/v4").ZodType<string & {
                 __prisma_table: "Recipes";
                 __prisma_field: "recipe_name";
@@ -3403,25 +3439,15 @@ declare module "packages/mws/src/commands/build-types" {
                 __prisma_table: "Recipes";
                 __prisma_field: "recipe_name";
             }, string>>;
-        }, Record<string, import("zod/v4").ZodType<any, string[] | undefined, import("zod/v4/core").$ZodTypeInternals<any, string[] | undefined>>>, import("zod/v4").ZodType<unknown, unknown, import("zod/v4/core").$ZodTypeInternals<unknown, unknown>>, {
-            title: string & {
-                __prisma_table: "Tiddlers";
-                __prisma_field: "title";
-            };
-            revision_id: string & {
-                __prisma_table: "Tiddlers";
-                __prisma_field: "revision_id";
-            };
-            is_deleted: PrismaField<"Tiddlers", "is_deleted">;
-            bag_name: string & {
-                __prisma_table: "Bags";
-                __prisma_field: "bag_name";
-            };
-            bag_id: string & {
-                __prisma_table: "Bags";
-                __prisma_field: "bag_id";
-            };
-        }[]> | import("@tiddlywiki/server").ZodRoute<"GET" | "HEAD", "ignore", {
+        }, Record<string, import("zod/v4").ZodType<any, string[] | undefined, import("zod/v4/core").$ZodTypeInternals<any, string[] | undefined>>>, import("zod/v4").ZodType<unknown, unknown, import("zod/v4/core").$ZodTypeInternals<unknown, unknown>>, never> | import("@tiddlywiki/server").ZodRoute<"GET" | "HEAD", "ignore", {
+            recipe_name: import("zod/v4").ZodType<string & {
+                __prisma_table: "Recipes";
+                __prisma_field: "recipe_name";
+            }, string, import("zod/v4/core").$ZodTypeInternals<string & {
+                __prisma_table: "Recipes";
+                __prisma_field: "recipe_name";
+            }, string>>;
+        }, Record<string, import("zod/v4").ZodType<any, string[] | undefined, import("zod/v4/core").$ZodTypeInternals<any, string[] | undefined>>>, import("zod/v4").ZodType<unknown, unknown, import("zod/v4/core").$ZodTypeInternals<unknown, unknown>>, never> | import("@tiddlywiki/server").ZodRoute<"GET" | "HEAD", "ignore", {
             recipe_name: import("zod/v4").ZodType<string & {
                 __prisma_table: "Recipes";
                 __prisma_field: "recipe_name";
@@ -3502,28 +3528,13 @@ declare module "packages/mws/src/commands/build-types" {
                 no: "no";
             }>>>;
         }, import("zod/v4").ZodType<unknown, unknown, import("zod/v4/core").$ZodTypeInternals<unknown, unknown>>, {
-            bag_id: string & {
-                __prisma_table: "Bags";
-                __prisma_field: "bag_id";
-            };
-            bag_name: string & {
-                __prisma_table: "Bags";
-                __prisma_field: "bag_name";
-            };
-            position: number & {
-                __prisma_table: "Recipe_bags";
-                __prisma_field: "position";
-            };
+            bag_id: string;
+            bag_name: string;
+            position: number;
             tiddlers: {
-                title: string & {
-                    __prisma_table: "Tiddlers";
-                    __prisma_field: "title";
-                };
-                revision_id: string & {
-                    __prisma_table: "Tiddlers";
-                    __prisma_field: "revision_id";
-                };
-                is_deleted: PrismaField<"Tiddlers", "is_deleted">;
+                title: string;
+                revision_id: string;
+                is_deleted: boolean;
             }[];
         }[]> | import("@tiddlywiki/server").ZodRoute<"GET" | "HEAD", "ignore", {
             recipe_name: import("zod/v4").ZodType<string & {

@@ -9,9 +9,10 @@ import { Writable } from "stream";
 import { IncomingHttpHeaders } from "http";
 import { WikiStateStore } from "./WikiStateStore";
 import { Debug } from "@prisma/client/runtime/library";
-import { BodyFormat, checkPath, JsonValue, registerZodRoutes, RouterKeyMap, RouterRouteMap, ServerRoute, tryParseJSON, UserError, zod, ZodRoute, zodRoute, ZodState } from "@tiddlywiki/server";
+import { BodyFormat, checkPath, JsonValue, registerZodRoutes, RouterKeyMap, RouterRouteMap, ServerRoute, tryParseJSON, UserError, Z2, zod, ZodRoute, zodRoute, ZodState } from "@tiddlywiki/server";
 import { serverEvents, ServerEventsMap } from "@tiddlywiki/events";
 const debugCORS = Debug("mws:cors");
+const debugSSE = Debug("mws:sse");
 
 export const WikiRouterKeyMap: RouterKeyMap<WikiRoutes, true> = {
   // recipe status updates
@@ -19,8 +20,8 @@ export const WikiRouterKeyMap: RouterKeyMap<WikiRoutes, true> = {
   handleGetRecipeEvents: true,
   handleGetBags: true,
   handleGetBagState: true,
-  handleListRecipeTiddlers: true,
-  handleGetBagStates: true,
+  handleGetAllBagStates: true,
+  handleSSEtest: true,
   // individual tiddlers
   handleLoadRecipeTiddler: true,
   handleSaveRecipeTiddler: true,
@@ -61,6 +62,11 @@ declare module "@tiddlywiki/events" {
       title: string;
       revision_id: string;
     }];
+  }
+}
+declare module "@tiddlywiki/server" {
+  interface IncomingHttpHeaders {
+    'last-event-id'?: string;
   }
 }
 
@@ -133,37 +139,6 @@ export class WikiRoutes {
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
     }),
-    // corsRequest: async state => {
-
-    //   // "Access-Control-Expose-Headers"
-    //   // https://developer.mozilla.org/en-US/docs/Glossary/CORS-safelisted_response_header
-    //   // https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Access-Control-Expose-Headers
-    //   // The following headers are exposed by default: 
-    //   // Cache-Control
-    //   // Content-Language
-    //   // Content-Length
-    //   // Content-Type
-    //   // Expires
-    //   // Last-Modified
-    //   // Pragma
-
-    //   const headers = state.headers["access-control-request-headers"]
-    //   const method = state.headers["access-control-request-method"]
-    //   debugCORS("OPTIONS %s %s %s", state.urlInfo.pathname, method, headers);
-    //   // CORS is currently disabled, so send an empty response
-    //   throw state.sendEmpty(204, {
-    //     // SameSite=strict should prevent the request from being credentialed
-    //     // Allow-Origin * prevents credentialed requests
-    //     // https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Access-Control-Allow-Credentials
-    //     // "Access-Control-Allow-Credentials": "true",
-    //     // "Access-Control-Allow-Origin": "*",
-    //     // "Access-Control-Allow-Methods": "POST",
-    //     // "Access-Control-Allow-Headers": "Content-Type, X-Requested-With",
-    //     // "Access-Control-Expose-Headers": "*",
-    //   });
-    //   // https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request
-
-    // },
     inner: async (state) => {
 
       const { recipe_name } = state.pathParams;
@@ -185,6 +160,43 @@ export class WikiRoutes {
     }
   });
 
+  handleSSEtest = zodRoute({
+    method: ["GET", "HEAD"],
+    path: RECIPE_PREFIX + "/:recipe_name/ssetest",
+    bodyFormat: "ignore",
+    zodPathParams: z => ({
+      recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
+    }),
+    inner: async (state) => {
+
+      const { recipe_name } = state.pathParams;
+
+      console.log(state.headers, state.queryParams)
+      const lastEventID = state.headers['last-event-id'];
+
+
+
+      await state.assertRecipeAccess(recipe_name, false);
+      debugSSE("connection opened", recipe_name);
+      const events = state.sendSSE();
+
+      const cancel = setInterval(() => {
+        debugSSE("test event", recipe_name);
+        events.emitEvent("test", {
+          message: "This is a test message",
+          timestamp: new Date().toISOString(),
+        }, new Date().toISOString());
+      }, 1000);
+
+      events.onClose(() => {
+        debugSSE("connection closed", recipe_name);
+        clearInterval(cancel);
+      });
+
+      throw STREAM_ENDED;
+
+    }
+  })
   handleGetRecipeEvents = zodRoute({
     method: ["GET", "HEAD"],
     path: RECIPE_PREFIX + "/:recipe_name/events",
@@ -192,57 +204,8 @@ export class WikiRoutes {
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
     }),
-    inner: async (state) => {
-
-      const { recipe_name } = state.pathParams;
-
-      await state.assertRecipeAccess(recipe_name, false);
-      console.log("SSE connection for recipe events", recipe_name);
-      const events = state.sendSSE();
-      serverEvents.on("mws.tiddler.delete", onDelete);
-      serverEvents.on("mws.tiddler.save", onSave);
-      events.onClose(() => {
-        console.log("SSE connection closed for recipe events", recipe_name);
-        serverEvents.off("mws.tiddler.delete", onDelete);
-        serverEvents.off("mws.tiddler.save", onSave);
-      });
-
-      throw STREAM_ENDED;
-
-      function onSave(data: ServerEventsMap["mws.tiddler.save"][0]) {
-        console.log("SSE tiddler.save", data);
-        if (data.recipe_name === recipe_name) {
-          events.emitEvent("tiddler.save", {
-            recipe_name: data.recipe_name,
-            bag_name: data.bag_name,
-            title: data.title,
-            revision_id: data.revision_id,
-          }, "");
-        }
-      }
-
-      function onDelete(data: ServerEventsMap["mws.tiddler.delete"][0]) {
-        console.log("SSE tiddler.save", data);
-        if (data.recipe_name === recipe_name) {
-          events.emitEvent("tiddler.delete", {
-            recipe_name: data.recipe_name,
-            bag_name: data.bag_name,
-            title: data.title,
-            revision_id: data.revision_id,
-          }, "");
-        }
-      }
-
-
-    }
-  })
-
-  handleListRecipeTiddlers = zodRoute({
-    method: ["GET", "HEAD"],
-    path: RECIPE_PREFIX + "/:recipe_name/tiddlers.json",
-    bodyFormat: "ignore",
-    zodPathParams: z => ({
-      recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
+    zodQueryParams: z => ({
+      "first-event-id": z.string().array().optional(),
     }),
     inner: async (state) => {
 
@@ -250,23 +213,98 @@ export class WikiRoutes {
 
       await state.assertRecipeAccess(recipe_name, false);
 
-      const result = await state.$transaction(async (prisma) => {
-        const server = new WikiStateStore(state, prisma);
-        // Get the recipe name from the parameters
-        const bagTiddlers = await server.getRecipeTiddlersByBag(recipe_name);
-
-        // reverse order for Map, so 0 comes after 1 and overlays it
-        bagTiddlers.sort((a, b) => b.position - a.position);
-
-        return Array.from(new Map(bagTiddlers.flatMap(bag => bag.tiddlers.map(tiddler => [tiddler.title, {
-          title: tiddler.title,
-          revision_id: tiddler.revision_id,
-          is_deleted: tiddler.is_deleted,
-          bag_name: bag.bag_name,
-          bag_id: bag.bag_id
-        }]))).values());
+      debugSSE("connection opened", recipe_name);
+      const events = state.sendSSE();
+      serverEvents.on("mws.tiddler.delete", onDelete);
+      serverEvents.on("mws.tiddler.save", onSave);
+      events.onClose(() => {
+        debugSSE("connection closed", recipe_name);
+        serverEvents.off("mws.tiddler.delete", onDelete);
+        serverEvents.off("mws.tiddler.save", onSave);
       });
-      return result;
+
+      const lastEventID = state.headers['last-event-id'] || state.queryParams["first-event-id"]?.[0];
+
+      if (lastEventID) {
+        const updates = await state.engine.recipe_bags.findMany({
+          where: { recipe: { recipe_name } },
+          orderBy: { position: "asc" },
+          select: {
+            bag: {
+              select: {
+                bag_name: true,
+                tiddlers: {
+                  select: {
+                    title: true,
+                    revision_id: true,
+                    is_deleted: true,
+                  },
+                  where: {
+                    is_deleted: true,
+                    revision_id: lastEventID ? { gt: lastEventID } : undefined,
+                  },
+                }
+              }
+            }
+          }
+        });
+        let newlastevent = "";
+        updates.forEach(({ bag }) => {
+          bag.tiddlers.forEach(tiddler => {
+            if (newlastevent < tiddler.revision_id) newlastevent = tiddler.revision_id;
+          })
+        });
+        events.emitEvent("tiddler.since-last-event", updates, newlastevent);
+      }
+
+
+      throw STREAM_ENDED;
+
+      // catch errors here otherwise they would cause the initiating request to 
+      // possibly return a 500 response. Since the event happens after the 
+      // transaction closes, it wouldn't roll it back.
+
+      // the only way to optimize this would be if the mws event included the 
+      // entire recipe_bags table, so we could check if the bag is in our recipe
+
+      // it's worse because we're using recipe and bag names instead of ids
+      // we also aren't checking permissions every time we emit an event
+
+      // TODO: there are probably things we could improve.
+
+      async function onSave(data: ServerEventsMap["mws.tiddler.save"][0]) {
+        try {
+          const hasBag = !!await state.engine.recipe_bags.count({
+            where: {
+              recipe: { recipe_name },
+              bag: { bag_name: data.bag_name },
+            },
+          });
+          if (hasBag) {
+            debugSSE("tiddler.save", recipe_name);
+            events.emitEvent("tiddler.save", data, data.revision_id);
+          }
+        } catch (e) {
+          console.error("Error in onSave for recipe events", e);
+        }
+      }
+
+      async function onDelete(data: ServerEventsMap["mws.tiddler.delete"][0]) {
+        try {
+          const hasBag = !!await state.engine.recipe_bags.count({
+            where: {
+              recipe: { recipe_name },
+              bag: { bag_name: data.bag_name },
+            },
+          });
+          if (hasBag) {
+            debugSSE("tiddler.delete", data);
+            events.emitEvent("tiddler.delete", data, data.revision_id);
+          }
+        } catch (e) {
+          console.error("Error in onDelete for recipe events", e);
+        }
+      }
     }
   })
 
@@ -333,9 +371,9 @@ export class WikiRoutes {
   });
 
 
-  handleGetBagStates = zodRoute({
+  handleGetAllBagStates = zodRoute({
     method: ["GET", "HEAD"],
-    path: RECIPE_PREFIX + "/:recipe_name/bag-states",
+    path: RECIPE_PREFIX + "/:recipe_name/all-bags-state",
     bodyFormat: "ignore",
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
@@ -357,8 +395,27 @@ export class WikiRoutes {
 
       const result = await state.$transaction(async (prisma) => {
         const server = new WikiStateStore(state, prisma);
-        return await server.getRecipeTiddlersByBag(recipe_name, { include_deleted, last_known_revision_id });
+        const bags = await server.getRecipeBags(recipe_name);
+
+        const alltids = await Promise.all(bags.map(({ bag_name, position }) =>
+          server.getBagTiddlers_PrismaQuery(bag_name, {
+            include_deleted,
+            last_known_revision_id
+          }).then(f => ({ ...f, position }))
+        ));
+
+        return zod.array(zod.strictObject({
+          bag_id: zod.string(),
+          bag_name: zod.string(),
+          position: zod.number(),
+          tiddlers: zod.strictObject({
+            title: zod.string(),
+            revision_id: zod.string(),
+            is_deleted: zod.boolean()
+          }).array()
+        })).parse(alltids);
       });
+
       let etag = "";
       for (const b of result) {
         for (const t of b.tiddlers) {
@@ -369,21 +426,17 @@ export class WikiRoutes {
       const match = state.headers["if-none-match"] === newEtag;
       // 304 has to return the same headers if they're to be useful, 
       // so we'll also put them in the etag in case it ignores the query
-      if (gzip_stream)
-        state.writeHead(match ? 304 : 200, {
-          "content-type": "application/gzip",
-          "content-encoding": "identity",
-          "x-gzip-stream": "yes",
-          "etag": newEtag,
-        });
-      else
-        state.writeHead(match ? 304 : 200, {
-          "content-type": "application/json",
-          "content-encoding": "identity",
-          "etag": newEtag,
-        });
-      if (match)
-        throw state.end();
+      state.writeHead(match ? 304 : 200, gzip_stream ? {
+        "content-type": "application/gzip",
+        "content-encoding": "identity",
+        "x-gzip-stream": "yes",
+        "etag": newEtag,
+      } : {
+        "content-type": "application/json",
+        "content-encoding": "identity",
+        "etag": newEtag,
+      });
+      if (match) throw state.end();
 
       state.write("[");
       for (let i = 0; i < result.length; i++) {

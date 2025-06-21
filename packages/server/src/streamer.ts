@@ -376,6 +376,8 @@ export class Streamer {
         throw new Error("Event ID must be a string");
       if (eventId.includes("\n"))
         throw new Error("Event ID cannot contain newlines");
+      if (this.writer.writableEnded)
+        throw new Error("Cannot emit event after the stream has ended");
 
       this.writer.write([
         eventName && `event: ${eventName}`,
@@ -388,12 +390,12 @@ export class Streamer {
       this.writer.write(`: ${comment}\n\n`);
     }
     const onClose = (callback: () => void) => {
-      this.writer.on("close", callback);
+      this.writer.on("finish", callback);
     }
     const close = () => {
       this.writer.end();
     }
-    
+
     serverEvents.on("exit", close);
     this.writer.on("finish", () => {
       serverEvents.off("exit", close);

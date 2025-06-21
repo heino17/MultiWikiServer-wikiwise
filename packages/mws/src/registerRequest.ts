@@ -62,15 +62,17 @@ serverEvents.on("listen.router.init", async (listen, router) => {
   await serverEvents.emitAsync("mws.routes.fallback", router.rootRoute, router.config);
 });
 serverEvents.on("request.middleware", async (router, req, res, options) => {
-  await new Promise<void>((resolve, reject) => router.helmet(
-    req as IncomingMessage,
-    res as ServerResponse,
-    err => err ? reject(err) : resolve()
-  ));
+  await new Promise<void>((resolve, reject) =>
+    router.helmet(
+      req as IncomingMessage,
+      res as ServerResponse,
+      err => err ? reject(err) : resolve()
+    )
+  );
 });
 serverEvents.on("request.streamer", async (router, streamer) => {
   // This is picked up by our StateObject class
   streamer.user = await SessionManager.parseIncomingRequest(streamer, router.config);
-  // this tells the server whether to use compression (it still allows gzip-stream)
+  // this tells the server whether to use dynamic compression (it still allows gzip-stream)
   streamer.compressor.enabled = router.config.enableGzip;
 });

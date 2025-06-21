@@ -6,11 +6,7 @@
   "types": "./src/index.ts",
   "module": "./src/index.ts",
   "dependencies": {
-    "@prisma/adapter-better-sqlite3": "6.7.0-dev.48",
-    "@prisma/client": "6.6.0",
-    "@serenity-kit/opaque": "^0.8.4",
-    "prisma": "6.6.0",
-    "prisma-json-types-generator": "~3.3.1"
+
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
@@ -18,7 +14,7 @@
     "@types/tiddlywiki": "file:../tiddlywiki-types",
     "debug": "^4.4.1",
     "esbuild": "0.25.2",
-    "helmet": "^8.1.0",
+    "helmet": "~8.1.0",
     "supports-color": "^10.0.0",
     "tiddlywiki": "^5.1.22",
     "try": "^1.0.0-beta.5",

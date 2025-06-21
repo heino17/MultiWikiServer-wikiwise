@@ -34,6 +34,7 @@ class MultiWikiClientAdaptor {
         this.name = "multiwikiclient";
         this.supportsLazyLoading = true;
         this.error = null;
+        this.syncTimeout = null;
         this.wiki = options.wiki;
         this.host = this.getHost();
         this.recipe = this.wiki.getTiddlerText("$:/config/multiwikiclient/recipe");
@@ -77,65 +78,6 @@ class MultiWikiClientAdaptor {
         }
         return text;
     }
-    /**
-     * This throws an error if the response status is not 2xx, but will still return the response alongside the error.
-     *
-     * So if the first parameter is false, the third parameter may still contain the response.
-     */
-    recipeRequest(options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (!options.url.startsWith("/"))
-                throw new Error("The url does not start with a slash");
-            return yield httpRequest(Object.assign(Object.assign({}, options), { responseType: "blob", url: this.host + "recipe/" + encodeURIComponent(this.recipe) + options.url })).then((e) => __awaiter(this, void 0, void 0, function* () {
-                var _a;
-                if (!e.ok)
-                    return [
-                        false, new Error(`The server return a status code ${e.status} with the following reason: `
-                            + `${(_a = e.headers.get("x-reason")) !== null && _a !== void 0 ? _a : "(no reason given)"}`),
-                        Object.assign(Object.assign({}, e), { responseString: "", responseJSON: undefined })
-                    ];
-                let responseString = "";
-                if (e.headers.get("x-gzip-stream") === "yes") {
-                    // Browsers only decode the first stream, 
-                    // so we cant use content-encoding or DecompressionStream
-                    yield new Promise((resolve) => __awaiter(this, void 0, void 0, function* () {
-                        const gunzip = new fflate.AsyncGunzip((err, chunk, final) => {
-                            if (err)
-                                return console.log(err);
-                            responseString += fflate.strFromU8(chunk);
-                            if (final)
-                                resolve();
-                        });
-                        if (this.isDevMode)
-                            gunzip.onmember = e => console.log("gunzip member", e);
-                        gunzip.push(new Uint8Array(yield readBlobAsArrayBuffer(e.response)));
-                        // this has to be on a separate line
-                        gunzip.push(new Uint8Array(), true);
-                    }));
-                    if (this.isDevMode)
-                        console.log("gunzip result", responseString.length);
-                }
-                else {
-                    responseString = fflate.strFromU8(new Uint8Array(yield readBlobAsArrayBuffer(e.response)));
-                }
-                return [true, void 0, Object.assign(Object.assign({}, e), { responseString, 
-                        /** this is undefined if status is not 200 */
-                        responseJSON: e.status === 200
-                            ? tryParseJSON(responseString)
-                            : undefined })];
-            }), e => [false, e, void 0]);
-            function tryParseJSON(data) {
-                try {
-                    return JSON.parse(data);
-                }
-                catch (e) {
-                    console.error("Error parsing JSON, returning undefined", e);
-                    // console.log(data);
-                    return undefined;
-                }
-            }
-        });
-    }
     getTiddlerInfo(tiddler) {
         var title = tiddler.fields.title, revision = this.wiki.extractTiddlerDataItem(REVISION_STATE_TIDDLER, title), bag = this.wiki.extractTiddlerDataItem(BAG_STATE_TIDDLER, title);
         if (revision && bag) {
@@ -174,6 +116,7 @@ class MultiWikiClientAdaptor {
                 method: "GET",
                 url: "/status",
             });
+            this.connectRecipeEvents();
             if (!ok && (data === null || data === void 0 ? void 0 : data.status) === 0) {
                 this.error = "The webpage is forbidden from contacting the server.";
                 this.isLoggedIn = false;
@@ -212,115 +155,102 @@ class MultiWikiClientAdaptor {
     Get details of changed tiddlers from the server
     */
     getUpdatedTiddlers(syncer, callback) {
-        if (this.offline)
-            return callback(null);
-        if (!this.useServerSentEvents) {
-            this.pollServer2().then(changes => {
-                callback(null, changes);
-                setTimeout(() => {
-                    // If Browswer Storage tiddlers were cached on reloading the wiki, add them after sync from server completes in the above callback.
-                    if ($tw.browserStorage && $tw.browserStorage.isEnabled()) {
-                        $tw.browserStorage.addCachedTiddlers();
-                    }
-                });
-            }, err => {
-                callback(err);
-            });
-            return;
-        }
-        var self = this;
-        // Do nothing if there's already a connection in progress.
-        if (this.serverUpdateConnectionStatus !== SERVER_NOT_CONNECTED) {
-            return callback(null, {
-                modifications: [],
-                deletions: []
-            });
-        }
-        // Try to connect a server stream
-        this.setUpdateConnectionStatus(SERVER_CONNECTING_SSE);
-        this.connectServerStream({
-            syncer: syncer,
-            onerror: function (err) {
-                return __awaiter(this, void 0, void 0, function* () {
-                    self.logger.log("Error connecting SSE stream", err);
-                    // If the stream didn't work, try polling
-                    self.setUpdateConnectionStatus(SERVER_POLLING);
-                    const changes = yield self.pollServer2();
-                    self.setUpdateConnectionStatus(SERVER_NOT_CONNECTED);
-                    callback(null, changes);
-                    setTimeout(() => {
-                        // If Browswer Storage tiddlers were cached on reloading the wiki, add them after sync from server completes in the above callback.
-                        if ($tw.browserStorage && $tw.browserStorage.isEnabled()) {
-                            $tw.browserStorage.addCachedTiddlers();
-                        }
-                    });
-                });
-            },
-            onopen: function () {
-                self.setUpdateConnectionStatus(SERVER_CONNECTED_SSE);
-                // The syncer is expecting a callback but we don't have any data to send
-                callback(null, {
-                    modifications: [],
-                    deletions: []
-                });
-            }
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this.offline)
+                return callback(null);
+            if (!this.bags || this.serverUpdateConnectionStatus === SERVER_NOT_CONNECTED)
+                yield this.pollServer();
+            const { modifications, deletions, last_revision } = this.updateBags();
+            this.last_known_revision_id = last_revision;
+            callback(null, { modifications, deletions });
         });
     }
-    /*
-    Attempt to establish an SSE stream with the server and transfer tiddler changes. Options include:
-  
-    syncer: reference to syncer object used for storing data
-    onopen: invoked when the stream is successfully opened
-    onerror: invoked if there is an error
-    */
-    connectServerStream(options) {
-        var self = this;
-        const eventSource = new EventSource("/recipes/" + this.recipe + "/events?last_known_revision_id=" + this.last_known_revision_id);
-        eventSource.onerror = function (event) {
-            if (options.onerror) {
-                options.onerror(event);
-            }
-        };
-        eventSource.onopen = function (event) {
-            if (options.onopen) {
-                options.onopen(event);
-            }
-        };
-        eventSource.addEventListener("change", function (event) {
-            const data = $tw.utils.parseJSONSafe(event.data);
-            if (!data)
-                return;
-            console.log("SSE data", data);
-            // Update last seen revision_id
-            if (data.revision_id > self.last_known_revision_id) {
-                self.last_known_revision_id = data.revision_id;
-            }
-            // Record the last update to this tiddler
-            self.lastRecordedUpdate[data.title] = {
-                type: data.is_deleted ? "deletion" : "update",
-                revision_id: data.revision_id
-            };
-            console.log(`Oustanding requests is ${JSON.stringify(self.outstandingRequests[data.title])}`);
-            // Process the update if the tiddler is not the subject of an outstanding request
-            if (self.outstandingRequests[data.title])
-                return;
-            if (data.is_deleted) {
-                self.removeTiddlerInfo(data.title);
-                delete options.syncer.tiddlerInfo[data.title];
-                options.syncer.logger.log("Deleting tiddler missing from server:", data.title);
-                options.syncer.wiki.deleteTiddler(data.title);
-                options.syncer.processTaskQueue();
+    debounceSyncFromServer() {
+        if (this.syncTimeout) {
+            clearTimeout(this.syncTimeout);
+        }
+        this.syncTimeout = setTimeout(() => {
+            this.syncTimeout = null;
+            if (this.syncer) {
+                this.syncer.syncFromServer();
             }
             else {
-                var result = self.incomingUpdatesFilterFn.call(self.wiki, self.wiki.makeTiddlerIterator([data.title]));
-                if (result.length > 0) {
-                    self.setTiddlerInfo(data.title, data.revision_id.toString(), data.bag_name);
-                    options.syncer.storeTiddler(data.tiddler);
-                }
+                console.warn("No syncer available to sync from server");
+            }
+        }, 1000);
+    }
+    connectRecipeEvents() {
+        const event = new EventSource(this.host + "recipe/" + encodeURIComponent(this.recipe) + "/events?first-event-id=" + encodeURIComponent(this.last_known_revision_id));
+        this.setUpdateConnectionStatus(SERVER_CONNECTING_SSE);
+        const onEvent = (e) => {
+            const data = JSON.parse(e.data);
+            if (!this.bags)
+                return;
+            const bag = this.bags.find(b => b.bag_name === data.bag_name);
+            if (!bag)
+                return;
+            const tiddler = bag.tiddlers.find(t => t.title === data.title);
+            if (!tiddler) {
+                if (e.type === "tiddler.delete")
+                    return;
+                // If the tiddler is not found, it must be a new tiddler
+                bag.tiddlers.push({
+                    title: data.title,
+                    revision_id: data.revision_id,
+                    is_deleted: false,
+                });
+            }
+            else {
+                tiddler.is_deleted = (e.type === "tiddler.delete");
+                tiddler.revision_id = data.revision_id;
+            }
+            this.debounceSyncFromServer();
+        };
+        const onUpdate = (e) => {
+            if (!this.bags)
+                return;
+            const updates = JSON.parse(e.data);
+            const existBags = new Map(this.bags.map(b => [b.bag_name, b.tiddlers]));
+            updates.forEach(e => {
+                const existBag = existBags.get(e.bag.bag_name);
+                if (!existBag)
+                    return;
+                const existTids = new Map(existBag.map(t => [t.title, t]));
+                e.bag.tiddlers.forEach(tid => {
+                    const existTid = existTids.get(tid.title);
+                    if (existTid) {
+                        Object.assign(existTid, tid);
+                    }
+                    else {
+                        existBag.push(tid);
+                    }
+                });
+            });
+            this.debounceSyncFromServer();
+        };
+        event.addEventListener("tiddler.save", onEvent);
+        event.addEventListener("tiddler.delete", onEvent);
+        event.addEventListener("tiddler.since-last-event", onUpdate);
+        event.addEventListener("test", console.log);
+        event.addEventListener("open", () => {
+            this.setUpdateConnectionStatus(SERVER_CONNECTED_SSE);
+            console.log("Connected to server events");
+        });
+        event.addEventListener("error", (e) => {
+            if (event.readyState === EventSource.CLOSED) {
+                this.setUpdateConnectionStatus(SERVER_NOT_CONNECTED);
+                console.error("Server events connection closed");
+            }
+            else if (event.readyState === EventSource.CONNECTING) {
+                this.setUpdateConnectionStatus(SERVER_CONNECTING_SSE);
+                console.warn("Connecting to server events");
+            }
+            else {
+                console.error("Error in server events connection", e);
             }
         });
     }
-    pollServer2() {
+    pollServer() {
         return __awaiter(this, void 0, void 0, function* () {
             const [ok, err, result] = yield this.recipeRequest({
                 key: "handleGetBags",
@@ -331,7 +261,7 @@ class MultiWikiClientAdaptor {
                 throw err;
             if (!result.responseJSON)
                 throw new Error("no result returned");
-            const bags = yield Promise.all(result.responseJSON.map(e => this.recipeRequest({
+            this.bags = yield Promise.all(result.responseJSON.map(e => this.recipeRequest({
                 key: "handleGetBagState",
                 url: "/bags/" + encodeURIComponent(e.bag_name) + "/state",
                 method: "GET",
@@ -343,86 +273,49 @@ class MultiWikiClientAdaptor {
                     throw new Error("no result returned");
                 return Object.assign(Object.assign({}, f.responseJSON), { position: e.position });
             })));
-            bags.sort((a, b) => b.position - a.position);
-            const modified = new Set(), deleted = new Set();
-            const incomingTitles = new Set(bags.map(
-            // get the titles in each layer that aren't deleted
-            e => e.tiddlers.filter(f => !f.is_deleted).map(f => f.title)
-            // and flatten them for Set
-            ).flat());
-            let last_revision = this.last_known_revision_id;
-            bags.forEach(bag => {
-                bag.tiddlers.forEach(tid => {
-                    // if the revision is old, ignore, since deletions create a new revision
-                    if (tid.revision_id <= this.last_known_revision_id)
-                        return;
-                    if (tid.revision_id > last_revision)
-                        last_revision = tid.revision_id;
-                    // check if this title still exists in any layer
-                    if (incomingTitles.has(tid.title))
-                        modified.add(tid.title);
-                    else
-                        deleted.add(tid.title);
-                });
-            });
-            this.last_known_revision_id = last_revision;
-            return {
-                modifications: [...modified.keys()],
-                deletions: [...deleted.keys()],
-            };
+            this.bags.sort((a, b) => b.position - a.position);
         });
     }
-    pollServer() {
-        return __awaiter(this, void 0, void 0, function* () {
-            const [ok, err, result] = yield this.recipeRequest({
-                key: "handleGetBagStates",
-                url: "/bag-states",
-                method: "GET",
-                queryParams: Object.assign({ include_deleted: "yes" }, this.useGzipStream ? { gzip_stream: "yes" } : {})
+    updateBags() {
+        if (!this.bags)
+            throw new Error("No bags loaded, call pollServer first");
+        const modified = new Set(), deleted = new Set();
+        const incomingTitles = new Set(this.bags.map(
+        // get the titles in each layer that aren't deleted
+        e => e.tiddlers.filter(f => !f.is_deleted).map(f => f.title)
+        // and flatten them for Set
+        ).flat());
+        let last_revision = this.last_known_revision_id;
+        this.bags.forEach(bag => {
+            bag.tiddlers.forEach(tid => {
+                // if the revision is old, ignore, since deletions create a new revision
+                if (tid.revision_id <= this.last_known_revision_id)
+                    return;
+                if (tid.revision_id > last_revision)
+                    last_revision = tid.revision_id;
+                // check if this title still exists in any layer
+                if (incomingTitles.has(tid.title))
+                    modified.add(tid.title);
+                else
+                    deleted.add(tid.title);
             });
-            if (!ok)
-                throw err;
-            const bags = result.responseJSON;
-            if (!bags)
-                throw new Error("no result returned");
-            bags.sort((a, b) => b.position - a.position);
-            const modified = new Set(), deleted = new Set();
-            const incomingTitles = new Set(bags.map(
-            // get the titles in each layer that aren't deleted
-            e => e.tiddlers.filter(f => !f.is_deleted).map(f => f.title)
-            // and flatten them for Set
-            ).flat());
-            let last_revision = this.last_known_revision_id;
-            bags.forEach(bag => {
-                bag.tiddlers.forEach(tid => {
-                    // if the revision is old, ignore, since deletions create a new revision
-                    if (tid.revision_id <= this.last_known_revision_id)
-                        return;
-                    if (tid.revision_id > last_revision)
-                        last_revision = tid.revision_id;
-                    // check if this title still exists in any layer
-                    if (incomingTitles.has(tid.title))
-                        modified.add(tid.title);
-                    else
-                        deleted.add(tid.title);
-                });
-            });
-            this.last_known_revision_id = last_revision;
-            return {
-                modifications: [...modified.keys()],
-                deletions: [...deleted.keys()],
-            };
         });
+        return {
+            modifications: [...modified.keys()],
+            deletions: [...deleted.keys()],
+            last_revision,
+            incomingTitles,
+        };
     }
     /*
     Queue a load for a tiddler if there has been an update for it since the specified revision
     */
     checkLastRecordedUpdate(title, revision) {
-        var lru = this.lastRecordedUpdate[title];
-        if (lru && lru.revision_id > revision) {
-            console.log(`Checking for updates to ${title} since ${JSON.stringify(lru)} comparing to ${revision}`);
-            this.syncer && this.syncer.enqueueLoadTiddler(title);
-        }
+        // var lru = this.lastRecordedUpdate[title];
+        // if (lru && lru.revision_id > revision) {
+        // 	console.log(`Checking for updates to ${title} since ${JSON.stringify(lru)} comparing to ${revision}`);
+        // 	this.syncer && this.syncer.enqueueLoadTiddler(title);
+        // }
     }
     get syncer() {
         if ($tw.syncadaptor === this)
@@ -493,7 +386,9 @@ class MultiWikiClientAdaptor {
     loadTiddler(title, callback, options) {
         return __awaiter(this, void 0, void 0, function* () {
             var _a, _b;
-            var self = this;
+            const self = this;
+            if (!self.syncer)
+                return callback(new Error("No syncer available"));
             self.outstandingRequests[title] = { type: "GET" };
             const [ok, err, result] = yield this.recipeRequest({
                 key: "handleLoadRecipeTiddler",
@@ -547,6 +442,65 @@ class MultiWikiClientAdaptor {
             self.removeTiddlerInfo(title);
             // Invoke the callback & return null adaptorInfo
             callback(null, null);
+        });
+    }
+    /**
+     * This throws an error if the response status is not 2xx, but will still return the response alongside the error.
+     *
+     * So if the first parameter is false, the third parameter may still contain the response.
+     */
+    recipeRequest(options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!options.url.startsWith("/"))
+                throw new Error("The url does not start with a slash");
+            return yield httpRequest(Object.assign(Object.assign({}, options), { responseType: "blob", url: this.host + "recipe/" + encodeURIComponent(this.recipe) + options.url })).then((e) => __awaiter(this, void 0, void 0, function* () {
+                var _a;
+                if (!e.ok)
+                    return [
+                        false, new Error(`The server return a status code ${e.status} with the following reason: `
+                            + `${(_a = e.headers.get("x-reason")) !== null && _a !== void 0 ? _a : "(no reason given)"}`),
+                        Object.assign(Object.assign({}, e), { responseString: "", responseJSON: undefined })
+                    ];
+                let responseString = "";
+                if (e.headers.get("x-gzip-stream") === "yes") {
+                    // Browsers only decode the first stream, 
+                    // so we cant use content-encoding or DecompressionStream
+                    yield new Promise((resolve) => __awaiter(this, void 0, void 0, function* () {
+                        const gunzip = new fflate.AsyncGunzip((err, chunk, final) => {
+                            if (err)
+                                return console.log(err);
+                            responseString += fflate.strFromU8(chunk);
+                            if (final)
+                                resolve();
+                        });
+                        if (this.isDevMode)
+                            gunzip.onmember = e => console.log("gunzip member", e);
+                        gunzip.push(new Uint8Array(yield readBlobAsArrayBuffer(e.response)));
+                        // this has to be on a separate line
+                        gunzip.push(new Uint8Array(), true);
+                    }));
+                    if (this.isDevMode)
+                        console.log("gunzip result", responseString.length);
+                }
+                else {
+                    responseString = fflate.strFromU8(new Uint8Array(yield readBlobAsArrayBuffer(e.response)));
+                }
+                return [true, void 0, Object.assign(Object.assign({}, e), { responseString, 
+                        /** this is undefined if status is not 200 */
+                        responseJSON: e.status === 200
+                            ? tryParseJSON(responseString)
+                            : undefined })];
+            }), e => [false, e, void 0]);
+            function tryParseJSON(data) {
+                try {
+                    return JSON.parse(data);
+                }
+                catch (e) {
+                    console.error("Error parsing JSON, returning undefined", e);
+                    // console.log(data);
+                    return undefined;
+                }
+            }
         });
     }
 }
