@@ -10,7 +10,11 @@
 
 ## Upgrades can break your wiki, always make backups
 
-Storing data is safe enough, but upgrading to new versions is where the problem comes in. That's why your package.json file has the exact version number saved. You can upgrade your TiddlyWiki version separate from the MWS version. Once you upgrade to a new MWS version, you might not be able to revert to the previous version. **Always make backups.** Also, you should not give untrusted users write access on any bags or recipes because they can write code that can run as any user.
+Storing data is safe enough, sort of, but upgrading to new versions is where the problem comes in. That's why your package.json file has the exact version number saved. You can upgrade your TiddlyWiki version separate from the MWS version. Once you upgrade to a new MWS version, you might not be able to revert to the previous version. **Always make backups.** Also, you should not give untrusted users write access on any bags or recipes because they can write code that can run as any user.
+
+## Also, this is a database, please make backups
+
+Seriously, you never know. Databases try very hard to be perfect, and a small number of database engines run the entire internet, so there are a lot of eyes on them, and data bugs are rare. But that doesn't mean things can't go wrong. Backups are critical. 
 
 -----
 
