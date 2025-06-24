@@ -18,8 +18,6 @@ serverEvents.on("mws.routes", (root) => {
   SettingsManager.defineRoutes(root);
 });
 
-const validKeys = ["siteTitle", "siteDescription", "theme", "language"];
-
 class SettingsManager {
   static defineRoutes(root: ServerRoute) {
     registerZodRoutes(root, new SettingsManager(), Object.keys(SettingsKeyMap));

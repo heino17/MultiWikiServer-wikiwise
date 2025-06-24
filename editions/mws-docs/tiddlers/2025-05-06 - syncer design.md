@@ -12,8 +12,4 @@ There also isn't a good way to move tiddlers between levels. Admins will need to
 
 I'm not good at wikitext, but I can provide the endpoints for all of these operations as well as the client-side adapters and actions to use them. 
 
-I also don't know why we aren't using the wiki mount point for the API, and putting the react UI under admin, since then it would free up the entire path space to use for a tree path structure. 
-
-I'm working on simplifying the internal code structure yet again, still focusing on getting everything up to speed with my latest ideas. 
-
 -- Arlen22

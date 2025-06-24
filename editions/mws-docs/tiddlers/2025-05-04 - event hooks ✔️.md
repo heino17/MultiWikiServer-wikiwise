@@ -11,3 +11,9 @@ I probably need a startup state object, which basically has the site config and 
 I guess this is actually a significant rewrite, so once I get some of the initial pieces done, it should be more obvious. 
 
 -- Arlen22
+
+## Retrospective - 2025-06-24
+
+It was a significant rewrite. I separated MWS into three packages, one package for the events, one package for generic web server stuff, and one package for all the MWS logic. Getting config from the database is pretty simple. We do it on startup and then if a setting can be changed live, we just update the config property. For those settings, we store the value in the request state to make sure each request uses the same setting for the duration of the request.
+
+The only downside is that we have to make sure we import all the files that use the server events, but that's a small price to pay for the much higher flexibility. I'm sure there's a lint rule we could create somehow, but I haven't gotten to that yet. 
