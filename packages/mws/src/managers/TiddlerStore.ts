@@ -146,8 +146,8 @@ export class TiddlerStore_PrismaBase {
     if (attachment_hash && tiddlerFields.text)
       throw new Error("Do not set both the attachment_hash and the text field. It should be one or the other.")
 
-    const deletion = this.prisma.tiddlers.delete({
-      where: { bag_id_title: { bag_id, title } },
+    const deletion = this.prisma.tiddlers.deleteMany({
+      where: { bag_id, title },
     });
 
     const fields = Object.entries(tiddlerFields);
@@ -178,8 +178,8 @@ export class TiddlerStore_PrismaBase {
     title: PrismaField<"Tiddlers", "title">,
   ) {
     return tuple(
-      this.prisma.tiddlers.delete({
-        where: { bag_id_title: { bag_id, title } },
+      this.prisma.tiddlers.deleteMany({
+        where: { bag_id, title },
       }),
       this.prisma.tiddlers.create({
         data: {

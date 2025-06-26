@@ -49,6 +49,7 @@
     "install-android": "GYP_DEFINES=\"android_ndk_path=''\" npm install",
     "prisma:format": "prettier --write prisma/client/*.js prisma/client/*/*.js",
     "prisma:generate": "node scripts.mjs prisma:generate",
+    "dev:init-store": "rm -rf dev/wiki/store && DEBUG= npm start init-store",
     "env": "env",
     "test": "node scripts.mjs test",
     "prepublishOnly": "npm run build",
