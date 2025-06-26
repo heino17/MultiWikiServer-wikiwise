@@ -61,12 +61,13 @@ export class Command extends BaseCommand<[string], {
 			return;
 		}
 
-	
 		const store = new TiddlerStore_PrismaBase(this.config.engine);
+
+		const bag = await store.upsertBag_PrismaPromise(bagName, bagDescription);
+
 		await this.config.engine.$transaction(loadWikiFolder({
 			wikiPath: this.params[0],
-			bagName,
-			bagDescription,
+			bag_id: bag.bag_id,
 			recipeName,
 			recipeDescription,
 			overwrite,
@@ -86,8 +87,7 @@ export class Command extends BaseCommand<[string], {
 // Copy TiddlyWiki core editions
 function loadWikiFolder({ $tw, store, cache, ...options }: {
 	wikiPath: string,
-	bagName: PrismaField<"Bags", "bag_name">,
-	bagDescription: PrismaField<"Bags", "description">,
+	bag_id: PrismaField<"Bags", "bag_id">,
 	recipeName: PrismaField<"Recipes", "recipe_name">,
 	recipeDescription: PrismaField<"Recipes", "description">,
 	overwrite: boolean;
@@ -101,7 +101,7 @@ function loadWikiFolder({ $tw, store, cache, ...options }: {
 	const recipeList = [];
 	// Create the recipe
 	recipeList.push({
-		bag_name: options.bagName,
+		bag_id: options.bag_id,
 		with_acl: true as PrismaField<"Recipe_bags", "with_acl">,
 	});
 	recipeList.reverse();
@@ -116,9 +116,10 @@ function loadWikiFolder({ $tw, store, cache, ...options }: {
 		if (!e.plugin) console.log(`Folder ${options.wikiPath} missing ${e.folder}.`)
 	});
 
+
+
 	return [
-		// create the bag
-		store.upsertBag_PrismaPromise(options.bagName, options.bagDescription),
+
 		// create the recipe and recipe_bags entries
 		...store.upsertRecipe_PrismaArray(
 			options.recipeName,
@@ -127,7 +128,7 @@ function loadWikiFolder({ $tw, store, cache, ...options }: {
 			plugins.map(e => e.plugin).filter(truthy)
 		),
 		// save the tiddlers (this will skip attachments)
-		...store.saveTiddlersFromPath_PrismaArray(options.bagName, tiddlersFromPath.map(e => e.tiddlers).flat())
+		...store.saveTiddlersFromPath_PrismaArray(options.bag_id, tiddlersFromPath.map(e => e.tiddlers).flat())
 	];
 
 }

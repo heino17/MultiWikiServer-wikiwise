@@ -1,14 +1,15 @@
 {
   "compilerOptions": {
-    "target": "es2017",
+    "target": "es2015",
     "lib": [
-      "es2017",
+      "es2015",
       "DOM",
     ],
     "module": "commonjs",
     "outDir": "tiddlers/syncer",
     /* Linting */
     "strict": true,
+    "alwaysStrict": true,
     "rootDir": "./src",
     "esModuleInterop": true,
     // "noUnusedLocals": false,

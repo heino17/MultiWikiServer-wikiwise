@@ -19,9 +19,11 @@ previous operation to complete before sending a new one.
 // the blank line is important, and so is the following use strict
 "use strict";
 
-import type { WikiRoutes, ZodRoute, ServerEventsMap } from './mws';
+import { ServerEventsMap } from '@tiddlywiki/events';
+import type { WikiRoutes, ZodRoute } from '@tiddlywiki/mws';
+import { zod } from '@tiddlywiki/server';
 // import type { WikiRoutes, ZodRoute } from '@tiddlywiki/mws';
-import type { Syncer, Tiddler } from 'tiddlywiki';
+import type { Syncer, Tiddler, TiddlerFields } from 'tiddlywiki';
 declare global { const fflate: typeof import("./fflate"); }
 declare const self: never;
 
@@ -131,6 +133,30 @@ interface SyncAdaptor<AD> {
 		) => void,
 		extra: { tiddlerInfo: SyncerTiddlerInfo<AD> }
 	): void;
+
+	saveTiddlers?(options: {
+		syncer: Syncer,
+		tiddlers: Tiddler[],
+		onNext: (title: string, adaptorInfo: any, revision: string) => void,
+		onDone: () => void,
+		onError: (err: Error) => void
+	}): void;
+
+	loadTiddlers?(options: {
+		syncer: Syncer,
+		titles: string[],
+		onNext: (tiddlerFields: TiddlerFields) => void,
+		onDone: () => void,
+		onError: (err: Error) => void
+	}): void;
+
+	deleteTiddlers?(options: {
+		syncer: Syncer,
+		titles: string[],
+		onNext: (title: string) => void,
+		onDone: () => void,
+		onError: (err: Error) => void
+	}): void;
 
 	setLoggerSaveBuffer?: (loggerForSaving: Logger) => void;
 	displayLoginPrompt?(syncer: Syncer): void;
@@ -501,6 +527,96 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 	}
 	private get syncer() {
 		if ($tw.syncadaptor === this) return $tw.syncer as Syncer;
+	}
+	async loadTiddlers(options: {
+		syncer: Syncer;
+		titles: string[];
+		onNext: (tiddlerFields: TiddlerFields) => void;
+		onDone: () => void;
+		onError: (err: Error) => void;
+	}) {
+		const tiddlers = await this.rpcRequest({
+			key: "rpcLoadRecipeTiddlerList",
+			body: {
+				titles: options.titles as PrismaField<"Tiddlers", "title">[]
+			}
+		}).catch(err => {
+			options.onError(err);
+			throw new Error("Error loading tiddlers: " + err.message);
+		});
+		tiddlers.forEach(fields => {
+			options.onNext(fields);
+		});
+		options.onDone();
+	}
+	async saveTiddlers(options: {
+		syncer: Syncer;
+		tiddlers: Tiddler[];
+		onNext: (title: string, adaptorInfo: MWSAdaptorInfo, revision: string) => void;
+		onDone: () => void;
+		onError: (err: Error) => void;
+	}) {
+		const { syncer, tiddlers, onNext, onDone, onError } = options;
+
+		const fields = tiddlers.map(e => e.getFieldStrings());
+
+		const results = await this.rpcRequest({
+			key: "rpcSaveRecipeTiddlerList",
+			body: { tiddlers: fields }
+		}).catch(err => {
+			onError(err);
+			throw new Error("Error saving tiddlers: " + err.message);
+		});
+
+		results.forEach(tiddler => {
+			onNext(tiddler.title, {
+				bag: tiddler.bag_id,
+			}, tiddler.revision_id);
+		});
+
+		onDone();
+	}
+
+	async deleteTiddlers(options: { syncer: Syncer; titles: string[]; onNext: (title: string) => void; onDone: () => void; onError: (err: Error) => void; }) {
+		const { syncer, titles, onNext, onDone, onError } = options;
+
+		const results = await this.rpcRequest({
+			key: "rpcDeleteRecipeTiddlerList",
+			body: { titles: titles as PrismaField<"Tiddlers", "title">[] }
+		}).catch(err => {
+			onError(err);
+			throw new Error("Error deleting tiddlers: " + err.message);
+		});
+
+		results.forEach(({ title }) => { onNext(title); });
+
+		onDone();
+	}
+
+
+	async rpcRequest<T extends keyof TiddlerRouterResponse>(
+		options: {
+			key: T;
+			body: zod.infer<TiddlerRouterResponse[T]["T"]>;
+		}
+	): Promise<TiddlerRouterResponse[T]["R"]> {
+
+		type t = TiddlerRouterResponse["handleSaveRecipeTiddler"]
+		const [ok, err, result] = await this.recipeRequest({
+			key: options.key,
+			url: "/rpc/" + options.key,
+			method: "PUT",
+			requestBodyString: JSON.stringify(options.body),
+			headers: {
+				"content-type": "application/json"
+			}
+		});
+
+		if (!ok) throw err;
+
+		if (!result.responseJSON) throw new Error("No response JSON returned");
+
+		return result.responseJSON as TiddlerRouterResponse[T]["R"];
 	}
 	/*
 	Save a tiddler and invoke the callback with (err,adaptorInfo,revision)

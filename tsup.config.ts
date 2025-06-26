@@ -56,6 +56,12 @@ export default defineConfig({
       "export default function startServer(): Promise<void>;",
     ].join("\n"));
     console.log("TSC dist/mws.d.ts");
+    if (process.env.TSCMWS) {
+      const tag = "TSC ⚡️ done";
+      console.time(tag);
+      await start("node scripts.mjs build:types", ["--noEmit"]).catch((code) => code);
+      console.timeEnd(tag);
+    }
 
     if (process.env.PLUGINDTS) {
       const tag = "TSC ⚡️ done";

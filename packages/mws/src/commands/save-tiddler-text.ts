@@ -23,14 +23,17 @@ export class Command extends BaseCommand {
 			tiddlerTitle = this.params[1] as PrismaField<"Tiddlers", "title">,
 			tiddlerText = this.params[2] as string;
 
+		const bag = await this.config.engine.bags.findUnique({ where: { bag_name: bagName } });
+
+		if (!bag) return `Bag "${bagName}" does not exist.`;
+
+
 		const store = new TiddlerStore_PrismaBase(this.config.engine);
 		await this.config.engine.$transaction(
-			store.saveBagTiddlerFields_PrismaArray(
-				{ title: tiddlerTitle, text: tiddlerText },
-				bagName,
-				null
-			)
+			store.saveBagTiddlerFields_PrismaArray({ title: tiddlerTitle, text: tiddlerText }, bag.bag_id, null)
 		);
+
+		return;
 
 	}
 }

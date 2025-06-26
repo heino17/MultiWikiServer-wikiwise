@@ -321,6 +321,74 @@ class MultiWikiClientAdaptor {
         if ($tw.syncadaptor === this)
             return $tw.syncer;
     }
+    loadTiddlers(options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const tiddlers = yield this.rpcRequest({
+                key: "rpcLoadRecipeTiddlerList",
+                body: {
+                    titles: options.titles
+                }
+            }).catch(err => {
+                options.onError(err);
+                throw new Error("Error loading tiddlers: " + err.message);
+            });
+            tiddlers.forEach(fields => {
+                options.onNext(fields);
+            });
+            options.onDone();
+        });
+    }
+    saveTiddlers(options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const { syncer, tiddlers, onNext, onDone, onError } = options;
+            const fields = tiddlers.map(e => e.getFieldStrings());
+            const results = yield this.rpcRequest({
+                key: "rpcSaveRecipeTiddlerList",
+                body: { tiddlers: fields }
+            }).catch(err => {
+                onError(err);
+                throw new Error("Error saving tiddlers: " + err.message);
+            });
+            results.forEach(tiddler => {
+                onNext(tiddler.title, {
+                    bag: tiddler.bag_id,
+                }, tiddler.revision_id);
+            });
+            onDone();
+        });
+    }
+    deleteTiddlers(options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const { syncer, titles, onNext, onDone, onError } = options;
+            const results = yield this.rpcRequest({
+                key: "rpcDeleteRecipeTiddlerList",
+                body: { titles: titles }
+            }).catch(err => {
+                onError(err);
+                throw new Error("Error deleting tiddlers: " + err.message);
+            });
+            results.forEach(({ title }) => { onNext(title); });
+            onDone();
+        });
+    }
+    rpcRequest(options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const [ok, err, result] = yield this.recipeRequest({
+                key: options.key,
+                url: "/rpc/" + options.key,
+                method: "PUT",
+                requestBodyString: JSON.stringify(options.body),
+                headers: {
+                    "content-type": "application/json"
+                }
+            });
+            if (!ok)
+                throw err;
+            if (!result.responseJSON)
+                throw new Error("No response JSON returned");
+            return result.responseJSON;
+        });
+    }
     /*
     Save a tiddler and invoke the callback with (err,adaptorInfo,revision)
     */

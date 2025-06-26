@@ -31,6 +31,10 @@ export const WikiRouterKeyMap: RouterKeyMap<WikiRoutes, true> = {
   handleFormMultipartRecipeTiddler: true,
   handleLoadBagTiddler: true,
   handleSaveBagTiddler: true,
+  // rpc routes 
+  rpcLoadRecipeTiddlerList: true,
+  rpcSaveRecipeTiddlerList: true,
+  rpcDeleteRecipeTiddlerList: true,
 }
 
 export type TiddlerManagerMap = RouterRouteMap<WikiRoutes>;
@@ -415,6 +419,65 @@ export class WikiRoutes {
     }
   })
 
+  rpcLoadRecipeTiddlerList = zodRoute({
+    method: ["PUT"],
+    path: RECIPE_PREFIX + "/:recipe_name/rpc/$key",
+    bodyFormat: "json",
+    zodPathParams: z => ({
+      recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
+    }),
+    zodRequestBody: z => z.strictObject({
+      titles: z.prismaField("Tiddlers", "title", "string").array(),
+    }),
+    inner: async (state) => {
+
+      const { recipe_name } = state.pathParams;
+
+      await state.assertRecipeAccess(recipe_name, false);
+
+      return await state.$transaction(async (prisma) => {
+        const server = new WikiStateStore(state, prisma);
+        const bags = await server.getRecipeBags(recipe_name);
+        const bagtids = (await Promise.all(bags.map(({ bag_name, bag_id, position }) =>
+          server.getBagTiddlers_PrismaQuery(bag_name, {}).then(f => f?.tiddlers.map(t => ({ ...t, bag_name, bag_id, position })))
+        ))).filter(truthy).flat();
+
+        bagtids.sort((a, b) => b.position - a.position);
+
+        const requestedTitles = new Set(state.data.titles);
+        const titles = Array.from(new Map(bagtids.map(b => [b.title, b])).values())
+          .filter(e => requestedTitles.has(e.title));
+
+        const titlesByBagID = titles.reduce((acc, t) => {
+          if (!acc[t.bag_id]) acc[t.bag_id] = [];
+          acc[t.bag_id]!.push(t);
+          return acc;
+        }, {} as Record<string, typeof titles>);
+
+        const result = await Promise.all(Object.keys(titlesByBagID).map(e => prisma.bags.findMany({
+          where: { bag_id: e },
+          select: {
+            tiddlers: {
+              where: {
+                title: { in: titlesByBagID[e]!.map(t => t.title) },
+              },
+              select: {
+                bag_id: true,
+                title: true,
+                fields: true,
+              }
+            }
+          }
+        })));
+
+
+        return result.map(e => e.map(f => f.tiddlers.map(g =>
+          Object.fromEntries(g.fields.map(e => [e.field_name, e.field_value] as const)) as TiddlerFields
+        )).flat()).flat();
+      });
+
+    }
+  });
 
   handleLoadRecipeTiddler = zodRoute({
     method: ["GET", "HEAD"],
@@ -443,6 +506,54 @@ export class WikiRoutes {
     }
   })
 
+  rpcSaveRecipeTiddlerList = zodRoute({
+    method: ["PUT"],
+    path: RECIPE_PREFIX + "/:recipe_name/rpc/$key",
+    bodyFormat: "json",
+    zodPathParams: z => ({
+      recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
+    }),
+    zodRequestBody: z => z.strictObject({
+      tiddlers: z.record(z.string(), z.string()).array(),
+    }),
+    inner: async (state) => {
+      const { recipe_name } = state.pathParams;
+      const { tiddlers } = state.data;
+
+      await state.assertRecipeAccess(recipe_name, true);
+      const server = new WikiStateStore(state, state.config.engine);
+      const bag = await server.getRecipeWritableBag(recipe_name);
+      const results = await state.config.engine.$transaction(tiddlers.map(fields =>
+        server.saveBagTiddlerFields_PrismaArray(fields as TiddlerFields, bag.bag_id, null)
+      ).flat());
+
+      return results.filter((e, i) => i % 2 === 1);
+    }
+  });
+
+  rpcDeleteRecipeTiddlerList = zodRoute({
+    method: ["PUT"],
+    path: RECIPE_PREFIX + "/:recipe_name/rpc/$key",
+    bodyFormat: "json",
+    zodPathParams: z => ({
+      recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
+    }),
+    zodRequestBody: z => z.strictObject({
+      titles: z.prismaField("Tiddlers", "title", "string").array(),
+    }),
+    inner: async (state) => {
+      const { recipe_name } = state.pathParams;
+      const { titles } = state.data;
+
+      await state.assertRecipeAccess(recipe_name, true);
+      const server = new WikiStateStore(state, state.config.engine);
+      const bag = await server.getRecipeWritableBag(recipe_name);
+      const results = await state.config.engine.$transaction(titles.map(title =>
+        server.deleteBagTiddler_PrismaArray(bag.bag_id, title)
+      ).flat());
+      return results.filter((e, i) => i % 2 === 1);
+    }
+  });
 
   handleSaveRecipeTiddler = zodRoute({
     method: ["PUT"],
@@ -470,7 +581,7 @@ export class WikiRoutes {
       const { bag_name, revision_id } = await state.$transaction(async (prisma) => {
         const server = new WikiStateStore(state, prisma);
         const bag = await server.getRecipeWritableBag(recipe_name);
-        const { revision_id } = await server.saveBagTiddlerFields(fields, bag.bag_name, null);
+        const { revision_id } = await server.saveBagTiddlerFields(fields, bag.bag_id, null);
         return { revision_id, bag_name: bag.bag_name };
       });
 
@@ -512,7 +623,7 @@ export class WikiRoutes {
 
         if (!bag.tiddlers.length) throw new UserError("The writable bag does not contain this tiddler.");
 
-        const { revision_id } = await server.deleteBagTiddler(bag.bag_name, title);
+        const { revision_id } = await server.deleteBagTiddler(bag.bag_id, title);
 
         return { revision_id, bag_name: bag.bag_name };
 
@@ -549,9 +660,9 @@ export class WikiRoutes {
 
       const res = await state.$transaction(async (prisma) => {
         const server = new WikiStateStore(state, prisma);
-        const { bag_name } = await server.getRecipeWritableBag(recipe_name) ?? {};
+        const { bag_name, bag_id } = await server.getRecipeWritableBag(recipe_name) ?? {};
         if (!bag_name) throw state.sendEmpty(404, { "x-reason": "bag not found" });
-        const { revision_id } = await server.saveBagTiddlerFields(tiddlerFields, bag_name, null);
+        const { revision_id } = await server.saveBagTiddlerFields(tiddlerFields, bag_id, null);
         return { bag_name, results: { revision_id, bag_name } };
       });
 
@@ -600,7 +711,7 @@ export class WikiRoutes {
     zodRequestBody: z => z.string(),
     inner: async (state) => {
       const { bag_name, title } = state.pathParams;
-      await state.assertBagAccess(bag_name, true);
+      const { bag_id } = await state.assertBagAccess(bag_name, true);
       const fields = parseTiddlerFields(state.data, state.headers["content-type"]);
       if (fields === undefined)
         throw state.sendEmpty(400, {
@@ -608,7 +719,7 @@ export class WikiRoutes {
         });
       const res = await state.$transaction(async (prisma) => {
         const server = new WikiStateStore(state, prisma);
-        return server.saveBagTiddlerFields(fields, bag_name, null);
+        return server.saveBagTiddlerFields(fields, bag_id, null);
       });
 
       await serverEvents.emitAsync("mws.tiddler.save", {
@@ -631,10 +742,10 @@ export class WikiRoutes {
     }),
     inner: async (state) => {
       const { bag_name, title } = state.pathParams;
-      await state.assertBagAccess(bag_name, true);
+      const { bag_id } = await state.assertBagAccess(bag_name, true);
       const res = await state.$transaction(async (prisma) => {
         const server = new WikiStateStore(state, prisma);
-        return server.deleteBagTiddler(bag_name, title);
+        return server.deleteBagTiddler(bag_id, title);
       });
       await serverEvents.emitAsync("mws.tiddler.delete", {
         bag_name,
@@ -653,11 +764,11 @@ export class WikiRoutes {
     }),
     inner: async (state) => {
       const { bag_name } = state.pathParams;
-      await state.assertBagAccess(bag_name, true);
+      const { bag_id } = await state.assertBagAccess(bag_name, true);
       const tiddlerFields = await recieveTiddlerMultipartUpload(state);
       const res = await state.$transaction(async (prisma) => {
         const server = new WikiStateStore(state, prisma);
-        return await server.saveBagTiddlerFields(tiddlerFields, bag_name, null);
+        return await server.saveBagTiddlerFields(tiddlerFields, bag_id, null);
       });
       await serverEvents.emitAsync("mws.tiddler.save", {
         bag_name,

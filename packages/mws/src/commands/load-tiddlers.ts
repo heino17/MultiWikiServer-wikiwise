@@ -30,9 +30,15 @@ export class Command extends BaseCommand {
 
 		const store = new TiddlerStore_PrismaBase(this.config.engine);
 
+		const bag = await this.config.engine.bags.findUnique({ where: { bag_name: this.bagName } });
+
+		if (!bag) {
+			return `Bag "${this.bagName}" does not exist.`;
+		}
+
 		// execute a batch transaction, rather than an interactive transaction
 		await this.config.engine.$transaction(
-			store.saveTiddlersFromPath_PrismaArray(this.bagName, tiddlersFromPath.map(e => e.tiddlers).flat())
+			store.saveTiddlersFromPath_PrismaArray(bag.bag_id, tiddlersFromPath.map(e => e.tiddlers).flat())
 		);
 
 		return null;

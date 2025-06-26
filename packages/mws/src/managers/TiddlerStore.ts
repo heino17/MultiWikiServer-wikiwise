@@ -67,7 +67,7 @@ export class TiddlerStore_PrismaBase {
   upsertRecipe_PrismaArray(
     recipe_name: PrismaField<"Recipes", "recipe_name">,
     description: PrismaField<"Recipes", "description">,
-    bags: { bag_name: PrismaField<"Bags", "bag_name">, with_acl: PrismaField<"Recipe_bags", "with_acl"> }[],
+    bags: { bag_id: PrismaField<"Bags", "bag_id">, with_acl: PrismaField<"Recipe_bags", "with_acl"> }[],
     plugin_names: string[],
     { allowPrivilegedCharacters = false }: { allowPrivilegedCharacters?: boolean; } = {}
   ) {
@@ -87,8 +87,8 @@ export class TiddlerStore_PrismaBase {
         where: { recipe_name },
         data: {
           recipe_bags: {
-            create: bags.map(({ bag_name, with_acl }, position) => ({
-              bag: { connect: { bag_name } },
+            create: bags.map(({ bag_id, with_acl }, position) => ({
+              bag: { connect: { bag_id } },
               position,
               with_acl
             }))
@@ -118,22 +118,22 @@ export class TiddlerStore_PrismaBase {
   }
 
   saveTiddlersFromPath_PrismaArray(
-    bag_name: PrismaField<"Bags", "bag_name">,
+    bag_id: PrismaField<"Bags", "bag_id">,
     tiddlers: TiddlerFields[]
   ) {
     return tuple(
       this.prisma.tiddlers.deleteMany({
-        where: { bag: { bag_name } }
+        where: { bag: { bag_id } }
       }),
       ...tiddlers.flatMap(tiddler =>
-        this.saveBagTiddlerFields_PrismaArray(tiddler, bag_name, null)
+        this.saveBagTiddlerFields_PrismaArray(tiddler, bag_id, null)
       )
     )
   }
 
   saveBagTiddlerFields_PrismaArray(
     tiddlerFields: TiddlerFields,
-    bag_name: PrismaField<"Bags", "bag_name">,
+    bag_id: PrismaField<"Bags", "bag_id">,
     attachment_hash: PrismaField<"Tiddlers", "attachment_hash">
   ) {
 
@@ -146,8 +146,8 @@ export class TiddlerStore_PrismaBase {
     if (attachment_hash && tiddlerFields.text)
       throw new Error("Do not set both the attachment_hash and the text field. It should be one or the other.")
 
-    const deletion = this.prisma.tiddlers.deleteMany({
-      where: { bag: { bag_name }, title }
+    const deletion = this.prisma.tiddlers.delete({
+      where: { bag_id_title: { bag_id, title } },
     });
 
     const fields = Object.entries(tiddlerFields);
@@ -156,7 +156,7 @@ export class TiddlerStore_PrismaBase {
 
     const creation = this.prisma.tiddlers.create({
       data: {
-        bag: { connect: { bag_name } },
+        bag: { connect: { bag_id } },
         title,
         is_deleted: false,
         attachment_hash: attachment_hash || null,
@@ -164,9 +164,6 @@ export class TiddlerStore_PrismaBase {
           create: fields.map(([field_name, field_value]) => ({ field_name, field_value }))
         }
       },
-      select: {
-        revision_id: true
-      }
     });
 
     return tuple(deletion, creation);
@@ -177,23 +174,20 @@ export class TiddlerStore_PrismaBase {
     Returns {revision_id:} of the delete marker
     */
   deleteBagTiddler_PrismaArray(
-    bag_name: PrismaField<"Bags", "bag_name">,
+    bag_id: PrismaField<"Bags", "bag_id">,
     title: PrismaField<"Tiddlers", "title">,
   ) {
     return tuple(
-      this.prisma.tiddlers.deleteMany({
-        where: { title, bag: { bag_name } },
+      this.prisma.tiddlers.delete({
+        where: { bag_id_title: { bag_id, title } },
       }),
       this.prisma.tiddlers.create({
         data: {
           title,
-          bag: { connect: { bag_name } },
+          bag: { connect: { bag_id } },
           is_deleted: true,
           attachment_hash: null,
         },
-        select: {
-          revision_id: true
-        }
       })
     );
   }
@@ -210,20 +204,21 @@ export class TiddlerStore_PrismaTransaction extends TiddlerStore_PrismaBase {
 
   async saveBagTiddlerFields(
     tiddlerFields: TiddlerFields,
-    bag_name: PrismaField<"Bags", "bag_name">,
+    bag_id: PrismaField<"Bags", "bag_id">,
     attachment_hash: PrismaField<"Tiddlers", "attachment_hash">
   ) {
+
     const [deletion, creation] = this.saveBagTiddlerFields_PrismaArray(
-      tiddlerFields, bag_name, attachment_hash
+      tiddlerFields, bag_id, attachment_hash
     );
     return await deletion, await creation;
   }
 
   async deleteBagTiddler(
-    bag_name: PrismaField<"Bags", "bag_name">,
+    bag_id: PrismaField<"Bags", "bag_id">,
     title: PrismaField<"Tiddlers", "title">,
   ) {
-    const [deletion, creation] = this.deleteBagTiddler_PrismaArray(bag_name, title);
+    const [deletion, creation] = this.deleteBagTiddler_PrismaArray(bag_id, title);
     return await deletion, await creation;
   }
 
