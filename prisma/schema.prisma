@@ -8,6 +8,7 @@ generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["relationJoins", "driverAdapters"]
   binaryTargets   = []
+  output = "client"
 }
 
 generator json {

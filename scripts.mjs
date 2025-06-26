@@ -4,7 +4,8 @@
 
 import { spawn } from "child_process";
 import EventEmitter from "events";
-import { writeFileSync } from "fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "fs";
+import * as path from "path";
 const events = new EventEmitter();
 const workspaces = [
   "packages/server",
@@ -15,22 +16,6 @@ const workspaces = [
 ];
 (async function run(arg) {
   switch(arg) {
-    case "install":
-      // run npm install in each workspace
-      await start("npm install", []);
-      for(const ws of workspaces) {
-        console.log("================================")
-        await start("npm install", [], {}, { cwd: ws });
-      }
-      break;
-    case "tsc":
-      // run tsc in each workspace
-      await start("npm run tsc", []).catch(console.log);
-      for(const ws of workspaces) {
-        console.log("================================")
-        await start("npm run tsc", [], {}, { cwd: ws }).catch(console.log);
-      }
-      break;
     case "start":
       // don't wait on tsc, it's just for checking types
       // await start("npm run tsc", []);
@@ -48,8 +33,22 @@ const workspaces = [
       await run("start");
       break;
     case "prisma:generate":
-      await start("prisma generate", [], {
-        PRISMA_CLIENT_FORCE_WASM: "true"
+      // rm -rf prisma/client && PRISMA_CLIENT_FORCE_WASM=true npx prisma generate && npm run prisma:format && rm -f prisma/client/*.node
+      console.log("Generating Prisma client...");
+      // remove the old client
+      await start("rm -rf prisma/client");
+      await start("prisma generate", [], { PRISMA_CLIENT_FORCE_WASM: "true" });
+      // await start("npm run prisma:format");
+      console.log("Formatting Prisma client...");
+      await start("prettier --write prisma/client/*.js prisma/client/*/*.js");
+      // remove the .node files, we don't need them in the client
+      console.log("Removing .node files from Prisma client...");
+      readdirSync("prisma/client").forEach(file => {
+        if(file.endsWith(".node")) {
+          const filePath = path.join("prisma/client", file);
+          console.log(`Removing ${filePath}`);
+          if(existsSync(filePath)) rmSync(filePath);
+        }
       });
       break;
     case "client-types": {
@@ -63,6 +62,41 @@ const workspaces = [
       await start("npx tsc -p tsconfig.types.json", process.argv.slice(3));
       break;
     }
+    case "test": {
+      // "test:pack": "(git clean -dfx tests && npm pack --pack-destination tests && cd tests && npm install && npm install ./tiddlywiki-mws-$npm_package_version.tgz --no-save && npm test)",
+      // "test": "(git clean -dfx tests && cd tests && npm install .. --no-save && npm test)",
+      // "fulltest": "mv node_modules node_modules_old; npm run test:pack; mv node_modules_old node_modules",
+
+
+      await Promise.resolve().then(async () => {
+        await start("mv node_modules node_modules_old");
+      }).then(async () => {
+        await start("git clean -dfx tests");
+        const filesFolder = path.resolve("create-package/files");
+        const testsFolder = path.resolve("tests");
+        mkdirSync(testsFolder, { recursive: false });
+        // copy files into the folder
+        console.log(`Copying files`);
+        readdirSync(filesFolder).forEach(file => {
+          const oldPath = path.join(filesFolder, file);
+          if(!statSync(oldPath).isFile()) return;
+          const newPath = path.join(testsFolder, file);
+          if(existsSync(newPath)) {
+            console.log(`File ${file} already exists. Skipping...`);
+            return;
+          }
+          console.log(`├─ ${file}`);
+          writeFileSync(newPath, readFileSync(oldPath));
+        });
+        await start("npm pack --pack-destination tests");
+        await start("npm install ./tiddlywiki-mws-$npm_package_version.tgz tiddlywiki", [], {}, { cwd: "tests" });
+      }).then(async () => {
+        await start("npx mws init-store", [], {}, { cwd: "tests" });
+      }).finally(async () => {
+        await start("mv node_modules_old node_modules");
+      });
+      break;
+    }
     default:
       console.log("nothing ran");
   }
@@ -73,7 +107,7 @@ process.on("SIGTERM", exit);
 process.on("SIGINT", exit);
 process.on("SIGHUP", exit);
 
-function start(cmd, args, env2 = {}, { cwd = process.cwd(), pipeOut } = {}) {
+function start(cmd, args = [], env2 = {}, { cwd = process.cwd(), pipeOut } = {}) {
   const cp = spawn(cmd, args, {
     cwd,
     env: { ...process.env, ...env2, },
