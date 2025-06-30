@@ -52,10 +52,15 @@ type TiddlerRouterResponse = {
 }
 
 declare module 'tiddlywiki' {
-	export interface Syncer {
+	export interface Syncer<AD> {
 		wiki: Wiki;
 		logger: Logger;
-		tiddlerInfo: Record<string, { bag: string; revision: string }>;
+		tiddlerInfo: Record<string, {
+			changeCount: number,
+			adaptorInfo: AD,
+			revision: string,
+			timestampLastSaved: Date
+		}>;
 		enqueueLoadTiddler(title: string): void;
 		storeTiddler(tiddler: Tiddler): void;
 		processTaskQueue(): void;
@@ -104,7 +109,7 @@ interface SyncAdaptor<AD> {
 		cb: (err: any, tiddlerFields: Record<string, string>[]) => void
 	): void;
 	getUpdatedTiddlers?(
-		syncer: Syncer,
+		syncer: Syncer<AD>,
 		cb: (
 			err: any,
 			/** Arrays of titles that have been modified or deleted */
@@ -135,7 +140,7 @@ interface SyncAdaptor<AD> {
 	): void;
 
 	saveTiddlers?(options: {
-		syncer: Syncer,
+		syncer: Syncer<AD>,
 		tiddlers: Tiddler[],
 		onNext: (title: string, adaptorInfo: any, revision: string) => void,
 		onDone: () => void,
@@ -143,7 +148,7 @@ interface SyncAdaptor<AD> {
 	}): void;
 
 	loadTiddlers?(options: {
-		syncer: Syncer,
+		syncer: Syncer<AD>,
 		titles: string[],
 		onNext: (tiddlerFields: TiddlerFields) => void,
 		onDone: () => void,
@@ -151,7 +156,7 @@ interface SyncAdaptor<AD> {
 	}): void;
 
 	deleteTiddlers?(options: {
-		syncer: Syncer,
+		syncer: Syncer<AD>,
 		titles: string[],
 		onNext: (title: string) => void,
 		onDone: () => void,
@@ -159,7 +164,7 @@ interface SyncAdaptor<AD> {
 	}): void;
 
 	setLoggerSaveBuffer?: (loggerForSaving: Logger) => void;
-	displayLoginPrompt?(syncer: Syncer): void;
+	displayLoginPrompt?(syncer: Syncer<AD>): void;
 	login?(username: string, password: string, cb: (err: any) => void): void;
 	logout?(cb: (err: any) => void): any;
 }
@@ -344,7 +349,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 	/*
 	Get details of changed tiddlers from the server
 	*/
-	async getUpdatedTiddlers(syncer: Syncer, callback: (err: any, changes?: { modifications: string[]; deletions: string[] }) => void) {
+	async getUpdatedTiddlers(syncer: Syncer<MWSAdaptorInfo>, callback: (err: any, changes?: { modifications: string[]; deletions: string[] }) => void) {
 		if (this.offline) return callback(null);
 		if (!this.bags || this.serverUpdateConnectionStatus === SERVER_NOT_CONNECTED) await this.pollServer();
 		const { modifications, deletions, last_revision } = this.updateBags();
@@ -526,10 +531,10 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		// }
 	}
 	private get syncer() {
-		if ($tw.syncadaptor === this) return $tw.syncer as Syncer;
+		if ($tw.syncadaptor === this) return $tw.syncer as Syncer<MWSAdaptorInfo>;
 	}
 	async loadTiddlers(options: {
-		syncer: Syncer;
+		syncer: Syncer<MWSAdaptorInfo>;
 		titles: string[];
 		onNext: (tiddlerFields: TiddlerFields) => void;
 		onDone: () => void;
@@ -550,7 +555,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		options.onDone();
 	}
 	async saveTiddlers(options: {
-		syncer: Syncer;
+		syncer: Syncer<MWSAdaptorInfo>;
 		tiddlers: Tiddler[];
 		onNext: (title: string, adaptorInfo: MWSAdaptorInfo, revision: string) => void;
 		onDone: () => void;
@@ -577,7 +582,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		onDone();
 	}
 
-	async deleteTiddlers(options: { syncer: Syncer; titles: string[]; onNext: (title: string) => void; onDone: () => void; onError: (err: Error) => void; }) {
+	async deleteTiddlers(options: { syncer: Syncer<MWSAdaptorInfo>; titles: string[]; onNext: (title: string) => void; onDone: () => void; onError: (err: Error) => void; }) {
 		const { syncer, titles, onNext, onDone, onError } = options;
 
 		const results = await this.rpcRequest({

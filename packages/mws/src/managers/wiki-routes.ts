@@ -11,6 +11,7 @@ import { WikiStateStore } from "./WikiStateStore";
 import Debug from "debug";
 import { BodyFormat, checkPath, JsonValue, registerZodRoutes, RouterKeyMap, RouterRouteMap, ServerRoute, tryParseJSON, UserError, Z2, zod, ZodRoute, zodRoute, ZodState } from "@tiddlywiki/server";
 import { serverEvents, ServerEventsMap } from "@tiddlywiki/events";
+import { Prisma } from "prisma-client";
 const debugCORS = Debug("mws:cors");
 const debugSSE = Debug("mws:sse");
 
@@ -419,6 +420,33 @@ export class WikiRoutes {
     }
   })
 
+  handleLoadRecipeTiddler = zodRoute({
+    method: ["GET", "HEAD"],
+    path: RECIPE_PREFIX + "/:recipe_name/tiddlers/:title",
+    bodyFormat: "ignore",
+    zodPathParams: z => ({
+      recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
+      title: z.prismaField("Tiddlers", "title", "string"),
+    }),
+    inner: async (state) => {
+      const { recipe_name, title } = state.pathParams;
+
+      await state.assertRecipeAccess(recipe_name, false);
+      // we can only throw STREAM_ENDED outside the transaction
+      throw await state.$transaction(async (prisma) => {
+        const server = new WikiStateStore(state, prisma);
+        const bag = await server.getRecipeBagWithTiddler({ recipe_name, title });
+        if (!bag) return state.sendEmpty(404, { "x-reason": "tiddler not found" });
+        return await server.serveBagTiddler(
+          bag.bag_id,
+          bag.bag.bag_name,
+          title
+        );
+      });
+
+    }
+  })
+
   rpcLoadRecipeTiddlerList = zodRoute({
     method: ["PUT"],
     path: RECIPE_PREFIX + "/:recipe_name/rpc/$key",
@@ -479,33 +507,6 @@ export class WikiRoutes {
     }
   });
 
-  handleLoadRecipeTiddler = zodRoute({
-    method: ["GET", "HEAD"],
-    path: RECIPE_PREFIX + "/:recipe_name/tiddlers/:title",
-    bodyFormat: "ignore",
-    zodPathParams: z => ({
-      recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
-      title: z.prismaField("Tiddlers", "title", "string"),
-    }),
-    inner: async (state) => {
-      const { recipe_name, title } = state.pathParams;
-
-      await state.assertRecipeAccess(recipe_name, false);
-      // we can only throw STREAM_ENDED outside the transaction
-      throw await state.$transaction(async (prisma) => {
-        const server = new WikiStateStore(state, prisma);
-        const bag = await server.getRecipeBagWithTiddler({ recipe_name, title });
-        if (!bag) return state.sendEmpty(404, { "x-reason": "tiddler not found" });
-        return await server.serveBagTiddler(
-          bag.bag_id,
-          bag.bag.bag_name,
-          title
-        );
-      });
-
-    }
-  })
-
   rpcSaveRecipeTiddlerList = zodRoute({
     method: ["PUT"],
     path: RECIPE_PREFIX + "/:recipe_name/rpc/$key",
@@ -527,7 +528,7 @@ export class WikiRoutes {
         server.saveBagTiddlerFields_PrismaArray(fields as TiddlerFields, bag.bag_id, null)
       ).flat());
 
-      return results.filter((e, i) => i % 2 === 1);
+      return results.filter((e, i): e is Exclude<typeof e, Prisma.BatchPayload> => i % 2 === 1);
     }
   });
 
@@ -551,7 +552,7 @@ export class WikiRoutes {
       const results = await state.config.engine.$transaction(titles.map(title =>
         server.deleteBagTiddler_PrismaArray(bag.bag_id, title)
       ).flat());
-      return results.filter((e, i) => i % 2 === 1);
+      return results.filter((e, i): e is Exclude<typeof e, Prisma.BatchPayload> => i % 2 === 1);
     }
   });
 
