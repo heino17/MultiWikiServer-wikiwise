@@ -164,6 +164,9 @@ export class TiddlerStore_PrismaBase {
           create: fields.map(([field_name, field_value]) => ({ field_name, field_value }))
         }
       },
+      include: {
+        bag: { select: { bag_id: true, bag_name: true } },
+      }
     });
 
     return tuple(deletion, creation);

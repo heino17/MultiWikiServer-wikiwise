@@ -204,6 +204,8 @@ var SERVER_NOT_CONNECTED = "NOT CONNECTED",
 
 interface MWSAdaptorInfo {
 	bag: string
+	revision: string
+	title: string
 }
 
 
@@ -273,7 +275,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		return text;
 	}
 
-	getTiddlerInfo(tiddler: Tiddler) {
+	getTiddlerInfo(tiddler: Tiddler): MWSAdaptorInfo | undefined {
 		var title = tiddler.fields.title,
 			revision = this.wiki.extractTiddlerDataItem(REVISION_STATE_TIDDLER, title),
 			bag = this.wiki.extractTiddlerDataItem(BAG_STATE_TIDDLER, title);
@@ -540,19 +542,20 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		onDone: () => void;
 		onError: (err: Error) => void;
 	}) {
+		const { syncer, titles, onNext, onDone, onError } = options;
+
 		const tiddlers = await this.rpcRequest({
 			key: "rpcLoadRecipeTiddlerList",
-			body: {
-				titles: options.titles as PrismaField<"Tiddlers", "title">[]
-			}
+			body: { titles: titles as PrismaField<"Tiddlers", "title">[] }
 		}).catch(err => {
-			options.onError(err);
+			onError(err);
 			throw new Error("Error loading tiddlers: " + err.message);
 		});
-		tiddlers.forEach(fields => {
-			options.onNext(fields);
+		tiddlers.forEach(({ bag_name, tiddler: fields }) => {
+			this.setTiddlerInfo(fields.title, fields.revision_id, bag_name);
+			onNext(fields);
 		});
-		options.onDone();
+		onDone();
 	}
 	async saveTiddlers(options: {
 		syncer: Syncer<MWSAdaptorInfo>;
@@ -573,9 +576,12 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 			throw new Error("Error saving tiddlers: " + err.message);
 		});
 
-		results.forEach(tiddler => {
+		results.forEach((tiddler) => {
+			this.setTiddlerInfo(tiddler.title, tiddler.revision_id, tiddler.bag.bag_name);
 			onNext(tiddler.title, {
-				bag: tiddler.bag_id,
+				bag: tiddler.bag.bag_name,
+				title: tiddler.title, 
+				revision: tiddler.revision_id
 			}, tiddler.revision_id);
 		});
 
@@ -593,36 +599,16 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 			throw new Error("Error deleting tiddlers: " + err.message);
 		});
 
-		results.forEach(({ title }) => { onNext(title); });
+		results.forEach(({ title }) => {
+			this.removeTiddlerInfo(title);
+			onNext(title);
+		});
 
 		onDone();
 	}
 
 
-	async rpcRequest<T extends keyof TiddlerRouterResponse>(
-		options: {
-			key: T;
-			body: zod.infer<TiddlerRouterResponse[T]["T"]>;
-		}
-	): Promise<TiddlerRouterResponse[T]["R"]> {
 
-		type t = TiddlerRouterResponse["handleSaveRecipeTiddler"]
-		const [ok, err, result] = await this.recipeRequest({
-			key: options.key,
-			url: "/rpc/" + options.key,
-			method: "PUT",
-			requestBodyString: JSON.stringify(options.body),
-			headers: {
-				"content-type": "application/json"
-			}
-		});
-
-		if (!ok) throw err;
-
-		if (!result.responseJSON) throw new Error("No response JSON returned");
-
-		return result.responseJSON as TiddlerRouterResponse[T]["R"];
-	}
 	/*
 	Save a tiddler and invoke the callback with (err,adaptorInfo,revision)
 	*/
@@ -692,7 +678,11 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		self.checkLastRecordedUpdate(title, revision);
 		// Invoke the callback
 		self.setTiddlerInfo(title, revision, bag_name);
-		callback(null, { bag: bag_name }, revision);
+		callback(null, { 
+			bag: bag_name,
+			title: title,
+			revision: revision
+		}, revision);
 
 	}
 	/*
@@ -702,7 +692,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 	*/
 	async loadTiddler(title: string, callback: (err: any, fields?: any) => void, options: any) {
 		const self = this;
-		if (!self.syncer) return callback(new Error("No syncer available"));
+		// if (!self.syncer) return callback(new Error("No syncer available"));
 		self.outstandingRequests[title] = { type: "GET" };
 		const [ok, err, result] = await this.recipeRequest({
 			key: "handleLoadRecipeTiddler",
@@ -756,7 +746,30 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		callback(null, null);
 	}
 
+	async rpcRequest<T extends keyof TiddlerRouterResponse>(
+		options: {
+			key: T;
+			body: zod.infer<TiddlerRouterResponse[T]["T"]>;
+		}
+	): Promise<TiddlerRouterResponse[T]["R"]> {
 
+		type t = TiddlerRouterResponse["handleSaveRecipeTiddler"]
+		const [ok, err, result] = await this.recipeRequest({
+			key: options.key,
+			url: "/rpc/" + options.key,
+			method: "PUT",
+			requestBodyString: JSON.stringify(options.body),
+			headers: {
+				"content-type": "application/json"
+			}
+		});
+
+		if (!ok) throw err;
+
+		if (!result.responseJSON) throw new Error("No response JSON returned");
+
+		return result.responseJSON as TiddlerRouterResponse[T]["R"];
+	}
 
 	/** 
 	 * This throws an error if the response status is not 2xx, but will still return the response alongside the error.

@@ -12,6 +12,8 @@ import Debug from "debug";
 import { BodyFormat, checkPath, JsonValue, registerZodRoutes, RouterKeyMap, RouterRouteMap, ServerRoute, tryParseJSON, UserError, Z2, zod, ZodRoute, zodRoute, ZodState } from "@tiddlywiki/server";
 import { serverEvents, ServerEventsMap } from "@tiddlywiki/events";
 import { Prisma } from "prisma-client";
+import { t } from "try";
+import { BAG_PREFIX, RECIPE_PREFIX } from "./wiki-utils";
 const debugCORS = Debug("mws:cors");
 const debugSSE = Debug("mws:sse");
 
@@ -78,9 +80,7 @@ serverEvents.on("mws.routes.fallback", (root, config) => {
   WikiRoutes.defineRoutes(root);
 })
 
-const BAG_PREFIX = "/bag";
-const RECIPE_PREFIX = "/recipe";
-const WIKI_PREFIX = "/wiki";
+
 
 export class WikiRoutes {
   static defineRoutes = (root: ServerRoute) => {
@@ -466,6 +466,8 @@ export class WikiRoutes {
       return await state.$transaction(async (prisma) => {
         const server = new WikiStateStore(state, prisma);
         const bags = await server.getRecipeBags(recipe_name);
+        const bagsLookup = new Map(bags.map(b => [b.bag_id, b] as const));
+
         const bagtids = (await Promise.all(bags.map(({ bag_name, bag_id, position }) =>
           server.getBagTiddlers_PrismaQuery(bag_name, {}).then(f => f?.tiddlers.map(t => ({ ...t, bag_name, bag_id, position })))
         ))).filter(truthy).flat();
@@ -491,17 +493,18 @@ export class WikiRoutes {
               },
               select: {
                 bag_id: true,
-                title: true,
                 fields: true,
               }
             }
           }
         })));
 
+        return result.map(e => e.map(f => f.tiddlers.map(g => ({
+          bag_id: g.bag_id,
+          bag_name: rethrow(() => bagsLookup.get(g.bag_id)!.bag_name, "Found a tiddler from a different bag. This is a server error."),
+          tiddler: Object.fromEntries(g.fields.map(e => [e.field_name, e.field_value] as const)) as TiddlerFields
+        }))).flat()).flat();
 
-        return result.map(e => e.map(f => f.tiddlers.map(g =>
-          Object.fromEntries(g.fields.map(e => [e.field_name, e.field_value] as const)) as TiddlerFields
-        )).flat()).flat();
       });
 
     }
@@ -899,4 +902,13 @@ async function recieveTiddlerMultipartUpload(state: ZodState<"POST", "stream", a
   rmSync(inboxPath, { recursive: true, force: true });
 
   return tiddlerFields;
+}
+
+function rethrow<T>(cb: () => T, message: string) {
+  try {
+    return cb();
+  } catch (e) {
+    if (e instanceof UserError) throw e;
+    throw new UserError(message);
+  }
 }
