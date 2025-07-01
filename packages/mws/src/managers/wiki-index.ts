@@ -62,6 +62,7 @@ serverEvents.on("mws.routes", (root, config) => {
     method: [],
     denyFinal: true,
     path: new RegExp(`^(?=${BAG_PREFIX}|${RECIPE_PREFIX})(?=/)`),
+    
   }, async state => {
 
   });

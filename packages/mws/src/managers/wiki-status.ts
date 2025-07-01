@@ -19,16 +19,6 @@ const debugSSE = Debug("mws:sse");
 
 export class WikiStatusRoutes {
  
-
-  // lets start with the scenarios from the sync adapter
-  // 1. Status - The wiki status that gets sent to the TW5 client
-  // 2. tiddlers.json - gets a skinny list of the recipe bag state.
-  // 3. Save Tiddler - create or update a tiddler
-  // 4. Load Tiddler - load the data for a tiddler
-  // 5. Delete Tiddler - delete a tiddler
-  // 6. Wiki Index - the wiki client itself, with all the config 
-  //    from the recipe, and the initial tiddler state
-
   handleGetRecipeStatus = zodRoute({
     method: ["GET", "HEAD"],
     path: RECIPE_PREFIX + "/:recipe_name/status",
