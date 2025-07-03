@@ -2,7 +2,7 @@
 import "./admin-recipes";
 import "./admin-users";
 import "./admin-settings";
-import "./wiki-routes";
+import "./wiki-index";
 
 // other imports
 import { admin } from "./admin-utils";
@@ -12,7 +12,8 @@ import { serverEvents } from "@tiddlywiki/events";
 
 export * from "./admin-recipes";
 export * from "./admin-users";
-export * from "./wiki-routes";
+export * from "./wiki-index";
+// export * from "./wiki-routes";
 
 serverEvents.on("mws.routes", (root: ServerRoute, config: ServerState) => {
   StatusManager.defineRoutes(root);

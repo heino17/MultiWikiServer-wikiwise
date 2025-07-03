@@ -72,7 +72,7 @@ export function Recipes() {
                   </ListItemAvatar>
                   <ListItemText
                     primary={<>
-                      <Link href={`${pathPrefix}/wiki/${encodeURIComponent(recipe.recipe_name)}`}>{recipe.recipe_name}</Link>
+                      <Link href={encodeURI(`${pathPrefix}/wiki/${recipe.recipe_name}`)}>{recipe.recipe_name}</Link>
                       {recipe.owner_id && <span> (by {getOwner(recipe.owner_id)})</span>}
                     </>}
                     secondary={<Stack direction="column">

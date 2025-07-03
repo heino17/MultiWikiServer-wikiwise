@@ -18,7 +18,7 @@ const debugCORS = Debug("mws:cors");
 const debugSSE = Debug("mws:sse");
 
 export class WikiStatusRoutes {
- 
+
   handleGetRecipeStatus = zodRoute({
     method: ["GET", "HEAD"],
     path: RECIPE_PREFIX + "/:recipe_name/status",
@@ -30,7 +30,10 @@ export class WikiStatusRoutes {
 
       const { recipe_name } = state.pathParams;
 
-      const { recipe, canRead, canWrite } = await state.getRecipeACL(recipe_name, true);
+      const { recipe, canRead, canWrite, referer } = await state.getRecipeACL(recipe_name, true);
+
+      if (referer && referer !== recipe_name)
+        throw state.sendEmpty(403, { "x-reason": "the page does not have permission to access this endpoint" });
 
       if (!recipe) throw state.sendEmpty(404, { "x-reason": "recipe not found" });
       if (!canRead) throw state.sendEmpty(403, { "x-reason": "read access denied" });
@@ -63,51 +66,21 @@ export class WikiStatusRoutes {
 
       await state.assertRecipeAccess(recipe_name, false);
 
+      let lastEventID = state.headers['last-event-id'] || state.queryParams["first-event-id"]?.[0];
+
+      if (!lastEventID) throw new UserError("No last event ID provided");
+
       debugSSE("connection opened", recipe_name);
       const events = state.sendSSE();
-      serverEvents.on("mws.tiddler.delete", onDelete);
-      serverEvents.on("mws.tiddler.save", onSave);
+      serverEvents.on("mws.tiddler.events", onEvent);
       events.onClose(() => {
         debugSSE("connection closed", recipe_name);
-        serverEvents.off("mws.tiddler.delete", onDelete);
-        serverEvents.off("mws.tiddler.save", onSave);
+        serverEvents.off("mws.tiddler.events", onEvent);
       });
 
-      const lastEventID = state.headers['last-event-id'] || state.queryParams["first-event-id"]?.[0];
+      let timeout: any = null, lastSent = 0;
 
-      if (lastEventID) {
-        const updates = await state.engine.recipe_bags.findMany({
-          where: { recipe: { recipe_name } },
-          orderBy: { position: "asc" },
-          select: {
-            bag: {
-              select: {
-                bag_name: true,
-                tiddlers: {
-                  select: {
-                    title: true,
-                    revision_id: true,
-                    is_deleted: true,
-                  },
-                  where: {
-                    is_deleted: true,
-                    revision_id: lastEventID ? { gt: lastEventID } : undefined,
-                  },
-                }
-              }
-            }
-          }
-        });
-        let newlastevent = "";
-        updates.forEach(({ bag }) => {
-          bag.tiddlers.forEach(tiddler => {
-            if (newlastevent < tiddler.revision_id) newlastevent = tiddler.revision_id;
-          })
-        });
-        // if there were no updates, just use the same last event id
-        events.emitEvent("tiddler.since-last-event", updates, newlastevent || lastEventID);
-      }
-
+      scheduleEvent();
 
       throw STREAM_ENDED;
 
@@ -123,8 +96,9 @@ export class WikiStatusRoutes {
 
       // TODO: there are probably things we could improve.
 
-      async function onSave(data: ServerEventsMap["mws.tiddler.save"][0]) {
+      async function onEvent(data: ServerEventsMap["mws.tiddler.events"][0]) {
         try {
+          debugSSE("onEvent", data);
           const hasBag = !!await state.engine.recipe_bags.count({
             where: {
               recipe: { recipe_name },
@@ -132,30 +106,38 @@ export class WikiStatusRoutes {
             },
           });
           if (hasBag) {
-            debugSSE("tiddler.save", recipe_name);
-            events.emitEvent("tiddler.save", data, data.revision_id);
+            debugSSE("hasBag", data.bag_name);
+            scheduleEvent();
           }
         } catch (e) {
           console.error("Error in onSave for recipe events", e);
         }
       }
 
-      async function onDelete(data: ServerEventsMap["mws.tiddler.delete"][0]) {
+      function scheduleEvent() {
+        // if we haven't sent an event in 5 seconds, don't keep debouncing
+        if (timeout && lastSent < Date.now() - 5000)
+          return void debugSSE("don't debounce", recipe_name, lastSent);
+        if (timeout) clearTimeout(timeout);
+        timeout = setTimeout(sendEvent, 1000);
+      }
+
+      async function sendEvent() {
+        timeout = null;
+        lastSent = Date.now();
         try {
-          const hasBag = !!await state.engine.recipe_bags.count({
-            where: {
-              recipe: { recipe_name },
-              bag: { bag_name: data.bag_name },
-            },
-          });
-          if (hasBag) {
-            debugSSE("tiddler.delete", data);
-            events.emitEvent("tiddler.delete", data, data.revision_id);
-          }
+          debugSSE("sendEvent", recipe_name, lastEventID);
+          const { updates, newlastevent } = await sendTiddlerEvents(state.engine, recipe_name, lastEventID!, events);
+          debugSSE("sendEvent updates", updates.map(e => e.bag.tiddlers.map(e => e.title)), newlastevent);
+          if (lastEventID === newlastevent) return;
+          events.emitEvent("tiddler.since-last-event", updates, newlastevent);
+          lastEventID = newlastevent;
         } catch (e) {
-          console.error("Error in onDelete for recipe events", e);
+          console.error("Error in sendTiddlerEvents", e);
         }
       }
+
+
     }
   })
 
@@ -305,3 +287,46 @@ export class WikiStatusRoutes {
 
 
 }
+async function sendTiddlerEvents(
+  engine: PrismaEngineClient,
+  recipe_name: string & { __prisma_table: "Recipes"; __prisma_field: "recipe_name"; },
+  lastEventID: string,
+  events: { emitEvent: (eventName: string, eventData: any, eventId: string) => void; emitComment: (comment: string) => void; onClose: (callback: () => void) => void; close: () => void; }
+) {
+  const updates = await engine.recipe_bags.findMany({
+    where: { recipe: { recipe_name } },
+    orderBy: { position: "asc" },
+    select: {
+      bag_id: true,
+      recipe_id: true,
+      position: true,
+      bag: {
+        select: {
+          bag_name: true,
+          tiddlers: {
+            select: {
+              title: true,
+              revision_id: true,
+              is_deleted: true,
+            },
+            where: {
+              revision_id: lastEventID ? { gt: lastEventID } : undefined,
+            },
+          }
+        }
+      }
+    }
+  });
+  let newlastevent = lastEventID;
+  updates.forEach(({ bag }) => {
+    bag.tiddlers.forEach(tiddler => {
+      if (newlastevent < tiddler.revision_id) newlastevent = tiddler.revision_id;
+    });
+  });
+  // if there were no updates, just use the same last event id
+  events.emitEvent("tiddler.since-last-event", updates, newlastevent);
+
+  return { updates, newlastevent };
+}
+
+type SendTiddlerEventsResult = ART<typeof sendTiddlerEvents>["updates"];

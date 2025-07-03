@@ -12,7 +12,7 @@ const debugSSE = Debug("mws:sse");
 
 
 export class WikiRecipeRoutes {
-  
+
   handleLoadRecipeTiddler = zodRoute({
     method: ["GET", "HEAD"],
     path: RECIPE_PREFIX + "/:recipe_name/tiddlers/:title",
@@ -103,6 +103,50 @@ export class WikiRecipeRoutes {
     }
   });
 
+
+  handleSaveRecipeTiddler = zodRoute({
+    method: ["PUT"],
+    path: RECIPE_PREFIX + "/:recipe_name/tiddlers/:title",
+    bodyFormat: "string",
+    securityChecks: { requestedWithHeader: true },
+    zodPathParams: z => ({
+      recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
+      title: z.prismaField("Tiddlers", "title", "string"),
+    }),
+    zodRequestBody: z => z.string(),
+    inner: async (state) => {
+
+      const { recipe_name } = state.pathParams;
+
+      const { recipe_id } = await state.assertRecipeAccess(recipe_name, true);
+
+      const fields = parseTiddlerFields(state.data, state.headers["content-type"]);
+
+      if (fields === undefined)
+        throw state.sendEmpty(400, {
+          "x-reason": "PUT tiddler expects a valid json or x-mws-tiddler body"
+        });
+
+      const { bag_id, bag_name, revision_id } = await state.$transaction(async (prisma) => {
+        const server = new WikiStateStore(state, prisma);
+        const bag = await server.getRecipeWritableBag(recipe_name);
+        const { revision_id } = await server.saveBagTiddlerFields(fields, bag.bag_id, null);
+        return { bag_id: bag.bag_id, revision_id, bag_name: bag.bag_name };
+      });
+
+      await serverEvents.emitAsync("mws.tiddler.events", {
+        recipe_id,
+        recipe_name,
+        bag_id,
+        bag_name,
+        results: [{ title: fields.title, revision_id, is_deleted: false }]
+      });
+
+      return { bag_name, revision_id };
+
+    }
+  });
+
   rpcSaveRecipeTiddlerList = zodRoute({
     method: ["PUT"],
     path: RECIPE_PREFIX + "/:recipe_name/rpc/$key",
@@ -117,14 +161,70 @@ export class WikiRecipeRoutes {
       const { recipe_name } = state.pathParams;
       const { tiddlers } = state.data;
 
-      await state.assertRecipeAccess(recipe_name, true);
+      const { recipe_id } = await state.assertRecipeAccess(recipe_name, true);
       const server = new WikiStateStore(state, state.config.engine);
-      const bag = await server.getRecipeWritableBag(recipe_name);
+      const { bag_id, bag_name } = await server.getRecipeWritableBag(recipe_name);
       const results = await state.config.engine.$transaction(tiddlers.map(fields =>
-        server.saveBagTiddlerFields_PrismaArray(fields as TiddlerFields, bag.bag_id, null)
+        server.saveBagTiddlerFields_PrismaArray(fields as TiddlerFields, bag_id, null)
       ).flat());
 
-      return results.filter((e, i): e is Exclude<typeof e, Prisma.BatchPayload> => i % 2 === 1);
+      const results2 = results.filter((e, i): e is Exclude<typeof e, Prisma.BatchPayload> => i % 2 === 1);
+
+      await serverEvents.emitAsync("mws.tiddler.events", {
+        recipe_id,
+        recipe_name,
+        bag_id,
+        bag_name,
+        results: results2.map(({ title, revision_id }) => ({ title, revision_id, is_deleted: false }))
+      });
+
+      console.log("rpcSaveRecipeTiddlerList results2", results2);
+
+      return results2;
+    }
+  });
+
+  handleDeleteRecipeTiddler = zodRoute({
+    method: ["DELETE"],
+    path: RECIPE_PREFIX + "/:recipe_name/tiddlers/:title",
+    bodyFormat: "json",
+    securityChecks: { requestedWithHeader: true },
+    zodPathParams: z => ({
+      recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
+      title: z.prismaField("Tiddlers", "title", "string"),
+    }),
+    zodRequestBody: z => z.undefined(),
+    inner: async (state) => {
+
+      const { recipe_name, title } = state.pathParams;
+      if (!recipe_name || !title) throw state.sendEmpty(404, { "x-reason": "bag_name or title not found" });
+
+      const { recipe_id } = await state.assertRecipeAccess(recipe_name, true);
+
+      const { bag_id, bag_name, revision_id } = await state.$transaction(async (prisma) => {
+
+        const server = new WikiStateStore(state, prisma);
+
+        const { bag_id, bag_name, tiddlers } = await server.getRecipeWritableBag(recipe_name, title);
+
+        if (!tiddlers.length) throw new UserError("The writable bag does not contain this tiddler.");
+
+        const { revision_id } = await server.deleteBagTiddler(bag_id, title);
+
+        return { bag_id, revision_id, bag_name };
+
+      });
+
+      await serverEvents.emitAsync("mws.tiddler.events", {
+        recipe_id,
+        recipe_name,
+        bag_id,
+        bag_name,
+        results: [{ title, revision_id, is_deleted: true }]
+      });
+
+      return { bag_id, bag_name, revision_id };
+
     }
   });
 
@@ -142,102 +242,35 @@ export class WikiRecipeRoutes {
       const { recipe_name } = state.pathParams;
       const { titles } = state.data;
 
-      await state.assertRecipeAccess(recipe_name, true);
+      const { recipe_id } = await state.assertRecipeAccess(recipe_name, true);
       const server = new WikiStateStore(state, state.config.engine);
-      const bag = await server.getRecipeWritableBag(recipe_name);
+      const { bag_id, bag_name } = await server.getRecipeWritableBag(recipe_name);
       const results = await state.config.engine.$transaction(titles.map(title =>
-        server.deleteBagTiddler_PrismaArray(bag.bag_id, title)
+        server.deleteBagTiddler_PrismaArray(bag_id, title)
       ).flat());
-      return results.filter((e, i): e is Exclude<typeof e, Prisma.BatchPayload> => i % 2 === 1);
-    }
-  });
+      const results2 = results.filter((e, i): e is Exclude<typeof e, Prisma.BatchPayload> => i % 2 === 1);
 
-  handleSaveRecipeTiddler = zodRoute({
-    method: ["PUT"],
-    path: RECIPE_PREFIX + "/:recipe_name/tiddlers/:title",
-    bodyFormat: "string",
-    securityChecks: { requestedWithHeader: true },
-    zodPathParams: z => ({
-      recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
-      title: z.prismaField("Tiddlers", "title", "string"),
-    }),
-    zodRequestBody: z => z.string(),
-    inner: async (state) => {
-
-      const { recipe_name } = state.pathParams;
-
-      await state.assertRecipeAccess(recipe_name, true);
-
-      const fields = parseTiddlerFields(state.data, state.headers["content-type"]);
-
-      if (fields === undefined)
-        throw state.sendEmpty(400, {
-          "x-reason": "PUT tiddler expects a valid json or x-mws-tiddler body"
-        });
-
-      const { bag_name, revision_id } = await state.$transaction(async (prisma) => {
-        const server = new WikiStateStore(state, prisma);
-        const bag = await server.getRecipeWritableBag(recipe_name);
-        const { revision_id } = await server.saveBagTiddlerFields(fields, bag.bag_id, null);
-        return { revision_id, bag_name: bag.bag_name };
-      });
-
-      await serverEvents.emitAsync("mws.tiddler.save", {
+      await serverEvents.emitAsync("mws.tiddler.events", {
+        recipe_id,
         recipe_name,
+        bag_id,
         bag_name,
-        title: fields.title,
-        revision_id,
+        results: results2.map(({ title, revision_id }) => ({ title, revision_id, is_deleted: true }))
       });
 
-      return { bag_name, revision_id };
-
+      return results2;
     }
   });
-
-
-  handleDeleteRecipeTiddler = zodRoute({
-    method: ["DELETE"],
-    path: RECIPE_PREFIX + "/:recipe_name/tiddlers/:title",
-    bodyFormat: "json",
-    securityChecks: { requestedWithHeader: true },
-    zodPathParams: z => ({
-      recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
-      title: z.prismaField("Tiddlers", "title", "string"),
-    }),
-    zodRequestBody: z => z.undefined(),
-    inner: async (state) => {
-
-      const { recipe_name, title } = state.pathParams;
-      if (!recipe_name || !title) throw state.sendEmpty(404, { "x-reason": "bag_name or title not found" });
-
-      await state.assertRecipeAccess(recipe_name, true);
-
-      const { bag_name, revision_id } = await state.$transaction(async (prisma) => {
-
-        const server = new WikiStateStore(state, prisma);
-
-        const bag = await server.getRecipeWritableBag(recipe_name, title);
-
-        if (!bag.tiddlers.length) throw new UserError("The writable bag does not contain this tiddler.");
-
-        const { revision_id } = await server.deleteBagTiddler(bag.bag_id, title);
-
-        return { revision_id, bag_name: bag.bag_name };
-
-      });
-
-      await serverEvents.emitAsync("mws.tiddler.delete", {
-        recipe_name,
-        bag_name,
-        title,
-        revision_id,
-      });
-
-      return { bag_name, revision_id };
-
-    }
-  });
-
 
 }
-
+declare module "@tiddlywiki/events" {
+  interface ServerEventsMap {
+    "mws.tiddler.events": [{
+      recipe_id?: string;
+      recipe_name?: string;
+      bag_id: string;
+      bag_name: string;
+      results: { title: string; revision_id: string; is_deleted: boolean; }[];
+    }];
+  }
+}

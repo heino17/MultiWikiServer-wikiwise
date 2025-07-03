@@ -68,6 +68,7 @@ export class StateObject<
     const prisma = this.engine;
     const read = this.getBagWhereACL({ permission: "READ", user_id, role_ids });
     const write = this.getBagWhereACL({ permission: "WRITE", user_id, role_ids });
+    const referer = this.getRefererRecipe();
 
     const [recipe, canRead, canWrite] = await prisma.$transaction([
       prisma.recipes.findUnique({
@@ -84,11 +85,24 @@ export class StateObject<
       }) : prisma.$queryRaw`SELECT 2`,
     ]);
 
-    return { recipe, canRead, canWrite };
+    return { recipe, canRead, canWrite, referer };
 
   }
 
-
+  getRefererRecipe() {
+    const state = this;
+    if (!state.headers.referer)
+      return;
+    const referer = new URL(state.headers.referer);
+    // console.log("Referer", state.headers.referer, referer);
+    if (!referer.pathname.startsWith(state.pathPrefix))
+      throw state.sendEmpty(404, { "x-reason": "invalid path prefix" });
+    if (!referer.pathname.startsWith(state.pathPrefix + "/wiki/"))
+      return; // keep going
+    // we now get the recipe name from the referer
+    const recipe_name = referer.pathname.substring(state.pathPrefix.length + "/wiki/".length);
+    return decodeURIComponent(recipe_name) as PrismaField<"Recipes", "recipe_name">;
+  }
 
   async assertRecipeAccess(
     recipe_name: PrismaField<"Recipes", "recipe_name">,
@@ -97,13 +111,18 @@ export class StateObject<
 
     // if (this.headers.referer) this.setHeader("x-found-referer", "true");
 
-    const { recipe, canRead, canWrite } = await this.getRecipeACL(recipe_name, needWrite);
+    const { recipe, canRead, canWrite, referer } = await this.getRecipeACL(recipe_name, needWrite);
+
+    if (referer && referer !== recipe_name)
+      throw this.sendEmpty(403, { "x-reason": "the page does not have permission to access this endpoint" });
 
     if (!recipe) throw this.sendEmpty(404, { "x-reason": "recipe not found" });
     if (!canRead) throw this.sendEmpty(403, { "x-reason": "no read permission" });
     if (!canWrite) throw this.sendEmpty(403, { "x-reason": "no write permission" });
 
     this.asserted = true;
+
+    return recipe;
 
   }
 

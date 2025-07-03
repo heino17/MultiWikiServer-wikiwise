@@ -21,25 +21,8 @@ const debugCORS = Debug("mws:cors");
 const debugSSE = Debug("mws:sse");
 
 
+export { WikiExternalRoutes, WikiRecipeRoutes, WikiStatusRoutes };
 
-
-
-declare module "@tiddlywiki/events" {
-  interface ServerEventsMap {
-    "mws.tiddler.save": [{
-      recipe_name?: string;
-      bag_name: string;
-      title: string;
-      revision_id: string;
-    }];
-    "mws.tiddler.delete": [{
-      recipe_name?: string;
-      bag_name: string;
-      title: string;
-      revision_id: string;
-    }];
-  }
-}
 declare module "@tiddlywiki/server" {
   interface IncomingHttpHeaders {
     'last-event-id'?: string;
@@ -61,8 +44,7 @@ serverEvents.on("mws.routes", (root, config) => {
   const parent = root.defineRoute({
     method: [],
     denyFinal: true,
-    path: new RegExp(`^(?=${BAG_PREFIX}|${RECIPE_PREFIX})(?=/)`),
-    
+    path: new RegExp(`^(?=${RECIPE_PREFIX}/)`),
   }, async state => {
 
   });
@@ -86,13 +68,13 @@ serverEvents.on("mws.routes", (root, config) => {
     rpcSaveRecipeTiddlerList: true,
   } satisfies RouterKeyMap<WikiRecipeRoutes, true>));
 
-  registerZodRoutes(parent, new WikiExternalRoutes(), Object.keys({
-    handleFormMultipartRecipeTiddler: true,
-    handleFormMultipartBagTiddler: true,
-    handleDeleteBagTiddler: true,
-    handleLoadBagTiddler: true,
-    handleSaveBagTiddler: true,
-  } satisfies RouterKeyMap<WikiExternalRoutes, true>));
+  // registerZodRoutes(parent, new WikiExternalRoutes(), Object.keys({
+  //   handleFormMultipartRecipeTiddler: true,
+  //   handleFormMultipartBagTiddler: true,
+  //   handleDeleteBagTiddler: true,
+  //   handleLoadBagTiddler: true,
+  //   handleSaveBagTiddler: true,
+  // } satisfies RouterKeyMap<WikiExternalRoutes, true>));
 
   // the wiki index route
   root.defineRoute({

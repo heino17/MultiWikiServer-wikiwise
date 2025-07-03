@@ -31,10 +31,10 @@ var CONFIG_HOST_TIDDLER = "$:/config/multiwikiclient/host", DEFAULT_HOST_TIDDLER
 var SERVER_NOT_CONNECTED = "NOT CONNECTED", SERVER_CONNECTING_SSE = "CONNECTING SSE", SERVER_CONNECTED_SSE = "CONNECTED SSE", SERVER_POLLING = "SERVER POLLING";
 class MultiWikiClientAdaptor {
     constructor(options) {
+        this.triggerPoll = null;
         this.name = "multiwikiclient";
         this.supportsLazyLoading = true;
         this.error = null;
-        this.syncTimeout = null;
         this.wiki = options.wiki;
         this.host = this.getHost();
         this.recipe = this.wiki.getTiddlerText("$:/config/multiwikiclient/recipe");
@@ -51,9 +51,9 @@ class MultiWikiClientAdaptor {
         this.username = "";
         // Compile the dirty tiddler filter
         this.incomingUpdatesFilterFn = this.wiki.compileFilter(this.wiki.getTiddlerText(INCOMING_UPDATES_FILTER_TIDDLER));
-        this.setUpdateConnectionStatus(SERVER_NOT_CONNECTED);
+        this.setConnectionStatus(SERVER_NOT_CONNECTED);
     }
-    setUpdateConnectionStatus(status) {
+    setConnectionStatus(status) {
         this.serverUpdateConnectionStatus = status;
         this.wiki.addTiddler({
             title: CONNECTION_STATE_TIDDLER,
@@ -65,6 +65,12 @@ class MultiWikiClientAdaptor {
     }
     isReady() {
         return true;
+    }
+    subscribe(callback) {
+        // TODO: not working at the moment for some reason
+        console.log("Subscribing to server updates");
+        this.triggerPoll = callback;
+        this.connectRecipeEvents();
     }
     getHost() {
         var text = this.wiki.getTiddlerText(CONFIG_HOST_TIDDLER, DEFAULT_HOST_TIDDLER), substitutions = [
@@ -97,11 +103,11 @@ class MultiWikiClientAdaptor {
     getTiddlerRevision(title) {
         return this.wiki.extractTiddlerDataItem(REVISION_STATE_TIDDLER, title);
     }
-    setTiddlerInfo(title, revision, bag) {
-        this.wiki.setText(BAG_STATE_TIDDLER, null, title, bag, { suppressTimestamp: true });
-        this.wiki.setText(REVISION_STATE_TIDDLER, null, title, revision, { suppressTimestamp: true });
+    setTiddlerInfo({ title, revision_id, bag_name }) {
+        this.wiki.setText(BAG_STATE_TIDDLER, null, title, bag_name, { suppressTimestamp: true });
+        this.wiki.setText(REVISION_STATE_TIDDLER, null, title, revision_id, { suppressTimestamp: true });
     }
-    removeTiddlerInfo(title) {
+    removeTiddlerInfo({ title, revision_id, bag_id }) {
         this.wiki.setText(BAG_STATE_TIDDLER, null, title, undefined, { suppressTimestamp: true });
         this.wiki.setText(REVISION_STATE_TIDDLER, null, title, undefined, { suppressTimestamp: true });
     }
@@ -116,7 +122,6 @@ class MultiWikiClientAdaptor {
                 method: "GET",
                 url: "/status",
             });
-            this.connectRecipeEvents();
             if (!ok && (data === null || data === void 0 ? void 0 : data.status) === 0) {
                 this.error = "The webpage is forbidden from contacting the server.";
                 this.isLoggedIn = false;
@@ -165,50 +170,23 @@ class MultiWikiClientAdaptor {
             callback(null, { modifications, deletions });
         });
     }
-    debounceSyncFromServer() {
-        if (this.syncTimeout) {
-            clearTimeout(this.syncTimeout);
-        }
-        this.syncTimeout = setTimeout(() => {
-            this.syncTimeout = null;
-            if (this.syncer) {
-                this.syncer.syncFromServer();
-            }
-            else {
-                console.warn("No syncer available to sync from server");
-            }
-        }, 1000);
-    }
     connectRecipeEvents() {
         const event = new EventSource(this.host + "recipe/" + encodeURIComponent(this.recipe) + "/events?first-event-id=" + encodeURIComponent(this.last_known_revision_id));
-        this.setUpdateConnectionStatus(SERVER_CONNECTING_SSE);
-        const onEvent = (e) => {
-            const data = JSON.parse(e.data);
-            if (!this.bags)
-                return;
-            const bag = this.bags.find(b => b.bag_name === data.bag_name);
-            if (!bag)
-                return;
-            const tiddler = bag.tiddlers.find(t => t.title === data.title);
-            if (!tiddler) {
-                if (e.type === "tiddler.delete")
-                    return;
-                // If the tiddler is not found, it must be a new tiddler
-                bag.tiddlers.push({
-                    title: data.title,
-                    revision_id: data.revision_id,
-                    is_deleted: false,
-                });
+        this.setConnectionStatus(SERVER_CONNECTING_SSE);
+        let syncTimeout = null;
+        const debounceSyncFromServer = () => {
+            if (syncTimeout) {
+                clearTimeout(syncTimeout);
             }
-            else {
-                tiddler.is_deleted = (e.type === "tiddler.delete");
-                tiddler.revision_id = data.revision_id;
-            }
-            this.debounceSyncFromServer();
+            syncTimeout = setTimeout(() => {
+                var _a;
+                syncTimeout = null;
+                (_a = this.triggerPoll) === null || _a === void 0 ? void 0 : _a.call(this);
+            }, 100);
         };
         const onUpdate = (e) => {
             if (!this.bags)
-                return;
+                return console.log("No bags loaded, cannot process updates");
             const updates = JSON.parse(e.data);
             const existBags = new Map(this.bags.map(b => [b.bag_name, b.tiddlers]));
             updates.forEach(e => {
@@ -226,23 +204,23 @@ class MultiWikiClientAdaptor {
                     }
                 });
             });
-            this.debounceSyncFromServer();
+            debounceSyncFromServer();
         };
-        event.addEventListener("tiddler.save", onEvent);
-        event.addEventListener("tiddler.delete", onEvent);
+        // event.addEventListener("tiddler.save", onEvent);
+        // event.addEventListener("tiddler.delete", onEvent);
         event.addEventListener("tiddler.since-last-event", onUpdate);
         event.addEventListener("test", console.log);
         event.addEventListener("open", () => {
-            this.setUpdateConnectionStatus(SERVER_CONNECTED_SSE);
+            this.setConnectionStatus(SERVER_CONNECTED_SSE);
             console.log("Connected to server events");
         });
         event.addEventListener("error", (e) => {
             if (event.readyState === EventSource.CLOSED) {
-                this.setUpdateConnectionStatus(SERVER_NOT_CONNECTED);
+                this.setConnectionStatus(SERVER_NOT_CONNECTED);
                 console.error("Server events connection closed");
             }
             else if (event.readyState === EventSource.CONNECTING) {
-                this.setUpdateConnectionStatus(SERVER_CONNECTING_SSE);
+                this.setConnectionStatus(SERVER_CONNECTING_SSE);
                 console.warn("Connecting to server events");
             }
             else {
@@ -323,19 +301,19 @@ class MultiWikiClientAdaptor {
     }
     loadTiddlers(options) {
         return __awaiter(this, void 0, void 0, function* () {
+            const { syncer, titles, onNext, onDone, onError } = options;
             const tiddlers = yield this.rpcRequest({
                 key: "rpcLoadRecipeTiddlerList",
-                body: {
-                    titles: options.titles
-                }
+                body: { titles: titles }
             }).catch(err => {
-                options.onError(err);
+                onError(err);
                 throw new Error("Error loading tiddlers: " + err.message);
             });
-            tiddlers.forEach(fields => {
-                options.onNext(fields);
+            tiddlers.forEach(({ bag_name, tiddler: fields }) => {
+                this.setTiddlerInfo({ title: fields.title, revision_id: fields.revision_id, bag_name: bag_name });
+                onNext(fields);
             });
-            options.onDone();
+            onDone();
         });
     }
     saveTiddlers(options) {
@@ -349,9 +327,12 @@ class MultiWikiClientAdaptor {
                 onError(err);
                 throw new Error("Error saving tiddlers: " + err.message);
             });
-            results.forEach(tiddler => {
+            results.forEach((tiddler) => {
+                this.setTiddlerInfo({ title: tiddler.title, revision_id: tiddler.revision_id, bag_name: tiddler.bag.bag_name });
                 onNext(tiddler.title, {
-                    bag: tiddler.bag_id,
+                    bag: tiddler.bag.bag_name,
+                    title: tiddler.title,
+                    revision: tiddler.revision_id
                 }, tiddler.revision_id);
             });
             onDone();
@@ -367,26 +348,11 @@ class MultiWikiClientAdaptor {
                 onError(err);
                 throw new Error("Error deleting tiddlers: " + err.message);
             });
-            results.forEach(({ title }) => { onNext(title); });
-            onDone();
-        });
-    }
-    rpcRequest(options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const [ok, err, result] = yield this.recipeRequest({
-                key: options.key,
-                url: "/rpc/" + options.key,
-                method: "PUT",
-                requestBodyString: JSON.stringify(options.body),
-                headers: {
-                    "content-type": "application/json"
-                }
+            results.forEach(({ title, revision_id, bag_id }) => {
+                this.removeTiddlerInfo({ title, revision_id, bag_id });
+                onNext(title);
             });
-            if (!ok)
-                throw err;
-            if (!result.responseJSON)
-                throw new Error("No response JSON returned");
-            return result.responseJSON;
+            onDone();
         });
     }
     /*
@@ -442,8 +408,8 @@ class MultiWikiClientAdaptor {
             // If there has been a more recent update from the server then enqueue a load of this tiddler
             self.checkLastRecordedUpdate(title, revision);
             // Invoke the callback
-            self.setTiddlerInfo(title, revision, bag_name);
-            callback(null, { bag: bag_name }, revision);
+            self.setTiddlerInfo({ title, revision_id: revision, bag_name: bag_name });
+            callback(null, { bag: bag_name, title: title, revision: revision }, revision);
         });
     }
     /*
@@ -455,8 +421,7 @@ class MultiWikiClientAdaptor {
         return __awaiter(this, void 0, void 0, function* () {
             var _a, _b;
             const self = this;
-            if (!self.syncer)
-                return callback(new Error("No syncer available"));
+            // if (!self.syncer) return callback(new Error("No syncer available"));
             self.outstandingRequests[title] = { type: "GET" };
             const [ok, err, result] = yield this.recipeRequest({
                 key: "handleLoadRecipeTiddler",
@@ -473,7 +438,7 @@ class MultiWikiClientAdaptor {
             // If there has been a more recent update from the server then enqueue a load of this tiddler
             self.checkLastRecordedUpdate(title, revision);
             // Invoke the callback
-            self.setTiddlerInfo(title, revision, bag_name);
+            self.setTiddlerInfo({ title, revision_id: revision, bag_name: bag_name });
             callback(null, data);
         });
     }
@@ -492,7 +457,6 @@ class MultiWikiClientAdaptor {
             // var bag = this.getTiddlerBag(title);
             // if(!bag) { return callback(null, options.tiddlerInfo.adaptorInfo); }
             self.outstandingRequests[title] = { type: "DELETE" };
-            // Issue HTTP request to delete the tiddler
             const [ok, err, result] = yield this.recipeRequest({
                 key: "handleDeleteRecipeTiddler",
                 url: "/tiddlers/" + encodeURIComponent(title),
@@ -504,12 +468,30 @@ class MultiWikiClientAdaptor {
             const { responseJSON: data } = result;
             if (!data)
                 return callback(null);
-            const revision = data.revision_id, bag_name = data.bag_name;
+            const { revision_id, bag_name, bag_id } = data;
             // If there has been a more recent update from the server then enqueue a load of this tiddler
-            self.checkLastRecordedUpdate(title, revision);
-            self.removeTiddlerInfo(title);
+            self.checkLastRecordedUpdate(title, revision_id);
+            self.removeTiddlerInfo({ title, revision_id, bag_id });
             // Invoke the callback & return null adaptorInfo
             callback(null, null);
+        });
+    }
+    rpcRequest(options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const [ok, err, result] = yield this.recipeRequest({
+                key: options.key,
+                url: "/rpc/" + options.key,
+                method: "PUT",
+                requestBodyString: JSON.stringify(options.body),
+                headers: {
+                    "content-type": "application/json"
+                }
+            });
+            if (!ok)
+                throw err;
+            if (!result.responseJSON)
+                throw new Error("No response JSON returned");
+            return result.responseJSON;
         });
     }
     /**

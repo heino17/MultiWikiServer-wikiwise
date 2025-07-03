@@ -46,7 +46,7 @@ The init command creates a new folder and installs what you need to get started.
 
 You can customize the defaults by modifying `mws.run.mjs`.
 
-- the server runs on port `5000`. It does not use HTTPS by default, but you can enable it by specifying a key and cert. 
+- the server runs on port `8080`. It does not use HTTPS by default, but you can enable it by specifying a key and cert. 
 - A `localpass.key` file is created to hold the password keyfile. If this file changes, all passwords will need to be reset. 
 - The data folder (`wikiPath`) is `wiki` by default.
 
@@ -84,4 +84,5 @@ If you want to work on the project,
 The development wiki will be active at http://localhost:8080/dev
 
 You can change the listeners as explained in the mws.dev.mjs file.
+
 

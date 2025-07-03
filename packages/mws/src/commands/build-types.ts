@@ -3,8 +3,8 @@ import { BaseCommand, CommandInfo } from '@tiddlywiki/commander';
 import { StatusKeyMap, StatusManager } from '../managers';
 import { UserKeyMap, UserManager } from '../managers/admin-users';
 import { RecipeKeyMap, RecipeManager } from '../managers/admin-recipes';
-import { WikiRouterKeyMap, WikiRoutes } from '../managers/wiki-routes';
-import { PrinterOptions } from 'typescript';
+// import { WikiRouterKeyMap, WikiRoutes } from '../managers/wiki-routes';
+// import { PrinterOptions } from 'typescript';
 
 
 export const info: CommandInfo = {
@@ -48,13 +48,13 @@ export class Command extends BaseCommand<[], {}> {
     const recipe = new RecipeManager();
     const user = new UserManager();
     // Note: WikiRoutes is not a manager, but it has the same interface as the others.
-    const wiki = new WikiRoutes();
+    // const wiki = new WikiRoutes();
 
     return [
       ...Object.keys(StatusKeyMap).map(e => [e, status[e]] as const),
       ...Object.keys(UserKeyMap).map(e => [e, user[e]] as const),
       ...Object.keys(RecipeKeyMap).map(e => [e, recipe[e]] as const),
-      ...Object.keys(WikiRouterKeyMap).map(e => [e, wiki[e]] as const),
+      // ...Object.keys(WikiRouterKeyMap).map(e => [e, wiki[e]] as const),
     ];
   }
 }

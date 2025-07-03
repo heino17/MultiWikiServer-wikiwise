@@ -19,13 +19,29 @@ previous operation to complete before sending a new one.
 // the blank line is important, and so is the following use strict
 "use strict";
 
-import { ServerEventsMap } from '@tiddlywiki/events';
-import type { WikiRoutes, ZodRoute } from '@tiddlywiki/mws';
-import { zod } from '@tiddlywiki/server';
-// import type { WikiRoutes, ZodRoute } from '@tiddlywiki/mws';
+import type { ServerEventsMap } from '@tiddlywiki/events';
+import type { ZodRoute, WikiStatusRoutes, WikiRecipeRoutes } from '@tiddlywiki/mws';
+import type { zod } from '@tiddlywiki/server';
 import type { Syncer, Tiddler, TiddlerFields } from 'tiddlywiki';
 declare global { const fflate: typeof import("./fflate"); }
 declare const self: never;
+
+// registerZodRoutes(parent, new WikiStatusRoutes(), Object.keys({
+// 	handleGetAllBagStates: true,
+// 	handleGetBagState: true,
+// 	handleGetRecipeStatus: true,
+// 	handleGetRecipeEvents: true,
+// 	handleGetBags: true,
+// } satisfies RouterKeyMap<WikiStatusRoutes, true>));
+
+// registerZodRoutes(parent, new WikiRecipeRoutes(), Object.keys({
+// 	handleDeleteRecipeTiddler: true,
+// 	handleLoadRecipeTiddler: true,
+// 	handleSaveRecipeTiddler: true,
+// 	rpcDeleteRecipeTiddlerList: true,
+// 	rpcLoadRecipeTiddlerList: true,
+// 	rpcSaveRecipeTiddlerList: true,
+// } satisfies RouterKeyMap<WikiRecipeRoutes, true>));
 
 declare class Logger {
 	constructor(componentName: any, options: any);
@@ -45,10 +61,17 @@ declare class Logger {
 	clearAlerts(): void;
 }
 
-type TiddlerRouterResponse = {
-	[K in keyof WikiRoutes]: WikiRoutes[K] extends ZodRoute<infer M, infer B, infer P, infer Q, infer T, infer R>
+type WikiStatusTypes = {
+	[K in keyof WikiStatusRoutes]: WikiStatusRoutes[K] extends ZodRoute<infer M, infer B, infer P, infer Q, infer T, infer R>
 	? { M: M, B: B, P: P, Q: Q, T: T, R: R }
 	: never
+}
+type WikiRecipeTypes = {
+	[K in keyof WikiRecipeRoutes]: WikiRecipeRoutes[K] extends ZodRoute<infer M, infer B, infer P, infer Q, infer T, infer R>
+	? { M: M, B: B, P: P, Q: Q, T: T, R: R }
+	: never
+}
+interface RouteTypes extends WikiStatusTypes, WikiRecipeTypes {
 }
 
 declare module 'tiddlywiki' {
@@ -226,6 +249,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 	private serverUpdateConnectionStatus!: string;
 	private isDevMode: boolean;
 	private useGzipStream: boolean;
+	private triggerPoll: (() => void) | null = null;
 
 	name = "multiwikiclient";
 	private supportsLazyLoading = true;
@@ -246,10 +270,10 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		this.username = "";
 		// Compile the dirty tiddler filter
 		this.incomingUpdatesFilterFn = this.wiki.compileFilter(this.wiki.getTiddlerText(INCOMING_UPDATES_FILTER_TIDDLER));
-		this.setUpdateConnectionStatus(SERVER_NOT_CONNECTED);
+		this.setConnectionStatus(SERVER_NOT_CONNECTED);
 	}
 
-	private setUpdateConnectionStatus(status: string) {
+	private setConnectionStatus(status: string) {
 		this.serverUpdateConnectionStatus = status;
 		this.wiki.addTiddler({
 			title: CONNECTION_STATE_TIDDLER,
@@ -261,6 +285,12 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 	}
 	isReady() {
 		return true;
+	}
+	subscribe(callback: () => void) {
+		// TODO: not working at the moment for some reason
+		console.log("Subscribing to server updates");
+		this.triggerPoll = callback;
+		this.connectRecipeEvents();
 	}
 	private getHost() {
 		var text = this.wiki.getTiddlerText(CONFIG_HOST_TIDDLER, DEFAULT_HOST_TIDDLER), substitutions = [
@@ -295,11 +325,11 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 	getTiddlerRevision(title: string) {
 		return this.wiki.extractTiddlerDataItem(REVISION_STATE_TIDDLER, title);
 	}
-	private setTiddlerInfo(title: string, revision: string, bag: string) {
-		this.wiki.setText(BAG_STATE_TIDDLER, null, title, bag, { suppressTimestamp: true });
-		this.wiki.setText(REVISION_STATE_TIDDLER, null, title, revision, { suppressTimestamp: true });
+	private setTiddlerInfo({ title, revision_id, bag_name }: { title: string; revision_id: string; bag_name: string; }) {
+		this.wiki.setText(BAG_STATE_TIDDLER, null, title, bag_name, { suppressTimestamp: true });
+		this.wiki.setText(REVISION_STATE_TIDDLER, null, title, revision_id, { suppressTimestamp: true });
 	}
-	private removeTiddlerInfo(title: string) {
+	private removeTiddlerInfo({ title, revision_id, bag_id }: { title: string; revision_id: string; bag_id: string; }) {
 		this.wiki.setText(BAG_STATE_TIDDLER, null, title, undefined, { suppressTimestamp: true });
 		this.wiki.setText(REVISION_STATE_TIDDLER, null, title, undefined, { suppressTimestamp: true });
 	}
@@ -315,7 +345,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 			method: "GET",
 			url: "/status",
 		});
-		this.connectRecipeEvents();
+
 		if (!ok && data?.status === 0) {
 			this.error = "The webpage is forbidden from contacting the server."
 			this.isLoggedIn = false;
@@ -358,46 +388,24 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		this.last_known_revision_id = last_revision;
 		callback(null, { modifications, deletions });
 	}
-	syncTimeout: NodeJS.Timeout | null = null;
-	debounceSyncFromServer() {
-		if (this.syncTimeout) {
-			clearTimeout(this.syncTimeout);
-		}
-		this.syncTimeout = setTimeout(() => {
-			this.syncTimeout = null;
-			if (this.syncer) {
-				this.syncer.syncFromServer();
-			} else {
-				console.warn("No syncer available to sync from server");
-			}
-		}, 1000);
-	}
+
+
 	connectRecipeEvents() {
 		const event = new EventSource(this.host + "recipe/" + encodeURIComponent(this.recipe) + "/events?first-event-id=" + encodeURIComponent(this.last_known_revision_id));
-		this.setUpdateConnectionStatus(SERVER_CONNECTING_SSE);
-		const onEvent = (e: MessageEvent) => {
-			type Data = | ServerEventsMap["mws.tiddler.save"][0] | ServerEventsMap["mws.tiddler.delete"][0];
-			const data: Data = JSON.parse(e.data);
-			if (!this.bags) return;
-			const bag = this.bags.find(b => b.bag_name === data.bag_name);
-			if (!bag) return;
-			const tiddler = bag.tiddlers.find(t => t.title === data.title);
-			if (!tiddler) {
-				if (e.type === "tiddler.delete") return;
-				// If the tiddler is not found, it must be a new tiddler
-				bag.tiddlers.push({
-					title: data.title,
-					revision_id: data.revision_id,
-					is_deleted: false,
-				});
-			} else {
-				tiddler.is_deleted = (e.type === "tiddler.delete");
-				tiddler.revision_id = data.revision_id;
+		this.setConnectionStatus(SERVER_CONNECTING_SSE);
+		let syncTimeout: NodeJS.Timeout | null = null;
+		const debounceSyncFromServer = () => {
+			if (syncTimeout) {
+				clearTimeout(syncTimeout);
 			}
-			this.debounceSyncFromServer();
-		}
+			syncTimeout = setTimeout(() => {
+				syncTimeout = null;
+				this.triggerPoll?.();
+			}, 100);
+		};
+
 		const onUpdate = (e: MessageEvent) => {
-			if (!this.bags) return;
+			if (!this.bags) return console.log("No bags loaded, cannot process updates");
 			const updates: {
 				bag: {
 					bag_name: PrismaField<"Bags", "bag_name">;
@@ -422,22 +430,22 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 					}
 				});
 			});
-			this.debounceSyncFromServer();
+			debounceSyncFromServer();
 		};
-		event.addEventListener("tiddler.save", onEvent);
-		event.addEventListener("tiddler.delete", onEvent);
+		// event.addEventListener("tiddler.save", onEvent);
+		// event.addEventListener("tiddler.delete", onEvent);
 		event.addEventListener("tiddler.since-last-event", onUpdate);
 		event.addEventListener("test", console.log);
 		event.addEventListener("open", () => {
-			this.setUpdateConnectionStatus(SERVER_CONNECTED_SSE);
+			this.setConnectionStatus(SERVER_CONNECTED_SSE);
 			console.log("Connected to server events");
 		});
 		event.addEventListener("error", (e) => {
 			if (event.readyState === EventSource.CLOSED) {
-				this.setUpdateConnectionStatus(SERVER_NOT_CONNECTED);
+				this.setConnectionStatus(SERVER_NOT_CONNECTED);
 				console.error("Server events connection closed");
 			} else if (event.readyState === EventSource.CONNECTING) {
-				this.setUpdateConnectionStatus(SERVER_CONNECTING_SSE);
+				this.setConnectionStatus(SERVER_CONNECTING_SSE);
 				console.warn("Connecting to server events");
 			} else {
 				console.error("Error in server events connection", e);
@@ -460,7 +468,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 	}[]
 
 	private async pollServer() {
-		type t1 = WikiRoutes["handleGetBags"];
+		type t1 = RouteTypes["handleGetBags"];
 		const [ok, err, result] = await this.recipeRequest({
 			key: "handleGetBags",
 			url: "/bags",
@@ -468,7 +476,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		});
 		if (!ok) throw err;
 		if (!result.responseJSON) throw new Error("no result returned");
-		type t2 = WikiRoutes["handleGetBagState"];
+		type t2 = RouteTypes["handleGetBagState"];
 		this.bags = await Promise.all(result.responseJSON.map(e => this.recipeRequest({
 			key: "handleGetBagState",
 			url: "/bags/" + encodeURIComponent(e.bag_name) + "/state",
@@ -552,7 +560,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 			throw new Error("Error loading tiddlers: " + err.message);
 		});
 		tiddlers.forEach(({ bag_name, tiddler: fields }) => {
-			this.setTiddlerInfo(fields.title, fields.revision_id, bag_name);
+			this.setTiddlerInfo({ title: fields.title, revision_id: fields.revision_id, bag_name: bag_name });
 			onNext(fields);
 		});
 		onDone();
@@ -577,10 +585,10 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		});
 
 		results.forEach((tiddler) => {
-			this.setTiddlerInfo(tiddler.title, tiddler.revision_id, tiddler.bag.bag_name);
+			this.setTiddlerInfo({ title: tiddler.title, revision_id: tiddler.revision_id, bag_name: tiddler.bag.bag_name });
 			onNext(tiddler.title, {
 				bag: tiddler.bag.bag_name,
-				title: tiddler.title, 
+				title: tiddler.title,
 				revision: tiddler.revision_id
 			}, tiddler.revision_id);
 		});
@@ -599,8 +607,8 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 			throw new Error("Error deleting tiddlers: " + err.message);
 		});
 
-		results.forEach(({ title }) => {
-			this.removeTiddlerInfo(title);
+		results.forEach(({ title, revision_id, bag_id }) => {
+			this.removeTiddlerInfo({ title, revision_id, bag_id });
 			onNext(title);
 		});
 
@@ -648,7 +656,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 			body += `\n\n${text}`
 		}
 
-		type t = TiddlerRouterResponse["handleSaveRecipeTiddler"]
+		type t = RouteTypes["handleSaveRecipeTiddler"]
 		const [ok, err, result] = await this.recipeRequest({
 			key: "handleSaveRecipeTiddler",
 			url: "/tiddlers/" + encodeURIComponent(title),
@@ -677,12 +685,8 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		// If there has been a more recent update from the server then enqueue a load of this tiddler
 		self.checkLastRecordedUpdate(title, revision);
 		// Invoke the callback
-		self.setTiddlerInfo(title, revision, bag_name);
-		callback(null, { 
-			bag: bag_name,
-			title: title,
-			revision: revision
-		}, revision);
+		self.setTiddlerInfo({ title, revision_id: revision, bag_name: bag_name });
+		callback(null, { bag: bag_name, title: title, revision: revision }, revision);
 
 	}
 	/*
@@ -712,7 +716,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		// If there has been a more recent update from the server then enqueue a load of this tiddler
 		self.checkLastRecordedUpdate(title, revision);
 		// Invoke the callback
-		self.setTiddlerInfo(title, revision, bag_name);
+		self.setTiddlerInfo({ title, revision_id: revision, bag_name: bag_name });
 		callback(null, data);
 	}
 	/*
@@ -728,6 +732,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		// if(!bag) { return callback(null, options.tiddlerInfo.adaptorInfo); }
 		self.outstandingRequests[title] = { type: "DELETE" };
 		// Issue HTTP request to delete the tiddler
+		type t = RouteTypes["handleDeleteRecipeTiddler"]
 		const [ok, err, result] = await this.recipeRequest({
 			key: "handleDeleteRecipeTiddler",
 			url: "/tiddlers/" + encodeURIComponent(title),
@@ -738,22 +743,22 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		const { responseJSON: data } = result;
 		if (!data) return callback(null);
 
-		const revision = data.revision_id, bag_name = data.bag_name;
+		const { revision_id, bag_name, bag_id } = data;
 		// If there has been a more recent update from the server then enqueue a load of this tiddler
-		self.checkLastRecordedUpdate(title, revision);
-		self.removeTiddlerInfo(title);
+		self.checkLastRecordedUpdate(title, revision_id);
+		self.removeTiddlerInfo({ title, revision_id, bag_id });
 		// Invoke the callback & return null adaptorInfo
 		callback(null, null);
 	}
 
-	async rpcRequest<T extends keyof TiddlerRouterResponse>(
+	async rpcRequest<T extends string & keyof RouteTypes>(
 		options: {
 			key: T;
-			body: zod.infer<TiddlerRouterResponse[T]["T"]>;
+			body: zod.infer<RouteTypes[T]["T"]>;
 		}
-	): Promise<TiddlerRouterResponse[T]["R"]> {
+	): Promise<RouteTypes[T]["R"]> {
 
-		type t = TiddlerRouterResponse["handleSaveRecipeTiddler"]
+		type t = RouteTypes["handleSaveRecipeTiddler"]
 		const [ok, err, result] = await this.recipeRequest({
 			key: options.key,
 			url: "/rpc/" + options.key,
@@ -768,7 +773,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 
 		if (!result.responseJSON) throw new Error("No response JSON returned");
 
-		return result.responseJSON as TiddlerRouterResponse[T]["R"];
+		return result.responseJSON as RouteTypes[T]["R"];
 	}
 
 	/** 
@@ -776,7 +781,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 	 * 
 	 * So if the first parameter is false, the third parameter may still contain the response.
 	 */
-	private async recipeRequest<KEY extends (string & keyof TiddlerRouterResponse)>(
+	private async recipeRequest<KEY extends (string & keyof RouteTypes)>(
 		options: Omit<HttpRequestOptions<"arraybuffer">, "responseType"> & { key: KEY }
 	) {
 		if (!options.url.startsWith("/"))
@@ -829,7 +834,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 				responseString,
 				/** this is undefined if status is not 200 */
 				responseJSON: e.status === 200
-					? tryParseJSON(responseString) as TiddlerRouterResponse[KEY]["R"]
+					? tryParseJSON(responseString) as RouteTypes[KEY]["R"]
 					: undefined,
 			}] as const;
 		}, e => [false, e, void 0] as const);

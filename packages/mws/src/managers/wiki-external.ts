@@ -14,12 +14,12 @@ import { serverEvents, ServerEventsMap } from "@tiddlywiki/events";
 import { Prisma } from "prisma-client";
 import { t } from "try";
 import { BAG_PREFIX, parseTiddlerFields, recieveTiddlerMultipartUpload, RECIPE_PREFIX } from "./wiki-utils";
+
 const debugCORS = Debug("mws:cors");
 const debugSSE = Debug("mws:sse");
 
-
 export class WikiExternalRoutes {
- 
+
 
   // this is not used by the sync adaptor.
   // it allows an HTML form to upload a tiddler directly with file upload
@@ -32,7 +32,7 @@ export class WikiExternalRoutes {
     }),
     inner: async (state) => {
 
-      await state.assertRecipeAccess(state.pathParams.recipe_name, true);
+      const { recipe_id } = await state.assertRecipeAccess(state.pathParams.recipe_name, true);
 
       const recipe_name = state.pathParams.recipe_name;
 
@@ -43,14 +43,15 @@ export class WikiExternalRoutes {
         const { bag_name, bag_id } = await server.getRecipeWritableBag(recipe_name) ?? {};
         if (!bag_name) throw state.sendEmpty(404, { "x-reason": "bag not found" });
         const { revision_id } = await server.saveBagTiddlerFields(tiddlerFields, bag_id, null);
-        return { bag_name, results: { revision_id, bag_name } };
+        return { bag_id, bag_name, results: { revision_id, bag_name } };
       });
 
-      await serverEvents.emitAsync("mws.tiddler.save", {
+      await serverEvents.emitAsync("mws.tiddler.events", {
+        recipe_id,
         recipe_name,
-        bag_name: res.results.bag_name,
-        title: tiddlerFields.title,
-        revision_id: res.results.revision_id,
+        bag_id: res.bag_id,
+        bag_name: res.bag_name,
+        results: [{ title: tiddlerFields.title, revision_id: res.results.revision_id, is_deleted: false }],
       });
 
       return res;
@@ -102,10 +103,10 @@ export class WikiExternalRoutes {
         return server.saveBagTiddlerFields(fields, bag_id, null);
       });
 
-      await serverEvents.emitAsync("mws.tiddler.save", {
+      await serverEvents.emitAsync("mws.tiddler.events", {
         bag_name,
-        title: fields.title,
-        revision_id: res.revision_id,
+        bag_id,
+        results: [{ title: fields.title, revision_id: res.revision_id, is_deleted: false }],
       });
 
       return res;
@@ -127,10 +128,10 @@ export class WikiExternalRoutes {
         const server = new WikiStateStore(state, prisma);
         return server.deleteBagTiddler(bag_id, title);
       });
-      await serverEvents.emitAsync("mws.tiddler.delete", {
+      await serverEvents.emitAsync("mws.tiddler.events", {
+        bag_id,
         bag_name,
-        title,
-        revision_id: res.revision_id,
+        results: [{ title, revision_id: res.revision_id, is_deleted: true }],
       });
       return res;
     }
@@ -150,10 +151,10 @@ export class WikiExternalRoutes {
         const server = new WikiStateStore(state, prisma);
         return await server.saveBagTiddlerFields(tiddlerFields, bag_id, null);
       });
-      await serverEvents.emitAsync("mws.tiddler.save", {
+      await serverEvents.emitAsync("mws.tiddler.events", {
+        bag_id,
         bag_name,
-        title: tiddlerFields.title,
-        revision_id: res.revision_id,
+        results: [{ title: tiddlerFields.title, revision_id: res.revision_id, is_deleted: false }],
       });
       return res;
     }
