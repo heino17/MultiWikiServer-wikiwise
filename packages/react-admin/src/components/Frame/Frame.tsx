@@ -8,7 +8,7 @@ import ManageUser from '../UserEdit/ManageUser';
 import { useIndexJson } from '../../helpers/utils';
 import { UsersScreen } from '../Users';
 import { ErrorBoundary } from 'react-error-boundary';
-import { Button, Container, Stack } from '@mui/material';
+import { Button, Container, Stack, useTheme } from '@mui/material';
 
 import { createContext, useContext } from 'react';
 import { Divider, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Typography } from '@mui/material';
@@ -120,7 +120,7 @@ export function PageRoot() {
     [/^\/admin\/users\/?$/, () => <UserManagement />, "User Management"],
     [/^\/admin\/users\/(.*)$/, ([, user_id]) => <ManageUser userID={user_id!} />, "Manage User"],
     [/^\/admin\/roles$/, () => <UsersScreen />, "Roles"],
-    [/^\/admin\/settings$/, () => <Settings/>, "Settings"],
+    [/^\/admin\/settings$/, () => <Settings />, "Settings"],
   ];
   const route = location.pathname.slice(pathPrefix.length);
   const matches = pages.map(([re]) => re.exec(route));
@@ -129,6 +129,7 @@ export function PageRoot() {
   const navigateTo = (path: string) => {
     window.location.href = pathPrefix + path;
   };
+  const theme = useTheme();
 
   const handleRecipes = () => {
     navigateTo("/admin/recipes");
@@ -175,7 +176,7 @@ export function PageRoot() {
           <Divider />
           <FrameMenuLine onClick={() => navigateTo('/admin/settings')} icon={<SettingsIcon />} text1="Settings" />
         </> : null}
-        
+
       </>}
       right={userIsLoggedIn ? <>
         {/* <IconButton onClick={() => { }} sx={{ padding: 2 }} size="large"><SettingsIcon /></IconButton> */}
@@ -183,13 +184,13 @@ export function PageRoot() {
           <Button
             onClick={handleClick}
             size="small"
-            sx={{ ml: 2, textTransform: 'none', fontSize: '0.9em', color: 'white'}}
+            sx={{ textTransform: 'none', fontSize: '0.9em', color: theme.palette.text.primary }}
             aria-controls={open ? 'account-menu' : undefined}
             aria-haspopup="true"
             aria-expanded={open ? 'true' : undefined}
             endIcon={<Avatar />}
           >
-	  {indexJson.username}
+            {indexJson.username}
           </Button>
         </Tooltip>
         <Menu
@@ -202,16 +203,16 @@ export function PageRoot() {
           anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
         >
           <MenuItem onClick={handleClickProfile}>
-	  <ListItemIcon><PersonIcon fontSize="small" /></ListItemIcon>
-          Profile
-	  </MenuItem>
+            <ListItemIcon><PersonIcon fontSize="small" /></ListItemIcon>
+            Profile
+          </MenuItem>
           {/* <MenuItem onClick={handleClose}>
             <ListItemIcon><Settings fontSize="small" /></ListItemIcon>Settings
           </MenuItem> */}
           <MenuItem onClick={handleLogout}>
             <ListItemIcon><Logout fontSize="small" /></ListItemIcon>Logout
           </MenuItem>
-          <Divider/>
+          <Divider />
           <MenuItem disabled>
             TW5: {indexJson.versions.tw5}
           </MenuItem>
