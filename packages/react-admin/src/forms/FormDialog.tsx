@@ -118,7 +118,7 @@ function DialogFormChildren({ render }: { render: (ctx: FormDialogContextType<an
 }
 
 
-export function FormDialogSubmitButton({ submitLabel, onSubmit, closeOnDiscard, hideClose, hideDiscard, hideSave }: {
+export function FormDialogSubmitButton({ submitLabel, onSubmit, closeOnDiscard, hideClose, hideDiscard, hideSave, alwaysClose }: {
   /** 
    * A function which returns a string for the success message, or throws an error.
    * 
@@ -131,6 +131,7 @@ export function FormDialogSubmitButton({ submitLabel, onSubmit, closeOnDiscard, 
   hideSave?: boolean;
   hideDiscard?: boolean;
   hideClose?: boolean;
+  alwaysClose?: boolean;
 }) {
   const { form, onClose, onReset } = useFormDialogForm();
   useObservable(form.events);
@@ -141,26 +142,29 @@ export function FormDialogSubmitButton({ submitLabel, onSubmit, closeOnDiscard, 
   return <>
     {submitResult && submitResult.ok === false && <Alert severity='error'>{submitResult.message}</Alert>}
     {submitResult && submitResult.ok === true && <Alert severity='success'>{submitResult.message}</Alert>}
-    <Stack direction="row-reverse" spacing={2}>
-      {!hideSave && (form.dirty || hideClose) && <ButtonAwait
-        disabled={form.invalid || form.disabled || !form.dirty}
-        variant="contained"
-        onClick={async () => {
-          setSubmitResult(null);
-          const submitResult = await onSubmit().then(
-            message => ({ ok: true, message }),
-            error => {
-              console.error(error);
-              return {
-                ok: false,
-                message: typeof error === "string" ? error : `${error?.message ?? error}`
+    <Stack direction="row" spacing={2} justifyContent="space-between" alignItems="center">
+      {alwaysClose && <Button color="error" onClick={() => onClose()}>Close</Button>}
+      <Stack direction="row-reverse" spacing={2}>
+        {!hideSave && (form.dirty || hideClose) && <ButtonAwait
+          disabled={form.invalid || form.disabled || !form.dirty}
+          variant="contained"
+          onClick={async () => {
+            setSubmitResult(null);
+            const submitResult = await onSubmit().then(
+              message => ({ ok: true, message }),
+              error => {
+                console.error(error);
+                return {
+                  ok: false,
+                  message: typeof error === "string" ? error : `${error?.message ?? error}`
+                }
               }
-            }
-          );
-          setSubmitResult(submitResult);
-        }}>{submitLabel || "Save"}</ButtonAwait>}
-      {!hideDiscard && form.dirty && <Button disabled={form.disabled} onClick={onDiscard}>Discard</Button>}
-      {!hideClose && !form.dirty && <Button onClick={() => onClose()}>Close</Button>}
+            );
+            setSubmitResult(submitResult);
+          }}>{submitLabel || "Save"}</ButtonAwait>}
+        {!hideDiscard && form.dirty && <Button disabled={form.disabled} onClick={onDiscard}>Discard</Button>}
+        {!alwaysClose && !hideClose && !form.dirty && <Button onClick={() => onClose()}>Close</Button>}
+      </Stack>
     </Stack>
 
   </>

@@ -3,7 +3,6 @@ import { PropsWithChildren, ReactNode, useState } from 'react';
 
 import { Bags } from './BagsList';
 import { Recipes } from './RecipesList';
-import UserManagement from '../UserList/UserManagement';
 import ManageUser from '../UserEdit/ManageUser';
 import { useIndexJson } from '../../helpers/utils';
 import { UsersScreen } from '../Users';
@@ -27,6 +26,7 @@ import ExtensionIcon from '@mui/icons-material/Extension';
 import { sessionRequest } from '../../helpers';
 import { ClientPlugins } from './ClientPlugins';
 import Settings from './Settings';
+import { Users } from './UsersList';
 
 
 function Message({ children }: PropsWithChildren<{}>) {
@@ -117,7 +117,7 @@ export function PageRoot() {
     [/^\/admin\/recipes$/, () => <Recipes />, "Recipes"],
     [/^\/admin\/bags$/, () => <Bags />, "Bags"],
     [/^\/admin\/client-plugins$/, () => <ClientPlugins />, "Plugins"],
-    [/^\/admin\/users\/?$/, () => <UserManagement />, "User Management"],
+    [/^\/admin\/users\/?$/, () => <Users />, "User Management"],
     [/^\/admin\/users\/(.*)$/, ([, user_id]) => <ManageUser userID={user_id!} />, "Manage User"],
     [/^\/admin\/roles$/, () => <UsersScreen />, "Roles"],
     [/^\/admin\/settings$/, () => <Settings />, "Settings"],

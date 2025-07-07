@@ -37,7 +37,7 @@ const slotProps = {
 }
 
 export const useCreateUserForm = createDialogForm({
-  blockMode: true,
+  blockMode: false,
   create: () => new forms.FormGroup({
     username: new forms.FormControl<string>("", {
       nonNullable: true,
@@ -100,7 +100,7 @@ export const useCreateUserForm = createDialogForm({
       />
       <FormDialogSubmitButton
         key="submit"
-        hideClose
+        alwaysClose
         onSubmit={async () => {
 
           const { username, email, role_ids, password, confirmPassword } = form.value;
