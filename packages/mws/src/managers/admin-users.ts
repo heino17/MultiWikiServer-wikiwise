@@ -79,11 +79,7 @@ export class UserManager {
         created_at: true,
       }
     });
-    return res.map(e => ({
-      ...e,
-      last_login: e.last_login?.toISOString(),
-      created_at: e.created_at.toISOString(),
-    }));
+    return res;
   });
 
 

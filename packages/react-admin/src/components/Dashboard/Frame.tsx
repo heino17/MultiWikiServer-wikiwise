@@ -5,7 +5,7 @@ import { Bags } from './BagsList';
 import { Recipes } from './RecipesList';
 import ManageUser from '../UserEdit/ManageUser';
 import { useIndexJson } from '../../helpers/utils';
-import { UsersScreen } from '../Users';
+import { UsersScreen } from './RolesList';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Button, Container, Stack, useTheme } from '@mui/material';
 

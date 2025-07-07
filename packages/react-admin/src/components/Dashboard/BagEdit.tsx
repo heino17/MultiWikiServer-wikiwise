@@ -6,8 +6,8 @@ import {
   IndexJson, serverRequest, useIndexJson, ok,
   Refresher
 } from '../../helpers';
-import { onChange, onChecked, OwnerSelection } from './Shared';
-import { createDialogForm, FormDialogSubmitButton } from '../../forms';
+import {  OwnerSelection } from './Shared';
+import { createDialogForm, FormDialogSubmitButton, onChange } from '../../forms';
 
 
 export const useBagEditForm = createDialogForm({

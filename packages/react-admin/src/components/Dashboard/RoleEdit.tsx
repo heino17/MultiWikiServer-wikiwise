@@ -6,9 +6,8 @@ import {
   serverRequest,
   ok
 } from '../../helpers';
-import { FormDialogSubmitButton, FormDialog, useFormDialogForm, createDialogForm, } from '../../forms';
+import { FormDialogSubmitButton, FormDialog, useFormDialogForm, createDialogForm, onChange, } from '../../forms';
 import { DialogContent, DialogTitle, Stack, TextField } from '@mui/material';
-import { onChange } from './shared';
 
 export const useRoleEditForm = createDialogForm({
   create: (value: IndexJson["roleList"][number] | null) => new forms.FormGroup({

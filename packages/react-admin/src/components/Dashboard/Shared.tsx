@@ -59,18 +59,3 @@ export function OwnerSelection({ isCreate, control, helperText, type }: {
   return null;
 
 }
-
-
-export function onChange<T>(formControl: forms.FormControl<T>) {
-  return (event: { target: { value: T } }) => {
-    formControl.setValue(event.target.value);
-    formControl.markAsDirty();
-  }
-}
-
-export function onChecked(formControl: forms.FormControl<boolean | null>) {
-  return (event: any, checked: boolean) => {
-    formControl.setValue(checked);
-    formControl.markAsDirty();
-  }
-}
