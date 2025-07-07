@@ -84,7 +84,7 @@ export const usePasswordForm = createDialogForm({
         <FormTextField
           key="password"
           control={form.controls.newPassword}
-          label="Password"
+          label="New Password"
           name="newPassword"
           type="password"
           required
