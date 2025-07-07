@@ -5,36 +5,26 @@ import {
   ListItemText, Stack, Collapse
 } from "@mui/material";
 
-import { useACLEditForm } from './ACLEdit';
-import { useBagEditForm } from './BagEdit';
-
-
+const name = Symbol("name");
 
 export function ClientPlugins() {
-  const [{ hasBagAclAccess, ...indexJson }] = useIndexJson();
-
-  const getOwner = useCallback((owner_id: string | null): string => {
-    if (owner_id === null) return "System";
-    return (indexJson.userListAdmin || indexJson.userListUser || [])
-      .find(e => e.user_id === owner_id)?.username ?? "Unknown";
-  }, [indexJson]);
-
-  const [bagMarkup, bagSet] = useBagEditForm();
-  const [aclMarkup, aclSet] = useACLEditForm();
+  const [{ clientPlugins }] = useIndexJson();
 
   const tree = useMemo(() => {
+
     const tree: any = {};
-    indexJson.clientPlugins.forEach(e => {
+      clientPlugins.forEach(e => {
       const path = e.split("/");
       let parent = tree;
       path.forEach(f => {
         if (!parent[f]) parent[f] = {};
         parent = parent[f];
       });
+      parent[name] = e;
     });
     console.log(tree);
     return tree;
-  }, [indexJson.clientPlugins]);
+  }, [clientPlugins]);
 
   return <CardContent>
     <Stack direction="column" spacing={2}>
@@ -46,22 +36,17 @@ export function ClientPlugins() {
               <TreeLevel folder={e} tree={tree[e]} />
             ))}
           </List>
-          {bagMarkup}
-          {aclMarkup}
         </CardContent>
-        {/* <CardActions>
-          <Button onClick={() => { bagSet(null); }}>Create new bag</Button>
-        </CardActions> */}
       </Card>
     </Stack>
   </CardContent>;
 }
 
 function TreeLevel({ folder, tree }: { folder: string, tree: any }) {
-  const [show, setShow] = useState(false);
+  const [show, setShow] = useState(folder === "$:");
   return <>
     <ListItemButton key={folder} onClick={() => { setShow(e => !e); }}>
-      <ListItemText primary={folder} />
+      <ListItemText primary={folder} secondary={!Object.keys(tree).length ? tree[name] : undefined} />
     </ListItemButton>
     <Collapse in={show} timeout="auto" unmountOnExit>
       <List sx={{ paddingLeft: "1rem" }} component="div" disablePadding>
