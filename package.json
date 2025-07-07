@@ -53,7 +53,7 @@
     "env": "env",
     "test": "node scripts.mjs test",
     "prepublishOnly": "npm run build",
-    "prisma:migrate": "DATABASE_URL=file:test.sqlite npx prisma migrate dev"
+    "prisma:migrate": "DATABASE_URL=file:test.sqlite npx prisma migrate dev --create-only --skip-generate --schema prisma/schema.prisma"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "6.10.1",

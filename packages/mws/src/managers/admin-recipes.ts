@@ -12,7 +12,7 @@ export const RecipeKeyMap: RouterKeyMap<RecipeManager, true> = {
   bag_create_or_update: true,
   bag_delete: true,
   bag_acl_update: true,
-  
+
   recipe_create_or_update: true,
   recipe_delete: true,
   recipe_acl_update: true,
@@ -42,12 +42,14 @@ export class RecipeManager {
     owner_id: z.prismaField("Recipes", "owner_id", "string", true).optional(),
     skip_required_plugins: z.prismaField("Recipes", "skip_required_plugins", "boolean"),
     skip_core: z.prismaField("Recipes", "skip_core", "boolean"),
+    preload_store: z.prismaField("Recipes", "preload_store", "boolean"),
+    custom_wiki: z.prismaField("Recipes", "custom_wiki", "string", true),
     create_only: z.boolean(),
   }), async (state, prisma) => {
     const {
       recipe_name, bag_names, description, owner_id,
       plugin_names, skip_core, skip_required_plugins,
-      create_only,
+      create_only, custom_wiki, preload_store
     } = state.data;
     const existing = await prisma.recipes.findUnique({ where: { recipe_name }, });
 
@@ -87,20 +89,18 @@ export class RecipeManager {
         where: { recipe_name },
         data: {
           description,
+          recipe_bags: { deleteMany: {}, },
           owner_id: isAdmin ? owner_id : undefined,
+          plugin_names,
           skip_core,
           skip_required_plugins,
-          plugin_names,
-          recipe_bags: { deleteMany: {}, }
+          preload_store,
+          custom_wiki,
         }
       });
       await prisma.recipes.update({
         where: { recipe_name },
-        data: {
-          recipe_bags: {
-            create: createBags
-          }
-        }
+        data: { recipe_bags: { create: createBags } }
       });
       return existing;
     } else {
@@ -110,10 +110,12 @@ export class RecipeManager {
           recipe_name,
           description,
           recipe_bags: { create: createBags },
-          plugin_names,
           owner_id: isAdmin ? owner_id : user_id,
+          plugin_names,
           skip_core,
-          skip_required_plugins
+          skip_required_plugins,
+          preload_store,
+          custom_wiki,
         },
       });
     }

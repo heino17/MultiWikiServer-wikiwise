@@ -17,8 +17,9 @@ import WithoutACL from '@mui/icons-material/GppBadOutlined';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import ExtensionOffIcon from '@mui/icons-material/ExtensionOff';
 import TuneIcon from '@mui/icons-material/Tune';
-import DeveloperModeIcon from '@mui/icons-material/DeveloperMode';
-
+import IntegrationInstructionsIcon from '@mui/icons-material/IntegrationInstructions';
+import HtmlIcon from '@mui/icons-material/Html';
+import JavascriptIcon from '@mui/icons-material/Javascript';
 import { useEventEmitter } from '../../helpers';
 
 
@@ -51,12 +52,18 @@ export function Recipes() {
               const bagsReadable = recipe.recipe_bags.every(bag => !!getBag(bag.bag_id));
               const requiredDisabled = recipe.skip_required_plugins;
               const coreDisabled = recipe.skip_core;
+              const customWiki = !!recipe.custom_wiki;
               return (<>
 
                 <ListItemButton key={recipe.recipe_name} disableRipple>
+                  {customWiki && <Tooltip title="Custom Wiki">
+                    <IconButton>
+                      <HtmlIcon color="error" fontSize='large' />
+                    </IconButton>
+                  </Tooltip>}
                   {coreDisabled && <Tooltip title="Core Disabled">
                     <IconButton>
-                      <DeveloperModeIcon color="error" fontSize='large' />
+                      <IntegrationInstructionsIcon color="error" fontSize='large' />
                     </IconButton>
                   </Tooltip>}
                   <ListItemAvatar>
@@ -85,6 +92,11 @@ export function Recipes() {
                     {requiredDisabled && <Tooltip title="Required Plugins Disabled">
                       <IconButton>
                         <ExtensionOffIcon />
+                      </IconButton>
+                    </Tooltip>}
+                    {recipe.preload_store && <Tooltip title="Preload Store Enabled">
+                      <IconButton>
+                        <JavascriptIcon fontSize='large' />
                       </IconButton>
                     </Tooltip>}
 

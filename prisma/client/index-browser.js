@@ -126,6 +126,8 @@ exports.Prisma.RecipesScalarFieldEnum = {
   plugin_names: "plugin_names",
   skip_required_plugins: "skip_required_plugins",
   skip_core: "skip_core",
+  preload_store: "preload_store",
+  custom_wiki: "custom_wiki",
 };
 
 exports.Prisma.RecipeAclScalarFieldEnum = {

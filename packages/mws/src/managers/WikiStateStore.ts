@@ -51,6 +51,8 @@ export class WikiStateStore extends TiddlerStore_PrismaTransaction {
 
     const { cachePath, pluginFiles, pluginHashes, requiredPlugins } = state.pluginCache;
 
+    const { custom_wiki, preload_store } = recipe;
+
     const plugins = [
       ...new Set([
         ...(!recipe.skip_core) ? ["$:/core"] : [],
@@ -58,6 +60,11 @@ export class WikiStateStore extends TiddlerStore_PrismaTransaction {
         ...recipe.plugin_names,
       ]).values()
     ];
+
+    plugins.forEach(e => {
+      if (!state.pluginCache.pluginFiles.has(e))
+        console.log(`Recipe ${recipe_name} uses unknown plugin ${e}`);
+    });
 
     // using early hints actually helps stale-while-revalidate
     // we could also use the hash in the url
@@ -82,7 +89,7 @@ export class WikiStateStore extends TiddlerStore_PrismaTransaction {
         _max: { revision_id: true },
         where: { bag_id: { in: recipe.recipe_bags.map(e => e.bag.bag_id) } }
       }),
-      readFile(resolve(state.config.cachePath, "tiddlywiki5.html"), "utf8")
+      custom_wiki ? Promise.resolve(custom_wiki) : readFile(resolve(state.config.cachePath, "tiddlywiki5.html"), "utf8")
     ]);
 
     const hash = createHash('md5');
@@ -130,6 +137,9 @@ export class WikiStateStore extends TiddlerStore_PrismaTransaction {
     //   $tw.preloadTiddlers.push(fields);
     // };
     const headPos = template.indexOf("</head>");
+    if (headPos === -1) {
+      throw new Error(`Cannot find </head> in ${custom_wiki ? "custom wiki" : "template"} for recipe ${recipe_name}`);
+    }
     await state.write(template.substring(0, headPos));
 
     if (enableExternalPlugins) {
@@ -141,23 +151,7 @@ export class WikiStateStore extends TiddlerStore_PrismaTransaction {
       }).join("\n") + "\n");
     }
 
-
-    // Splice in our tiddlers
-    const marker = `<script class="tiddlywiki-tiddler-store" type="application/json">[`;
-    const markerPos = template.indexOf(marker);
-    if (markerPos === -1) {
-      throw new Error("Cannot find tiddler store in template");
-    }
-
-    await state.write(template.substring(headPos, markerPos));
-
-    plugins.forEach(e => {
-      if (!state.pluginCache.pluginFiles.has(e))
-        console.log(`Recipe ${recipe_name} uses unknown plugin ${e}`);
-    });
-
-    if (enableExternalPlugins) {
-
+    if (enableExternalPlugins || preload_store) {
       await state.write(`
 <script>
 window.$tw = window.$tw || Object.create(null);
@@ -167,76 +161,110 @@ $tw.preloadTiddler = function(fields) {
 };
 </script>
 `);
+    }
 
-      await state.write(plugins.map(e => {
-        const plugin = pluginFiles.get(e)!;
-        const hash = pluginHashes.get(e)!;
-        return `<script src="${state.pathPrefix}/$cache/${plugin}/plugin.js" `
-          + `integrity="${hash}" crossorigin="anonymous"></script>`;
-      }).join("\n") + "\n");
 
-      await state.write(marker);
+
+    if (preload_store) {
+      if (enableExternalPlugins) {
+
+        await state.write(plugins.map(e => {
+          const plugin = pluginFiles.get(e)!;
+          const hash = pluginHashes.get(e)!;
+          return `<script src="${state.pathPrefix}/$cache/${plugin}/plugin.js" `
+            + `integrity="${hash}" crossorigin="anonymous"></script>`;
+        }).join("\n") + "\n");
+
+      }
+
+      state.write(`<script>$tw.preloadTiddlers.push(`);
+
+      if (!enableExternalPlugins) {
+        const fileStreams = plugins.map(e => createReadStream(join(cachePath, pluginFiles.get(e)!, "plugin.json")));
+
+        for (let i = 0; i < fileStreams.length; i++) {
+          state.write("\n");
+          await state.pipeFrom(fileStreams[i]!);
+          state.write(",");
+        }
+      }
+
+      await this.writeStoreTiddlers(state, recipe, recipe_name);
+
+      state.write(");</script>\n");
+
+      await state.write(template.substring(headPos));
 
     } else {
 
-      await state.write(marker);
+      if (enableExternalPlugins) {
 
-      const fileStreams = plugins.map(e => createReadStream(join(cachePath, pluginFiles.get(e)!, "plugin.json"))
-      );
+        await state.write(plugins.map(e => {
+          const plugin = pluginFiles.get(e)!;
+          const hash = pluginHashes.get(e)!;
+          return `<script src="${state.pathPrefix}/$cache/${plugin}/plugin.js" `
+            + `integrity="${hash}" crossorigin="anonymous"></script>`;
+        }).join("\n") + "\n");
 
-      for (let i = 0; i < fileStreams.length; i++) {
-        state.write("\n");
-        await state.pipeFrom(fileStreams[i]!);
-        state.write(",");
       }
 
+      // Splice in our tiddlers
+      const marker = `<script class="tiddlywiki-tiddler-store" type="application/json">[`;
+      const markerPos = template.indexOf(marker);
+      if (markerPos === -1) {
+        throw new Error("Cannot find tiddler store in template");
+      }
+      await state.write(template.substring(headPos, markerPos));
+
+      await state.write(marker);
+
+      if (!enableExternalPlugins) {
+
+        const fileStreams = plugins.map(e => createReadStream(join(cachePath, pluginFiles.get(e)!, "plugin.json")));
+
+        for (let i = 0; i < fileStreams.length; i++) {
+          state.write("\n");
+          await state.pipeFrom(fileStreams[i]!);
+          state.write(",");
+        }
+
+      }
+
+      await this.writeStoreTiddlers(state, recipe, recipe_name);
+
+      await state.write(template.substring(markerPos + marker.length));
     }
 
 
-    async function writeTiddler(tiddlerFields: Record<string, string>) {
-      await state.write(JSON.stringify(tiddlerFields).replace(/</g, "\\u003c") + ",\n");
-    }
-
-    const bagOrder = new Map(recipe.recipe_bags.map(e => [e.bag.bag_id, e.position]));
-    const bagIDs = recipe.recipe_bags.filter(e => !state.pluginCache.pluginFiles.has(e.bag.bag_name)).map(e => e.bag.bag_id);
-    await this.serveStoreTiddlers(bagIDs, bagOrder, writeTiddler);
-
-    await writeTiddler({
-      title: "$:/config/multiwikiclient/recipe",
-      text: recipe_name
-    });
-
-    await writeTiddler({
-      title: "$:/config/multiwikiclient/use-server-sent-events",
-      text: false ? "yes" : "no"
-    });
-
-    await writeTiddler({
-      title: "$:/config/multiwikiclient/host",
-      text: "$protocol$//$host$" + state.pathPrefix + "/",
-    });
-
-    if (state.config.enableDevServer)
-      await writeTiddler({
-        title: "$:/state/multiwikiclient/dev-mode",
-        text: "yes"
-      });
 
 
     // await writeTiddler({
     //   title: "$:/state/multiwikiclient/gzip-stream",
     //   text: "yes"
     // })
-    await state.write(template.substring(markerPos + marker.length));
+
     // Finish response
     return state.end();
 
   }
 
 
+  private async writeStoreTiddlers(state: ServerRequest<"string" | "stream" | "json" | "buffer" | "www-form-urlencoded" | "www-form-urlencoded-urlsearchparams" | "ignore", string, unknown>, recipe: { recipe_bags: { position: number & { __prisma_table: "Recipe_bags"; __prisma_field: "position"; }; bag: { bag_id: string & { __prisma_table: "Bags"; __prisma_field: "bag_id"; }; bag_name: string & { __prisma_table: "Bags"; __prisma_field: "bag_name"; }; }; }[]; } & { recipe_id: string & { __prisma_table: "Recipes"; __prisma_field: "recipe_id"; }; recipe_name: string & { __prisma_table: "Recipes"; __prisma_field: "recipe_name"; }; description: string & { __prisma_table: "Recipes"; __prisma_field: "description"; }; owner_id: PrismaField<"Recipes", "owner_id">; plugin_names: PrismaJson.Recipes_plugin_names & { __prisma_table: "Recipes"; __prisma_field: "plugin_names"; }; skip_required_plugins: PrismaField<"Recipes", "skip_required_plugins">; skip_core: PrismaField<"Recipes", "skip_core">; preload_store: PrismaField<"Recipes", "preload_store">; custom_wiki: PrismaField<"Recipes", "custom_wiki">; }, recipe_name: string & { __prisma_table: "Recipes"; __prisma_field: "recipe_name"; }) {
+    async function writeTiddler(tiddlerFields: Record<string, string>) {
+      await state.write(JSON.stringify(tiddlerFields).replace(/</g, "\\u003c") + ",\n");
+    }
+
+    const bagOrder = new Map(recipe.recipe_bags.map(e => [e.bag.bag_id, e.position]));
+    const bagIDs = recipe.recipe_bags.filter(e => !state.pluginCache.pluginFiles.has(e.bag.bag_name)).map(e => e.bag.bag_id);
+    await this.serveStoreTiddlers(bagIDs, bagOrder, recipe_name, state.pathPrefix, state.config.enableDevServer, writeTiddler);
+  }
+
   private async serveStoreTiddlers(
     bagKeys: string[],
     bagOrder: Map<string, number>,
+    recipe_name: PrismaField<"Recipes", "recipe_name">,
+    pathPrefix: string,
+    enableDevServer: boolean,
     writeTiddler: (tiddlerFields: Record<string, string>) => Promise<void>
   ) {
     // NOTES: 
@@ -297,7 +325,7 @@ $tw.preloadTiddler = function(fields) {
 
       bagInfo[title] = bag_name;
       revisionInfo[title] = revision_id.toString();
-      await writeTiddler(tiddler);
+      writeTiddler(tiddler);
     }
 
     const last_revision_id = Object.values(revisionInfo).reduce((n, e) => n > e ? n : e, "");
@@ -316,6 +344,28 @@ $tw.preloadTiddler = function(fields) {
       title: "$:/state/multiwikiclient/recipe/last_revision_id",
       text: last_revision_id
     });
+
+    writeTiddler({
+      title: "$:/config/multiwikiclient/recipe",
+      text: recipe_name
+    });
+
+    writeTiddler({
+      title: "$:/config/multiwikiclient/use-server-sent-events",
+      text: false ? "yes" : "no"
+    });
+
+    writeTiddler({
+      title: "$:/config/multiwikiclient/host",
+      text: "$protocol$//$host$" + pathPrefix + "/",
+    });
+
+    if (enableDevServer)
+      writeTiddler({
+        title: "$:/state/multiwikiclient/dev-mode",
+        text: "yes"
+      });
+
   }
 
   async serveBagTiddler(
@@ -375,6 +425,7 @@ $tw.preloadTiddler = function(fields) {
 
 
 }
+
 
 function getTiddlerFields(
   title: PrismaField<"Tiddlers", "title">,

@@ -74,8 +74,8 @@ export class ServerState {
     const existing = Object.fromEntries((await this.engine.settings.findMany()).map(e => [e.key, e.value]));
 
     for (const { key, valueType } of this.settings) {
-      const value = valueType === "boolean" ? "false" : valueType === "number" ? "0" : "";
       if (typeof existing[key] === "undefined") {
+        const value = valueType === "boolean" ? "false" : valueType === "number" ? "0" : "";
         await this.engine.settings.create({ data: { key, value } });
         existing[key] = value as any;
       }

@@ -3145,6 +3145,8 @@ export namespace Prisma {
     owner_id: string | null
     skip_required_plugins: boolean | null
     skip_core: boolean | null
+    preload_store: boolean | null
+    custom_wiki: string | null
   }
 
   export type RecipesMaxAggregateOutputType = {
@@ -3154,6 +3156,8 @@ export namespace Prisma {
     owner_id: string | null
     skip_required_plugins: boolean | null
     skip_core: boolean | null
+    preload_store: boolean | null
+    custom_wiki: string | null
   }
 
   export type RecipesCountAggregateOutputType = {
@@ -3164,6 +3168,8 @@ export namespace Prisma {
     plugin_names: number
     skip_required_plugins: number
     skip_core: number
+    preload_store: number
+    custom_wiki: number
     _all: number
   }
 
@@ -3175,6 +3181,8 @@ export namespace Prisma {
     owner_id?: true
     skip_required_plugins?: true
     skip_core?: true
+    preload_store?: true
+    custom_wiki?: true
   }
 
   export type RecipesMaxAggregateInputType = {
@@ -3184,6 +3192,8 @@ export namespace Prisma {
     owner_id?: true
     skip_required_plugins?: true
     skip_core?: true
+    preload_store?: true
+    custom_wiki?: true
   }
 
   export type RecipesCountAggregateInputType = {
@@ -3194,6 +3204,8 @@ export namespace Prisma {
     plugin_names?: true
     skip_required_plugins?: true
     skip_core?: true
+    preload_store?: true
+    custom_wiki?: true
     _all?: true
   }
 
@@ -3277,6 +3289,8 @@ export namespace Prisma {
     plugin_names: PrismaJson.Recipes_plugin_names
     skip_required_plugins: boolean
     skip_core: boolean
+    preload_store: boolean
+    custom_wiki: string | null
     _count: RecipesCountAggregateOutputType | null
     _min: RecipesMinAggregateOutputType | null
     _max: RecipesMaxAggregateOutputType | null
@@ -3304,6 +3318,8 @@ export namespace Prisma {
     plugin_names?: boolean
     skip_required_plugins?: boolean
     skip_core?: boolean
+    preload_store?: boolean
+    custom_wiki?: boolean
     recipe_bags?: boolean | Recipes$recipe_bagsArgs<ExtArgs>
     acl?: boolean | Recipes$aclArgs<ExtArgs>
     _count?: boolean | RecipesCountOutputTypeDefaultArgs<ExtArgs>
@@ -3317,6 +3333,8 @@ export namespace Prisma {
     plugin_names?: boolean
     skip_required_plugins?: boolean
     skip_core?: boolean
+    preload_store?: boolean
+    custom_wiki?: boolean
   }, ExtArgs["result"]["recipes"]>
 
   export type RecipesSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -3327,6 +3345,8 @@ export namespace Prisma {
     plugin_names?: boolean
     skip_required_plugins?: boolean
     skip_core?: boolean
+    preload_store?: boolean
+    custom_wiki?: boolean
   }, ExtArgs["result"]["recipes"]>
 
   export type RecipesSelectScalar = {
@@ -3337,9 +3357,11 @@ export namespace Prisma {
     plugin_names?: boolean
     skip_required_plugins?: boolean
     skip_core?: boolean
+    preload_store?: boolean
+    custom_wiki?: boolean
   }
 
-  export type RecipesOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"recipe_id" | "recipe_name" | "description" | "owner_id" | "plugin_names" | "skip_required_plugins" | "skip_core", ExtArgs["result"]["recipes"]>
+  export type RecipesOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"recipe_id" | "recipe_name" | "description" | "owner_id" | "plugin_names" | "skip_required_plugins" | "skip_core" | "preload_store" | "custom_wiki", ExtArgs["result"]["recipes"]>
   export type RecipesInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     recipe_bags?: boolean | Recipes$recipe_bagsArgs<ExtArgs>
     acl?: boolean | Recipes$aclArgs<ExtArgs>
@@ -3365,6 +3387,8 @@ export namespace Prisma {
       plugin_names: PrismaJson.Recipes_plugin_names
       skip_required_plugins: boolean
       skip_core: boolean
+      preload_store: boolean
+      custom_wiki: string | null
     }, ExtArgs["result"]["recipes"]>
     composites: {}
   }
@@ -3797,6 +3821,8 @@ export namespace Prisma {
     readonly plugin_names: FieldRef<"Recipes", 'Json'>
     readonly skip_required_plugins: FieldRef<"Recipes", 'Boolean'>
     readonly skip_core: FieldRef<"Recipes", 'Boolean'>
+    readonly preload_store: FieldRef<"Recipes", 'Boolean'>
+    readonly custom_wiki: FieldRef<"Recipes", 'String'>
   }
     
 
@@ -13961,7 +13987,9 @@ export namespace Prisma {
     owner_id: 'owner_id',
     plugin_names: 'plugin_names',
     skip_required_plugins: 'skip_required_plugins',
-    skip_core: 'skip_core'
+    skip_core: 'skip_core',
+    preload_store: 'preload_store',
+    custom_wiki: 'custom_wiki'
   };
 
   export type RecipesScalarFieldEnum = (typeof RecipesScalarFieldEnum)[keyof typeof RecipesScalarFieldEnum]
@@ -14212,6 +14240,8 @@ export namespace Prisma {
     plugin_names?: JsonFilter<"Recipes">
     skip_required_plugins?: BoolFilter<"Recipes"> | boolean
     skip_core?: BoolFilter<"Recipes"> | boolean
+    preload_store?: BoolFilter<"Recipes"> | boolean
+    custom_wiki?: StringNullableFilter<"Recipes"> | string | null
     recipe_bags?: Recipe_bagsListRelationFilter
     acl?: RecipeAclListRelationFilter
   }
@@ -14224,6 +14254,8 @@ export namespace Prisma {
     plugin_names?: SortOrder
     skip_required_plugins?: SortOrder
     skip_core?: SortOrder
+    preload_store?: SortOrder
+    custom_wiki?: SortOrderInput | SortOrder
     recipe_bags?: Recipe_bagsOrderByRelationAggregateInput
     acl?: RecipeAclOrderByRelationAggregateInput
   }
@@ -14239,6 +14271,8 @@ export namespace Prisma {
     plugin_names?: JsonFilter<"Recipes">
     skip_required_plugins?: BoolFilter<"Recipes"> | boolean
     skip_core?: BoolFilter<"Recipes"> | boolean
+    preload_store?: BoolFilter<"Recipes"> | boolean
+    custom_wiki?: StringNullableFilter<"Recipes"> | string | null
     recipe_bags?: Recipe_bagsListRelationFilter
     acl?: RecipeAclListRelationFilter
   }, "recipe_id" | "recipe_name">
@@ -14251,6 +14285,8 @@ export namespace Prisma {
     plugin_names?: SortOrder
     skip_required_plugins?: SortOrder
     skip_core?: SortOrder
+    preload_store?: SortOrder
+    custom_wiki?: SortOrderInput | SortOrder
     _count?: RecipesCountOrderByAggregateInput
     _max?: RecipesMaxOrderByAggregateInput
     _min?: RecipesMinOrderByAggregateInput
@@ -14267,6 +14303,8 @@ export namespace Prisma {
     plugin_names?: JsonWithAggregatesFilter<"Recipes">
     skip_required_plugins?: BoolWithAggregatesFilter<"Recipes"> | boolean
     skip_core?: BoolWithAggregatesFilter<"Recipes"> | boolean
+    preload_store?: BoolWithAggregatesFilter<"Recipes"> | boolean
+    custom_wiki?: StringNullableWithAggregatesFilter<"Recipes"> | string | null
   }
 
   export type RecipeAclWhereInput = {
@@ -14801,6 +14839,8 @@ export namespace Prisma {
     plugin_names: PrismaJson.Recipes_plugin_names
     skip_required_plugins?: boolean
     skip_core?: boolean
+    preload_store?: boolean
+    custom_wiki?: string | null
     recipe_bags?: Recipe_bagsCreateNestedManyWithoutRecipeInput
     acl?: RecipeAclCreateNestedManyWithoutRecipeInput
   }
@@ -14813,6 +14853,8 @@ export namespace Prisma {
     plugin_names: PrismaJson.Recipes_plugin_names
     skip_required_plugins?: boolean
     skip_core?: boolean
+    preload_store?: boolean
+    custom_wiki?: string | null
     recipe_bags?: Recipe_bagsUncheckedCreateNestedManyWithoutRecipeInput
     acl?: RecipeAclUncheckedCreateNestedManyWithoutRecipeInput
   }
@@ -14825,6 +14867,8 @@ export namespace Prisma {
     plugin_names?: PrismaJson.Recipes_plugin_names
     skip_required_plugins?: BoolFieldUpdateOperationsInput | boolean
     skip_core?: BoolFieldUpdateOperationsInput | boolean
+    preload_store?: BoolFieldUpdateOperationsInput | boolean
+    custom_wiki?: NullableStringFieldUpdateOperationsInput | string | null
     recipe_bags?: Recipe_bagsUpdateManyWithoutRecipeNestedInput
     acl?: RecipeAclUpdateManyWithoutRecipeNestedInput
   }
@@ -14837,6 +14881,8 @@ export namespace Prisma {
     plugin_names?: PrismaJson.Recipes_plugin_names
     skip_required_plugins?: BoolFieldUpdateOperationsInput | boolean
     skip_core?: BoolFieldUpdateOperationsInput | boolean
+    preload_store?: BoolFieldUpdateOperationsInput | boolean
+    custom_wiki?: NullableStringFieldUpdateOperationsInput | string | null
     recipe_bags?: Recipe_bagsUncheckedUpdateManyWithoutRecipeNestedInput
     acl?: RecipeAclUncheckedUpdateManyWithoutRecipeNestedInput
   }
@@ -14849,6 +14895,8 @@ export namespace Prisma {
     plugin_names: PrismaJson.Recipes_plugin_names
     skip_required_plugins?: boolean
     skip_core?: boolean
+    preload_store?: boolean
+    custom_wiki?: string | null
   }
 
   export type RecipesUpdateManyMutationInput = {
@@ -14859,6 +14907,8 @@ export namespace Prisma {
     plugin_names?: PrismaJson.Recipes_plugin_names
     skip_required_plugins?: BoolFieldUpdateOperationsInput | boolean
     skip_core?: BoolFieldUpdateOperationsInput | boolean
+    preload_store?: BoolFieldUpdateOperationsInput | boolean
+    custom_wiki?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type RecipesUncheckedUpdateManyInput = {
@@ -14869,6 +14919,8 @@ export namespace Prisma {
     plugin_names?: PrismaJson.Recipes_plugin_names
     skip_required_plugins?: BoolFieldUpdateOperationsInput | boolean
     skip_core?: BoolFieldUpdateOperationsInput | boolean
+    preload_store?: BoolFieldUpdateOperationsInput | boolean
+    custom_wiki?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type RecipeAclCreateInput = {
@@ -15464,6 +15516,8 @@ export namespace Prisma {
     plugin_names?: SortOrder
     skip_required_plugins?: SortOrder
     skip_core?: SortOrder
+    preload_store?: SortOrder
+    custom_wiki?: SortOrder
   }
 
   export type RecipesMaxOrderByAggregateInput = {
@@ -15473,6 +15527,8 @@ export namespace Prisma {
     owner_id?: SortOrder
     skip_required_plugins?: SortOrder
     skip_core?: SortOrder
+    preload_store?: SortOrder
+    custom_wiki?: SortOrder
   }
 
   export type RecipesMinOrderByAggregateInput = {
@@ -15482,6 +15538,8 @@ export namespace Prisma {
     owner_id?: SortOrder
     skip_required_plugins?: SortOrder
     skip_core?: SortOrder
+    preload_store?: SortOrder
+    custom_wiki?: SortOrder
   }
 
   export type StringNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -16754,6 +16812,8 @@ export namespace Prisma {
     plugin_names: PrismaJson.Recipes_plugin_names
     skip_required_plugins?: boolean
     skip_core?: boolean
+    preload_store?: boolean
+    custom_wiki?: string | null
     recipe_bags?: Recipe_bagsCreateNestedManyWithoutRecipeInput
   }
 
@@ -16765,6 +16825,8 @@ export namespace Prisma {
     plugin_names: PrismaJson.Recipes_plugin_names
     skip_required_plugins?: boolean
     skip_core?: boolean
+    preload_store?: boolean
+    custom_wiki?: string | null
     recipe_bags?: Recipe_bagsUncheckedCreateNestedManyWithoutRecipeInput
   }
 
@@ -16792,6 +16854,8 @@ export namespace Prisma {
     plugin_names?: PrismaJson.Recipes_plugin_names
     skip_required_plugins?: BoolFieldUpdateOperationsInput | boolean
     skip_core?: BoolFieldUpdateOperationsInput | boolean
+    preload_store?: BoolFieldUpdateOperationsInput | boolean
+    custom_wiki?: NullableStringFieldUpdateOperationsInput | string | null
     recipe_bags?: Recipe_bagsUpdateManyWithoutRecipeNestedInput
   }
 
@@ -16803,6 +16867,8 @@ export namespace Prisma {
     plugin_names?: PrismaJson.Recipes_plugin_names
     skip_required_plugins?: BoolFieldUpdateOperationsInput | boolean
     skip_core?: BoolFieldUpdateOperationsInput | boolean
+    preload_store?: BoolFieldUpdateOperationsInput | boolean
+    custom_wiki?: NullableStringFieldUpdateOperationsInput | string | null
     recipe_bags?: Recipe_bagsUncheckedUpdateManyWithoutRecipeNestedInput
   }
 
@@ -16837,6 +16903,8 @@ export namespace Prisma {
     plugin_names: PrismaJson.Recipes_plugin_names
     skip_required_plugins?: boolean
     skip_core?: boolean
+    preload_store?: boolean
+    custom_wiki?: string | null
     acl?: RecipeAclCreateNestedManyWithoutRecipeInput
   }
 
@@ -16848,6 +16916,8 @@ export namespace Prisma {
     plugin_names: PrismaJson.Recipes_plugin_names
     skip_required_plugins?: boolean
     skip_core?: boolean
+    preload_store?: boolean
+    custom_wiki?: string | null
     acl?: RecipeAclUncheckedCreateNestedManyWithoutRecipeInput
   }
 
@@ -16904,6 +16974,8 @@ export namespace Prisma {
     plugin_names?: PrismaJson.Recipes_plugin_names
     skip_required_plugins?: BoolFieldUpdateOperationsInput | boolean
     skip_core?: BoolFieldUpdateOperationsInput | boolean
+    preload_store?: BoolFieldUpdateOperationsInput | boolean
+    custom_wiki?: NullableStringFieldUpdateOperationsInput | string | null
     acl?: RecipeAclUpdateManyWithoutRecipeNestedInput
   }
 
@@ -16915,6 +16987,8 @@ export namespace Prisma {
     plugin_names?: PrismaJson.Recipes_plugin_names
     skip_required_plugins?: BoolFieldUpdateOperationsInput | boolean
     skip_core?: BoolFieldUpdateOperationsInput | boolean
+    preload_store?: BoolFieldUpdateOperationsInput | boolean
+    custom_wiki?: NullableStringFieldUpdateOperationsInput | string | null
     acl?: RecipeAclUncheckedUpdateManyWithoutRecipeNestedInput
   }
 

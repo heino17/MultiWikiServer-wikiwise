@@ -1,7 +1,7 @@
 import React, { PropsWithChildren, useCallback, useMemo } from 'react';
 import { IndexJson, ok, Refresher, SelectField, serverRequest, useIndexJson } from '../../helpers';
 import {
-  Autocomplete, Checkbox, DialogContent, DialogTitle, Divider, FormControlLabel, FormHelperText, IconButton, Stack, TextField,
+  Autocomplete, Button, Checkbox, DialogContent, DialogTitle, Divider, FormControlLabel, FormHelperText, IconButton, Stack, TextField,
   useMediaQuery, useTheme
 
 } from "@mui/material";
@@ -27,6 +27,8 @@ export interface Recipe {
   plugin_names: string[];
   skip_required_plugins: boolean;
   skip_core: boolean;
+  preload_store: boolean;
+  custom_wiki: string | null;
 }
 
 export const useRecipeEditForm = createDialogForm({
@@ -53,6 +55,12 @@ export const useRecipeEditForm = createDialogForm({
       }),
       skip_core: new forms.FormControl<boolean>(value?.skip_core ?? false, {
         nonNullable: true,
+      }),
+      preload_store: new forms.FormControl<boolean>(value?.preload_store ?? false, {
+        nonNullable: true,
+      }),
+      custom_wiki: new forms.FormControl<string | null>(value?.custom_wiki ?? null, {
+        nonNullable: false,
       }),
     });
     if (value) form.controls.recipe_name.disable();
@@ -126,7 +134,11 @@ export const useRecipeEditForm = createDialogForm({
         <h2>Required Plugins</h2>
         <p>These plugins are always included even if no other client plugins are set.</p>
         <ul>{indexJson.corePlugins.map(e => <li>{e}</li>)}</ul>
-        <p>The plugins are required for the wiki to save properly. The themes are provided as a default fallback in case nothing else is availabe.</p>
+        <p>
+          The plugins are required for the wiki to save properly. The themes are
+          provided as a default fallback in case nothing else is availabe.
+          You can disable these if you want a completely vanilla wiki.
+        </p>
         <Stack direction="row" alignItems="center">
           <Checkbox
             checked={recipeForm.controls.skip_required_plugins.value}
@@ -135,14 +147,14 @@ export const useRecipeEditForm = createDialogForm({
           />
           <span>Skip Required Plugins</span>
         </Stack>
-        <FormHelperText sx={{ marginBlock: 0 }}>Don't include required plugins.</FormHelperText>
       </Stack>
       <Divider />
       <Stack direction="column" justifyContent="stretch" alignItems="stretch" spacing={0}>
         <h2>TiddlyWiki Core</h2>
         <p>
           The TiddlyWiki core is the heart of your wiki. Obviously the only reason
-          to disable this is if you want to write a completely new core from scratch.
+          to disable this is if you want to write a completely new core from scratch
+          or want to include an older version of the core from a bag.
         </p>
         <Stack direction="row" alignItems="center">
           <Checkbox
@@ -152,7 +164,50 @@ export const useRecipeEditForm = createDialogForm({
           />
           <span>Skip The Core!</span>
         </Stack>
-        <FormHelperText sx={{ marginBlock: 0 }}>Don't include the core.</FormHelperText>
+      </Stack>
+      <Divider />
+      <Stack direction="column" justifyContent="stretch" alignItems="stretch" spacing={0}>
+        <h2>Store Rendering</h2>
+        <p>
+          Older version of TiddlyWiki may not support the current store rendering.
+          You can instead add tiddlers via <code>$tw.preloadTiddlers</code>, a much older feature.
+        </p>
+        <Stack direction="row" alignItems="center">
+          <Checkbox
+            checked={recipeForm.controls.preload_store.value}
+            onChange={onChecked(recipeForm.controls.preload_store)}
+            disabled={recipeForm.controls.preload_store.disabled}
+          />
+          <span>Preload Tiddlers</span>
+        </Stack>
+      </Stack>
+      <Divider />
+      <Stack direction="column" justifyContent="stretch" alignItems="stretch" spacing={0}>
+        <h2>Custom Wiki</h2>
+        <p>
+          The final boss of advanced recipes. This allows you to completely
+          replace the wiki page with a custom one, including
+          raw markup, old versions of core, or even a completely different wiki.
+          All the HTTP endpoints will still work, and the store tiddlers and recipe plugins
+          will be added right before the closing head tag using <code>$tw.preloadTiddlers</code>.
+          <br />
+          <br />
+          The options above still apply.
+          Boot, library, and raw markup tiddlers are not read from store and must be included here manually.
+          If the wiki is old enough, all options will need to be enabled.
+          <br />
+          <br />
+          If you want to bulk import an older wiki, you can create a separate recipe with the same bag to 
+          import the tiddlers using the new bulk save feature, then open this recipe to view the tiddlers in the older version.
+        </p>
+        <TextField
+          multiline
+          rows={10}
+          label="Custom Wiki"
+          value={recipeForm.controls.custom_wiki.value}
+          onChange={(event) => recipeForm.controls.custom_wiki.setValue(event.target.value)}
+          disabled={recipeForm.controls.custom_wiki.disabled}
+        />
       </Stack>
       <FormDialogSubmitButton
         onSubmit={async () => {
@@ -166,13 +221,13 @@ export const useRecipeEditForm = createDialogForm({
           if (recipeForm.invalid) { console.log(recipeForm.errors); throw recipeForm.errors; }
 
           const recipe_name = isCreate ? formData.recipe_name : value.recipe_name;
-        
+
           ok(recipe_name);
           ok(formData.description);
           ok(formData.bag_names);
           ok(formData.plugin_names);
-          
-          const { plugin_names, skip_required_plugins = false, skip_core = false } = formData;
+
+          const { plugin_names, skip_required_plugins = false, skip_core = false, preload_store = false } = formData;
 
           const { recipe_id } = await serverRequest.recipe_create_or_update({
             recipe_name,
@@ -184,6 +239,8 @@ export const useRecipeEditForm = createDialogForm({
             plugin_names,
             skip_required_plugins,
             skip_core,
+            preload_store,
+            custom_wiki: formData.custom_wiki || null,
             create_only: isCreate,
           });
 

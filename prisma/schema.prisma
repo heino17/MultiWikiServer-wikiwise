@@ -40,6 +40,8 @@ model Recipes {
   plugin_names          Json
   skip_required_plugins Boolean       @default(false)
   skip_core             Boolean       @default(false)
+  preload_store         Boolean       @default(false)
+  custom_wiki           String?
   recipe_bags           Recipe_bags[]
   acl                   RecipeAcl[]
 
