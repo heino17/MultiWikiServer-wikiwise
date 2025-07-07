@@ -1,8 +1,8 @@
 
 import { PropsWithChildren, ReactNode, useState } from 'react';
-import Header from './Header';
 
-import { Recipes, Bags } from '../Dashboard/Dashboard';
+import { Bags } from './BagsList';
+import { Recipes } from './RecipesList';
 import UserManagement from '../UserList/UserManagement';
 import ManageUser from '../UserEdit/ManageUser';
 import { useIndexJson } from '../../helpers/utils';
@@ -25,7 +25,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import GroupsIcon from '@mui/icons-material/Groups';
 import ExtensionIcon from '@mui/icons-material/Extension';
 import { sessionRequest } from '../../helpers';
-import { ClientPlugins } from '../Dashboard/ClientPlugins';
+import { ClientPlugins } from './ClientPlugins';
 import Settings from './Settings';
 
 

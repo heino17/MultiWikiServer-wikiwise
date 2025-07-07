@@ -1,7 +1,7 @@
 import { StrictMode, Suspense, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import Login from './components/Login/Login';
-import { PageRoot } from './components/Frame/Frame';
+import { PageRoot } from './components/Dashboard/Frame';
 import { DataLoader, getIndexJson, IndexJsonContext } from './helpers/utils';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
