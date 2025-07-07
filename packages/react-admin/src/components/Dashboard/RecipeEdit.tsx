@@ -134,11 +134,7 @@ export const useRecipeEditForm = createDialogForm({
         <h2>Required Plugins</h2>
         <p>These plugins are always included even if no other client plugins are set.</p>
         <ul>{indexJson.corePlugins.map(e => <li>{e}</li>)}</ul>
-        <p>
-          The plugins are required for the wiki to save properly. The themes are
-          provided as a default fallback in case nothing else is availabe.
-          You can disable these if you want a completely vanilla wiki.
-        </p>
+        <p>You can disable these if you want a completely vanilla wiki.</p>
         <Stack direction="row" alignItems="center">
           <Checkbox
             checked={recipeForm.controls.skip_required_plugins.value}
@@ -169,8 +165,8 @@ export const useRecipeEditForm = createDialogForm({
       <Stack direction="column" justifyContent="stretch" alignItems="stretch" spacing={0}>
         <h2>Store Rendering</h2>
         <p>
-          Older version of TiddlyWiki may not support the current store rendering.
-          You can instead add tiddlers via <code>$tw.preloadTiddlers</code>, a much older feature.
+          Modern TiddlyWiki versions have a JSON store which is injected on page load. 
+          For older wikis, you can add tiddlers via <code>$tw.preloadTiddlers</code>, a much older feature. 
         </p>
         <Stack direction="row" alignItems="center">
           <Checkbox
