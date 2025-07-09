@@ -2,10 +2,8 @@
 
 <a href="https://www.paypal.com/donate/?hosted_button_id=BVDDREGEU2ZEA">
   <img src="https://github.com/user-attachments/assets/6467378f-26fd-40ff-b60e-b8d62555c08a" width="20" />
-Donate via PayPal
+Donate via PayPal to support development
 </a>
-
-In its early stages, MWS is largely being developed by me, [Arlen22](https://github.com/Arlen22), based on input from the TiddlyWiki community at large, as well as my own experience with TiddlyWiki. I am a freelance software developer, so I can allocate time as needed, but that cuts into other work I could be doing. If you'd like to support my work on MWS, feel free to donate. It very directly allows me to put more time into this project. I've worked on several similar projects in the past, so this project is one I am quite passionate about, and I consider it a privelage to be able to do this.
 
 ## Warning
 
