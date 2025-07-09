@@ -317,7 +317,6 @@ export class Streamer {
     return new Promise<typeof STREAM_ENDED>((resolve, reject) => {
 
       sender.on("error", (err) => Promise.resolve().then(async (): Promise<typeof STREAM_ENDED> => {
-        console.log(err);
         if (err === 404 || err?.statusCode === 404) {
           return (await on404?.()) ?? this.sendEmpty(404);
         } else {

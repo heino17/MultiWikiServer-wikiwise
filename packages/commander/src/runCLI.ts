@@ -159,7 +159,7 @@ function getCLI(commands: Record<string, CommandFile>) {
 
   Object.keys(commands).forEach(key => {
     const c = commands[key]!;
-    // if (c.info.internal) return;
+    if (c.info.internal && !process.env.MWSDEV) return;
     if (c.info.name === "help") return;
     if (c.info.command) return void c.info.command(program);
     const command = program.command(c.info.name);

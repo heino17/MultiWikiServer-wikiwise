@@ -13,7 +13,7 @@ export const info: CommandInfo = {
       "help: print options for the specified endpoint"
     ]
   ],
-  internal: false,
+  internal: true,
 };
 
 

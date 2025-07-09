@@ -2,7 +2,7 @@
   "name": "@tiddlywiki/mws",
   "description": "TiddlyWiki Multiple Wiki Server",
   "private": false,
-  "version": "0.1.0",
+  "version": "0.1.8",
   "bin": {
     "mws": "./mws.run.mjs"
   },
@@ -39,6 +39,7 @@
     "node": ">=18"
   },
   "scripts": {
+    "install-android": "GYP_DEFINES=\"android_ndk_path=''\" npm install",
     "docs": "node scripts.mjs docs",
     "start": "node scripts.mjs start",
     "certs": "(cd dev && bash localhost_certs.sh)",
@@ -46,13 +47,11 @@
     "build": "tsup && npm run build:admin",
     "build:admin": "node scripts.mjs client-build",
     "build:client": "cd plugins/client && tsc",
-    "install-android": "GYP_DEFINES=\"android_ndk_path=''\" npm install",
-    "prisma:format": "prettier --write prisma/client/*.js prisma/client/*/*.js",
-    "prisma:generate": "node scripts.mjs prisma:generate",
     "dev:init-store": "rm -rf dev/wiki/store && DEBUG= npm start init-store",
     "env": "env",
     "test": "node scripts.mjs test",
-    "prepublishOnly": "npm run build",
+    "prisma:format": "prettier --write prisma/client/*.js prisma/client/*/*.js",
+    "prisma:generate": "node scripts.mjs prisma:generate",
     "prisma:migrate": "DATABASE_URL=file:test.sqlite npx prisma migrate dev --create-only --skip-generate --schema prisma/schema.prisma"
   },
   "dependencies": {
