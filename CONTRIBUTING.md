@@ -1,75 +1,92 @@
 # MWS Server Architecture Explained
 
-The MWS server architecture follows a clean separation of concerns with three distinct layers:
+This is a monorepo divided into separate projects. The entry point is in `packages/mws/src/index.ts`. The entry point imports the `server`, `commander`, and `events` projects. 
 
-## 1. Interface Layers
-- **CLI Commands**: Command-line interface for server configuration and maintenance tasks
-- **Web Routes**: HTTP endpoints that handle incoming requests for admin and wiki functionality
-- **Database**: Application logic that reads from and writes to the database. 
+The entire server uses Promises and async functions for pretty much everything. Synchronous file system calls should be avoided as much as possible. 
 
-## 2. Data Flow
-The architecture follows this pattern:
-1. **Request Reception**: Commands or HTTP requests arrive at their respective interface
-2. **Data Normalization**: Input is validated and transformed into a consistent format
-3. **Core Logic Execution**: Normalized data is passed to the appropriate methods in the database layer.
-4. **Response Delivery**: Results from the database layer are returned to the client
+The `events` project is the foundation of MWS. It contains an `EventEmitter` instance that everything else subscribes to. 
 
-## 3. Package Organization
-- **Commander Package**: Handles CLI parsing and command execution
-- **Server Package**: Manages web request routing, validation, and responses
-- **MWS Package**: Contains the database logic and business rules
-- **Events Package**: Provides communication between the other packages
+Events are emitted asyncly. Event listeners are awaited with `Promise.all`, and rejections throw back to the event emit call. This is intentional because it is the heart of the entire server, not just a public event bus, and errors shouldn't be ignored. Errors that come from things like attempting to send SSE events to other clients, however, should not be thrown because they aren't relevent to the source of the event. 
 
-## 4. Independence and Reusability
-Each layer has clear boundaries and responsibilities, allowing the components to be:
-- Developed together but maintained separately
-- Reused in different contexts
-- Published as independent packages
+There should be no singleton references other than the event emitter and event handlers should be as pure as possible, so that in theory it would be possible to run multiple completely separate MWS servers in the same process.
 
-## User Interface
+The `commander` project handles the CLI parsing code. It exports a default function which MWS calls to execute the CLI. Commander emits several events during execution, which MWS hooks into to scaffold the rest of the server. 
 
-The user experience involves three separate interfaces working together: the cli, the admin, and the wiki. 
+It also exports the base class for commands to inherit from, and because it instantiates the commands, commands should not specify their own constructor. Additional instance properties may be added to commands in the `cli.execute.before` event. 
 
-- The cli handles settings specific to the webserver, especially those which could make the site unreachable if configured incorrectly. It also has some commands to help with server maintenance. 
-- The admin manages users, roles, bags, recipes, site settings, and anything else that needs to be configured for the site. 
-- The wiki handles all tiddler and TW5-related routes. 
+The `server` project handles all web related stuff, but in an MWS-agnostic way. It only requires the `events` project, so it could be used as the foundation for unrelated webservers. Its internal API is directly inspired by the TiddlyWiki server API, with routing and centralized handling of the request body. 
 
-## Package Details
+The `mws` project is the application layer of MWS and ties everything else together. It defines all the commands and web server routes and handles the database connection. 
 
-MWS is divided into separate packages mostly because they are logically separate concerns:
+The `react-admin` package is the Admin UI. It's based on react, and is built automatically when the dev server is enabled. You can find the server route in `packages/mws/src/services/setupDevServer.ts`
 
-- **Server Package**: Provides request routing, handling, validation, response, compression, and all web-related request/response functionality. Designed to be flexible and reusable.
-- **Commander Package**: Handles CLI parsing and command execution through registered events.
-- **Events Package**: Provides communication between packages, allowing commander and server to be used independently.
-- **MWS Package**: Contains database logic and extends server/commander types. Most logic can be found in `packages/mws/src/register*.ts`.
-- **React-Admin Package**: Builds the browser client, using MWS types for server requests/responses.
-- **TiddlyWiki-Types Package**: Provides TypeScript definitions for TiddlyWiki.
+If this all sounds a bit confusing, here's all the events that are emitted on a normal startup. 
 
-## Plugins Architecture
+- `zod.make`  - Emitted by `server` to extend the zod global.
+- `cli.register`  - Emitted by `commander` to register commands.
+- `cli.commander` - Emitted by `commander` after routes are registered, but before help is printed. 
+- `cli.execute.before` - Emitted by `commander` right before the command is executed. This allows adding properties to the command instance for use later in the application. 
 
-- **Server Plugin**: Loaded into TW5 instance for cache file generation. Library tiddlers with `library: yes` are "hoisted".
-- **Client Plugin**: Contains sync adapter and related tiddlers, loaded and cached on startup.
+These next ones are attachment points for further extension of MWS. They are emitted in the main `cli.execute.before` listener that MWS attaches.  
 
-## Repository Structure
+- `mws.cache.init.before`
+- `mws.cache.init.after`
+- `mws.adapter.init.before`
+- `mws.adapter.init.after`
+- `mws.init.before`
+- `mws.init.after`
 
-- **dev/**
-  - Development-related files
-  - Contains dev wiki folder and SSL certificate generation scripts
-- **dist/**
-  - Build folder for server code
-- **editions/**
-  - Contains MWS site tiddlers in mws-docs
-- **packages/**
-  - Core MWS code modules
-- **plugins/**
-  - Client and server TiddlyWiki plugins
-- **prisma/**
-  - Database schema and migration files
-- **Root Files**
-  - mws.dev.mjs: Development binary
-  - scripts.mjs: Cross-platform operation scripts
-  - tsconfig files: TypeScript configuration
-  - tsup.config.ts: Build configuration
+These are emitted by the listen command, either by `mws` or by `server`. 
 
-This architecture promotes code maintainability, testability, and separation of concerns while providing flexibility as the API matures.
+- `listen.router.init`
+- `mws.router.init`
+- `mws.routes.important`
+- `mws.routes`
+- `mws.routes.fallback`
 
+And finally the event emitted after the command ends. 
+
+- `cli.execute.after`
+
+Remember that this is the order the commands start executing in. Some of them are nested. For instance, if I log the event name when it is emitted and time it, this is the output.
+
+
+```
+zod.make
+zod.make: 0.123ms
+
+cli.register
+cli.register: 0.088ms
+
+cli.commander
+cli.commander: 0.019ms
+
+cli.execute.before
+  mws.cache.init.before
+  mws.cache.init.before: 0.014ms
+  mws.cache.init.after
+  mws.cache.init.after: 0.013ms
+  mws.adapter.init.before
+  mws.adapter.init.before: 0.007ms
+  mws.adapter.init.after
+  mws.adapter.init.after: 0.006ms
+  mws.init.before
+  mws.init.before: 0.008ms
+  mws.init.after
+  mws.init.after: 0.009ms
+cli.execute.before: 1.171s
+
+listen.router.init
+  mws.router.init
+  mws.router.init: 0.012ms
+  mws.routes.important
+  mws.routes.important: 0.006ms
+  mws.routes
+  mws.routes: 2.754ms
+  mws.routes.fallback
+  mws.routes.fallback: 0.054ms
+listen.router.init: 4.002ms
+
+cli.execute.after
+cli.execute.after: 0.015ms
+```

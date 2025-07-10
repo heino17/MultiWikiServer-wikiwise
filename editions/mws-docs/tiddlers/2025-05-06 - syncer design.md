@@ -13,3 +13,7 @@ There also isn't a good way to move tiddlers between levels. Admins will need to
 I'm not good at wikitext, but I can provide the endpoints for all of these operations as well as the client-side adapters and actions to use them. 
 
 -- Arlen22
+
+## Update 2025-07-09
+
+I've come up with a solution for this and opened a PR on GitHub [#9117](https://github.com/TiddlyWiki/TiddlyWiki5/pull/9117). I've also included the changes in the client plugin so MWS wikis can make use of them already. This is temporary and only allowed because the current version of MWS is still considered experimental. 

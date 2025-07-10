@@ -18,7 +18,7 @@ import "./services/sessions";
 // startup
 import * as opaque from "@serenity-kit/opaque";
 import { startup } from "@tiddlywiki/server";
-import { runCLI } from "@tiddlywiki/commander";
+import runCLI from "@tiddlywiki/commander";
 
 // exports
 export { ZodRoute } from "@tiddlywiki/server";

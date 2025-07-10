@@ -13,8 +13,8 @@ import * as opaque from "@serenity-kit/opaque";
 
 declare module "@tiddlywiki/events" {
   interface ServerEventsMap {
-    "mws.init.before": [config: ServerState, $tw: TW];
-    "mws.init.after": [config: ServerState, $tw: TW];
+    "mws.config.init.before": [config: ServerState, $tw: TW];
+    "mws.config.init.after": [config: ServerState, $tw: TW];
     "mws.adapter.init.before": [adapter: SqliteAdapter];
     "mws.adapter.init.after": [adapter: SqliteAdapter];
     "mws.cache.init.before": [cachePath: string, $tw: TW];
@@ -38,9 +38,9 @@ serverEvents.on("cli.execute.before", async (name, params, options, instance) =>
 
   const cachePath = path.resolve(wikiPath, "cache");
   mkdirSync(cachePath, { recursive: true });
-  serverEvents.emitAsync("mws.cache.init.before", cachePath, $tw);
+  await serverEvents.emitAsync("mws.cache.init.before", cachePath, $tw);
   const cache = await startupCache($tw, cachePath);
-  serverEvents.emitAsync("mws.cache.init.after", cache, $tw);
+  await serverEvents.emitAsync("mws.cache.init.after", cache, $tw);
 
   const storePath = path.resolve(wikiPath, "store");
   mkdirSync(storePath, { recursive: true });
@@ -54,9 +54,9 @@ serverEvents.on("cli.execute.before", async (name, params, options, instance) =>
   ].join("\n"));
 
   const adapter = new SqliteAdapter(databasePath, !!process.env.ENABLE_DEV_SERVER);
-  serverEvents.emitAsync("mws.adapter.init.before", adapter);
+  await serverEvents.emitAsync("mws.adapter.init.before", adapter);
   await adapter.init();
-  serverEvents.emitAsync("mws.adapter.init.after", adapter);
+  await serverEvents.emitAsync("mws.adapter.init.after", adapter);
 
   const engine: PrismaEngineClient = new PrismaClient({
     log: [
@@ -67,9 +67,9 @@ serverEvents.on("cli.execute.before", async (name, params, options, instance) =>
   });
 
   const config = new ServerState({ wikiPath, cachePath, storePath }, $tw, engine, passwordService, cache);
-  serverEvents.emitAsync("mws.init.before", config, $tw);
+  await serverEvents.emitAsync("mws.config.init.before", config, $tw);
   await config.init();
-  serverEvents.emitAsync("mws.init.after", config, $tw);
+  await serverEvents.emitAsync("mws.config.init.after", config, $tw);
 
   instance.config = config;
   instance.$tw = $tw;

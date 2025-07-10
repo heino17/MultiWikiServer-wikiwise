@@ -13,7 +13,7 @@ _So please try it out, kick the tires, import your multi-gigabyte wikis and play
 
 ## Security is still a dumpster fire.
 
-![image](https://github.com/user-attachments/assets/49505d25-7a48-42f1-b4f7-73e8630c1ba1)
+![this is fine](https://github.com/user-attachments/assets/49505d25-7a48-42f1-b4f7-73e8630c1ba1)
 
 ## Upgrades can break your wiki, always make backups
 

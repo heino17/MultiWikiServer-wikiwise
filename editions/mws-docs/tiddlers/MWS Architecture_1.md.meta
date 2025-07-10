@@ -1,7 +1,5 @@
 created: 20250612170433199
-modified: 20250612170434896
+modified: 20250710211738963
 tags: TableOfContents
 title: Architecture
-type: text/vnd.tiddlywiki
-
-<<toc>>
+type: text/markdown

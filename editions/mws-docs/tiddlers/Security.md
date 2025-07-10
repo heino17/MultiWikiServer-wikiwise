@@ -11,17 +11,17 @@ The primary use cases for MWS are
 
 While these are the goals of MWS, it is still in early development, so none of these security restraints have actually been put in place yet. This is a work in progress, and the direction we're headed. 
 
-## Potential weaknesses
-
-- **Not using HTTPS**
-- **Oracles** that leak information through observable side-effects, such as network traffic, without directly revealing the contents. 
-- **Multi-user**: Users with write access can modify bags to gain access to other tiddlers in a different recipe that are supposed to be private. 
-
 ## Don't add untrusted bags to your recipe. 
 
 Generally speaking, wiki text is quite powerful, almost as powerful as JavaScript. Button clicks can run widget actions, which can read and change any tiddler in the current recipe. Any user could easily cause TiddlyWiki to write tiddlers to other bags via actions. 
 
-A possible protection from this is using the referrer header to restrict edits to from a wiki to only follow the rules for the recipe that is open. In other words, if you have a recipe open, code in that page cannot use your credentials to somehow write to unrelated bags. 
+A user can also modify a bag they have write access to so that when a different user loads that bag in their own recipe it gives the first user access to tiddlers that the second user would consider private. This flaw is almost inherent to the idea of bags and recipes and cannot be avoided. 
+
+## Potential weaknesses
+
+- **Not using HTTPS** is always the number one weakness. If you're on an open WIFI network, your session info can be read by anyone within 100 meters.
+- **Oracles** that leak information through observable side-effects, such as network traffic, without directly revealing the contents. 
+- **Multi-user**: Users with write access can modify bags to gain access to other tiddlers in a different recipe that are supposed to be private. 
 
 ## Protection strategies
 
