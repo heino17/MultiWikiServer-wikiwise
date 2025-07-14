@@ -1,11 +1,15 @@
 These instructions require minimal knowledge of the terminal and require NodeJS to be installed.
 
 - Open a terminal window and set the current directory to the folder you want to create the project folder in. 
-- The init command creates the project folder and installs the required dependencies and config files. You can change the name to whatever you like. <<.copy-code-to-clipboard """npm init @tiddlywiki/mws@latest "new_folder_name" """>>
-- Set the current directory to the project folder that was just created: <<.copy-code-to-clipboard """cd "new_folder_name" """>>
-- Initialize the database <<.copy-code-to-clipboard "npx mws init-store">>
-- Start MWS: <<.copy-code-to-clipboard "npx mws init-store">>
-- Visit http://localhost:8080 in a browser on the same computer. 
+- The init command creates the project folder and installs the required dependencies and config files. You can change the name to whatever you like. 
+<<.copy-code-to-clipboard """npm init @tiddlywiki/mws@latest "new_folder_name" """>>
+- Set the current directory to the project folder that was just created: 
+<<.copy-code-to-clipboard """cd "new_folder_name" """>>
+- Initialize the database 
+<<.copy-code-to-clipboard "npx mws init-store">>
+- Start MWS: 
+<<.copy-code-to-clipboard "npx mws listen --listener">>
+- Visit [[http://localhost:8080/]] in a browser on the same computer. 
 - When you have finished using MWS, stop the server with <kbd>ctrl-C</kbd>
 
 See [[Troubleshooting]] if you encounter any errors.
