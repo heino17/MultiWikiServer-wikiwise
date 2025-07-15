@@ -387,7 +387,7 @@ export const ROOT_ROUTE: unique symbol = Symbol("ROOT_ROUTE");
 export function createRootRoute(
   method: string[],
   handler: (state: ServerRequest) => void
-) {
+): ServerRoute {
   return defineRoute(ROOT_ROUTE, {
     method,
     path: /^/,
