@@ -1,0 +1,6 @@
+created: 20250717212608133
+modified: 20250717213112789
+title: Recipe
+type: text/vnd.tiddlywiki
+
+A recipe is an [[Entity]] that stores a list of bags by [[priority|Recipe Bag Priority]].

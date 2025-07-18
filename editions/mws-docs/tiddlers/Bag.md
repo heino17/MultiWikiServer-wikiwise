@@ -1,0 +1,1 @@
+A bag is an [[Entity]] that stores tiddlers.
