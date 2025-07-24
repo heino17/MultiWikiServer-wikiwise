@@ -73,6 +73,7 @@ export interface ZodRoute<
   method: M[];
   path: string;
   bodyFormat: B;
+  registerError: Error;
   inner: (state: { [K in M]: ZodState<K, B, P, Q, T> }[M]) => Promise<R>;
 }
 

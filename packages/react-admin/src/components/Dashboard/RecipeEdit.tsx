@@ -165,8 +165,8 @@ export const useRecipeEditForm = createDialogForm({
       <Stack direction="column" justifyContent="stretch" alignItems="stretch" spacing={0}>
         <h2>Store Rendering</h2>
         <p>
-          Modern TiddlyWiki versions have a JSON store which is injected on page load. 
-          For older wikis, you can add tiddlers via <code>$tw.preloadTiddlers</code>, a much older feature. 
+          Modern TiddlyWiki versions have a JSON store which is injected on page load.
+          For older wikis, you can add tiddlers via <code>$tw.preloadTiddlers</code>, a much older feature.
         </p>
         <Stack direction="row" alignItems="center">
           <Checkbox
@@ -193,7 +193,7 @@ export const useRecipeEditForm = createDialogForm({
           If the wiki is old enough, all options will need to be enabled.
           <br />
           <br />
-          If you want to bulk import an older wiki, you can create a separate recipe with the same bag to 
+          If you want to bulk import an older wiki, you can create a separate recipe with the same bag to
           import the tiddlers using the new bulk save feature, then open this recipe to view the tiddlers in the older version.
         </p>
         <TextField
@@ -205,6 +205,28 @@ export const useRecipeEditForm = createDialogForm({
           disabled={recipeForm.controls.custom_wiki.disabled}
         />
       </Stack>
+      {!isCreate && <>
+        <Stack direction="column" justifyContent="stretch" alignItems="stretch" spacing={0}>
+          <h2>Delete Recipe</h2>
+          <p>
+            If you want to delete this recipe, you can do so here.
+            This will not delete any bags or plugins, but will remove the recipe from the list.
+          </p>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={async () => {
+              if (!value.recipe_name) return;
+              if (!window.confirm("Are you sure you want to delete this recipe?")) return;
+              await serverRequest.recipe_delete({ recipe_name: value.recipe_name });
+              globalRefresh();
+            }}
+            disabled={isCreate}
+          >
+            Delete Recipe
+          </Button>
+        </Stack>
+      </>}
       <FormDialogSubmitButton
         onSubmit={async () => {
           const formData = recipeForm.value;

@@ -15,7 +15,7 @@ export const registerZodRoutes = (parent: ServerRoute, router: any, keys: string
   keys.forEach((key) => {
     const route = router[key as keyof typeof router] as ZodRoute<any, any, any, any, any, any>;
     const {
-      method, path, bodyFormat,
+      method, path, bodyFormat, registerError,
       zodPathParams,
       zodQueryParams = (z => ({}) as any),
       zodRequestBody = ["string", "json", "www-form-urlencoded"].includes(bodyFormat)
@@ -52,9 +52,9 @@ export const registerZodRoutes = (parent: ServerRoute, router: any, keys: string
       securityChecks,
     }, async state => {
 
-      checkPath(state, zodPathParams);
+      checkPath(state, zodPathParams, registerError);
 
-      checkQuery(state, zodQueryParams);
+      checkQuery(state, zodQueryParams, registerError);
 
       await corsRequest(state as any as ServerRequest<"ignore", "OPTIONS">);
 
@@ -68,11 +68,12 @@ export const registerZodRoutes = (parent: ServerRoute, router: any, keys: string
       denyFinal: false,
     }, async state => {
 
-      checkPath(state, zodPathParams);
+      checkPath(state, zodPathParams, registerError);
 
-      checkQuery(state, zodQueryParams);
+      checkQuery(state, zodQueryParams, registerError);
 
-      checkData(state, zodRequestBody);
+      checkData(state, zodRequestBody, registerError);
+
       const timekey = `handler ${state.bodyFormat} ${state.method} ${state.urlInfo.pathname}`;
       if (Debug.enabled("server:handler:timing")) console.time(timekey);
       const [good, error, res] = await inner(state)
@@ -100,11 +101,12 @@ export function checkData<
   T extends core.$ZodType
 >(
   state: ServerRequest,
-  zodRequestBody: (z: Z2<any>) => T
+  zodRequestBody: (z: Z2<any>) => T,
+  registerError: Error
 ): asserts state is ServerRequest & { data: zod.infer<T> } {
   const inputCheck = Z2.any().pipe(zodRequestBody(Z2)).safeParse(state.data);
   if (!inputCheck.success) {
-    console.log(inputCheck.error);
+    console.log(`${inputCheck.error}\nfor\n${registerError.stack?.split("\n").slice(1).join("\n")}`);
     throw state.sendString(400, { "x-reason": "zod-request" },
       Z2.prettifyError(inputCheck.error).toString(), "utf8");
   }
@@ -115,11 +117,12 @@ export function checkQuery<
   T extends { [x: string]: core.$ZodType<unknown, string[] | undefined>; }
 >(
   state: ServerRequest,
-  zodQueryParams: (z: Z2<"STRING">) => T
+  zodQueryParams: (z: Z2<"STRING">) => T,
+  registerError: Error
 ): asserts state is ServerRequest & { queryParams: zod.infer<zod.ZodObject<T>> } {
   const queryCheck = Z2.strictObject(zodQueryParams(Z2)).safeParse(state.queryParams);
   if (!queryCheck.success) {
-    console.log(queryCheck.error);
+    console.log(`${queryCheck.error}\nfor\n${registerError.stack?.split("\n").slice(1).join("\n")}`);
     throw state.sendString(400, { "x-reason": "zod-query" },
       Z2.prettifyError(queryCheck.error).toString(), "utf8");
   }
@@ -130,11 +133,12 @@ export function checkPath<
   T extends { [x: string]: core.$ZodType<unknown, string | undefined>; }
 >(
   state: ServerRequest,
-  zodPathParams: (z: Z2<"STRING">) => T
+  zodPathParams: (z: Z2<"STRING">) => T,
+  registerError: Error
 ): asserts state is ServerRequest & { pathParams: zod.infer<zod.ZodObject<T>> } {
   const pathCheck = Z2.strictObject(zodPathParams(Z2)).safeParse(state.pathParams);
   if (!pathCheck.success) {
-    console.log(pathCheck.error);
+    console.log(`${pathCheck.error}\nfor\n${registerError.stack?.split("\n").slice(1).join("\n")}`);
     throw state.sendString(404, { "x-reason": "zod-path" },
       Z2.prettifyError(pathCheck.error).toString(), "utf8");
   }
