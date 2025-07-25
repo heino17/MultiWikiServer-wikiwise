@@ -55,7 +55,7 @@ serverEvents.on("mws.routes", (root, config) => {
     pathParams: ["plugin"]
   }, async (state: ServerRequest<BodyFormat, string, unknown>) => {
 
-    checkPath(state, z => ({ plugin: z.string() }));
+    checkPath(state, z => ({ plugin: z.string() }), new Error());
 
     const plugin = state.pluginCache.filePlugins.get(state.pathParams.plugin);
     if (!plugin) throw state.sendEmpty(404, { "x-reason": "Plugin not found" });

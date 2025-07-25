@@ -91,7 +91,7 @@ serverEvents.on("mws.routes", (root, config) => {
 
     checkPath(state, z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
-    }));
+    }), new Error());
 
     await state.assertRecipeAccess(state.pathParams.recipe_name, false);
 

@@ -43,6 +43,7 @@ export function zodSession<P extends string, T extends zod.ZodTypeAny, R extends
     ...zodRoute({
       method: ["POST"], path,
       bodyFormat: "json",
+      registerError: new Error(),
       zodPathParams: z => ({}),
       zodQueryParams: z => ({}),
       zodRequestBody: zodRequest,

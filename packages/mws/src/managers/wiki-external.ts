@@ -27,6 +27,7 @@ export class WikiExternalRoutes {
     method: ["POST"],
     path: RECIPE_PREFIX + "/:recipe_name/tiddlers",
     bodyFormat: "stream",
+    registerError: new Error(),
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
     }),
@@ -65,6 +66,7 @@ export class WikiExternalRoutes {
     method: ["GET", "HEAD"],
     path: BAG_PREFIX + "/:bag_name/tiddlers/:title",
     bodyFormat: "ignore",
+    registerError: new Error(),
     zodPathParams: z => ({
       bag_name: z.prismaField("Bags", "bag_name", "string"),
       title: z.prismaField("Tiddlers", "title", "string"),
@@ -84,6 +86,7 @@ export class WikiExternalRoutes {
     method: ["PUT"],
     path: BAG_PREFIX + "/:bag_name/tiddlers/:title",
     bodyFormat: "string",
+    registerError: new Error(),
     securityChecks: { requestedWithHeader: true },
     zodPathParams: z => ({
       bag_name: z.prismaField("Bags", "bag_name", "string"),
@@ -116,6 +119,7 @@ export class WikiExternalRoutes {
     method: ["DELETE"],
     path: BAG_PREFIX + "/:bag_name/tiddlers/:title",
     bodyFormat: "ignore",
+    registerError: new Error(),
     securityChecks: { requestedWithHeader: true },
     zodPathParams: z => ({
       bag_name: z.prismaField("Bags", "bag_name", "string"),
@@ -140,6 +144,7 @@ export class WikiExternalRoutes {
     method: ["POST"],
     path: BAG_PREFIX + "/:bag_name/tiddlers",
     bodyFormat: "stream",
+    registerError: new Error(),
     zodPathParams: z => ({
       bag_name: z.prismaField("Bags", "bag_name", "string"),
     }),

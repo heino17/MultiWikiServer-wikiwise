@@ -287,10 +287,10 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		return true;
 	}
 	subscribe(callback: () => void) {
-		// TODO: not working at the moment for some reason
 		console.log("Subscribing to server updates");
 		this.triggerPoll = callback;
-		this.connectRecipeEvents();
+		if (this.useServerSentEvents)
+			this.connectRecipeEvents();
 	}
 	private getHost() {
 		var text = this.wiki.getTiddlerText(CONFIG_HOST_TIDDLER, DEFAULT_HOST_TIDDLER), substitutions = [

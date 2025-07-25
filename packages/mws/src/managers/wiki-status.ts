@@ -23,6 +23,7 @@ export class WikiStatusRoutes {
     method: ["GET", "HEAD"],
     path: RECIPE_PREFIX + "/:recipe_name/status",
     bodyFormat: "ignore",
+    registerError: new Error(),
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
     }),
@@ -54,6 +55,7 @@ export class WikiStatusRoutes {
     method: ["GET", "HEAD"],
     path: RECIPE_PREFIX + "/:recipe_name/events",
     bodyFormat: "ignore",
+    registerError: new Error(),
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
     }),
@@ -145,6 +147,7 @@ export class WikiStatusRoutes {
     method: ["GET", "HEAD"],
     path: RECIPE_PREFIX + "/:recipe_name/bags",
     bodyFormat: "ignore",
+    registerError: new Error(),
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
     }),
@@ -167,6 +170,7 @@ export class WikiStatusRoutes {
     method: ["GET", "HEAD"],
     path: RECIPE_PREFIX + "/:recipe_name/bags/:bag_name/state",
     bodyFormat: "ignore",
+    registerError: new Error(),
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
       bag_name: z.prismaField("Bags", "bag_name", "string"),
@@ -208,6 +212,7 @@ export class WikiStatusRoutes {
     method: ["GET", "HEAD"],
     path: RECIPE_PREFIX + "/:recipe_name/all-bags-state",
     bodyFormat: "ignore",
+    registerError: new Error(),
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
     }),

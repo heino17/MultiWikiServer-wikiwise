@@ -17,6 +17,7 @@ export class WikiRecipeRoutes {
     method: ["GET", "HEAD"],
     path: RECIPE_PREFIX + "/:recipe_name/tiddlers/:title",
     bodyFormat: "ignore",
+    registerError: new Error(),
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
       title: z.prismaField("Tiddlers", "title", "string"),
@@ -44,6 +45,7 @@ export class WikiRecipeRoutes {
     method: ["PUT"],
     path: RECIPE_PREFIX + "/:recipe_name/rpc/$key",
     bodyFormat: "json",
+    registerError: new Error(),
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
     }),
@@ -109,6 +111,7 @@ export class WikiRecipeRoutes {
     path: RECIPE_PREFIX + "/:recipe_name/tiddlers/:title",
     bodyFormat: "string",
     securityChecks: { requestedWithHeader: true },
+    registerError: new Error(),
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
       title: z.prismaField("Tiddlers", "title", "string"),
@@ -151,6 +154,7 @@ export class WikiRecipeRoutes {
     method: ["PUT"],
     path: RECIPE_PREFIX + "/:recipe_name/rpc/$key",
     bodyFormat: "json",
+    registerError: new Error(),
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
     }),
@@ -188,6 +192,7 @@ export class WikiRecipeRoutes {
     method: ["DELETE"],
     path: RECIPE_PREFIX + "/:recipe_name/tiddlers/:title",
     bodyFormat: "json",
+    registerError: new Error(),
     securityChecks: { requestedWithHeader: true },
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
@@ -232,6 +237,7 @@ export class WikiRecipeRoutes {
     method: ["PUT"],
     path: RECIPE_PREFIX + "/:recipe_name/rpc/$key",
     bodyFormat: "json",
+    registerError: new Error(),
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
     }),
