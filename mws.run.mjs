@@ -19,7 +19,7 @@ if(!pkg?.dependencies?.["@tiddlywiki/mws"] || pkg.name !== "@tiddlywiki/mws-inst
   process.exit(1);
 }
 
-import(`${cwd}/node_modules/@tiddlywiki/mws/dist/mws.js`).then(mws => mws.default()).catch(console.error);
+import(`file://${cwd}/node_modules/@tiddlywiki/mws/dist/mws.js`).then(mws => mws.default()).catch(console.error);
 
 function tryParseJSON(file) {
   try {
