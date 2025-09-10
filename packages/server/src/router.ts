@@ -11,8 +11,13 @@ import { serverEvents } from "@tiddlywiki/events";
 const debug = Debug("mws:router:matching");
 const debugnomatch = Debug("mws:router:nomatch");
 
+export interface AllowedRequestedWithHeaderKeys {
+  fetch: true;
+  XMLHttpRequest: true;
+}
+
 export class Router {
-  allowedRequestedWithHeaders = ["fetch", "XMLHttpRequest"];
+  allowedRequestedWithHeaders: (keyof AllowedRequestedWithHeaderKeys)[] = ["fetch", "XMLHttpRequest"];
   constructor(
     public rootRoute: ServerRoute
   ) {
@@ -79,7 +84,7 @@ export class Router {
     // 3. The server checks the CSRF token against the session.
     // 4. If the CSRF token is valid, the request is processed.
     // 5. If the CSRF token is invalid, the request is rejected with a 403 Forbidden.
-    const reqwith = streamer.headers["x-requested-with"];
+    const reqwith = streamer.headers["x-requested-with"] as keyof AllowedRequestedWithHeaderKeys | undefined;
     // If the route requires a CSRF check,
     if (routePath.some(e => e.route.securityChecks?.requestedWithHeader))
       // If the method is not GET, HEAD, or OPTIONS, 
@@ -311,9 +316,11 @@ export interface RouteDef {
 
   securityChecks?: {
     /**
-     * If true, the request must have the "x-requested-with" header set to "XMLHttpRequest".
+     * If true, the request must have the "x-requested-with" header set to keyof AllowedRequestedWithHeaderKeys.
      * This is a common way to check if the request is an AJAX request.
      * If the header is not set, the request will be rejected with a 403 Forbidden.
+     * 
+     * @see {@link AllowedRequestedWithHeaderKeys}
      */
     requestedWithHeader?: boolean;
   };

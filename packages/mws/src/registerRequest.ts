@@ -36,7 +36,13 @@ declare module "@tiddlywiki/server" {
   interface Streamer {
     user: AuthUser;
   }
+
+  interface AllowedRequestedWithHeaderKeys {
+    TiddlyWiki: true;
+  }
 }
+
+
 serverEvents.on("listen.router.init", async (listen, router) => {
   router.allowedRequestedWithHeaders.push("TiddlyWiki");
   router.config = listen.config;

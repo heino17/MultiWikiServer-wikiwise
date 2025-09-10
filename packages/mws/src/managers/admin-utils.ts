@@ -15,7 +15,6 @@ export function admin<T extends zod.ZodTypeAny, R extends JsonValue>(
     zodQueryParams: z => ({}),
     bodyFormat: "json",
     securityChecks: { requestedWithHeader: true },
-    registerError: new Error(),
     zodRequestBody: zodRequest,
     inner: async (state) => {
 

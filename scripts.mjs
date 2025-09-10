@@ -118,7 +118,6 @@ function start(cmd, args = [], env2 = {}, { cwd = process.cwd(), pipeOut } = {})
   events.on("exit", (code) => { cp.kill(code); });
 
   if(pipeOut) {
-
     return new Promise((r, c) => {
       const chunks = [];
       cp.stdout.on("data", (data) => {
@@ -138,6 +137,6 @@ function start(cmd, args = [], env2 = {}, { cwd = process.cwd(), pipeOut } = {})
       cp.on("exit", (code) => { if(code) c(code); else r(); });
     });
   }
-
-
 }
+
+

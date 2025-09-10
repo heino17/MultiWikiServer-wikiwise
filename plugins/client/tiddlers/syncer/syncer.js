@@ -139,9 +139,8 @@ function Syncer(options) {
 			self.handleLazyLoadEvent(title);
 		});		
 	}
-	if(this.syncadaptor.subscribe) this.syncadaptor.subscribe(function(){
-		self.syncFromServer();
-	});
+
+	this.syncadaptor.registerSyncer(this);
 
 	// Get the login status
 	this.getStatus(function(err,isLoggedIn) {

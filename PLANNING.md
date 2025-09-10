@@ -37,3 +37,12 @@ Internal notes by core developers
 
 - Not planed, but https://crates.io/crates/indradb
 
+## planning for a publicized release (sometime in september)
+
+- make a note about wikis not being able to talk to each other
+- verify all of the authentication and security
+- possibly make material design 3 ui with web commponents
+- make sure the getting started doc is correct
+- put site restrictions in a file
+- sell people on contributing to the project
+

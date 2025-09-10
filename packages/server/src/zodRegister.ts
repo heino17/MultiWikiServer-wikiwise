@@ -21,14 +21,6 @@ export const registerZodRoutes = (parent: ServerRoute, router: any, keys: string
       zodRequestBody = ["string", "json", "www-form-urlencoded"].includes(bodyFormat)
         ? z => z.undefined() : (z => z.any() as any),
       inner,
-      corsRequest = async state => {
-        state.pathParams
-        const headers = state.headers["access-control-request-headers"]
-        const method = state.headers["access-control-request-method"]
-        debugCORS("OPTIONS default %s %s %s", state.urlInfo.pathname, method, headers);
-        // CORS is disabled by default, so send an empty response
-        throw state.sendEmpty(204, {});
-      },
       securityChecks,
     } = route;
 
@@ -44,28 +36,12 @@ export const registerZodRoutes = (parent: ServerRoute, router: any, keys: string
     ).join("\\/") + "$";
 
     parent.defineRoute({
-      method: ["OPTIONS"],
-      path: new RegExp(pathregex),
-      pathParams,
-      bodyFormat: "ignore",
-      denyFinal: false,
-      securityChecks,
-    }, async state => {
-
-      checkPath(state, zodPathParams, registerError);
-
-      checkQuery(state, zodQueryParams, registerError);
-
-      await corsRequest(state as any as ServerRequest<"ignore", "OPTIONS">);
-
-    });
-
-    parent.defineRoute({
       method,
       path: new RegExp(pathregex),
       pathParams,
       bodyFormat,
       denyFinal: false,
+      securityChecks,
     }, async state => {
 
       checkPath(state, zodPathParams, registerError);

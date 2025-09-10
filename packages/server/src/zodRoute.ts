@@ -13,8 +13,9 @@ export function zodRoute<
   Q extends Record<string, z.ZodType<any, string[] | undefined>>,
   T extends z.ZodTypeAny,
   R extends JsonValue
->(route: ZodRoute<M, B, P, Q, T, R>): ZodRoute<M, B, P, Q, T, R> {
-  return route;
+>(route: Omit<ZodRoute<M, B, P, Q, T, R>, "registerError">): ZodRoute<M, B, P, Q, T, R> {
+  (route as any).registerError = new Error();
+  return route as ZodRoute<M, B, P, Q, T, R>;
 }
 
 
@@ -52,14 +53,16 @@ export interface ZodRoute<
    * The default behavior is to remove all query params.
    */
   zodQueryParams?: (z: Z2<"STRING">) => Q;
-  /** 
-   * CORS preflight requests do not include credentials or request headers,
-   * so you can't authenticate requests. It is a way to provide information about the endpoint. 
-   * 
-   * Be careful, because if you specify the same route with different methods, and set corsRequest
-   * on more than one, because only the first one will actually be called.
-   */
-  corsRequest?: (state: ZodState<"OPTIONS", "ignore", P, Q, z.ZodUndefined>) => Promise<typeof STREAM_ENDED>;
+  // this was a good idea, but separate routes can have the same path but different methods, 
+  // so we have to handle it differently.
+  // /** 
+  //  * CORS preflight requests do not include credentials or request headers,
+  //  * so you can't authenticate requests. It is a way to provide information about the endpoint. 
+  //  * 
+  //  * Be careful, because if you specify the same route with different methods, and set corsRequest
+  //  * on more than one, because only the first one will actually be called.
+  //  */
+  // corsRequest?: (state: ZodState<"OPTIONS", "ignore", P, Q, z.ZodUndefined>) => Promise<typeof STREAM_ENDED>;
   /**
    * A zod check of the request body result.
    *

@@ -145,7 +145,7 @@ type: text/css
   /* --------------------------------------------------------------------- */
   /* Typography                                                            */
   /* --------------------------------------------------------------------- */
-  --foreground: var(--color-grey-900);
+  --foreground: var(--color-grey-800);
   /* text.primary */
   --muted-foreground: var(--color-grey-700);
   /* text.secondary */

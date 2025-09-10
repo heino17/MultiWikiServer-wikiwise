@@ -124,6 +124,8 @@ interface SyncAdaptor<AD> {
 
 	isReady?(): boolean;
 
+	registerSyncer?(syncer: Syncer<AD>): void;
+
 	getStatus?(
 		cb: ServerStatusCallback
 	): void;
@@ -190,6 +192,7 @@ interface SyncAdaptor<AD> {
 	displayLoginPrompt?(syncer: Syncer<AD>): void;
 	login?(username: string, password: string, cb: (err: any) => void): void;
 	logout?(cb: (err: any) => void): any;
+
 }
 interface SyncerTiddlerInfo<AD> {
 	/** this comes from the wiki changeCount record */
@@ -249,7 +252,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 	private serverUpdateConnectionStatus!: string;
 	private isDevMode: boolean;
 	private useGzipStream: boolean;
-	private triggerPoll: (() => void) | null = null;
+	private syncer: Syncer<MWSAdaptorInfo> | null = null;
 
 	name = "multiwikiclient";
 	private supportsLazyLoading = true;
@@ -283,15 +286,21 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 	setLoggerSaveBuffer(loggerForSaving: Logger) {
 		this.logger.setSaveBuffer(loggerForSaving);
 	}
+	
 	isReady() {
 		return true;
 	}
-	subscribe(callback: () => void) {
-		console.log("Subscribing to server updates");
-		this.triggerPoll = callback;
+	
+	registerSyncer(syncer: Syncer<MWSAdaptorInfo>): void {
+		this.syncer = syncer;
 		if (this.useServerSentEvents)
 			this.connectRecipeEvents();
 	}
+
+	triggerPoll() {
+		this.syncer?.syncFromServer();
+	}
+
 	private getHost() {
 		var text = this.wiki.getTiddlerText(CONFIG_HOST_TIDDLER, DEFAULT_HOST_TIDDLER), substitutions = [
 			{ name: "protocol", value: document.location.protocol },
@@ -540,9 +549,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		// 	this.syncer && this.syncer.enqueueLoadTiddler(title);
 		// }
 	}
-	private get syncer() {
-		if ($tw.syncadaptor === this) return $tw.syncer as Syncer<MWSAdaptorInfo>;
-	}
+
 	async loadTiddlers(options: {
 		syncer: Syncer<MWSAdaptorInfo>;
 		titles: string[];
