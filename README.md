@@ -5,6 +5,8 @@
 Donate via PayPal to support development
 </a>
 
+---
+
 Multiple users, multiple wikis for TiddlyWiki.
 
 - Bag & Recipe system for storing tiddlers.
@@ -23,20 +25,16 @@ Most of these features are still in development.
 
 **Do not use it to protect feelings or intellectual property.**
 
-## Warning
+## Warning: Security is still a dumpster fire.
 
-**This is not ready for primetime. Do not use it to protect feelings or intellectual property. Seriously. The security mechanisms required are not built yet.**
-
-_So please try it out, kick the tires, import your multi-gigabyte wikis and play around with it, but don't actually store anything you want to keep. We'll hopefully get there soon, but even the database schema itself is still in flux as we figure out what the best layout is for all the stuff we have planned._
-
-## Security is still a dumpster fire.
+**While the database structure is reliable, the security mechanism isn't. Do not use it to protect feelings or intellectual property. There are still ways to easily get around the security restrictions.**
 
 ![this is fine](https://github.com/user-attachments/assets/49505d25-7a48-42f1-b4f7-73e8630c1ba1)
 
 
 ## Also, this is a database, please make backups
 
-Seriously, you never know. Databases try very hard to be perfect, and data bugs are rare. But that doesn't mean things can't go wrong. Backups are critical.
+Databases try very hard to be perfect, and data bugs are rare. But that doesn't mean things can't go wrong. Backups are pretty important. 
 
 ## How to run
 
@@ -50,8 +48,8 @@ The init command creates a new folder and installs what you need to get started.
 You can run `npx mws help` to get more information about the commands. 
 
 - the server runs on port `8080`. It does not use HTTPS by default, but you can enable it by specifying a key and cert.
-- A `localpass.key` file is created to hold the password keyfile. If this file changes, all passwords will need to be reset.
-- The database is in the store folder. Backups MUST save the entire store folder. All files are critically important. They are not temp files. 
+- A `passwords.key` file is created which contains the password master salt. If this file changes, all passwords will need to be reset.
+- Your database is in the `store` folder. All files in the `store` folder are data files, not temp or lock files! Never delete them! 
 
 The initial user created on first run has the username `admin` and password `1234`.
 
@@ -74,9 +72,12 @@ The 0.1 database is incompatible with the 0.0 database. Version 0.1 will detect 
 
 It is recommended to backup your entire data folder, not just the `store` folder, except the `cache` folder. 
 
-The `cache` folder (next to the `store` folder) is generated every time MWS starts, so you can exclude that from backups if you want. 
+- You must *always* backup the *entire* `store` folder. Never delete any files in the `store` folder. All files in the `store` folder are data files!
+- You should definitely backup the `package.json` file, as it contains the MWS version you are currently using. The `package-lock.json` file is also useful if you don't want to back up the entire `node_modules` folder for some reason. 
+- The `cache` folder (next to the `store` folder) is generated every time MWS starts, so you can exclude that from backups if you want. 
+- The `node_modules` folder should be included in your backup, as it contains all the application code required to run your database, but it can also be reconstructed from the `package-lock.json` file or the `package.json` file. 
 
-The `node_modules` folder should definitely be included in your backup, as it contains all the application code required to run your database.
+MWS uses NPM packages, so as long as you back up the *entire* store folder, and the package-lock.json file, you should have enough information for a NodeJS developer to reconstruct the site. 
 
 ## Development
 
