@@ -46,3 +46,9 @@ Internal notes by core developers
 - put site restrictions in a file
 - sell people on contributing to the project
 
+## some ideas
+
+- webdav or samba for importing or editing tiddlers
+  - multiple folder views (flat, folder, tag)
+- active node server for a specific folder (also a massive security bypass)
+- 

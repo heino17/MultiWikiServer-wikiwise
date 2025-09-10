@@ -5,26 +5,6 @@
 Donate via PayPal to support development
 </a>
 
-## Warning
-
-**This is not ready for primetime. Do not use it to protect feelings or intellectual property. Seriously. The security mechanisms required are not built yet.**
-
-_So please try it out, kick the tires, import your multi-gigabyte wikis and play around with it, but don't actually store anything you want to keep. We'll hopefully get there soon, but even the database schema itself is still in flux as we figure out what the best layout is for all the stuff we have planned._
-
-## Security is still a dumpster fire.
-
-![this is fine](https://github.com/user-attachments/assets/49505d25-7a48-42f1-b4f7-73e8630c1ba1)
-
-## Upgrades can break your wiki, always make backups
-
-Storing data is safe enough, sort of, but upgrading to new versions is where the problem comes in. That's why your package.json file has the exact version number saved. You can upgrade your TiddlyWiki version separate from the MWS version. Once you upgrade to a new MWS version, you might not be able to revert to the previous version. **Always make backups.** Also, you should not give untrusted users write access on any bags or recipes because they can write code that can run as any user.
-
-## Also, this is a database, please make backups
-
-Seriously, you never know. Databases try very hard to be perfect, and data bugs are rare. But that doesn't mean things can't go wrong. Backups are critical.
-
----
-
 Multiple users, multiple wikis for TiddlyWiki.
 
 - Bag & Recipe system for storing tiddlers.
@@ -42,6 +22,21 @@ Multiple users, multiple wikis for TiddlyWiki.
 Most of these features are still in development.
 
 **Do not use it to protect feelings or intellectual property.**
+
+## Warning
+
+**This is not ready for primetime. Do not use it to protect feelings or intellectual property. Seriously. The security mechanisms required are not built yet.**
+
+_So please try it out, kick the tires, import your multi-gigabyte wikis and play around with it, but don't actually store anything you want to keep. We'll hopefully get there soon, but even the database schema itself is still in flux as we figure out what the best layout is for all the stuff we have planned._
+
+## Security is still a dumpster fire.
+
+![this is fine](https://github.com/user-attachments/assets/49505d25-7a48-42f1-b4f7-73e8630c1ba1)
+
+
+## Also, this is a database, please make backups
+
+Seriously, you never know. Databases try very hard to be perfect, and data bugs are rare. But that doesn't mean things can't go wrong. Backups are critical.
 
 ## How to run
 
@@ -77,7 +72,11 @@ The 0.1 database is incompatible with the 0.0 database. Version 0.1 will detect 
 
 ## Backups
 
-It is recommended to backup your entire data folder, not just the `store` folder. However, the `cache` folder (next to the `store` folder) is generated every time MWS starts, so you can exclude that from backups if you want. The `node_modules` folder should definitely be included in your backup, as it contains all the application code required to run your database.
+It is recommended to backup your entire data folder, not just the `store` folder, except the `cache` folder. 
+
+The `cache` folder (next to the `store` folder) is generated every time MWS starts, so you can exclude that from backups if you want. 
+
+The `node_modules` folder should definitely be included in your backup, as it contains all the application code required to run your database.
 
 ## Development
 
@@ -92,6 +91,6 @@ If you want to work on the project,
 - `npm start init-store` - Create the `admin` user and import default wikis.
 - `npm start` - this will run the build every time, but it's very fast.
 
-The development wiki will be active at http://localhost:8080/dev
+The development wiki will be active at http://localhost:8080/
 
 You can change the listeners as explained in the mws.dev.mjs file.

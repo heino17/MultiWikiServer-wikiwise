@@ -16,6 +16,8 @@ import { BAG_PREFIX, parseTiddlerFields, recieveTiddlerMultipartUpload, RECIPE_P
 const debugCORS = Debug("mws:cors");
 const debugSSE = Debug("mws:sse");
 
+
+// this is currently disabled
 export class WikiExternalRoutes {
 
 

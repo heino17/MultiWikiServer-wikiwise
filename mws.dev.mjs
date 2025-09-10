@@ -19,6 +19,19 @@ console.log(process.version);
  * You may also pass arguments to the command line. The `mws.dev.json` file is only used if there
  * are no command line arguments. 
  * 
+ * Here is an example `mws.dev.json` file:
+ * 
+ * [
+ *   {
+ *     "key": "./localhost.key",
+ *     "cert": "./localhost.crt",
+ *     "host": "::",
+ *     "port": 5000,
+ *     "prefix": "/dev",
+ *     "secure": true
+ *   }
+ * ]
+ * 
  * @typedef {Partial<Record<"host"|"port"|"prefix"|"key"|"cert"|"secure", string>>} ListenArgs 
  * 
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

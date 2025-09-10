@@ -69,7 +69,7 @@ const workspaces = [
 
 
       await Promise.resolve().then(async () => {
-        await start("mv node_modules node_modules_old");
+        await start("mv node_modules node_modules_off");
       }).then(async () => {
         await start("git clean -dfx tests");
         const filesFolder = path.resolve("create-package/files");
@@ -93,7 +93,7 @@ const workspaces = [
       }).then(async () => {
         await start("npx mws init-store", [], {}, { cwd: "tests" });
       }).finally(async () => {
-        await start("mv node_modules_old node_modules");
+        await start("mv node_modules_off node_modules");
       });
       break;
     }
