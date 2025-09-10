@@ -140,7 +140,8 @@ function Syncer(options) {
 		});		
 	}
 
-	this.syncadaptor.registerSyncer(this);
+	if(this.syncadaptor.registerSyncer)	
+		this.syncadaptor.registerSyncer(this);
 
 	// Get the login status
 	this.getStatus(function(err,isLoggedIn) {

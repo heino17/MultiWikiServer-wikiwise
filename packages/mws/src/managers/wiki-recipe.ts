@@ -263,6 +263,7 @@ export class WikiRecipeRoutes {
   });
 
 }
+
 declare module "@tiddlywiki/events" {
   interface ServerEventsMap {
     "mws.tiddler.events": [{
@@ -274,3 +275,4 @@ declare module "@tiddlywiki/events" {
     }];
   }
 }
+

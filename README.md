@@ -21,7 +21,7 @@ Storing data is safe enough, sort of, but upgrading to new versions is where the
 
 ## Also, this is a database, please make backups
 
-Seriously, you never know. Databases try very hard to be perfect, and a small number of database engines run the entire internet, so there are a lot of eyes on them, and data bugs are rare. But that doesn't mean things can't go wrong. Backups are critical.
+Seriously, you never know. Databases try very hard to be perfect, and data bugs are rare. But that doesn't mean things can't go wrong. Backups are critical.
 
 ---
 
