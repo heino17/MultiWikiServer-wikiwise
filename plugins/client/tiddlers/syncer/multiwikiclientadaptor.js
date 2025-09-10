@@ -31,7 +31,7 @@ var CONFIG_HOST_TIDDLER = "$:/config/multiwikiclient/host", DEFAULT_HOST_TIDDLER
 var SERVER_NOT_CONNECTED = "NOT CONNECTED", SERVER_CONNECTING_SSE = "CONNECTING SSE", SERVER_CONNECTED_SSE = "CONNECTED SSE", SERVER_POLLING = "SERVER POLLING";
 class MultiWikiClientAdaptor {
     constructor(options) {
-        this.triggerPoll = null;
+        this.syncer = null;
         this.name = "multiwikiclient";
         this.supportsLazyLoading = true;
         this.error = null;
@@ -66,11 +66,14 @@ class MultiWikiClientAdaptor {
     isReady() {
         return true;
     }
-    subscribe(callback) {
-        console.log("Subscribing to server updates");
-        this.triggerPoll = callback;
+    registerSyncer(syncer) {
+        this.syncer = syncer;
         if (this.useServerSentEvents)
             this.connectRecipeEvents();
+    }
+    triggerPoll() {
+        var _a;
+        (_a = this.syncer) === null || _a === void 0 ? void 0 : _a.syncFromServer();
     }
     getHost() {
         var text = this.wiki.getTiddlerText(CONFIG_HOST_TIDDLER, DEFAULT_HOST_TIDDLER), substitutions = [
@@ -294,10 +297,6 @@ class MultiWikiClientAdaptor {
         // 	console.log(`Checking for updates to ${title} since ${JSON.stringify(lru)} comparing to ${revision}`);
         // 	this.syncer && this.syncer.enqueueLoadTiddler(title);
         // }
-    }
-    get syncer() {
-        if ($tw.syncadaptor === this)
-            return $tw.syncer;
     }
     loadTiddlers(options) {
         return __awaiter(this, void 0, void 0, function* () {
