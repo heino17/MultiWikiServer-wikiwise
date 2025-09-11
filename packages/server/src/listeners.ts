@@ -35,11 +35,11 @@ export class ListenerBase {
       switch (error.code) {
         case 'EACCES':
           console.error(bindInfo + ' requires elevated privileges');
-          process.exit();
+          process.exit(4);
           break;
         case 'EADDRINUSE':
           console.error(bindInfo + ' is already in use');
-          process.exit();
+          process.exit(4);
           break;
         default:
           throw error;
@@ -50,7 +50,7 @@ export class ListenerBase {
       const address = this.server.address();
       console.log(`Listening on`, address, options.prefix);
     });
-    const { host = "localhost", port = process.env.PORT } = options;
+    const { host, port } = options;
     if (port === "0") {
       this.server.listen(undefined, host);
     } else if (port && +port) {
@@ -72,8 +72,8 @@ export class ListenerBase {
 
 export class ListenerHTTPS extends ListenerBase {
   constructor(router: Router, config: ListenOptions) {
-    const { port = process.env.PORT, host, prefix = "" } = config;
-    const bindInfo = host ? `HTTP ${host} ${port} ${prefix}` : `HTTP ${port} ${prefix}`;
+    const { port, host, prefix } = config;
+    const bindInfo = `HTTPS ${host} ${port} ${prefix}`;
     ok(config.key && existsSync(config.key), "Key file not found at " + config.key);
     ok(config.cert && existsSync(config.cert), "Cert file not found at " + config.cert);
     const key = readFileSync(config.key), cert = readFileSync(config.cert);
@@ -86,19 +86,19 @@ export class ListenerHTTPS extends ListenerBase {
 export class ListenerHTTP extends ListenerBase {
   /** Create an http1 server */
   constructor(router: Router, config: ListenOptions) {
-    const { port, host, prefix = "" } = config;
-    const bindInfo = host ? `HTTP ${host} ${port} ${prefix}` : `HTTP ${port} ${prefix}`;
+    const { port, host, prefix } = config;
+    const bindInfo = `HTTP ${host} ${port} ${prefix}`;
     super(createServer(), router, bindInfo, config);
   }
 }
 
 export interface ListenOptions {
-  port?: string;
-  host?: string;
-  prefix?: string;
+  port: string;
+  host: string;
+  prefix: string;
+  secure: boolean;
   key?: string;
   cert?: string;
-  secure?: boolean;
   redirect?: number;
 }
 

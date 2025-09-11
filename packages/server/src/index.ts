@@ -60,7 +60,7 @@ const listenOptionsCheck = z.object({
 
 export async function startListening(
   router: Router,
-  options: ListenOptions[] = []
+  options: Partial<ListenOptions>[] = []
 ) {
 
   const listenerCheck = listenOptionsCheck.safeParse(options);
@@ -79,9 +79,19 @@ export async function startListening(
       throw new Error("Both key and cert are required for HTTPS");
     }
 
+    const options2: ListenOptions = {
+      port: e.port ?? process.env.PORT ?? "8080",
+      host: e.host ?? "localhost",
+      prefix: e.prefix ?? "",
+      secure: e.secure ?? false,
+      key: e.key,
+      cert: e.cert,
+      redirect: e.redirect,
+    }
+
     return e.key && e.cert
-      ? new ListenerHTTPS(router, e)
-      : new ListenerHTTP(router, e);
+      ? new ListenerHTTPS(router, options2)
+      : new ListenerHTTP(router, options2);
 
   });
 
