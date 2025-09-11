@@ -37,7 +37,7 @@ class MultiWikiClientAdaptor {
         this.error = null;
         this.wiki = options.wiki;
         this.host = this.getHost();
-        this.recipe = this.wiki.getTiddlerText("$:/config/multiwikiclient/recipe");
+        this.recipe = this.wiki.getTiddlerText("$:/config/multiwikiclient/recipe", "default");
         this.useServerSentEvents = this.wiki.getTiddlerText(ENABLE_SSE_TIDDLER) === "yes";
         this.isDevMode = this.wiki.getTiddlerText(IS_DEV_MODE_TIDDLER) === "yes";
         this.useGzipStream = this.wiki.getTiddlerText(ENABLE_GZIP_STREAM_TIDDLER) === "yes";

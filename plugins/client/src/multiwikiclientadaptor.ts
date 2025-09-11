@@ -22,7 +22,7 @@ previous operation to complete before sending a new one.
 import type { ServerEventsMap } from '@tiddlywiki/events';
 import type { ZodRoute, WikiStatusRoutes, WikiRecipeRoutes } from '@tiddlywiki/mws';
 import type { zod } from '@tiddlywiki/server';
-import type { Syncer, Tiddler, TiddlerFields } from 'tiddlywiki';
+import type { Syncer, Tiddler, TiddlerFields, Wiki } from 'tiddlywiki';
 declare global { const fflate: typeof import("./fflate"); }
 declare const self: never;
 
@@ -236,7 +236,7 @@ interface MWSAdaptorInfo {
 
 
 class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
-	private wiki;
+	private wiki: Wiki;
 	private host;
 	private recipe;
 	private useServerSentEvents;
@@ -259,11 +259,11 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 	constructor(options: { wiki: any }) {
 		this.wiki = options.wiki;
 		this.host = this.getHost();
-		this.recipe = this.wiki.getTiddlerText("$:/config/multiwikiclient/recipe");
+		this.recipe = this.wiki.getTiddlerText("$:/config/multiwikiclient/recipe", "default")!;
 		this.useServerSentEvents = this.wiki.getTiddlerText(ENABLE_SSE_TIDDLER) === "yes";
 		this.isDevMode = this.wiki.getTiddlerText(IS_DEV_MODE_TIDDLER) === "yes";
 		this.useGzipStream = this.wiki.getTiddlerText(ENABLE_GZIP_STREAM_TIDDLER) === "yes";
-		this.last_known_revision_id = this.wiki.getTiddlerText("$:/state/multiwikiclient/recipe/last_revision_id", "0")
+		this.last_known_revision_id = this.wiki.getTiddlerText("$:/state/multiwikiclient/recipe/last_revision_id", "0")!
 		this.outstandingRequests = Object.create(null); // Hashmap by title of outstanding request object: {type: "PUT"|"GET"|"DELETE"}
 		this.lastRecordedUpdate = Object.create(null); // Hashmap by title of last recorded update via SSE: {type: "update"|"detetion", revision_id:}
 		this.logger = new $tw.utils.Logger("MultiWikiClientAdaptor");
@@ -272,7 +272,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		this.offline = false;
 		this.username = "";
 		// Compile the dirty tiddler filter
-		this.incomingUpdatesFilterFn = this.wiki.compileFilter(this.wiki.getTiddlerText(INCOMING_UPDATES_FILTER_TIDDLER));
+		this.incomingUpdatesFilterFn = this.wiki.compileFilter(this.wiki.getTiddlerText(INCOMING_UPDATES_FILTER_TIDDLER)!);
 		this.setConnectionStatus(SERVER_NOT_CONNECTED);
 	}
 

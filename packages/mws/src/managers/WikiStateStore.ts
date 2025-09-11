@@ -350,10 +350,7 @@ $tw.preloadTiddler = function(fields) {
       text: recipe_name
     });
 
-    writeTiddler({
-      title: "$:/config/multiwikiclient/use-server-sent-events",
-      text: false ? "yes" : "no"
-    });
+
 
     writeTiddler({
       title: "$:/config/multiwikiclient/host",

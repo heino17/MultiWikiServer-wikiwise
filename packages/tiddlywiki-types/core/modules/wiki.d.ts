@@ -1,14 +1,14 @@
 // Generated using Claude 3.7 Sonnet Thinking on 2025-03-25. 
-
+// type DefaultValue = string | number | boolean | object | null | undefined;
 declare module "tiddlywiki" {
 
 
 
   interface Wiki {
     addIndexersToWiki(): void;
-    getTextReference(textRef: string, defaultText?: string, currTiddlerTitle?: string): string;
+    getTextReference(textRef: string, defaultText?: any, currTiddlerTitle?: string): string;
     setTextReference(textRef: string, value: string, currTiddlerTitle?: string): void;
-    setText(title: string, field?: string, index?: string, value?: string, options?: SetTextOptions): void;
+    setText(title: string, field?: string | null | undefined, index?: string, value?: string, options?: SetTextOptions): void;
     deleteTextReference(textRef: string, currTiddlerTitle?: string): void;
     addEventListener(type: string, listener: Function): void;
     removeEventListener(type: string, listener: Function): void;
