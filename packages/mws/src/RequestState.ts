@@ -56,14 +56,19 @@ export class StateObject<
       return this.sendString(
         err.status,
         {
-          "x-reason": err.apiText,
+          // FIXME
+          //"x-reason": err.apiText,
           "content-type": "text/html"
         },
         err.html, "utf-8")
-    else return this.sendEmpty(
-      err.status,
-      { "x-reason": err.apiText }
-    )
+    else return this.sendString(
+        err.status,
+        {
+          // FIXME
+          //"x-reason": err.apiText,
+          "content-type": "text/plain"
+        },
+        err.apiText, "utf-8")
   }
 
   makeTiddlerEtag(options: { bag_name: string; revision_id: string | number; }) {
