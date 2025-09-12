@@ -2,7 +2,7 @@ import { Prisma } from 'prisma-client';
 import { Types } from 'prisma-client/runtime/library';
 import { ServerState } from "./ServerState";
 import { BodyFormat, RouteMatch, Router, ServerRequestClass, Streamer } from "@tiddlywiki/server";
-import { BagNoReadPermission, BagNotFound, BagNoWritePermission, PageNotAuthorizedForEndpoint, RecipeNoReadPermission, RecipeNotFound, RecipeNoWritePermission, SendError } from "./SendError";
+import { BagNoReadPermission, BagNotFound, BagNoWritePermission, PageNotAuthorizedForEndpoint, RecipeNoReadPermission, RecipeNotFound, RecipeNoWritePermission, SendError, XReasonSendErrorMap } from "./SendError";
 
 export class StateObject<
   B extends BodyFormat = BodyFormat,
@@ -51,24 +51,22 @@ export class StateObject<
     return this.engine.$transaction(arg(this.engine), options);
   }
 
-  sendError(err: SendError) {
+  sendError<XReasonStr extends keyof XReasonSendErrorMap>(err: SendError<XReasonStr>) {
     if (this.headers.accept?.includes("text/html"))
       return this.sendString(
         err.status,
         {
-          // FIXME
-          //"x-reason": err.apiText,
+          "x-reason": err.xReason,
           "content-type": "text/html"
         },
         err.html, "utf-8")
     else return this.sendString(
-        err.status,
-        {
-          // FIXME
-          //"x-reason": err.apiText,
-          "content-type": "text/plain"
-        },
-        err.apiText, "utf-8")
+      err.status,
+      {
+        "x-reason": err.xReason,
+        "content-type": "text/plain"
+      },
+      err.apiText, "utf-8")
   }
 
   makeTiddlerEtag(options: { bag_name: string; revision_id: string | number; }) {
