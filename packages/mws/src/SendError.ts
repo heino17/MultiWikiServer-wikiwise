@@ -1,60 +1,76 @@
-export abstract class SendError<XReasonStr extends keyof XReasonSendErrorMap> {
-  constructor(
-    { apiText, htmlText, status, xReason }
-      : { apiText: string, htmlText: string, status: number, xReason: XReasonStr }
-  ) {
-    this.apiText = apiText
-    this.htmlText = htmlText
+export abstract class SendError
+  <ReasonStr extends keyof ReasonSendErrorMap>
+  extends Error {
+  constructor({ details, status, reason }:
+    {
+      details: ReasonSendErrorMap[ReasonStr]["details"]
+      status: number
+      reason: string
+
+    }) {
+    super()
     this.status = status
-    this.#xReason = xReason
+    this.reason = reason
+    this.details = details
+    this.name = SendError.toString()
   }
 
-  apiText
-  htmlText
   status
-  #xReason: XReasonStr
-  get xReason() { return this.#xReason }
+  reason
+  details: ReasonSendErrorMap[ReasonStr]["details"]
 
-  get html() {
-    return (
-      `
-      <html>
-      <body>
-      <div>
-      ${this.htmlText}
-      </div>
-      </body>
-      </html>
-      `
-    )
+  override get message() {
+    return JSON.stringify({
+      status: this.status,
+      reason: this.reason,
+      details: this.details
+    })
   }
-
-
 
 }
 
 
 
 // TODO: Make it a type error to break this interface.
-export interface XReasonSendErrorMap {
-  "RECIPE_NOT_FOUND": RecipeNotFound
-  "RECIPE_NO_READ_PERMISSION": RecipeNoReadPermission
-  "RECIPE_NO_WRITE_PERMISSION": RecipeNoWritePermission
-  "BAG_NOT_FOUND": BagNotFound
-  "BAG_NO_READ_PERMISSION": BagNoReadPermission
-  "BAG_NO_WRITE_PERMISSION": BagNoWritePermission
-  "PAGE_NOT_AUTHORIZED_FOR_ENDPOINT": PageNotAuthorizedForEndpoint
+export interface ReasonSendErrorMap {
+  "RECIPE_NOT_FOUND": {
+    err: RecipeNotFound
+    details: { recipeName: string }
+  }
+  "RECIPE_NO_READ_PERMISSION": {
+    err: RecipeNoReadPermission
+    details: { recipeName: string }
+  }
+  "RECIPE_NO_WRITE_PERMISSION": {
+    err: RecipeNoWritePermission
+    details: { recipeName: string }
+  }
+  "BAG_NOT_FOUND": {
+    err: BagNotFound
+    details: { bagName: string }
+  }
+  "BAG_NO_READ_PERMISSION": {
+    err: BagNoReadPermission
+    details: { bagName: string }
+  }
+  "BAG_NO_WRITE_PERMISSION": {
+    err: BagNoWritePermission
+    details: { bagName: string }
+  }
+  "PAGE_NOT_AUTHORIZED_FOR_ENDPOINT": {
+    err: PageNotAuthorizedForEndpoint
+    details: undefined
+  }
 }
 
-export type xReason = keyof XReasonSendErrorMap
+export type xReason = keyof ReasonSendErrorMap
 
 export class RecipeNotFound extends SendError<"RECIPE_NOT_FOUND"> {
   constructor(public recipeName: string) {
     super({
+      details: { recipeName },
       status: 404,
-      apiText: "recipe not found",
-      htmlText: `Recipe ${recipeName} was not found.`,
-      xReason: "RECIPE_NOT_FOUND"
+      reason: "RECIPE_NOT_FOUND"
     })
   }
 }
@@ -62,10 +78,9 @@ export class RecipeNotFound extends SendError<"RECIPE_NOT_FOUND"> {
 export class RecipeNoReadPermission extends SendError<"RECIPE_NO_READ_PERMISSION"> {
   constructor(public recipeName: string) {
     super({
+      details: { recipeName },
       status: 403,
-      apiText: "no read permission",
-      htmlText: `You can not read from ${recipeName}.`,
-      xReason: "RECIPE_NO_READ_PERMISSION"
+      reason: "RECIPE_NO_READ_PERMISSION"
     })
   }
 }
@@ -73,10 +88,9 @@ export class RecipeNoReadPermission extends SendError<"RECIPE_NO_READ_PERMISSION
 export class RecipeNoWritePermission extends SendError<"RECIPE_NO_WRITE_PERMISSION"> {
   constructor(public recipeName: string) {
     super({
+      details: { recipeName },
       status: 403,
-      apiText: "no write permission",
-      htmlText: `You can not write to ${recipeName}.`,
-      xReason: "RECIPE_NO_WRITE_PERMISSION"
+      reason: "RECIPE_NO_WRITE_PERMISSION"
     })
   }
 }
@@ -84,10 +98,9 @@ export class RecipeNoWritePermission extends SendError<"RECIPE_NO_WRITE_PERMISSI
 export class BagNotFound extends SendError<"BAG_NOT_FOUND"> {
   constructor(public bagName: string) {
     super({
+      details: { bagName },
       status: 404,
-      apiText: "bag not found",
-      htmlText: `Recipe ${bagName} was not found.`,
-      xReason: "BAG_NOT_FOUND"
+      reason: "BAG_NOT_FOUND"
     })
   }
 }
@@ -95,10 +108,9 @@ export class BagNotFound extends SendError<"BAG_NOT_FOUND"> {
 export class BagNoReadPermission extends SendError<"BAG_NO_READ_PERMISSION"> {
   constructor(public bagName: string) {
     super({
+      details: { bagName },
       status: 403,
-      apiText: "no read permission",
-      htmlText: `You can not read from ${bagName}.`,
-      xReason: "BAG_NO_READ_PERMISSION"
+      reason: "BAG_NO_READ_PERMISSION"
     })
   }
 }
@@ -106,10 +118,9 @@ export class BagNoReadPermission extends SendError<"BAG_NO_READ_PERMISSION"> {
 export class BagNoWritePermission extends SendError<"BAG_NO_WRITE_PERMISSION"> {
   constructor(public bagName: string) {
     super({
+      details: { bagName },
       status: 403,
-      apiText: "no write permission",
-      htmlText: `You can not write to ${bagName}.`,
-      xReason: "BAG_NO_WRITE_PERMISSION"
+      reason: "BAG_NO_WRITE_PERMISSION"
     })
   }
 }
@@ -117,10 +128,9 @@ export class BagNoWritePermission extends SendError<"BAG_NO_WRITE_PERMISSION"> {
 export class PageNotAuthorizedForEndpoint extends SendError<"PAGE_NOT_AUTHORIZED_FOR_ENDPOINT"> {
   constructor() {
     super({
+      details: undefined,
       status: 403,
-      apiText: "the page does not have permission to access this endpoint",
-      htmlText: `The page does not have permission to access this endpoint.`,
-      xReason: "PAGE_NOT_AUTHORIZED_FOR_ENDPOINT"
+      reason: "PAGE_NOT_AUTHORIZED_FOR_ENDPOINT"
     })
   }
 }
