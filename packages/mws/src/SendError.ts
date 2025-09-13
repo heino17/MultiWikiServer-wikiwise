@@ -12,7 +12,7 @@ export abstract class SendError
     this.status = status
     this.reason = reason
     this.details = details
-    this.name = SendError.toString()
+    this.name = SendError.name
   }
 
   status
