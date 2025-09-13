@@ -4,8 +4,8 @@ export abstract class SendError
   constructor({ details, status, reason }:
     {
       details: ReasonSendErrorMap[ReasonStr]["details"]
-      status: number
-      reason: string
+      status: ReasonSendErrorMap[ReasonStr]["status"]
+      reason: ReasonStr
 
     }) {
     super()
@@ -36,30 +36,37 @@ export interface ReasonSendErrorMap {
   "RECIPE_NOT_FOUND": {
     err: RecipeNotFound
     details: { recipeName: string }
+    status: 404
   }
   "RECIPE_NO_READ_PERMISSION": {
     err: RecipeNoReadPermission
     details: { recipeName: string }
+    status: 403
   }
   "RECIPE_NO_WRITE_PERMISSION": {
     err: RecipeNoWritePermission
     details: { recipeName: string }
+    status: 403
   }
   "BAG_NOT_FOUND": {
     err: BagNotFound
     details: { bagName: string }
+    status: 404
   }
   "BAG_NO_READ_PERMISSION": {
     err: BagNoReadPermission
     details: { bagName: string }
+    status: 403
   }
   "BAG_NO_WRITE_PERMISSION": {
     err: BagNoWritePermission
     details: { bagName: string }
+    status: 403
   }
   "PAGE_NOT_AUTHORIZED_FOR_ENDPOINT": {
     err: PageNotAuthorizedForEndpoint
     details: undefined
+    status: 403
   }
 }
 
