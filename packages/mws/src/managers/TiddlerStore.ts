@@ -1,5 +1,6 @@
 import { TiddlerFields } from "tiddlywiki";
-import { UserError, zod } from "@tiddlywiki/server";
+import { zod } from "@tiddlywiki/server";
+import { BagNotFound, RecipeMustHaveBags, RecipeNoBagAtPositionZero, RecipeNotFound, ResponseInterceptedByChecker } from "../SendError";
 
 /**
  * 	
@@ -74,7 +75,7 @@ export class TiddlerStore_PrismaBase {
 
     const validationRecipeName = this.validateItemName(recipe_name, allowPrivilegedCharacters);
     if (validationRecipeName) throw validationRecipeName;
-    if (bags.length === 0) throw new UserError("Recipes must contain at least one bag");
+    if (bags.length === 0) throw new RecipeMustHaveBags(recipe_name);
 
     return tuple(
       this.prisma.recipes.upsert({
@@ -260,13 +261,13 @@ export class TiddlerStore_PrismaTransaction extends TiddlerStore_PrismaBase {
       }
     });
 
-    if (!recipe) throw new UserError("Recipe not found");
+    if (!recipe) throw new RecipeNotFound(recipe_name);
 
     // the where clause selects only the bag at position 0, 
     // not to be confused with index zero of the result array!
     const bag = recipe.recipe_bags[0]?.bag;
 
-    if (!bag) throw new UserError("Recipe has no bag at position 0");
+    if (!bag) throw new RecipeNoBagAtPositionZero(recipe_name);
 
     return bag;
   }
@@ -324,7 +325,7 @@ export class TiddlerStore_PrismaTransaction extends TiddlerStore_PrismaBase {
   ) {
 
     const bag = await this.getBagTiddlers_PrismaQuery(bag_name, options);
-    if (!bag) throw new UserError("Bag not found");
+    if (!bag) throw new BagNotFound(bag_name);
 
     const { success, error, data } = zod.strictObject({
       bag_id: zod.string(),
@@ -338,7 +339,7 @@ export class TiddlerStore_PrismaTransaction extends TiddlerStore_PrismaBase {
 
     if (!success) {
       console.error("Invalid bag data", bag, error);
-      throw new UserError("The server tried to send an invalid response, but it was intercepted by the response checker.");
+      throw new ResponseInterceptedByChecker();
     }
 
     return data;

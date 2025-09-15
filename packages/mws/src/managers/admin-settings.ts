@@ -1,8 +1,9 @@
-import { registerZodRoutes, RouterKeyMap, RouterRouteMap, ServerRoute, UserError } from "@tiddlywiki/server";
+import { registerZodRoutes, RouterKeyMap, RouterRouteMap, ServerRoute } from "@tiddlywiki/server";
 import { admin } from "./admin-utils";
 import { ServerState } from "../ServerState";
 import { assertSignature } from "../services/sessions";
 import { serverEvents } from "@tiddlywiki/events";
+import { SettingKeyInvalid } from "../SendError";
 
 
 
@@ -50,7 +51,7 @@ class SettingsManager {
     const { key, value } = state.data;
 
     if (!state.config.settings.find(e => e.key === key)) {
-      throw new UserError(`Invalid setting key: ${key}`);
+      throw new SettingKeyInvalid(key);
     }
 
     // Update or create the setting
