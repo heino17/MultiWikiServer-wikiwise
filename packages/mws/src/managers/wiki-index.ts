@@ -95,8 +95,6 @@ serverEvents.on("mws.routes", (root, config) => {
     await state.$transaction(async (prisma) => {
       const server = new WikiStateStore(state, prisma);
       await server.serveIndexFile(state.pathParams.recipe_name);
-    }).catch(async e => {
-
     });
 
     if (Debug.enabled("server:handler:timing")) console.timeEnd(timekey);
