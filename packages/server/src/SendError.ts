@@ -8,6 +8,27 @@ export interface SendErrorReasonData {
   /** Check the server logs for this one */
   "INTERNAL_SERVER_ERROR":
   SendErrorItem<500, { message: string; details?: any; }>;
+
+  "INVALID_X_REQUESTED_WITH":
+  SendErrorItem<400, null>;
+
+  "MALFORMED_JSON":
+  SendErrorItem<400, null>;
+
+  // return 400 rather than 404 to protect the semantic meaning of 404 NOT FOUND,
+  // because if the request does not match a route, we have no way of knowing what
+  // resource they thought they were requesting and whether or not it exists.
+  "NO_ROUTE_MATCHED":
+  SendErrorItem<400, null>;
+
+  "METHOD_NOT_ALLOWED":
+  SendErrorItem<405, { allowedMethods: string[] }>;
+
+  "INVALID_BODY_FORMAT":
+  SendErrorItem<500, null>;
+
+  "REQUEST_DROPPED":
+  SendErrorItem<500, null>;
 };
 
 export class SendError<REASON extends SendErrorReason>

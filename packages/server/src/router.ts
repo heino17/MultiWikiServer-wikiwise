@@ -84,7 +84,7 @@ export class Router {
     if (!routePath.length || routePath[routePath.length - 1]?.route.denyFinal) {
       console.log("No route found for", streamer.method, streamer.urlInfo.pathname, routePath.length);
       routePath.forEach(e => console.log(e.route.method, e.route.path.source, e.route.denyFinal));
-      return streamer.sendEmpty(400, { "x-reason": "no-route" });
+      throw new SendError("NO_ROUTE_MATCHED", 400, null);
     }
 
     // A basic CSRF prevention so that basic HTML forms and AJAX requests
@@ -103,7 +103,7 @@ export class Router {
         // If the x-requested-with header is not set to "fetch", 
         if (!reqwith || !this.allowedRequestedWithHeaders.includes(reqwith))
           // we reject the request with a 403 Forbidden.
-          return streamer.sendEmpty(403, { "x-reason": "x-requested-with invalid" });
+          throw new SendError("INVALID_X_REQUESTED_WITH", 400, null);
 
     // if no bodyFormat is specified, we default to ignore
     const bodyFormat = routePath.find(e => e.route.bodyFormat)?.route.bodyFormat || "ignore";
@@ -134,7 +134,7 @@ export class Router {
       if (state.bodyFormat === "json") {
         // make sure this parses as valid data
         const { success, data } = zod.string().transform(zodTransformJSON).safeParse(state.data);
-        if (!success) return state.sendEmpty(400, { "x-reason": "json" });
+        if (!success) throw new SendError("MALFORMED_JSON", 400, null);
         state.data = data;
       }
     } else if (state.bodyFormat === "www-form-urlencoded-urlsearchparams"
@@ -148,7 +148,7 @@ export class Router {
       // make sure state is never by assigning it to a never const. This will error if something is missed.
       const t: never = state;
       const state2: ServerRequest = state as any;
-      return state2.sendString(500, {}, "Invalid bodyFormat: " + state2.bodyFormat, "utf8");
+      throw new SendError("INVALID_BODY_FORMAT", 500, null);
     }
 
     return await this.handleRoute(state, routePath);
@@ -189,8 +189,8 @@ export class Router {
     }
     if (!state.headersSent) {
       await serverEvents.emitAsync("request.fallback", state, route);
-      state.sendEmpty(404, {});
       console.log("No handler sent headers before the promise resolved.");
+      throw new SendError("REQUEST_DROPPED", 500, null);
     }
 
   }
