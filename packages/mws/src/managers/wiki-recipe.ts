@@ -3,10 +3,11 @@
 import { TiddlerFields } from "tiddlywiki";
 import { WikiStateStore } from "./WikiStateStore";
 import Debug from "debug";
-import { BodyFormat, JsonValue, UserError, zod, ZodRoute, zodRoute } from "@tiddlywiki/server";
+import { BodyFormat, JsonValue, zod, ZodRoute, zodRoute } from "@tiddlywiki/server";
 import { serverEvents } from "@tiddlywiki/events";
 import { Prisma } from "prisma-client";
 import { parseTiddlerFields, RECIPE_PREFIX, rethrow } from "./wiki-utils";
+import { BagDoesNotHaveThisTiddler } from "../SendError";
 const debugCORS = Debug("mws:cors");
 const debugSSE = Debug("mws:sse");
 
@@ -207,7 +208,11 @@ export class WikiRecipeRoutes {
 
         const { bag_id, bag_name, tiddlers } = await server.getRecipeWritableBag(recipe_name, title);
 
-        if (!tiddlers.length) throw new UserError("The writable bag does not contain this tiddler.");
+        if (!tiddlers.length)
+          throw new BagDoesNotHaveThisTiddler({
+            bagName: bag_name,
+            tiddlerTitle: title
+          });
 
         const { revision_id } = await server.deleteBagTiddler(bag_id, title);
 

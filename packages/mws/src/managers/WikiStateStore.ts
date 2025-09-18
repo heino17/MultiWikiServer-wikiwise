@@ -3,8 +3,9 @@ import { readFileSync, createReadStream } from "fs";
 import { resolve, join } from "path";
 import { TiddlerFields } from "tiddlywiki";
 import { TiddlerStore_PrismaTransaction } from "./TiddlerStore";
-import { ServerRequest, UserError } from "@tiddlywiki/server";
+import { ServerRequest } from "@tiddlywiki/server";
 import { readFile } from "fs/promises";
+import { TiddlerWireFormatUnknown } from "../SendError";
 
 /** Basically a bunch of methods to help with wiki routes. */
 export class WikiStateStore extends TiddlerStore_PrismaTransaction {
@@ -447,6 +448,6 @@ function formatTiddlerFields(input: TiddlerFields, ctype: "application/x-mws-tid
     return JSON.stringify(input);
   }
 
-  throw new UserError("Unknown tiddler wire format " + ctype)
+  throw new TiddlerWireFormatUnknown(ctype)
 
 }
