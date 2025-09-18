@@ -6,6 +6,7 @@ import { IncomingMessage, ServerResponse } from "node:http";
 import { Http2ServerRequest, Http2ServerResponse } from "node:http2";
 import { ListenOptions } from "./listeners";
 import { serverEvents } from "@tiddlywiki/events";
+import { SendError } from "./SendError";
 
 
 const debug = Debug("mws:router:matching");
@@ -34,9 +35,19 @@ export class Router {
     if (Debug.enabled("server:timing:handle")) console.time(timekey);
     // the sole purpose of this method is to catch errors
     this.handleRequest(req, res, options).catch(err2 => {
-      if (err2 === STREAM_ENDED) return;
-      res.writeHead(500, { "x-reason": "handle incoming request" }).end();
+      if (err2 === STREAM_ENDED || res.headersSent) return;
+      if (!(err2 instanceof SendError)) {
+        err2 = new SendError("INTERNAL_SERVER_ERROR", 500, {
+          message: "Internal Server Error. Details have been logged."
+        });
+      }
       console.log(timekey, err2);
+      const err3 = err2 as SendError<any>;
+      res.writeHead(err3.status, {
+        "content-type": "application/json",
+        "x-reason": err3.reason,
+      }).end(JSON.stringify(err3));
+
     }).finally(() => {
       if (Debug.enabled("server:timing:handle")) console.timeEnd(timekey);
     });
