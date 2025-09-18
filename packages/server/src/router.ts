@@ -165,7 +165,15 @@ export class Router {
 
     let result: any = state;
     for (const match of route) {
-      await match.route.handler(result);
+      await Promise.resolve().then(() => {
+        return match.route.handler(result);
+      }).catch(e => {
+        if (match.route.catchHandler) {
+          return match.route.catchHandler(result, e);
+        } else {
+          throw e;
+        }
+      });
       if (state.headersSent) return;
     }
     if (!state.headersSent) {
@@ -261,7 +269,7 @@ export interface RouteMatch {
 }
 
 
-export const zodTransformJSON = (arg: string, ctx: zod.RefinementCtx) => {
+export const zodTransformJSON = (arg: string, ctx: zod.RefinementCtx<string>) => {
   try {
     if (arg === "") return undefined;
     return JSON.parse(arg, (key, value) => {
@@ -274,9 +282,21 @@ export const zodTransformJSON = (arg: string, ctx: zod.RefinementCtx) => {
     });
   } catch (e) {
     ctx.addIssue({
-      code: zod.ZodIssueCode.custom,
+      code: "custom",
       message: e instanceof Error ? e.message : `${e}`,
-      fatal: true,
+      input: arg,
+    });
+    return zod.NEVER;
+  }
+};
+export const zodDecodeURIComponent = (arg: string, ctx: zod.RefinementCtx<string>) => {
+  try {
+    return decodeURIComponent(arg);
+  } catch (e) {
+    ctx.addIssue({
+      code: "custom",
+      message: e instanceof Error ? e.message : `${e}`,
+      input: arg,
     });
     return zod.NEVER;
   }
@@ -335,6 +355,15 @@ export interface ServerRoute extends RouteDef {
   handler: (state: ServerRequest) => Promise<typeof STREAM_ENDED>
 
   /**
+   * If the handler promise rejects, this function will be called as a second attempt.
+   * 
+   * Same rules apply as for handler.
+   */
+  catchHandler?: (state: ServerRequest, error: any) => Promise<typeof STREAM_ENDED>
+
+  registerError: Error;
+
+  /**
    * ### ROUTING
    *
    * @param route The route definition.
@@ -353,7 +382,8 @@ export interface ServerRoute extends RouteDef {
    */
   defineRoute: (
     route: RouteDef,
-    handler: (state: ServerRequest) => Promise<symbol | void>
+    handler: (state: ServerRequest) => Promise<symbol | void>,
+    catchHandler?: (state: ServerRequest, error: any) => Promise<symbol | void>
   ) => ServerRoute;
 }
 
@@ -362,7 +392,8 @@ const debugDefining = Debug("mws:router:defining");
 function defineRoute(
   parent: { $o?: any; method: any; } | typeof ROOT_ROUTE,
   route: RouteDef,
-  handler: (state: any) => any
+  handler: (state: any) => any,
+  catchHandler?: (state: any, error: any) => any
 ) {
 
   if (route.bodyFormat && !BodyFormats.includes(route.bodyFormat))
@@ -380,9 +411,13 @@ function defineRoute(
     (parent as any).childRoutes.push(route);
   }
 
-  (route as ServerRoute).defineRoute = (...args: [any, any]) => defineRoute(route, ...args);
+  (route as ServerRoute).defineRoute = (...args: [any, any, any]) => defineRoute(route, ...args);
 
   (route as ServerRoute).handler = handler;
+
+  (route as ServerRoute).catchHandler = catchHandler;
+
+  (route as ServerRoute).registerError = new Error("defineRoute register error");
 
   debugDefining(route.method, route.path.source);
 
@@ -393,7 +428,7 @@ export const ROOT_ROUTE: unique symbol = Symbol("ROOT_ROUTE");
 
 export function createRootRoute(
   method: string[],
-  handler: (state: ServerRequest) => void
+  handler: (state: ServerRequest) => Promise<void>
 ): ServerRoute {
   return defineRoute(ROOT_ROUTE, {
     method,

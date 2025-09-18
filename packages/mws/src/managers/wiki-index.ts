@@ -1,22 +1,14 @@
 
 
-import { TiddlerFields } from "tiddlywiki";
-import { createWriteStream, mkdirSync, rmSync } from "fs";
-import { resolve } from "path";
-import { createHash, Hash } from "crypto";
-import { readFile } from "fs/promises";
-import { Writable } from "stream";
-import { IncomingHttpHeaders } from "http";
 import { WikiStateStore } from "./WikiStateStore";
 import Debug from "debug";
-import { BodyFormat, checkPath, JsonValue, registerZodRoutes, RouterKeyMap, RouterRouteMap, ServerRoute, tryParseJSON, Z2, zod, ZodRoute, zodRoute, ZodState } from "@tiddlywiki/server";
-import { serverEvents, ServerEventsMap } from "@tiddlywiki/events";
-import { Prisma } from "prisma-client";
-import { t } from "try";
+import { checkPath, checkQuery, registerZodRoutes, RouterKeyMap, tryParseJSON, Z2, zod, zodDecodeURIComponent, zodTransformJSON } from "@tiddlywiki/server";
+import { serverEvents } from "@tiddlywiki/events";
 import { WikiRecipeRoutes } from "./wiki-recipe";
 import { WikiStatusRoutes } from "./wiki-status";
-import { BAG_PREFIX, RECIPE_PREFIX } from "./wiki-utils";
+import { RECIPE_PREFIX } from "./wiki-utils";
 import { WikiExternalRoutes } from "./wiki-external";
+import { SendError, SendErrorReason } from "@tiddlywiki/server";
 const debugCORS = Debug("mws:cors");
 const debugSSE = Debug("mws:sse");
 
@@ -83,25 +75,43 @@ serverEvents.on("mws.routes", (root, config) => {
     pathParams: ["recipe_name"],
     bodyFormat: "ignore",
   }, async (state) => {
-    const timekey = `handler ${state.bodyFormat} ${state.method} ${state.urlInfo.pathname}`;
-    if (Debug.enabled("server:handler:timing")) console.time(timekey);
-
-    if (!state.pathParams.recipe_name)
-      throw state.sendEmpty(404, { "x-reason": "recipe name not found" });
+    const timekey = `handler ${state.bodyFormat} ${state.method} ${state.urlInfo.pathname} ${Date.now()}`;
 
     checkPath(state, z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
     }), new Error());
+
+    if (!state.pathParams.recipe_name) {
+      const error = new SendError("RECIPE_NOT_FOUND", 404, {
+        recipeName: state.pathParams.recipe_name
+      })
+      throw await state.sendAdmin(error.status, JSON.stringify(error));
+    }
+
+    if (Debug.enabled("server:handler:timing")) console.time(timekey);
 
     await state.assertRecipeAccess(state.pathParams.recipe_name, false);
 
     await state.$transaction(async (prisma) => {
       const server = new WikiStateStore(state, prisma);
       await server.serveIndexFile(state.pathParams.recipe_name);
+    }).catch(async e => {
+
     });
 
     if (Debug.enabled("server:handler:timing")) console.timeEnd(timekey);
 
+    throw STREAM_ENDED;
+  }, async (state, e) => {
+    if (e instanceof SendError) {
+      await state.sendAdmin(e.status, JSON.stringify(e));
+    } else {
+      console.log("Unexpected error in wiki index route", e);
+      const error = new SendError("INTERNAL_SERVER_ERROR", 500, {
+        message: "An unexpected error occurred. Details have been logged.",
+      });
+      await state.sendAdmin(error.status, JSON.stringify(error));
+    }
     throw STREAM_ENDED;
   });
 })

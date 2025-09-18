@@ -2,7 +2,7 @@ import { Prisma } from 'prisma-client';
 import { Types } from 'prisma-client/runtime/library';
 import { ServerState } from "./ServerState";
 import { BodyFormat, RouteMatch, Router, ServerRequestClass, Streamer } from "@tiddlywiki/server";
-import { BagNoReadPermission, BagNotFound, BagNoWritePermission, PageNotAuthorizedForEndpoint, RecipeNoReadPermission, RecipeNotFound, RecipeNoWritePermission, SendError, ReasonSendErrorMap } from "./SendError";
+import { SendError, SendErrorReasonData } from "@tiddlywiki/server";
 
 export class StateObject<
   B extends BodyFormat = BodyFormat,
@@ -28,7 +28,7 @@ export class StateObject<
     this.pluginCache = router.config.pluginCache;
 
     this.asserted = false;
-    this.sendAdmin = () => router.sendAdmin(this);
+    this.sendAdmin = (status: number, response: string) => router.sendAdmin(this, status, response);
   }
 
   okUser() {
@@ -51,8 +51,18 @@ export class StateObject<
     return this.engine.$transaction(arg(this.engine), options);
   }
 
-  sendError<ReasonStr extends keyof ReasonSendErrorMap>(err: SendError<ReasonStr>) {
-    return this.sendEmpty(err.status, { "x-reason": err.reason })
+  sendError<ReasonStr extends keyof SendErrorReasonData>(
+    reason: ReasonStr,
+    status: SendErrorReasonData[ReasonStr]["status"],
+    details: SendErrorReasonData[ReasonStr]["details"]
+  ): typeof STREAM_ENDED {
+    
+    return this.sendString(
+      status,
+      { "x-reason": reason },
+      JSON.stringify({ status, reason, details }),
+      "utf8"
+    );
   }
 
   makeTiddlerEtag(options: { bag_name: string; revision_id: string | number; }) {
@@ -119,11 +129,11 @@ export class StateObject<
     const { recipe, canRead, canWrite, referer } = await this.getRecipeACL(recipe_name, needWrite);
 
     if (referer && referer !== recipe_name)
-      throw this.sendError(new PageNotAuthorizedForEndpoint())
+      throw new SendError("PAGE_NOT_AUTHORIZED_FOR_ENDPOINT", 403, null);
 
-    if (!recipe) throw this.sendError(new RecipeNotFound(recipe_name));
-    if (!canRead) throw this.sendError(new RecipeNoReadPermission(recipe_name));
-    if (!canWrite) throw this.sendError(new RecipeNoWritePermission(recipe_name));
+    if (!recipe) throw new SendError("RECIPE_NOT_FOUND", 404, { recipeName: recipe_name });
+    if (!canRead) throw new SendError("RECIPE_NO_READ_PERMISSION", 403, { recipeName: recipe_name });
+    if (!canWrite) throw new SendError("RECIPE_NO_WRITE_PERMISSION", 403, { recipeName: recipe_name });
 
     this.asserted = true;
 
@@ -141,9 +151,9 @@ export class StateObject<
 
     const { bag, canRead, canWrite } = await this.getBagACL(bag_name, needWrite);
 
-    if (!bag) throw this.sendError(new BagNotFound(bag_name));
-    if (!canRead) throw this.sendError(new BagNoReadPermission(bag_name));
-    if (!canWrite) throw this.sendError(new BagNoWritePermission(bag_name));
+    if (!bag) throw new SendError("BAG_NOT_FOUND", 404, { bagName: bag_name });
+    if (!canRead) throw new SendError("BAG_NO_READ_PERMISSION", 403, { bagName: bag_name });
+    if (!canWrite) throw new SendError("BAG_NO_WRITE_PERMISSION", 403, { bagName: bag_name });
 
     this.asserted = true;
 

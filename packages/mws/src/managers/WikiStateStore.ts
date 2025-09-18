@@ -1,11 +1,11 @@
 import { createHash } from "crypto";
-import { readFileSync, createReadStream } from "fs";
+import { createReadStream } from "fs";
 import { resolve, join } from "path";
 import { TiddlerFields } from "tiddlywiki";
 import { TiddlerStore_PrismaTransaction } from "./TiddlerStore";
 import { ServerRequest } from "@tiddlywiki/server";
 import { readFile } from "fs/promises";
-import { TiddlerWireFormatUnknown } from "../SendError";
+import { SendError } from "@tiddlywiki/server";
 
 /** Basically a bunch of methods to help with wiki routes. */
 export class WikiStateStore extends TiddlerStore_PrismaTransaction {
@@ -23,7 +23,7 @@ export class WikiStateStore extends TiddlerStore_PrismaTransaction {
 
     // Check request is valid
     if (!recipe_name) {
-      return state.sendEmpty(404);
+      throw new SendError("RECIPE_NOT_FOUND", 404, { recipeName: recipe_name });
     }
 
     const recipe = await this.prisma.recipes.findUnique({
@@ -448,6 +448,6 @@ function formatTiddlerFields(input: TiddlerFields, ctype: "application/x-mws-tid
     return JSON.stringify(input);
   }
 
-  throw new TiddlerWireFormatUnknown(ctype)
+  throw new SendError("TIDDLER_WIRE_FORMAT_UNKNOWN", 403, { contentType: ctype })
 
 }

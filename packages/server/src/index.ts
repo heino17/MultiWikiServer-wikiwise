@@ -6,16 +6,16 @@ import type { IncomingMessage, ServerResponse } from "http";
 import type { Http2ServerRequest, Http2ServerResponse } from "http2";
 import type { ServerRequest } from "./StateObject";
 import { Z2, zod as z } from "./Z2";
-import { fromError } from "zod-validation-error";
 
 export * from "./listeners";
 export * from "./router";
+export * from "./SendError";
 export * from "./StateObject";
 export * from "./streamer";
 export * from "./utils";
+export * from "./Z2";
 export * from "./zodRegister";
 export * from "./zodRoute";
-export * from "./Z2";
 
 /**
  * 

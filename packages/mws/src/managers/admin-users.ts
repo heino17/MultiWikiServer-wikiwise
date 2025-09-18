@@ -1,7 +1,6 @@
 
 import { registerZodRoutes, RouterKeyMap, RouterRouteMap, ServerRoute } from "@tiddlywiki/server";
 import { admin } from "./admin-utils";
-import { ServerState } from "../ServerState";
 import { assertSignature } from "../services/sessions";
 import { serverEvents } from "@tiddlywiki/events";
 

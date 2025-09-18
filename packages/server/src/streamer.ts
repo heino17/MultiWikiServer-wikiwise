@@ -51,6 +51,7 @@ export class Streamer {
   host: string;
   method: string;
   urlInfo: URL;
+  /** The request url with path prefix removed. */
   url: string;
   headers: IncomingHttpHeaders;
   cookies: URLSearchParams;
@@ -645,7 +646,7 @@ export class StreamerState {
 
   }
 
-
+  /** The request url with path prefix removed. */
   get url() { return this.streamer.url; }
   get method(): string { return this.streamer.method; }
   get headers() { return this.streamer.headers; }

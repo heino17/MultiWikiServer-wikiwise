@@ -1,6 +1,6 @@
 import { TiddlerFields } from "tiddlywiki";
 import { zod } from "@tiddlywiki/server";
-import { BagNotFound, RecipeMustHaveBags, RecipeNoBagAtPositionZero, RecipeNotFound, ResponseInterceptedByChecker } from "../SendError";
+import { SendError } from "@tiddlywiki/server";
 
 /**
  * 	
@@ -75,7 +75,7 @@ export class TiddlerStore_PrismaBase {
 
     const validationRecipeName = this.validateItemName(recipe_name, allowPrivilegedCharacters);
     if (validationRecipeName) throw validationRecipeName;
-    if (bags.length === 0) throw new RecipeMustHaveBags(recipe_name);
+    if (bags.length === 0) throw new SendError("RECIPE_MUST_HAVE_BAGS", 400, { recipeName: recipe_name });
 
     return tuple(
       this.prisma.recipes.upsert({
@@ -261,13 +261,13 @@ export class TiddlerStore_PrismaTransaction extends TiddlerStore_PrismaBase {
       }
     });
 
-    if (!recipe) throw new RecipeNotFound(recipe_name);
+    if (!recipe) throw new SendError("RECIPE_NOT_FOUND", 404, { recipeName: recipe_name });
 
     // the where clause selects only the bag at position 0, 
     // not to be confused with index zero of the result array!
     const bag = recipe.recipe_bags[0]?.bag;
 
-    if (!bag) throw new RecipeNoBagAtPositionZero(recipe_name);
+    if (!bag) throw new SendError("RECIPE_NO_BAG_AT_POSITION_ZERO", 403, { recipeName: recipe_name });
 
     return bag;
   }
@@ -325,7 +325,7 @@ export class TiddlerStore_PrismaTransaction extends TiddlerStore_PrismaBase {
   ) {
 
     const bag = await this.getBagTiddlers_PrismaQuery(bag_name, options);
-    if (!bag) throw new BagNotFound(bag_name);
+    if (!bag) throw new SendError("BAG_NOT_FOUND", 404, { bagName: bag_name });
 
     const { success, error, data } = zod.strictObject({
       bag_id: zod.string(),
@@ -339,7 +339,7 @@ export class TiddlerStore_PrismaTransaction extends TiddlerStore_PrismaBase {
 
     if (!success) {
       console.error("Invalid bag data", bag, error);
-      throw new ResponseInterceptedByChecker();
+      throw new SendError("RESPONSE_INTERCEPTED_BY_CHECKER", 500, null);
     }
 
     return data;

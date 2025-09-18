@@ -131,7 +131,7 @@ export class Command extends BaseCommand<[], {
       process.exit();
     }
 
-    const rootRoute = createRootRoute([], (state) => { })
+    const rootRoute = createRootRoute([], async (state) => { })
     const router = new Router(rootRoute);
     // listeners on here setup all the request handling
     await serverEvents.emitAsync("listen.router.init", this, router);

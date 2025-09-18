@@ -1,20 +1,11 @@
 
 
-import { TiddlerFields } from "tiddlywiki";
-import { createWriteStream, mkdirSync, rmSync } from "fs";
-import { resolve } from "path";
-import { createHash, Hash } from "crypto";
-import { readFile } from "fs/promises";
-import { Writable } from "stream";
-import { IncomingHttpHeaders } from "http";
 import { WikiStateStore } from "./WikiStateStore";
 import Debug from "debug";
-import { BodyFormat, checkPath, JsonValue, registerZodRoutes, RouterKeyMap, RouterRouteMap, ServerRoute, tryParseJSON, Z2, zod, ZodRoute, zodRoute, ZodState } from "@tiddlywiki/server";
+import { zod, zodRoute } from "@tiddlywiki/server";
 import { serverEvents, ServerEventsMap } from "@tiddlywiki/events";
-import { Prisma } from "prisma-client";
-import { t } from "try";
 import { RECIPE_PREFIX } from "./wiki-utils";
-import { LastEventIdNotProvided } from "../SendError";
+import { SendError } from "@tiddlywiki/server";
 const debugCORS = Debug("mws:cors");
 const debugSSE = Debug("mws:sse");
 
@@ -69,7 +60,7 @@ export class WikiStatusRoutes {
 
       let lastEventID = state.headers['last-event-id'] || state.queryParams["first-event-id"]?.[0];
 
-      if (!lastEventID) throw new LastEventIdNotProvided();
+      if (!lastEventID) throw new SendError("LAST_EVENT_ID_NOT_PROVIDED", 403, null);
 
       debugSSE("connection opened", recipe_name);
       const events = state.sendSSE();

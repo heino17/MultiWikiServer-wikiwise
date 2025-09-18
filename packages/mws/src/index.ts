@@ -14,6 +14,7 @@ import "./ServerState";
 import "./services/tw-routes";
 import "./services/cache";
 import "./services/sessions";
+import "./SendError";
 
 // startup
 import * as opaque from "@serenity-kit/opaque";

@@ -19,6 +19,7 @@ class ExtString {
     }
   }
   [Symbol.toPrimitive](hint: "string") { return this.str; }
+  toString() { return this.str; }
 }
 
 const rootdir = dist_resolve('../packages/react-admin');
@@ -26,19 +27,24 @@ const publicdir = dist_resolve('../public/react-admin');
 
 export async function setupDevServer(
   config: ServerState,
-) {
-  const {enableDevServer} = config;
-  
+): Promise<(state: ServerRequest, status: number, serverResponse: string) => Promise<typeof STREAM_ENDED>> {
+  const { enableDevServer } = config;
 
-  const make_index_file = async (pathPrefix: string) =>
-    Buffer.from(new ExtString(await readFile(join(publicdir, "index.html"), "utf8"))
-      .replaceAll("`$$js:pathPrefix:stringify$$`", JSON.stringify(pathPrefix))
+  // Escaped </script> to avoid ending the script block early
+  const escapedScriptEnd = "<\\/script>";
+  const make_index_file = async (pathPrefix: string, serverResponseJSON: string) => {
+    pathPrefix = new ExtString(pathPrefix).replaceAll("</script>", "<\\/script>").toString();
+    serverResponseJSON = new ExtString(serverResponseJSON).replaceAll("</script>", "<\\/script>").toString();
+    return Buffer.from(new ExtString(await readFile(join(publicdir, "index.html"), "utf8"))
       .replaceAll("$$js:pathPrefix$$", pathPrefix)
+      .replaceAll("`$$js:pathPrefix:stringify$$`", JSON.stringify(pathPrefix))
+      .replaceAll("`$$js:embeddedServerResponse:stringify$$`", serverResponseJSON)
       , "utf8");
+  };
 
   if (!enableDevServer) {
-    return async function sendProdServer(state: ServerRequest) {
-      const index_file = await make_index_file(state.pathPrefix);
+    return async function sendProdServer(state: ServerRequest, status: number, serverResponse: string) {
+      const index_file = await make_index_file(state.pathPrefix, serverResponse);
       const index_hash = createHash("sha1").update(index_file).digest().toString("base64");
       const sendIndex = (): typeof STREAM_ENDED => state.sendBuffer(200, {
         "content-type": "text/html",
@@ -49,7 +55,7 @@ export async function setupDevServer(
       if (state.url === "/") return sendIndex();
 
       // use sendFile directly instead of having the dev server send it
-      return state.sendFile(200, {}, {
+      return state.sendFile(status, {}, {
         root: publicdir,
         reqpath: state.url,
         on404: async () => sendIndex()
@@ -58,14 +64,10 @@ export async function setupDevServer(
   } else {
     const { ctx, port } = await esbuildStartup();
 
-    return async function sendDevServer(state: ServerRequest) {
-      const index_file = await make_index_file(state.pathPrefix);
+    return async function sendDevServer(state: ServerRequest, status: number, serverResponse: string) {
+      const index_file = await make_index_file(state.pathPrefix, serverResponse);
       const index_hash = createHash("sha1").update(index_file).digest().toString("base64");
-      const sendIndex = (): typeof STREAM_ENDED => state.sendBuffer(200, {
-        "content-type": "text/html",
-        "content-length": index_file.length,
-        "etag": index_hash,
-      }, index_file);
+      // const sendIndex = (): typeof STREAM_ENDED => ;
 
       const proxyRes = await new Promise<import("http").IncomingMessage>((resolve, reject) => {
         const headers = { ...state.headers };
@@ -95,7 +97,11 @@ export async function setupDevServer(
         });
 
         if (indexCheck.toString("utf8").includes("<!-- react-user-mgmt client home page -->"))
-          return sendIndex();
+          return state.sendBuffer(status, {
+            "content-type": "text/html",
+            "content-length": index_file.length,
+            "etag": index_hash,
+          }, index_file);
       }
       if (statusCode === 404 || !statusCode) {
         proxyRes.resume();
@@ -117,7 +123,7 @@ export async function esbuildStartup() {
 
   const entry = resolve(rootdir, 'src/main.tsx');
 
-  if(!existsSync(entry)) {
+  if (!existsSync(entry)) {
     throw new Error(`Entry file ${entry} does not exist. You might be running this in production via the ENABLE_DEV_SERVER=mws environment variable, which is only valid in the git repo.`);
   }
 
