@@ -82,7 +82,7 @@ export type IndexJson = ART<typeof getIndexJson>;
 declare global {
   // see packages/mws/services/setupDevServer.ts
   const pathPrefix: string;
-  const embeddedServerResponse: string;
+  const embeddedServerResponse: any;
 }
 type t = StatusManagerMap["index_json"]
 
