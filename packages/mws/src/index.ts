@@ -1,4 +1,5 @@
 import "../../../prisma/global";
+import "@tiddlywiki/utils";
 import { serverEvents } from "@tiddlywiki/events";
 
 // these all use serverEvents
@@ -57,30 +58,5 @@ serverEvents.on("cli.commander", (program) => {
   program.description("Multi-User Multi-Wiki Server for TiddlyWiki.");
 })
 
-
-declare global {
-
-  /** Awaited Return Type */
-  type ART<T extends (...args: any) => any> = Awaited<ReturnType<T>>
-  type Complete<T> = { [K in keyof T]-?: T[K] }
-  interface ObjectConstructor { keys<T>(t: T): (string & keyof T)[]; }
-
-}
-
-declare global {
-  /** helper function which returns the arguments as an array, but typed as a tuple, which is still an array, but positional. */
-  function tuple<P extends any[]>(...arg: P): P;
-}
-(global as any).tuple = function (...args: any[]) { return args; }
-
-declare global {
-  /** 
-   * Helper function which narrows the type to only truthy values.
-   * 
-   * It uses `!!` so NaN will also be excluded.
-   */
-  function truthy<T>(obj: T): obj is Exclude<T, false | null | undefined | 0 | '' | void>
-}
-(global as any).truthy = function truthy(obj: any) { return !!obj; }
 
 

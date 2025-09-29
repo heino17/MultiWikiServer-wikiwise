@@ -1,3 +1,4 @@
+import "@tiddlywiki/utils";
 import { serverEvents } from "@tiddlywiki/events";
 import { createRootRoute, Router, ServerRoute, type RouteMatch } from "./router";
 import { ListenerBase, ListenerHTTP, ListenerHTTPS, ListenOptions } from "./listeners";

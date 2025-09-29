@@ -24,7 +24,8 @@
     "packages/server",
     "packages/mws",
     "packages/react-admin",
-    "packages/tiddlywiki-types"
+    "packages/tiddlywiki-types",
+    "packages/utils"
   ],
   "files": [
     "dist",
