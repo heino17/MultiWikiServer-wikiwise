@@ -27,8 +27,7 @@ export function admin<T extends zod.ZodTypeAny, R extends JsonValue>(
 
       const allowed = url.pathname.startsWith(state.pathPrefix + "/admin/")
         || url.pathname === state.pathPrefix + "/"
-        || url.pathname === state.pathPrefix + "/login"
-        || url.pathname.startsWith(state.pathPrefix + "/wiki/");
+        || url.pathname === state.pathPrefix + "/login";
 
 
       if (!allowed)
