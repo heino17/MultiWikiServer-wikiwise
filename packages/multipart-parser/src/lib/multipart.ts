@@ -55,6 +55,7 @@ export interface ParseMultipartOptions {
    */
   maxFileSize?: number;
 
+  useContentPart?: boolean;
   onCreatePart?(part: MultipartPart): void;
 }
 
@@ -155,7 +156,8 @@ export class MultipartParser {
   #currentPart: MultipartPart | null = null;
   #contentLength = 0;
 
-  #onCreatePart?: (part: MultipartPart) => void;
+  #onCreatePart: MultipartParserOptions['onCreatePart'];
+  #useContentPart: MultipartParserOptions['useContentPart'] & boolean;
 
   constructor(boundary: string, options?: MultipartParserOptions) {
     this.boundary = boundary;
@@ -168,6 +170,7 @@ export class MultipartParser {
     this.#findPartialTailBoundary = createPartialTailSearch(`\r\n--${boundary}`);
     this.#boundaryLength = 4 + boundary.length; // length of '\r\n--' + boundary
     this.#onCreatePart = options?.onCreatePart;
+    this.#useContentPart = options?.useContentPart ?? true;
   }
 
   /**
@@ -262,7 +265,10 @@ export class MultipartParser {
           throw new MaxHeaderSizeExceededError(this.maxHeaderSize);
         }
 
-        this.#currentPart = new MultipartPart(chunk.subarray(index, headerEndIndex), []);
+        const header = chunk.subarray(index, headerEndIndex);
+        this.#currentPart = this.#useContentPart
+          ? new MultipartContentPart(header, [])
+          : new MultipartPart(header);
         this.#onCreatePart?.(this.#currentPart);
         this.#contentLength = 0;
 
@@ -295,7 +301,7 @@ export class MultipartParser {
       throw new MaxFileSizeExceededError(this.maxFileSize);
     }
 
-    this.#currentPart!.content.push(chunk);
+    this.#currentPart!.append(chunk);
     this.#contentLength += chunk.length;
   }
 
@@ -316,44 +322,23 @@ export class MultipartParser {
 
 const decoder = new TextDecoder('utf-8', { fatal: true });
 
+export type MultipartContentFields = "bytes" | "size" | "text" | "arrayBuffer";
+
 /**
  * A part of a `multipart/*` HTTP message.
  */
 export class MultipartPart {
-  /**
-   * The raw content of this part as an array of `Uint8Array` chunks.
-   */
-  readonly content: Uint8Array[];
+
 
   #header: Uint8Array;
   #headers?: Headers;
 
-  constructor(header: Uint8Array, content: Uint8Array[]) {
+  constructor(header: Uint8Array) {
     this.#header = header;
-    this.content = content;
   }
 
-  /**
-   * The content of this part as an `ArrayBuffer`.
-   */
-  get arrayBuffer(): ArrayBuffer {
-    return this.bytes.buffer as ArrayBuffer;
-  }
-
-  /**
-   * The content of this part as a single `Uint8Array`. In `multipart/form-data` messages, this is useful
-   * for reading the value of files that were uploaded using `<input type="file">` fields.
-   */
-  get bytes(): Uint8Array {
-    let buffer = new Uint8Array(this.size);
-
-    let offset = 0;
-    for (let chunk of this.content) {
-      buffer.set(chunk, offset);
-      offset += chunk.length;
-    }
-
-    return buffer;
+  append(chunk: Uint8Array): void {
+    throw new Error('Not implemented');
   }
 
   /**
@@ -400,6 +385,46 @@ export class MultipartPart {
    */
   get name(): string | undefined {
     return this.headers.contentDisposition.name;
+  }
+
+
+}
+export class MultipartContentPart extends MultipartPart {
+  /**
+   * The raw content of this part as an array of `Uint8Array` chunks.
+   */
+  readonly content: Uint8Array[];
+
+  constructor(header: Uint8Array, content: Uint8Array[]) {
+    super(header);
+    this.content = content;
+  }
+
+  append(chunk: Uint8Array) {
+    this.content.push(chunk);
+  }
+
+  /**
+   * The content of this part as an `ArrayBuffer`.
+   */
+  get arrayBuffer(): ArrayBuffer {
+    return this.bytes.buffer as ArrayBuffer;
+  }
+
+  /**
+   * The content of this part as a single `Uint8Array`. In `multipart/form-data` messages, this is useful
+   * for reading the value of files that were uploaded using `<input type="file">` fields.
+   */
+  get bytes(): Uint8Array {
+    let buffer = new Uint8Array(this.size);
+
+    let offset = 0;
+    for (let chunk of this.content) {
+      buffer.set(chunk, offset);
+      offset += chunk.length;
+    }
+
+    return buffer;
   }
 
   /**

@@ -29,6 +29,15 @@ export interface SendErrorReasonData {
 
   "REQUEST_DROPPED":
   SendErrorItem<500, null>;
+
+  "MULTIPART_INVALID_CONTENT_TYPE":
+  SendErrorItem<400, null>;
+
+  "MULTIPART_MISSING_BOUNDARY":
+  SendErrorItem<400, null>;
+
+  "MULTIPART_INVALID_PART_ENCODING":
+  SendErrorItem<400, { partIndex: number; partEncoding: string; }>;
 };
 
 export class SendError<REASON extends SendErrorReason>

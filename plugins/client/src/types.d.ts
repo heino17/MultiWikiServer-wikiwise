@@ -115,63 +115,1391 @@ declare module "packages/commander/src/index" {
     export * from "packages/commander/src/runCLI";
     export default runCLI;
 }
-declare module "packages/mws/src/globals" {
-    import type { Prisma } from "@tiddlywiki/mws-prisma";
-    global {
-        namespace PrismaJson {
-            type Recipes_plugin_names = string[];
-            type Recipe_bags_partitioned_bags = {
-                /** partitioned bags allow each user with write access to write to `${title_prefix}${username}` */
-                title_prefix: string;
-                /**
-                 * everyone with acl read can read all tiddlers
-                 *
-                 * if this is false, admins can still do this, but they will be in a restricted readonly mode.
-                 */
-                everyone_readable: boolean;
-                /**
-                 * everyone with acl write can write normal tiddlers.
-                 *
-                 * site and entity admins can always do this.
-                 */
-                normally_writable: boolean;
-            };
-        }
+declare module "packages/multipart-parser/src/headers/lib/header-value" {
+    export interface HeaderValue {
+        toString(): string;
     }
-    global {
-        /**
-         * This primarily makes sure that positional arguments are used correctly
-         * (so you can't switch a title and bag_name around).
-         *
-         * If you assign the wrong value (like `5 as PrismaField<"Bags", "bag_name">`),
-         * this will result in a type error on the as keyword, allowing you to catch incorrect types quickly.
-        */
-        type PrismaField<T extends Prisma.ModelName, K extends keyof PrismaPayloadScalars<T>> = ([
-            T,
-            K
-        ] extends ["Tiddlers", "bag_id"] ? PrismaField<"Bags", "bag_id"> : [
-            T,
-            K
-        ] extends ["Sessions", "user_id"] ? PrismaField<"Users", "user_id"> : [
-            T,
-            K
-        ] extends ["Recipe_bags", "bag_id"] ? PrismaField<"Bags", "bag_id"> : [
-            T,
-            K
-        ] extends ["Recipe_bags", "recipe_id"] ? PrismaField<"Recipes", "recipe_id"> : [
-            T,
-            K
-        ] extends ["Recipes", "owner_id"] ? PrismaField<"Users", "user_id"> : [
-            T,
-            K
-        ] extends ["Bags", "owner_id"] ? PrismaField<"Users", "user_id"> : (PrismaPayloadScalars<T>[K] & {
-            __prisma_table: T;
-            __prisma_field: K;
-        })) | (null extends PrismaPayloadScalars<T>[K] ? null : never);
-        type PrismaPayloadScalars<T extends Prisma.ModelName> = Prisma.TypeMap["model"][T]["payload"]["scalars"];
-    }
-    export {};
 }
+declare module "packages/multipart-parser/src/headers/lib/param-values" {
+    export function parseParams(input: string, delimiter?: ';' | ','): [string, string | undefined][];
+    export function quote(value: string): string;
+}
+declare module "packages/multipart-parser/src/headers/lib/utils" {
+    export function capitalize(str: string): string;
+    export function isIterable<T>(value: any): value is Iterable<T>;
+    export function isValidDate(date: unknown): boolean;
+    export function quoteEtag(tag: string): string;
+}
+declare module "packages/multipart-parser/src/headers/lib/accept" {
+    import { type HeaderValue } from "packages/multipart-parser/src/headers/lib/header-value";
+    export type AcceptInit = Iterable<string | [string, number]> | Record<string, number>;
+    /**
+     * The value of a `Accept` HTTP header.
+     *
+     * [MDN `Accept` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept)
+     *
+     * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.2)
+     */
+    export class Accept implements HeaderValue, Iterable<[string, number]> {
+        #private;
+        constructor(init?: string | AcceptInit);
+        /**
+         * An array of all media types in the header.
+         */
+        get mediaTypes(): string[];
+        /**
+         * An array of all weights (q values) in the header.
+         */
+        get weights(): number[];
+        /**
+         * The number of media types in the `Accept` header.
+         */
+        get size(): number;
+        /**
+         * Returns `true` if the header matches the given media type (i.e. it is "acceptable").
+         * @param mediaType The media type to check.
+         * @returns `true` if the media type is acceptable, `false` otherwise.
+         */
+        accepts(mediaType: string): boolean;
+        /**
+         * Gets the weight of a given media type. Also supports wildcards, so e.g. `text/*` will match `text/html`.
+         * @param mediaType The media type to get the weight of.
+         * @returns The weight of the media type.
+         */
+        getWeight(mediaType: string): number;
+        /**
+         * Returns the most preferred media type from the given list of media types.
+         * @param mediaTypes The list of media types to choose from.
+         * @returns The most preferred media type or `null` if none match.
+         */
+        getPreferred(mediaTypes: string[]): string | null;
+        /**
+         * Returns the weight of a media type. If it is not in the header verbatim, this returns `null`.
+         * @param mediaType The media type to get the weight of.
+         * @returns The weight of the media type, or `null` if it is not in the header.
+         */
+        get(mediaType: string): number | null;
+        /**
+         * Sets a media type with the given weight.
+         * @param mediaType The media type to set.
+         * @param weight The weight of the media type. Defaults to 1.
+         */
+        set(mediaType: string, weight?: number): void;
+        /**
+         * Removes the given media type from the header.
+         * @param mediaType The media type to remove.
+         */
+        delete(mediaType: string): void;
+        /**
+         * Checks if a media type is in the header.
+         * @param mediaType The media type to check.
+         * @returns `true` if the media type is in the header (verbatim), `false` otherwise.
+         */
+        has(mediaType: string): boolean;
+        /**
+         * Removes all media types from the header.
+         */
+        clear(): void;
+        entries(): IterableIterator<[string, number]>;
+        [Symbol.iterator](): IterableIterator<[string, number]>;
+        forEach(callback: (mediaType: string, weight: number, header: Accept) => void, thisArg?: any): void;
+        toString(): string;
+    }
+}
+declare module "packages/multipart-parser/src/headers/lib/accept-encoding" {
+    import { type HeaderValue } from "packages/multipart-parser/src/headers/lib/header-value";
+    export type AcceptEncodingInit = Iterable<string | [string, number]> | Record<string, number>;
+    /**
+     * The value of a `Accept-Encoding` HTTP header.
+     *
+     * [MDN `Accept-Encoding` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Encoding)
+     *
+     * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.4)
+     */
+    export class AcceptEncoding implements HeaderValue, Iterable<[string, number]> {
+        #private;
+        constructor(init?: string | AcceptEncodingInit);
+        /**
+         * An array of all encodings in the header.
+         */
+        get encodings(): string[];
+        /**
+         * An array of all weights (q values) in the header.
+         */
+        get weights(): number[];
+        /**
+         * The number of encodings in the header.
+         */
+        get size(): number;
+        /**
+         * Returns `true` if the header matches the given encoding (i.e. it is "acceptable").
+         * @param encoding The encoding to check.
+         * @returns `true` if the encoding is acceptable, `false` otherwise.
+         */
+        accepts(encoding: string): boolean;
+        /**
+         * Gets the weight an encoding. Performs wildcard matching so `*` matches all encodings.
+         * @param encoding The encoding to get.
+         * @returns The weight of the encoding, or `0` if it is not in the header.
+         */
+        getWeight(encoding: string): number;
+        /**
+         * Returns the most preferred encoding from the given list of encodings.
+         * @param encodings The encodings to choose from.
+         * @returns The most preferred encoding or `null` if none match.
+         */
+        getPreferred(encodings: string[]): string | null;
+        /**
+         * Gets the weight of an encoding. If it is not in the header verbatim, this returns `null`.
+         * @param encoding The encoding to get.
+         * @returns The weight of the encoding, or `null` if it is not in the header.
+         */
+        get(encoding: string): number | null;
+        /**
+         * Sets an encoding with the given weight.
+         * @param encoding The encoding to set.
+         * @param weight The weight of the encoding. Defaults to 1.
+         */
+        set(encoding: string, weight?: number): void;
+        /**
+         * Removes the given encoding from the header.
+         * @param encoding The encoding to remove.
+         */
+        delete(encoding: string): void;
+        /**
+         * Checks if the header contains a given encoding.
+         * @param encoding The encoding to check.
+         * @returns `true` if the encoding is in the header, `false` otherwise.
+         */
+        has(encoding: string): boolean;
+        /**
+         * Removes all encodings from the header.
+         */
+        clear(): void;
+        entries(): IterableIterator<[string, number]>;
+        [Symbol.iterator](): IterableIterator<[string, number]>;
+        forEach(callback: (encoding: string, weight: number, header: AcceptEncoding) => void, thisArg?: any): void;
+        toString(): string;
+    }
+}
+declare module "packages/multipart-parser/src/headers/lib/accept-language" {
+    import { type HeaderValue } from "packages/multipart-parser/src/headers/lib/header-value";
+    export type AcceptLanguageInit = Iterable<string | [string, number]> | Record<string, number>;
+    /**
+     * The value of a `Accept-Language` HTTP header.
+     *
+     * [MDN `Accept-Language` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language)
+     *
+     * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.5)
+     */
+    export class AcceptLanguage implements HeaderValue, Iterable<[string, number]> {
+        #private;
+        constructor(init?: string | AcceptLanguageInit);
+        /**
+         * An array of all languages in the header.
+         */
+        get languages(): string[];
+        /**
+         * An array of all weights (q values) in the header.
+         */
+        get weights(): number[];
+        /**
+         * The number of languages in the header.
+         */
+        get size(): number;
+        /**
+         * Returns `true` if the header matches the given language (i.e. it is "acceptable").
+         * @param language The locale identifier of the language to check.
+         * @returns `true` if the language is acceptable, `false` otherwise.
+         */
+        accepts(language: string): boolean;
+        /**
+         * Gets the weight of a language with the given locale identifier. Performs wildcard and subtype
+         * matching, so `en` matches `en-US` and `en-GB`, and `*` matches all languages.
+         * @param language The locale identifier of the language to get.
+         * @returns The weight of the language, or `0` if it is not in the header.
+         */
+        getWeight(language: string): number;
+        /**
+         * Returns the most preferred language from the given list of languages.
+         * @param languages The locale identifiers of the languages to choose from.
+         * @returns The most preferred language or `null` if none match.
+         */
+        getPreferred(languages: string[]): string | null;
+        /**
+         * Gets the weight of a language with the given locale identifier. If it is not in the header
+         * verbatim, this returns `null`.
+         * @param language The locale identifier of the language to get.
+         * @returns The weight of the language, or `null` if it is not in the header.
+         */
+        get(language: string): number | null;
+        /**
+         * Sets a language with the given weight.
+         * @param language The locale identifier of the language to set.
+         * @param weight The weight of the language. Defaults to 1.
+         */
+        set(language: string, weight?: number): void;
+        /**
+         * Removes a language with the given locale identifier.
+         * @param language The locale identifier of the language to remove.
+         */
+        delete(language: string): void;
+        /**
+         * Checks if the header contains a language with the given locale identifier.
+         * @param language The locale identifier of the language to check.
+         * @returns `true` if the language is in the header, `false` otherwise.
+         */
+        has(language: string): boolean;
+        /**
+         * Removes all languages from the header.
+         */
+        clear(): void;
+        entries(): IterableIterator<[string, number]>;
+        [Symbol.iterator](): IterableIterator<[string, number]>;
+        forEach(callback: (language: string, weight: number, header: AcceptLanguage) => void, thisArg?: any): void;
+        toString(): string;
+    }
+}
+declare module "packages/multipart-parser/src/headers/lib/cache-control" {
+    import { type HeaderValue } from "packages/multipart-parser/src/headers/lib/header-value";
+    export interface CacheControlInit {
+        /**
+         * The `max-age=N` **request directive** indicates that the client allows a stored response that
+         * is generated on the origin server within _N_ seconds — where _N_ may be any non-negative
+         * integer (including `0`).
+         *
+         * The `max-age=N` **response directive** indicates that the response remains
+         * [fresh](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#fresh_and_stale_based_on_age)
+         * until _N_ seconds after the response is generated.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#max-age)
+         */
+        maxAge?: number;
+        /**
+         * The `max-stale=N` **request directive** indicates that the client allows a stored response
+         * that is [stale](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#fresh_and_stale_based_on_age)
+         * within _N_ seconds.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#max-stale)
+         */
+        maxStale?: number;
+        /**
+         * The `min-fresh=N` **request directive** indicates that the client allows a stored response
+         * that is [fresh](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#fresh_and_stale_based_on_age)
+         * for at least _N_ seconds.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#min-fresh)
+         */
+        minFresh?: number;
+        /**
+         * The `s-maxage` **response directive** also indicates how long the response is
+         * [fresh](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#fresh_and_stale_based_on_age) for (similar to `max-age`) —
+         * but it is specific to shared caches, and they will ignore `max-age` when it is present.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#s-maxage)
+         */
+        sMaxage?: number;
+        /**
+         * The `no-cache` **request directive** asks caches to validate the response with the origin
+         * server before reuse. If you want caches to always check for content updates while reusing
+         * stored content, `no-cache` is the directive to use.
+         *
+         * The `no-cache` **response directive** indicates that the response can be stored in caches, but
+         * the response must be validated with the origin server before each reuse, even when the cache
+         * is disconnected from the origin server.
+         *
+         * `no-cache` allows clients to request the most up-to-date response even if the cache has a
+         * [fresh](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#fresh_and_stale_based_on_age)
+         * response.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#no-cache)
+         */
+        noCache?: true;
+        /**
+         * The `no-store` **request directive** allows a client to request that caches refrain from
+         * storing the request and corresponding response — even if the origin server's response could
+         * be stored.
+         *
+         * The `no-store` **response directive** indicates that any caches of any kind (private or shared)
+         * should not store this response.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#no-store)
+         */
+        noStore?: true;
+        /**
+         * `no-transform` indicates that any intermediary (regardless of whether it implements a cache)
+         * shouldn't transform the response contents.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#no-transform)
+         */
+        noTransform?: true;
+        /**
+         * The client indicates that cache should obtain an already-cached response. If a cache has
+         * stored a response, it's reused.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#only-if-cached)
+         */
+        onlyIfCached?: true;
+        /**
+         * The `must-revalidate` **response directive** indicates that the response can be stored in
+         * caches and can be reused while [fresh](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#fresh_and_stale_based_on_age).
+         * If the response becomes [stale](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#fresh_and_stale_based_on_age),
+         * it must be validated with the origin server before reuse.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#must-revalidate)
+         */
+        mustRevalidate?: true;
+        /**
+         * The `proxy-revalidate` **response directive** is the equivalent of `must-revalidate`, but
+         * specifically for shared caches only.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#proxy-revalidate)
+         */
+        proxyRevalidate?: true;
+        /**
+         * The `must-understand` **response directive** indicates that a cache should store the response
+         * only if it understands the requirements for caching based on status code.
+         *
+         * `must-understand` should be coupled with `no-store` for fallback behavior.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#must-understand)
+         */
+        mustUnderstand?: true;
+        /**
+         * The `private` **response directive** indicates that the response can be stored only in a
+         * private cache (e.g. local caches in browsers).
+         *
+         * You should add the `private` directive for user-personalized content, especially for responses
+         * received after login and for sessions managed via cookies.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#private)
+         */
+        private?: true;
+        /**
+         * The `public` **response directive** indicates that the response can be stored in a shared
+         * cache. Responses for requests with `Authorization` header fields must not be stored in a
+         * shared cache; however, the `public` directive will cause such responses to be stored in a
+         * shared cache.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#public)
+         */
+        public?: true;
+        /**
+         * The `immutable` **response directive** indicates that the response will not be updated while
+         * it's [fresh](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#fresh_and_stale_based_on_age).
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#public)
+         */
+        immutable?: true;
+        /**
+         * The `stale-while-revalidate` **response directive** indicates that the cache could reuse a
+         * stale response while it revalidates it to a cache.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#stale-while-revalidate)
+         */
+        staleWhileRevalidate?: number;
+        /**
+         * The `stale-if-error` **response directive** indicates that the cache can reuse a
+         * [stale response](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#fresh_and_stale_based_on_age)
+         * when an upstream server generates an error, or when the error is generated locally. Here, an
+         * error is considered any response with a status code of 500, 502, 503, or 504.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#stale-if-error)
+         */
+        staleIfError?: number;
+    }
+    /**
+     * The value of a `Cache-Control` HTTP header.
+     *
+     * [MDN `Cache-Control` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control)
+     *
+     * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7234#section-5.2)
+     */
+    export class CacheControl implements HeaderValue, CacheControlInit {
+        maxAge?: number;
+        maxStale?: number;
+        minFresh?: number;
+        sMaxage?: number;
+        noCache?: true;
+        noStore?: true;
+        noTransform?: true;
+        onlyIfCached?: true;
+        mustRevalidate?: true;
+        proxyRevalidate?: true;
+        mustUnderstand?: true;
+        private?: true;
+        public?: true;
+        immutable?: true;
+        staleWhileRevalidate?: number;
+        staleIfError?: number;
+        constructor(init?: string | CacheControlInit);
+        toString(): string;
+    }
+}
+declare module "packages/multipart-parser/src/headers/lib/content-disposition" {
+    import { type HeaderValue } from "packages/multipart-parser/src/headers/lib/header-value";
+    export interface ContentDispositionInit {
+        /**
+         * For file uploads, the name of the file that the user selected.
+         */
+        filename?: string;
+        /**
+         * For file uploads, the name of the file that the user selected, encoded as a [RFC 8187](https://tools.ietf.org/html/rfc8187) `filename*` parameter.
+         * This parameter allows non-ASCII characters in filenames, and specifies the character encoding.
+         */
+        filenameSplat?: string;
+        /**
+         * For `multipart/form-data` requests, the name of the `<input>` field associated with this content.
+         */
+        name?: string;
+        /**
+         * The disposition type of the content, such as `attachment` or `inline`.
+         */
+        type?: string;
+    }
+    /**
+     * The value of a `Content-Disposition` HTTP header.
+     *
+     * [MDN `Content-Disposition` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition)
+     *
+     * [RFC 6266](https://tools.ietf.org/html/rfc6266)
+     */
+    export class ContentDisposition implements HeaderValue, ContentDispositionInit {
+        filename?: string;
+        filenameSplat?: string;
+        name?: string;
+        type?: string;
+        constructor(init?: string | ContentDispositionInit);
+        /**
+         * The preferred filename for the content, using the `filename*` parameter if present, falling back to the `filename` parameter.
+         *
+         * From [RFC 6266](https://tools.ietf.org/html/rfc6266):
+         *
+         * Many user agent implementations predating this specification do not understand the "filename*" parameter.
+         * Therefore, when both "filename" and "filename*" are present in a single header field value, recipients SHOULD
+         * pick "filename*" and ignore "filename". This way, senders can avoid special-casing specific user agents by
+         * sending both the more expressive "filename*" parameter, and the "filename" parameter as fallback for legacy recipients.
+         */
+        get preferredFilename(): string | undefined;
+        toString(): string;
+    }
+}
+declare module "packages/multipart-parser/src/headers/lib/content-type" {
+    import { type HeaderValue } from "packages/multipart-parser/src/headers/lib/header-value";
+    export interface ContentTypeInit {
+        /**
+         * For multipart entities, the boundary that separates the different parts of the message.
+         */
+        boundary?: string;
+        /**
+         * Indicates the [character encoding](https://developer.mozilla.org/en-US/docs/Glossary/Character_encoding) of the content.
+         *
+         * For example, `utf-8`, `iso-8859-1`.
+         */
+        charset?: string;
+        /**
+         * The media type (or MIME type) of the content. This consists of a type and subtype, separated by a slash.
+         *
+         * For example, `text/html`, `application/json`, `image/png`.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types)
+         */
+        mediaType?: string;
+    }
+    /**
+     * The value of a `Content-Type` HTTP header.
+     *
+     * [MDN `Content-Type` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type)
+     *
+     * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-3.1.1.5)
+     */
+    export class ContentType implements HeaderValue, ContentTypeInit {
+        boundary?: string;
+        charset?: string;
+        mediaType?: string;
+        constructor(init?: string | ContentTypeInit);
+        toString(): string;
+    }
+}
+declare module "packages/multipart-parser/src/headers/lib/cookie" {
+    import { type HeaderValue } from "packages/multipart-parser/src/headers/lib/header-value";
+    export type CookieInit = Iterable<[string, string]> | Record<string, string>;
+    /**
+     * The value of a `Cookie` HTTP header.
+     *
+     * [MDN `Cookie` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cookie)
+     *
+     * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc6265#section-4.2)
+     */
+    export class Cookie implements HeaderValue, Iterable<[string, string]> {
+        #private;
+        constructor(init?: string | CookieInit);
+        /**
+         * An array of the names of the cookies in the header.
+         */
+        get names(): string[];
+        /**
+         * An array of the values of the cookies in the header.
+         */
+        get values(): string[];
+        /**
+         * The number of cookies in the header.
+         */
+        get size(): number;
+        /**
+         * Gets the value of a cookie with the given name from the header.
+         * @param name The name of the cookie.
+         * @returns The value of the cookie, or `null` if the cookie does not exist.
+         */
+        get(name: string): string | null;
+        /**
+         * Sets a cookie with the given name and value in the header.
+         * @param name The name of the cookie.
+         * @param value The value of the cookie.
+         */
+        set(name: string, value: string): void;
+        /**
+         * Removes a cookie with the given name from the header.
+         * @param name The name of the cookie.
+         */
+        delete(name: string): void;
+        /**
+         * True if a cookie with the given name exists in the header.
+         * @param name The name of the cookie.
+         * @returns True if a cookie with the given name exists in the header.
+         */
+        has(name: string): boolean;
+        /**
+         * Removes all cookies from the header.
+         */
+        clear(): void;
+        entries(): IterableIterator<[string, string]>;
+        [Symbol.iterator](): IterableIterator<[string, string]>;
+        forEach(callback: (name: string, value: string, header: Cookie) => void, thisArg?: any): void;
+        toString(): string;
+    }
+}
+declare module "packages/multipart-parser/src/headers/lib/if-none-match" {
+    import { type HeaderValue } from "packages/multipart-parser/src/headers/lib/header-value";
+    export interface IfNoneMatchInit {
+        /**
+         * The entity tags to compare against the current entity.
+         */
+        tags: string[];
+    }
+    /**
+     * The value of an `If-None-Match` HTTP header.
+     *
+     * [MDN `If-None-Match` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-None-Match)
+     *
+     * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7232#section-3.2)
+     */
+    export class IfNoneMatch implements HeaderValue, IfNoneMatchInit {
+        tags: string[];
+        constructor(init?: string | string[] | IfNoneMatchInit);
+        /**
+         * Checks if the header contains the given entity tag.
+         *
+         * Note: This method checks only for exact matches and does not consider wildcards.
+         *
+         * @param tag The entity tag to check for.
+         * @returns `true` if the tag is present in the header, `false` otherwise.
+         */
+        has(tag: string): boolean;
+        /**
+         * Checks if this header matches the given entity tag.
+         *
+         * @param tag The entity tag to check for.
+         * @returns `true` if the tag is present in the header (or the header contains a wildcard), `false` otherwise.
+         */
+        matches(tag: string): boolean;
+        toString(): string;
+    }
+}
+declare module "packages/multipart-parser/src/headers/lib/set-cookie" {
+    import { type HeaderValue } from "packages/multipart-parser/src/headers/lib/header-value";
+    type SameSiteValue = 'Strict' | 'Lax' | 'None';
+    export interface SetCookieInit {
+        /**
+         * The domain of the cookie. For example, `example.com`.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#domaindomain-value)
+         */
+        domain?: string;
+        /**
+         * The expiration date of the cookie. If not specified, the cookie is a session cookie.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#expiresdate)
+         */
+        expires?: Date;
+        /**
+         * Indicates this cookie should not be accessible via JavaScript.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#httponly)
+         */
+        httpOnly?: true;
+        /**
+         * The maximum age of the cookie in seconds.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#max-age)
+         */
+        maxAge?: number;
+        /**
+         * The name of the cookie.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#cookie-namecookie-value)
+         */
+        name?: string;
+        /**
+         * The path of the cookie. For example, `/` or `/admin`.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#pathpath-value)
+         */
+        path?: string;
+        /**
+         * The `SameSite` attribute of the cookie. This attribute lets servers require that a cookie shouldn't be sent with
+         * cross-site requests, which provides some protection against cross-site request forgery attacks.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value)
+         */
+        sameSite?: SameSiteValue;
+        /**
+         * Indicates the cookie should only be sent over HTTPS.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#secure)
+         */
+        secure?: true;
+        /**
+         * The value of the cookie.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#cookie-namecookie-value)
+         */
+        value?: string;
+    }
+    /**
+     * The value of a `Set-Cookie` HTTP header.
+     *
+     * [MDN `Set-Cookie` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie)
+     *
+     * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc6265#section-4.1)
+     */
+    export class SetCookie implements HeaderValue, SetCookieInit {
+        domain?: string;
+        expires?: Date;
+        httpOnly?: true;
+        maxAge?: number;
+        name?: string;
+        path?: string;
+        sameSite?: SameSiteValue;
+        secure?: true;
+        value?: string;
+        constructor(init?: string | SetCookieInit);
+        toString(): string;
+    }
+}
+declare module "packages/multipart-parser/src/headers/lib/header-names" {
+    export function canonicalHeaderName(name: string): string;
+}
+declare module "packages/multipart-parser/src/headers/lib/super-headers" {
+    import { type AcceptInit, Accept } from "packages/multipart-parser/src/headers/lib/accept";
+    import { type AcceptEncodingInit, AcceptEncoding } from "packages/multipart-parser/src/headers/lib/accept-encoding";
+    import { type AcceptLanguageInit, AcceptLanguage } from "packages/multipart-parser/src/headers/lib/accept-language";
+    import { type CacheControlInit, CacheControl } from "packages/multipart-parser/src/headers/lib/cache-control";
+    import { type ContentDispositionInit, ContentDisposition } from "packages/multipart-parser/src/headers/lib/content-disposition";
+    import { type ContentTypeInit, ContentType } from "packages/multipart-parser/src/headers/lib/content-type";
+    import { type CookieInit, Cookie } from "packages/multipart-parser/src/headers/lib/cookie";
+    import { type HeaderValue } from "packages/multipart-parser/src/headers/lib/header-value";
+    import { type IfNoneMatchInit, IfNoneMatch } from "packages/multipart-parser/src/headers/lib/if-none-match";
+    import { type SetCookieInit, SetCookie } from "packages/multipart-parser/src/headers/lib/set-cookie";
+    type DateInit = number | Date;
+    interface SuperHeadersPropertyInit {
+        /**
+         * The [`Accept`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept) header value.
+         */
+        accept?: string | AcceptInit;
+        /**
+         * The [`Accept-Encoding`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Encoding) header value.
+         */
+        acceptEncoding?: string | AcceptEncodingInit;
+        /**
+         * The [`Accept-Language`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language) header value.
+         */
+        acceptLanguage?: string | AcceptLanguageInit;
+        /**
+         * The [`Accept-Ranges`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Ranges) header value.
+         */
+        acceptRanges?: string;
+        /**
+         * The [`Age`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Age) header value.
+         */
+        age?: string | number;
+        /**
+         * The [`Cache-Control`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control) header value.
+         */
+        cacheControl?: string | CacheControlInit;
+        /**
+         * The [`Connection`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection) header value.
+         */
+        connection?: string;
+        /**
+         * The [`Content-Disposition`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition) header value.
+         */
+        contentDisposition?: string | ContentDispositionInit;
+        /**
+         * The [`Content-Encoding`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding) header value.
+         */
+        contentEncoding?: string | string[];
+        /**
+         * The [`Content-Language`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Language) header value.
+         */
+        contentLanguage?: string | string[];
+        /**
+         * The [`Content-Length`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Length) header value.
+         */
+        contentLength?: string | number;
+        /**
+         * The [`Content-Type`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type) header value.
+         */
+        contentType?: string | ContentTypeInit;
+        /**
+         * The [`Cookie`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cookie) header value.
+         */
+        cookie?: string | CookieInit;
+        /**
+         * The [`Date`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Date) header value.
+         */
+        date?: string | DateInit;
+        /**
+         * The [`ETag`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag) header value.
+         */
+        etag?: string;
+        /**
+         * The [`Expires`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Expires) header value.
+         */
+        expires?: string | DateInit;
+        /**
+         * The [`Host`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Host) header value.
+         */
+        host?: string;
+        /**
+         * The [`If-Modified-Since`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Modified-Since) header value.
+         */
+        ifModifiedSince?: string | DateInit;
+        /**
+         * The [`If-None-Match`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-None-Match) header value.
+         */
+        ifNoneMatch?: string | string[] | IfNoneMatchInit;
+        /**
+         * The [`If-Unmodified-Since`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Unmodified-Since) header value.
+         */
+        ifUnmodifiedSince?: string | DateInit;
+        /**
+         * The [`Last-Modified`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Last-Modified) header value.
+         */
+        lastModified?: string | DateInit;
+        /**
+         * The [`Location`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Location) header value.
+         */
+        location?: string;
+        /**
+         * The [`Referer`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referer) header value.
+         */
+        referer?: string;
+        /**
+         * The [`Set-Cookie`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie) header value(s).
+         */
+        setCookie?: string | (string | SetCookieInit)[];
+    }
+    export type SuperHeadersInit = Iterable<[string, string]> | (SuperHeadersPropertyInit & Record<string, string | HeaderValue>);
+    /**
+     * An enhanced JavaScript `Headers` interface with type-safe access.
+     *
+     * [API Reference](https://github.com/mjackson/remix-the-web/tree/main/packages/headers)
+     *
+     * [MDN `Headers` Base Class Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers)
+     */
+    export class SuperHeaders extends Headers {
+        #private;
+        constructor(init?: string | SuperHeadersInit | Headers);
+        /**
+         * Appends a new header value to the existing set of values for a header,
+         * or adds the header if it does not already exist.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/append)
+         */
+        append(name: string, value: string): void;
+        /**
+         * Removes a header.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/delete)
+         */
+        delete(name: string): void;
+        /**
+         * Returns a string of all the values for a header, or `null` if the header does not exist.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/get)
+         */
+        get(name: string): string | null;
+        /**
+         * Returns an array of all values associated with the `Set-Cookie` header. This is
+         * useful when building headers for a HTTP response since multiple `Set-Cookie` headers
+         * must be sent on separate lines.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/getSetCookie)
+         */
+        getSetCookie(): string[];
+        /**
+         * Returns `true` if the header is present in the list of headers.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/has)
+         */
+        has(name: string): boolean;
+        /**
+         * Sets a new value for the given header. If the header already exists, the new value
+         * will replace the existing value.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/set)
+         */
+        set(name: string, value: string): void;
+        /**
+         * Returns an iterator of all header keys (lowercase).
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/keys)
+         */
+        keys(): IterableIterator<string>;
+        /**
+         * Returns an iterator of all header values.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/values)
+         */
+        values(): IterableIterator<string>;
+        /**
+         * Returns an iterator of all header key/value pairs.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/entries)
+         */
+        entries(): IterableIterator<[string, string]>;
+        [Symbol.iterator](): IterableIterator<[string, string]>;
+        /**
+         * Invokes the `callback` for each header key/value pair.
+         *
+         * [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Headers/forEach)
+         */
+        forEach(callback: (value: string, key: string, headers: SuperHeaders) => void, thisArg?: any): void;
+        /**
+         * Returns a string representation of the headers suitable for use in a HTTP message.
+         */
+        toString(): string;
+        /**
+         * The `Accept` header is used by clients to indicate the media types that are acceptable
+         * in the response.
+         *
+         * [MDN `Accept` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept)
+         *
+         * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.2)
+         */
+        get accept(): Accept;
+        set accept(value: string | AcceptInit | undefined | null);
+        /**
+         * The `Accept-Encoding` header contains information about the content encodings that the client
+         * is willing to accept in the response.
+         *
+         * [MDN `Accept-Encoding` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Encoding)
+         *
+         * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.4)
+         */
+        get acceptEncoding(): AcceptEncoding;
+        set acceptEncoding(value: string | AcceptEncodingInit | undefined | null);
+        /**
+         * The `Accept-Language` header contains information about preferred natural language for the
+         * response.
+         *
+         * [MDN `Accept-Language` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language)
+         *
+         * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.5)
+         */
+        get acceptLanguage(): AcceptLanguage;
+        set acceptLanguage(value: string | AcceptLanguageInit | undefined | null);
+        /**
+         * The `Accept-Ranges` header indicates the server's acceptance of range requests.
+         *
+         * [MDN `Accept-Ranges` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Ranges)
+         *
+         * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7233#section-2.3)
+         */
+        get acceptRanges(): string | null;
+        set acceptRanges(value: string | undefined | null);
+        /**
+         * The `Age` header contains the time in seconds an object was in a proxy cache.
+         *
+         * [MDN `Age` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Age)
+         *
+         * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7234#section-5.1)
+         */
+        get age(): number | null;
+        set age(value: string | number | undefined | null);
+        /**
+         * The `Cache-Control` header contains directives for caching mechanisms in both requests and responses.
+         *
+         * [MDN `Cache-Control` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control)
+         *
+         * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7234#section-5.2)
+         */
+        get cacheControl(): CacheControl;
+        set cacheControl(value: string | CacheControlInit | undefined | null);
+        /**
+         * The `Connection` header controls whether the network connection stays open after the current
+         * transaction finishes.
+         *
+         * [MDN `Connection` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection)
+         *
+         * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7230#section-6.1)
+         */
+        get connection(): string | null;
+        set connection(value: string | undefined | null);
+        /**
+         * The `Content-Disposition` header is a response-type header that describes how the payload is displayed.
+         *
+         * [MDN `Content-Disposition` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition)
+         *
+         * [RFC 6266](https://datatracker.ietf.org/doc/html/rfc6266)
+         */
+        get contentDisposition(): ContentDisposition;
+        set contentDisposition(value: string | ContentDispositionInit | undefined | null);
+        /**
+         * The `Content-Encoding` header specifies the encoding of the resource.
+         *
+         * Note: If multiple encodings have been used, this value may be a comma-separated list. However, most often this
+         * header will only contain a single value.
+         *
+         * [MDN `Content-Encoding` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding)
+         *
+         * [HTTP/1.1 Specification](https://httpwg.org/specs/rfc9110.html#field.content-encoding)
+         */
+        get contentEncoding(): string | null;
+        set contentEncoding(value: string | string[] | undefined | null);
+        /**
+         * The `Content-Language` header describes the natural language(s) of the intended audience for the response content.
+         *
+         * Note: If the response content is intended for multiple audiences, this value may be a comma-separated list. However,
+         * most often this header will only contain a single value.
+         *
+         * [MDN `Content-Language` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Language)
+         *
+         * [HTTP/1.1 Specification](https://httpwg.org/specs/rfc9110.html#field.content-language)
+         */
+        get contentLanguage(): string | null;
+        set contentLanguage(value: string | string[] | undefined | null);
+        /**
+         * The `Content-Length` header indicates the size of the entity-body in bytes.
+         *
+         * [MDN `Content-Length` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Length)
+         *
+         * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7230#section-3.3.2)
+         */
+        get contentLength(): number | null;
+        set contentLength(value: string | number | undefined | null);
+        /**
+         * The `Content-Type` header indicates the media type of the resource.
+         *
+         * [MDN `Content-Type` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type)
+         *
+         * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-3.1.1.5)
+         */
+        get contentType(): ContentType;
+        set contentType(value: string | ContentTypeInit | undefined | null);
+        /**
+         * The `Cookie` request header contains stored HTTP cookies previously sent by the server with
+         * the `Set-Cookie` header.
+         *
+         * [MDN `Cookie` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cookie)
+         *
+         * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc6265#section-5.4)
+         */
+        get cookie(): Cookie;
+        set cookie(value: string | CookieInit | undefined | null);
+        /**
+         * The `Date` header contains the date and time at which the message was sent.
+         *
+         * [MDN `Date` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Date)
+         *
+         * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-7.1.1.2)
+         */
+        get date(): Date | null;
+        set date(value: string | DateInit | undefined | null);
+        /**
+         * The `ETag` header provides a unique identifier for the current version of the resource.
+         *
+         * [MDN `ETag` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag)
+         *
+         * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7232#section-2.3)
+         */
+        get etag(): string | null;
+        set etag(value: string | undefined | null);
+        /**
+         * The `Expires` header contains the date/time after which the response is considered stale.
+         *
+         * [MDN `Expires` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Expires)
+         *
+         * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7234#section-5.3)
+         */
+        get expires(): Date | null;
+        set expires(value: string | DateInit | undefined | null);
+        /**
+         * The `Host` header specifies the domain name of the server and (optionally) the TCP port number.
+         *
+         * [MDN `Host` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Host)
+         *
+         * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7230#section-5.4)
+         */
+        get host(): string | null;
+        set host(value: string | undefined | null);
+        /**
+         * The `If-Modified-Since` header makes a request conditional on the last modification date of the
+         * requested resource.
+         *
+         * [MDN `If-Modified-Since` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Modified-Since)
+         *
+         * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7232#section-3.3)
+         */
+        get ifModifiedSince(): Date | null;
+        set ifModifiedSince(value: string | DateInit | undefined | null);
+        /**
+         * The `If-None-Match` header makes a request conditional on the absence of a matching ETag.
+         *
+         * [MDN `If-None-Match` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-None-Match)
+         *
+         * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7232#section-3.2)
+         */
+        get ifNoneMatch(): IfNoneMatch;
+        set ifNoneMatch(value: string | string[] | IfNoneMatchInit | undefined | null);
+        /**
+         * The `If-Unmodified-Since` header makes a request conditional on the last modification date of the
+         * requested resource.
+         *
+         * [MDN `If-Unmodified-Since` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Unmodified-Since)
+         *
+         * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7232#section-3.4)
+         */
+        get ifUnmodifiedSince(): Date | null;
+        set ifUnmodifiedSince(value: string | DateInit | undefined | null);
+        /**
+         * The `Last-Modified` header contains the date and time at which the resource was last modified.
+         *
+         * [MDN `Last-Modified` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Last-Modified)
+         *
+         * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7232#section-2.2)
+         */
+        get lastModified(): Date | null;
+        set lastModified(value: string | DateInit | undefined | null);
+        /**
+         * The `Location` header indicates the URL to redirect to.
+         *
+         * [MDN `Location` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Location)
+         *
+         * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-7.1.2)
+         */
+        get location(): string | null;
+        set location(value: string | undefined | null);
+        /**
+         * The `Referer` header contains the address of the previous web page from which a link to the
+         * currently requested page was followed.
+         *
+         * [MDN `Referer` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referer)
+         *
+         * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7231#section-5.5.2)
+         */
+        get referer(): string | null;
+        set referer(value: string | undefined | null);
+        /**
+         * The `Set-Cookie` header is used to send cookies from the server to the user agent.
+         *
+         * [MDN `Set-Cookie` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie)
+         *
+         * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc6265#section-4.1)
+         */
+        get setCookie(): SetCookie[];
+        set setCookie(value: (string | SetCookieInit)[] | string | SetCookieInit | undefined | null);
+    }
+}
+declare module "packages/multipart-parser/src/headers/index" {
+    export { type AcceptInit, Accept } from "packages/multipart-parser/src/headers/lib/accept";
+    export { type AcceptEncodingInit, AcceptEncoding } from "packages/multipart-parser/src/headers/lib/accept-encoding";
+    export { type AcceptLanguageInit, AcceptLanguage } from "packages/multipart-parser/src/headers/lib/accept-language";
+    export { type CacheControlInit, CacheControl } from "packages/multipart-parser/src/headers/lib/cache-control";
+    export { type ContentDispositionInit, ContentDisposition } from "packages/multipart-parser/src/headers/lib/content-disposition";
+    export { type ContentTypeInit, ContentType } from "packages/multipart-parser/src/headers/lib/content-type";
+    export { type CookieInit, Cookie } from "packages/multipart-parser/src/headers/lib/cookie";
+    export { type IfNoneMatchInit, IfNoneMatch } from "packages/multipart-parser/src/headers/lib/if-none-match";
+    export { type SetCookieInit, SetCookie } from "packages/multipart-parser/src/headers/lib/set-cookie";
+    export { type SuperHeadersInit, SuperHeaders, SuperHeaders as default, } from "packages/multipart-parser/src/headers/lib/super-headers";
+}
+declare module "packages/multipart-parser/src/lib/read-stream" {
+    export function readStream(stream: ReadableStream<Uint8Array>): AsyncIterable<Uint8Array>;
+}
+declare module "packages/multipart-parser/src/lib/buffer-search" {
+    export interface SearchFunction {
+        (haystack: Uint8Array, start?: number): number;
+    }
+    export function createSearch(pattern: string): SearchFunction;
+    export interface PartialTailSearchFunction {
+        (haystack: Uint8Array): number;
+    }
+    export function createPartialTailSearch(pattern: string): PartialTailSearchFunction;
+}
+declare module "packages/multipart-parser/src/lib/multipart" {
+    import Headers from "packages/multipart-parser/src/headers/index";
+    /**
+     * The base class for errors thrown by the multipart parser.
+     */
+    export class MultipartParseError extends Error {
+        constructor(message: string);
+    }
+    /**
+     * An error thrown when the maximum allowed size of a header is exceeded.
+     */
+    export class MaxHeaderSizeExceededError extends MultipartParseError {
+        constructor(maxHeaderSize: number);
+    }
+    /**
+     * An error thrown when the maximum allowed size of a file is exceeded.
+     */
+    export class MaxFileSizeExceededError extends MultipartParseError {
+        constructor(maxFileSize: number);
+    }
+    export interface ParseMultipartOptions {
+        /**
+         * The boundary string used to separate parts in the multipart message,
+         * e.g. the `boundary` parameter in the `Content-Type` header.
+         */
+        boundary: string;
+        /**
+         * The maximum allowed size of a header in bytes. If an individual part's header
+         * exceeds this size, a `MaxHeaderSizeExceededError` will be thrown.
+         *
+         * Default: 8 KiB
+         */
+        maxHeaderSize?: number;
+        /**
+         * The maximum allowed size of a file in bytes. If an individual part's content
+         * exceeds this size, a `MaxFileSizeExceededError` will be thrown.
+         *
+         * Default: 2 MiB
+         */
+        maxFileSize?: number;
+        onCreatePart?(part: MultipartPart): void;
+    }
+    /**
+     * Parse a `multipart/*` message from a buffer/iterable and yield each part as a `MultipartPart` object.
+     *
+     * Note: This is a low-level API that requires manual handling of the content and boundary. If you're
+     * building a web server, consider using `parseMultipartRequest(request)` instead.
+     *
+     * @param message The multipart message as a `Uint8Array` or an iterable of `Uint8Array` chunks
+     * @param options Options for the parser
+     * @return A generator that yields `MultipartPart` objects
+     */
+    export function parseMultipart(message: Uint8Array | Iterable<Uint8Array>, options: ParseMultipartOptions): Generator<MultipartPart, void, unknown>;
+    /**
+     * Parse a `multipart/*` message stream and yield each part as a `MultipartPart` object.
+     *
+     * Note: This is a low-level API that requires manual handling of the content and boundary. If you're
+     * building a web server, consider using `parseMultipartRequest(request)` instead.
+     *
+     * @param stream A stream containing multipart data as a `ReadableStream<Uint8Array>`
+     * @param options Options for the parser
+     * @return An async generator that yields `MultipartPart` objects
+     */
+    export function parseMultipartStream(stream: ReadableStream<Uint8Array>, options: ParseMultipartOptions): AsyncGenerator<MultipartPart, void, unknown>;
+    export type MultipartParserOptions = Omit<ParseMultipartOptions, 'boundary'>;
+    /**
+     * A streaming parser for `multipart/*` HTTP messages.
+     */
+    export class MultipartParser {
+        #private;
+        readonly boundary: string;
+        readonly maxHeaderSize: number;
+        readonly maxFileSize: number;
+        constructor(boundary: string, options?: MultipartParserOptions);
+        /**
+         * Write a chunk of data to the parser.
+         *
+         * @param chunk A chunk of data to write to the parser
+         * @return A generator yielding `MultipartPart` objects as they are parsed
+         */
+        write(chunk: Uint8Array): Generator<MultipartPart, void, unknown>;
+        /**
+         * Should be called after all data has been written to the parser.
+         *
+         * Note: This will throw if the multipart message is incomplete or
+         * wasn't properly terminated.
+         *
+         * @return void
+         */
+        finish(): void;
+    }
+    /**
+     * A part of a `multipart/*` HTTP message.
+     */
+    export class MultipartPart {
+        #private;
+        /**
+         * The raw content of this part as an array of `Uint8Array` chunks.
+         */
+        readonly content: Uint8Array[];
+        constructor(header: Uint8Array, content: Uint8Array[]);
+        /**
+         * The content of this part as an `ArrayBuffer`.
+         */
+        get arrayBuffer(): ArrayBuffer;
+        /**
+         * The content of this part as a single `Uint8Array`. In `multipart/form-data` messages, this is useful
+         * for reading the value of files that were uploaded using `<input type="file">` fields.
+         */
+        get bytes(): Uint8Array;
+        /**
+         * The headers associated with this part.
+         */
+        get headers(): Headers;
+        /**
+         * True if this part originated from a file upload.
+         */
+        get isFile(): boolean;
+        /**
+         * True if this part originated from a text input field in a form submission.
+         */
+        get isText(): boolean;
+        /**
+         * The filename of the part, if it is a file upload.
+         */
+        get filename(): string | undefined;
+        /**
+         * The media type of the part.
+         */
+        get mediaType(): string | undefined;
+        /**
+         * The name of the part, usually the `name` of the field in the `<form>` that submitted the request.
+         */
+        get name(): string | undefined;
+        /**
+         * The size of the content in bytes.
+         */
+        get size(): number;
+        /**
+         * The content of this part as a string. In `multipart/form-data` messages, this is useful for
+         * reading the value of parts that originated from `<input type="text">` fields.
+         *
+         * Note: Do not use this for binary data, use `part.bytes` or `part.arrayBuffer` instead.
+         */
+        get text(): string;
+    }
+}
+declare module "packages/multipart-parser/src/lib/multipart-request" {
+    import type { MultipartParserOptions, MultipartPart } from "packages/multipart-parser/src/lib/multipart";
+    /**
+     * Extracts the boundary string from a `multipart/*` content type.
+     *
+     * @param contentType The `Content-Type` header value from the request
+     * @return The boundary string if found, or null if not present
+     */
+    export function getMultipartBoundary(contentType: string): string | null;
+    /**
+     * Returns true if the given request contains multipart data.
+     *
+     * @param request The `Request` object to check
+     * @return `true` if the request is a multipart request, `false` otherwise
+     */
+    export function isMultipartRequest(request: Request): boolean;
+    /**
+     * Returns true if the given request is a multipart request.
+     *
+     * @param req The Node.js `http.IncomingMessage` object to check
+     * @return `true` if the request is a multipart request, `false` otherwise
+     */
+    export function isMultipartRequestHeader(contentTypeHeader: string | null | undefined): boolean;
+    /**
+     * Parse a multipart [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and yield each part as
+     * a `MultipartPart` object. Useful in HTTP server contexts for handling incoming `multipart/*` requests.
+     *
+     * @param request The `Request` object containing multipart data
+     * @param options Optional parser options, such as `maxHeaderSize` and `maxFileSize`
+     * @return An async generator yielding `MultipartPart` objects
+     */
+    export function parseMultipartRequest(request: Request, options?: MultipartParserOptions): AsyncGenerator<MultipartPart, void, unknown>;
+}
+declare module "packages/multipart-parser/src/lib/multipart.node" {
+    import type * as http from 'node:http';
+    import { Readable } from 'node:stream';
+    import type { ParseMultipartOptions, MultipartParserOptions, MultipartPart } from "packages/multipart-parser/src/lib/multipart";
+    /**
+     * Parse a `multipart/*` Node.js `Buffer` and yield each part as a `MultipartPart` object.
+     *
+     * Note: This is a low-level API that requires manual handling of the content and boundary. If you're
+     * building a web server, consider using `parseMultipartRequest(request)` instead.
+     *
+     * @param message The multipart message as a `Buffer` or an iterable of `Buffer` chunks
+     * @param options Options for the parser
+     * @return A generator yielding `MultipartPart` objects
+     */
+    export function parseMultipart(message: Buffer | Iterable<Buffer>, options: ParseMultipartOptions): Generator<MultipartPart, void, unknown>;
+    /**
+     * Parse a `multipart/*` Node.js `Readable` stream and yield each part as a `MultipartPart` object.
+     *
+     * Note: This is a low-level API that requires manual handling of the stream and boundary. If you're
+     * building a web server, consider using `parseMultipartRequest(request)` instead.
+     *
+     * @param stream A Node.js `Readable` stream containing multipart data
+     * @param options Options for the parser
+     * @return An async generator yielding `MultipartPart` objects
+     */
+    export function parseMultipartStream(stream: Readable, options: ParseMultipartOptions): AsyncGenerator<MultipartPart, void, unknown>;
+    /**
+     * Returns true if the given request is a multipart request.
+     *
+     * @param req The Node.js `http.IncomingMessage` object to check
+     * @return `true` if the request is a multipart request, `false` otherwise
+     */
+    export function isMultipartRequest(req: http.IncomingMessage): boolean;
+    /**
+     * Parse a multipart Node.js request and yield each part as a `MultipartPart` object.
+     *
+     * @param req The Node.js `http.IncomingMessage` object containing multipart data
+     * @param options Options for the parser
+     * @return An async generator yielding `MultipartPart` objects
+     */
+    export function parseMultipartRequest(req: http.IncomingMessage, options?: MultipartParserOptions): AsyncGenerator<MultipartPart, void, unknown>;
+}
+declare module "packages/multipart-parser/src/index" {
+    export type { ParseMultipartOptions, MultipartParserOptions } from "packages/multipart-parser/src/lib/multipart";
+    export { MultipartParseError, MaxHeaderSizeExceededError, MaxFileSizeExceededError, MultipartParser, MultipartPart, } from "packages/multipart-parser/src/lib/multipart";
+    export { parseMultipart, parseMultipartStream, } from "packages/multipart-parser/src/lib/multipart";
+    export { isMultipartRequest, isMultipartRequestHeader, getMultipartBoundary, parseMultipartRequest, } from "packages/multipart-parser/src/lib/multipart-request";
+    export { isMultipartRequest as isNodeMultipartRequest, parseMultipartRequest as parseNodeMultipartRequest, parseMultipart as parseNodeMultipart, parseMultipartStream as parseNodeMultipartStream } from "packages/multipart-parser/src/lib/multipart.node";
+    export * from "packages/multipart-parser/src/headers/index";
+}
+declare module "packages/multipart-parser/src/multipart-parser.node" {
+    export type { ParseMultipartOptions, MultipartParserOptions } from "packages/multipart-parser/src/lib/multipart";
+    export { MultipartParseError, MaxHeaderSizeExceededError, MaxFileSizeExceededError, MultipartParser, MultipartPart, } from "packages/multipart-parser/src/lib/multipart";
+    export { getMultipartBoundary } from "packages/multipart-parser/src/lib/multipart-request";
+    export { isMultipartRequest, parseMultipartRequest, parseMultipart, parseMultipartStream } from "packages/multipart-parser/src/lib/multipart.node";
+}
+declare module "packages/multipart-parser/src/multipart-parser" {
+    export type { ParseMultipartOptions, MultipartParserOptions } from "packages/multipart-parser/src/lib/multipart";
+    export { MultipartParseError, MaxHeaderSizeExceededError, MaxFileSizeExceededError, parseMultipart, parseMultipartStream, MultipartParser, MultipartPart, } from "packages/multipart-parser/src/lib/multipart";
+    export { getMultipartBoundary, isMultipartRequest, parseMultipartRequest, } from "packages/multipart-parser/src/lib/multipart-request";
+}
+declare module "packages/multipart-parser/src/headers/lib/accept-encoding.test" { }
+declare module "packages/multipart-parser/src/headers/lib/accept-language.test" { }
+declare module "packages/multipart-parser/src/headers/lib/accept.test" { }
+declare module "packages/multipart-parser/src/headers/lib/cache-control.test" { }
+declare module "packages/multipart-parser/src/headers/lib/content-disposition.test" { }
+declare module "packages/multipart-parser/src/headers/lib/content-type.test" { }
+declare module "packages/multipart-parser/src/headers/lib/cookie.test" { }
+declare module "packages/multipart-parser/src/headers/lib/header-names.test" { }
+declare module "packages/multipart-parser/src/headers/lib/if-none-match.test" { }
+declare module "packages/multipart-parser/src/headers/lib/param-values.test" { }
+declare module "packages/multipart-parser/src/headers/lib/set-cookie.test" { }
+declare module "packages/multipart-parser/src/headers/lib/super-headers.test" { }
 declare module "packages/utils/src/index" {
     global {
         /** Awaited Return Type */
@@ -626,11 +1954,47 @@ declare module "packages/server/src/streamer" {
         get pathPrefix(): string;
     }
 }
+declare module "packages/server/src/SendError" {
+    export interface SendErrorItem<STATUS extends number, DETAIL extends (object & {}) | null> {
+        status: STATUS;
+        details: DETAIL;
+    }
+    export interface SendErrorReasonData {
+        /** Check the server logs for this one */
+        "INTERNAL_SERVER_ERROR": SendErrorItem<500, {
+            message: string;
+            details?: any;
+        }>;
+        "INVALID_X_REQUESTED_WITH": SendErrorItem<400, null>;
+        "MALFORMED_JSON": SendErrorItem<400, null>;
+        "NO_ROUTE_MATCHED": SendErrorItem<400, null>;
+        "METHOD_NOT_ALLOWED": SendErrorItem<405, {
+            allowedMethods: string[];
+        }>;
+        "INVALID_BODY_FORMAT": SendErrorItem<500, null>;
+        "REQUEST_DROPPED": SendErrorItem<500, null>;
+        MULTIPART_INVALID_REQUEST: SendErrorItem<400, null>;
+        MULTIPART_MISSING_BOUNDARY: SendErrorItem<400, null>;
+    }
+    export class SendError<REASON extends SendErrorReason> extends Error {
+        reason: REASON;
+        status: SendErrorReasonData[REASON]["status"];
+        details: SendErrorReasonData[REASON]["details"];
+        constructor(reason: REASON, status: SendErrorReasonData[REASON]["status"], details: SendErrorReasonData[REASON]["details"]);
+        get message(): string;
+        toJSON(): {
+            status: SendErrorReasonData[REASON]["status"];
+            reason: REASON;
+            details: SendErrorReasonData[REASON]["details"];
+        };
+    }
+    export type SendErrorReason = keyof SendErrorReasonData;
+}
 declare module "packages/server/src/StateObject" {
     import { Streamer, StreamerState } from "packages/server/src/streamer";
     import { BodyFormat, Router } from "packages/server/src/router";
     import { RouteMatch } from "packages/server/src/router";
-    import { IncomingHttpHeaders } from 'http';
+    import { MultipartPart } from "packages/multipart-parser/src/index";
     export interface ServerRequest<B extends BodyFormat = BodyFormat, M extends string = string, D = unknown> extends ServerRequestClass<B, M, D> {
     }
     export class ServerRequestClass<B extends BodyFormat = BodyFormat, M extends string = string, D = unknown> extends StreamerState {
@@ -685,20 +2049,10 @@ declare module "packages/server/src/StateObject" {
          * - **308 Permanent Redirect:** The resource has permanently moved; the client should use the new URL in future requests.
          */
         redirect(location: string): typeof STREAM_ENDED;
-        /**
-        Options include:
-        - `cbPartStart(headers,name,filename)` - invoked when a file starts being received
-        - `cbPartChunk(chunk)` - invoked when a chunk of a file is received
-        - `cbPartEnd()` - invoked when a file finishes being received
-        - `cbFinished(err)` - invoked when the all the form data has been processed, optional,
-                              as it is called immediately before resolving or rejecting the promise.
-                              The promise will reject with err if there is an error.
-        */
-        readMultipartData(this: ServerRequest<any, any>, options: {
-            cbPartStart: (headers: IncomingHttpHeaders, name: string | null, filename: string | null) => void;
-            cbPartChunk: (chunk: Buffer) => void;
-            cbPartEnd: () => void;
-            cbFinished?: (err: Error | string | null) => void;
+        readMultipartData(this: ServerRequest<"stream", any>, options: {
+            cbPartStart: (part: MultipartPart) => void;
+            cbPartChunk: (part: MultipartPart, chunk: Buffer) => void;
+            cbPartEnd: (part: MultipartPart) => void;
         }): Promise<void>;
     }
 }
@@ -799,40 +2153,6 @@ declare module "packages/server/src/listeners" {
         cert?: string;
         redirect?: number;
     }
-}
-declare module "packages/server/src/SendError" {
-    export interface SendErrorItem<STATUS extends number, DETAIL extends (object & {}) | null> {
-        status: STATUS;
-        details: DETAIL;
-    }
-    export interface SendErrorReasonData {
-        /** Check the server logs for this one */
-        "INTERNAL_SERVER_ERROR": SendErrorItem<500, {
-            message: string;
-            details?: any;
-        }>;
-        "INVALID_X_REQUESTED_WITH": SendErrorItem<400, null>;
-        "MALFORMED_JSON": SendErrorItem<400, null>;
-        "NO_ROUTE_MATCHED": SendErrorItem<400, null>;
-        "METHOD_NOT_ALLOWED": SendErrorItem<405, {
-            allowedMethods: string[];
-        }>;
-        "INVALID_BODY_FORMAT": SendErrorItem<500, null>;
-        "REQUEST_DROPPED": SendErrorItem<500, null>;
-    }
-    export class SendError<REASON extends SendErrorReason> extends Error {
-        reason: REASON;
-        status: SendErrorReasonData[REASON]["status"];
-        details: SendErrorReasonData[REASON]["details"];
-        constructor(reason: REASON, status: SendErrorReasonData[REASON]["status"], details: SendErrorReasonData[REASON]["details"]);
-        get message(): string;
-        toJSON(): {
-            status: SendErrorReasonData[REASON]["status"];
-            reason: REASON;
-            details: SendErrorReasonData[REASON]["details"];
-        };
-    }
-    export type SendErrorReason = keyof SendErrorReasonData;
 }
 declare module "packages/server/src/router" {
     import { zod } from "packages/server/src/Z2";
@@ -1351,6 +2671,107 @@ declare module "packages/mws/src/RequestState" {
         })[];
     }
     export type ACLPermissionName = "READ" | "WRITE" | "ADMIN";
+}
+declare module "packages/mws/src/SendError" {
+    import { SendErrorItem } from "packages/server/src/index";
+    module "packages/server/src/index" {
+        interface SendErrorReasonData {
+            "RECIPE_NOT_FOUND": SendErrorItem<404, {
+                recipeName: string;
+            }>;
+            "RECIPE_NO_READ_PERMISSION": SendErrorItem<403, {
+                recipeName: string;
+            }>;
+            "RECIPE_NO_WRITE_PERMISSION": SendErrorItem<403, {
+                recipeName: string;
+            }>;
+            "RECIPE_MUST_HAVE_BAGS": SendErrorItem<400, {
+                recipeName: string;
+            }>;
+            "RECIPE_NO_BAG_AT_POSITION_ZERO": SendErrorItem<403, {
+                recipeName: string;
+            }>;
+            "BAG_NOT_FOUND": SendErrorItem<404, {
+                bagName: string;
+            }>;
+            "BAG_NO_READ_PERMISSION": SendErrorItem<403, {
+                bagName: string;
+            }>;
+            "BAG_NO_WRITE_PERMISSION": SendErrorItem<403, {
+                bagName: string;
+            }>;
+            "BAG_DOES_NOT_HAVE_THIS_TIDDLER": SendErrorItem<403, {
+                bagName: string;
+                tiddlerTitle: string;
+            }>;
+            "PAGE_NOT_AUTHORIZED_FOR_ENDPOINT": SendErrorItem<403, null>;
+            "RESPONSE_INTERCEPTED_BY_CHECKER": SendErrorItem<500, null>;
+            "TIDDLER_WIRE_FORMAT_UNKNOWN": SendErrorItem<403, {
+                contentType: string;
+            }>;
+            "SETTING_KEY_INVALID": SendErrorItem<403, {
+                key: string;
+            }>;
+            "LAST_EVENT_ID_NOT_PROVIDED": SendErrorItem<403, null>;
+        }
+    }
+}
+declare module "packages/mws/src/globals" {
+    import type { Prisma } from "@tiddlywiki/mws-prisma";
+    global {
+        namespace PrismaJson {
+            type Recipes_plugin_names = string[];
+            type Recipe_bags_partitioned_bags = {
+                /** partitioned bags allow each user with write access to write to `${title_prefix}${username}` */
+                title_prefix: string;
+                /**
+                 * everyone with acl read can read all tiddlers
+                 *
+                 * if this is false, admins can still do this, but they will be in a restricted readonly mode.
+                 */
+                everyone_readable: boolean;
+                /**
+                 * everyone with acl write can write normal tiddlers.
+                 *
+                 * site and entity admins can always do this.
+                 */
+                normally_writable: boolean;
+            };
+        }
+    }
+    global {
+        /**
+         * This primarily makes sure that positional arguments are used correctly
+         * (so you can't switch a title and bag_name around).
+         *
+         * If you assign the wrong value (like `5 as PrismaField<"Bags", "bag_name">`),
+         * this will result in a type error on the as keyword, allowing you to catch incorrect types quickly.
+        */
+        type PrismaField<T extends Prisma.ModelName, K extends keyof PrismaPayloadScalars<T>> = ([
+            T,
+            K
+        ] extends ["Tiddlers", "bag_id"] ? PrismaField<"Bags", "bag_id"> : [
+            T,
+            K
+        ] extends ["Sessions", "user_id"] ? PrismaField<"Users", "user_id"> : [
+            T,
+            K
+        ] extends ["Recipe_bags", "bag_id"] ? PrismaField<"Bags", "bag_id"> : [
+            T,
+            K
+        ] extends ["Recipe_bags", "recipe_id"] ? PrismaField<"Recipes", "recipe_id"> : [
+            T,
+            K
+        ] extends ["Recipes", "owner_id"] ? PrismaField<"Users", "user_id"> : [
+            T,
+            K
+        ] extends ["Bags", "owner_id"] ? PrismaField<"Users", "user_id"> : (PrismaPayloadScalars<T>[K] & {
+            __prisma_table: T;
+            __prisma_field: K;
+        })) | (null extends PrismaPayloadScalars<T>[K] ? null : never);
+        type PrismaPayloadScalars<T extends Prisma.ModelName> = Prisma.TypeMap["model"][T]["payload"]["scalars"];
+    }
+    export {};
 }
 declare module "packages/mws/src/services/sessions" {
     import { jsonify, JsonValue, RouterKeyMap, ServerRoute, Streamer, Z2, zod, ZodRoute, ZodState } from "packages/server/src/index";
@@ -2058,6 +3479,10 @@ declare module "packages/mws/src/commands/save-archive" {
                 };
             }[];
             sessions: {
+                session_id: string & {
+                    __prisma_table: "Sessions";
+                    __prisma_field: "session_id";
+                };
                 user_id: string & {
                     __prisma_table: "Users";
                     __prisma_field: "user_id";
@@ -2065,10 +3490,6 @@ declare module "packages/mws/src/commands/save-archive" {
                 created_at: Date & {
                     __prisma_table: "Sessions";
                     __prisma_field: "created_at";
-                };
-                session_id: string & {
-                    __prisma_table: "Sessions";
-                    __prisma_field: "session_id";
                 };
                 last_accessed: Date & {
                     __prisma_table: "Sessions";
@@ -2605,10 +4026,10 @@ declare module "packages/mws/src/managers/admin-settings" {
     class SettingsManager {
         static defineRoutes(root: ServerRoute): void;
         settings_read: import("packages/server/src/index").ZodRoute<"POST", "json", {}, {}, import("zod/v4").ZodUndefined, {
-            value: (string & {
+            value: string & {
                 __prisma_table: "Settings";
                 __prisma_field: "value";
-            }) | undefined;
+            };
             key: string;
             description: string;
             valueType: "string" | "boolean" | "number";
@@ -3879,50 +5300,6 @@ declare module "packages/mws/src/services/tw-routes" {
         variables?: Record<string, string>;
     }): (state: ServerRequest) => Promise<symbol>;
 }
-declare module "packages/mws/src/SendError" {
-    import { SendErrorItem } from "packages/server/src/index";
-    module "packages/server/src/index" {
-        interface SendErrorReasonData {
-            "RECIPE_NOT_FOUND": SendErrorItem<404, {
-                recipeName: string;
-            }>;
-            "RECIPE_NO_READ_PERMISSION": SendErrorItem<403, {
-                recipeName: string;
-            }>;
-            "RECIPE_NO_WRITE_PERMISSION": SendErrorItem<403, {
-                recipeName: string;
-            }>;
-            "RECIPE_MUST_HAVE_BAGS": SendErrorItem<400, {
-                recipeName: string;
-            }>;
-            "RECIPE_NO_BAG_AT_POSITION_ZERO": SendErrorItem<403, {
-                recipeName: string;
-            }>;
-            "BAG_NOT_FOUND": SendErrorItem<404, {
-                bagName: string;
-            }>;
-            "BAG_NO_READ_PERMISSION": SendErrorItem<403, {
-                bagName: string;
-            }>;
-            "BAG_NO_WRITE_PERMISSION": SendErrorItem<403, {
-                bagName: string;
-            }>;
-            "BAG_DOES_NOT_HAVE_THIS_TIDDLER": SendErrorItem<403, {
-                bagName: string;
-                tiddlerTitle: string;
-            }>;
-            "PAGE_NOT_AUTHORIZED_FOR_ENDPOINT": SendErrorItem<403, null>;
-            "RESPONSE_INTERCEPTED_BY_CHECKER": SendErrorItem<500, null>;
-            "TIDDLER_WIRE_FORMAT_UNKNOWN": SendErrorItem<403, {
-                contentType: string;
-            }>;
-            "SETTING_KEY_INVALID": SendErrorItem<403, {
-                key: string;
-            }>;
-            "LAST_EVENT_ID_NOT_PROVIDED": SendErrorItem<403, null>;
-        }
-    }
-}
 declare module "packages/mws/src/index" {
     import "packages/mws/src/globals";
     import "packages/utils/src/index";
@@ -3943,3 +5320,76 @@ declare module "packages/mws/src/index" {
     export * from "packages/mws/src/managers/index";
     export default function runMWS(oldOptions?: any): Promise<void>;
 }
+declare module "packages/mws/src/commands/_empty" {
+    import { BaseCommand, CommandInfo } from "packages/commander/src/index";
+    export const info: CommandInfo;
+    export class Command extends BaseCommand {
+        execute(): Promise<void>;
+    }
+}
+declare module "packages/mws/src/commands/load-tiddlers" {
+    import { BaseCommand, CommandInfo } from "packages/commander/src/index";
+    export const info: CommandInfo;
+    export class Command extends BaseCommand {
+        tiddlersPath: string;
+        bagName: PrismaField<"Bags", "bag_name">;
+        constructor(...args: ConstructorParameters<typeof BaseCommand>);
+        execute(): Promise<string | null>;
+    }
+}
+declare module "packages/mws/src/commands/save-tiddler-text" {
+    import { BaseCommand, CommandInfo } from "packages/commander/src/index";
+    export const info: CommandInfo;
+    export class Command extends BaseCommand {
+        execute(): Promise<string | undefined>;
+    }
+}
+declare module "packages/mws/src/services/attachments" {
+    import * as fs from "fs";
+    import { TiddlerFields } from "tiddlywiki";
+    import { ServerState } from "packages/mws/src/ServerState";
+    export class AttachmentService {
+        protected config: ServerState;
+        protected prisma: PrismaTxnClient;
+        constructor(config: ServerState, prisma: PrismaTxnClient);
+        makeCanonicalUri(bag_name: string, title: string): string;
+        processOutgoingTiddler({ tiddler, revision_id, bag_name, attachment_hash }: {
+            tiddler: TiddlerFields;
+            revision_id: any;
+            bag_name: PrismaField<"Bags", "bag_name">;
+            attachment_hash: PrismaField<"Tiddlers", "attachment_hash">;
+        }): TiddlerFields;
+        processIncomingTiddler({ tiddlerFields, existing_attachment_hash, existing_canonical_uri }: {
+            tiddlerFields: TiddlerFields;
+            existing_attachment_hash: PrismaField<"Tiddlers", "attachment_hash">;
+            existing_canonical_uri: any;
+        }): Promise<{
+            tiddlerFields: TiddlerFields;
+            attachment_hash: PrismaField<"Tiddlers", "attachment_hash">;
+        }>;
+        isValidAttachmentName(content_hash: string): boolean;
+        saveAttachment(options: {
+            text: string;
+            type: string;
+            reference: string;
+            _canonical_uri: string;
+        }): Promise<PrismaField<"Tiddlers", "attachment_hash">>;
+        private writeMetaFile;
+        adoptAttachment({ incomingFilepath, type, hash, _canonical_uri }: {
+            incomingFilepath: any;
+            type: string;
+            hash: any;
+            _canonical_uri: any;
+        }): Promise<any>;
+        getAttachmentStream(content_hash: string): Promise<{
+            stream: fs.ReadStream;
+            type: any;
+        } | null>;
+        getAttachmentFileSize(content_hash: PrismaField<"Tiddlers", "attachment_hash"> & {}): Promise<number | null>;
+        getAttachmentMetadata(content_hash: PrismaField<"Tiddlers", "attachment_hash"> & {}): Promise<any>;
+    }
+}
+declare module "packages/mws/src/utils/index" {
+    export {};
+}
+declare module "packages/mws/src/utils/prisma-proxy" { }

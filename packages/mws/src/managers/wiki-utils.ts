@@ -1,4 +1,5 @@
-import { BodyFormat, IncomingHttpHeaders, JsonValue, tryParseJSON, UserError, zod, ZodRoute, ZodState } from "@tiddlywiki/server";
+import { MultipartPart } from "@mjackson/multipart-parser";
+import { BodyFormat, JsonValue, SendError, tryParseJSON, UserError, zod, ZodRoute, ZodState } from "@tiddlywiki/server";
 import { createHash, Hash } from "crypto";
 import { createWriteStream, mkdirSync, rmSync } from "fs";
 import { readFile } from "fs/promises";
@@ -52,65 +53,71 @@ export function parseTiddlerFields(input: string, ctype: string | undefined) {
 
 export async function recieveTiddlerMultipartUpload(state: ZodState<"POST", "stream", any, any, zod.ZodTypeAny>) {
 
-  interface UploadPart {
-    name: string | null;
-    headers: IncomingHttpHeaders;
-    hash: string;
-    length: number;
-    filename: string | null;
-    value?: string;
-    inboxFilename?: string;
-  }
   // Process the incoming data
   const inboxName = new Date().toISOString().replace(/:/g, "-");
   const inboxPath = resolve(state.config.storePath, "inbox", inboxName);
   mkdirSync(inboxPath, { recursive: true });
 
-  /** Current file being written */
-  let fileStream: Writable | null = null;
-  /** Accumulating hash of current part */
-  let hasher: Hash | null = null;
-  /** Accumulating length of current part */
-  let length = 0;
-  // Array of {name:, headers:, value:, hash:} and/or {name:, filename:, headers:, inboxFilename:, hash:} 
-  const parts: UploadPart[] = [];
+  const parts: MultipartPart[] = [];
+
+  interface UploadPart2 {
+    inboxFilename?: string;
+    value?: string;
+    hasher?: Hash;
+    length: number;
+    fileStream?: Writable;
+    hash?: string;
+  }
+
+  const incomingParts = new WeakMap<MultipartPart, UploadPart2>();
+  const inboxFiles = new WeakMap<MultipartPart, string>();
+  const valueParts = new WeakMap<MultipartPart, string>();
 
   await state.readMultipartData({
-    cbPartStart: function (headers, name, filename) {
-      const part: UploadPart = {
-        name: name,
-        filename: filename,
-        headers: headers,
-        hash: "",
+    cbPartStart: function (part) {
+      const part2: UploadPart2 = {
+        hasher: createHash("sha-256"),
         length: 0,
       };
-      if (filename) {
+
+      if (part.filename) {
         const inboxFilename = (parts.length).toString();
-        part.inboxFilename = resolve(inboxPath, inboxFilename);
-        fileStream = createWriteStream(part.inboxFilename);
+        const inboxFilename2 = resolve(inboxPath, inboxFilename);
+        part2.fileStream = createWriteStream(inboxFilename2);
+        inboxFiles.set(part, inboxFilename2);
       } else {
-        part.value = "";
+        part2.value = "";
       }
-      // hash = new sjcl.hash.sha256();
-      hasher = createHash("sha-256");
-      length = 0;
+
+    },
+    cbPartChunk: function (part, chunk) {
+      const part2 = incomingParts.get(part)!;
+      if (part2.fileStream) {
+        part2.fileStream.write(chunk);
+      } else {
+        const encoding = part.headers.contentType?.charset || "utf8";
+        if (!Buffer.isEncoding(encoding)) {
+          throw new SendError("MULTIPART_INVALID_PART_ENCODING", 400, {
+            partIndex: parts.length,
+            partEncoding: encoding,
+          });
+        }
+        part2.value! += chunk.toString(encoding as BufferEncoding);
+      }
+      part2.length += chunk.length;
+      part2.hasher!.update(chunk);
+    },
+    cbPartEnd: function (part) {
+      const part2 = incomingParts.get(part)!;
+
+      if (part2.fileStream) part2.fileStream.end();
+      else valueParts.set(part, part2.value ?? "");
+
+      part2.hash = part2.hasher!.digest("base64url");
+      part2.fileStream = undefined;
+      part2.hasher = undefined;
+      incomingParts.delete(part);
       parts.push(part);
-    },
-    cbPartChunk: function (chunk) {
-      if (fileStream) {
-        fileStream.write(chunk);
-      } else {
-        parts[parts.length - 1]!.value! += chunk;
-      }
-      length += chunk.length;
-      hasher!.update(chunk);
-    },
-    cbPartEnd: function () {
-      if (fileStream) fileStream.end();
-      fileStream = null;
-      parts[parts.length - 1]!.hash = hasher!.digest("base64url");
-      parts[parts.length - 1]!.length = length;
-      hasher = null;
     },
   });
 
@@ -118,21 +125,23 @@ export async function recieveTiddlerMultipartUpload(state: ZodState<"POST", "str
 
   if (!partFile) throw state.sendSimple(400, "Missing file to upload");
 
-  const missingfilename = "File uploaded " + new Date().toISOString()
+  const missingfilename = "File uploaded " + new Date().toISOString();
 
-  const type = partFile.headers["content-type"];
+  const type = partFile.headers.contentType.mediaType;
   const tiddlerFields: TiddlerFields = { title: partFile.filename ?? missingfilename, type, };
 
   for (const part of parts) {
     const tiddlerFieldPrefix = "tiddler-field-";
     if (part.name?.startsWith(tiddlerFieldPrefix)) {
-      (tiddlerFields as any)[part.name.slice(tiddlerFieldPrefix.length)] = part.value?.trim();
+      const name = part.name.slice(tiddlerFieldPrefix.length);
+      const value = valueParts.get(part)?.trim() ?? "";
+      (tiddlerFields as any)[name] = value;
     }
   }
 
   const contentTypeInfo = state.config.getContentType(type);
 
-  const file = await readFile(partFile.inboxFilename!);
+  const file = await readFile(inboxFiles.get(partFile)!);
 
   tiddlerFields.text = file.toString(contentTypeInfo.encoding as BufferEncoding);
 

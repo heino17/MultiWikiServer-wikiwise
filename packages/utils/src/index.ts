@@ -1,3 +1,4 @@
+import { InteropObservable, Subject } from "rxjs";
 
 declare global {
 
@@ -23,3 +24,5 @@ declare global {
 (global as any).truthy = function truthy(obj: any) { return !!obj; };
 
 export { };
+
+export * from "./ReactiveArray";

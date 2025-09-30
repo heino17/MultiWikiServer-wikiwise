@@ -24,17 +24,14 @@
     "checkJs": true,
     "allowJs": true,
     "jsx": "preserve",
-    "paths": {
-      // "@tiddlywiki/server": [
-      //   "./packages/server/src"
-      // ],
-    },
+
   },
   "exclude": [
-    "./packages/react-admin",
-    "./plugins/client/src/types.d.ts"
+    "dist",
+    "packages/react-admin",
+    "plugins/client/src/types.d.ts"
   ],
-    "include":[
-    "./packages/**/src"
+  "include": [
+    "packages/**/src"
   ],
 }

@@ -15,18 +15,4 @@
     "checkJs": true,
     "types": [],
   },
-  "files": [
-    // we have to list all of them, paths would probably also work
-    "./packages/commander/src/index.ts",
-    "./packages/events/src/index.ts",
-    "./packages/mws/src/index.ts",
-    "./packages/server/src/index.ts",
-    "./packages/tiddlywiki-types/index.d.ts",
-    "./packages/utils/src/index.ts",
-  ],
-  "exclude": [
-    "dist",
-    "packages/react-admin",
-    "plugins/client/src/types.d.ts"
-  ]
 }

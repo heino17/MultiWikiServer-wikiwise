@@ -1,18 +1,16 @@
 import { Streamer, StreamerState } from './streamer';
 import { BodyFormat, Router } from "./router";
 import { RouteMatch } from './router';
-import { ok } from 'assert';
-import { IncomingHttpHeaders } from 'http';
 import { zod } from './Z2';
 import {
   getMultipartBoundary,
   isMultipartRequestHeader,
   MultipartPart,
   parseNodeMultipartStream,
-  SuperHeaders,
+  SuperHeaders
 } from '@mjackson/multipart-parser';
-import { InteropObservable, Observable, Operator, Subject } from 'rxjs';
-import { is } from './utils';
+import { SendError } from './SendError';
+import { MultipartContentFields, MultipartContentPart } from '@mjackson/multipart-parser/src/lib/multipart';
 
 export interface ServerRequest<
   B extends BodyFormat = BodyFormat,
@@ -119,124 +117,9 @@ export class ServerRequestClass<
     return this.sendEmpty(302, { 'Location': this.pathPrefix + location });
   }
 
-  /**
-  Options include:
-  - `cbPartStart(headers,name,filename)` - invoked when a file starts being received
-  - `cbPartChunk(chunk)` - invoked when a chunk of a file is received
-  - `cbPartEnd()` - invoked when a file finishes being received
-  - `cbFinished(err)` - invoked when the all the form data has been processed, optional,
-                        as it is called immediately before resolving or rejecting the promise.
-                        The promise will reject with err if there is an error.
-  */
-  readMultipartData(this: ServerRequest<"stream", any>, options: {
-    cbPartStart: (headers: IncomingHttpHeaders, name: string | null, filename: string | null) => void;
-    cbPartChunk: (chunk: Buffer) => void;
-    cbPartEnd: () => void;
-    cbFinished?: (err: Error | string | null) => void;
-  }) {
-    return new Promise<void>((resolve, reject) => {
-      // Check that the Content-Type is multipart/form-data
-      const contentType = this.headers['content-type'];
-      if (!contentType?.startsWith("multipart/form-data")) {
-        return reject("Expected multipart/form-data content type");
-      }
-      // Extract the boundary string from the Content-Type header
-      const boundaryMatch = contentType.match(/boundary=(.+)$/);
-      if (!boundaryMatch) {
-        return reject("Missing boundary in multipart/form-data");
-      }
-      const boundary = boundaryMatch[1];
-      const boundaryBuffer = Buffer.from("--" + boundary);
-      // Initialise
-      let buffer = Buffer.alloc(0);
-      let processingPart = false;
-      // Process incoming chunks
-      this.reader.on("data", (chunk) => {
-        // Accumulate the incoming data
-        buffer = Buffer.concat([buffer, chunk]);
-        // Loop through any parts within the current buffer
-        while (true) {
-          if (!processingPart) {
-            // If we're not processing a part then we try to find a boundary marker
-            const boundaryIndex = buffer.indexOf(boundaryBuffer);
-            if (boundaryIndex === -1) {
-              // Haven't reached the boundary marker yet, so we should wait for more data
-              break;
-            }
-            // Look for the end of the headers
-            const endOfHeaders = buffer.indexOf("\r\n\r\n", boundaryIndex + boundaryBuffer.length);
-            if (endOfHeaders === -1) {
-              // Haven't reached the end of the headers, so we should wait for more data
-              break;
-            }
-            // Extract and parse headers
-            const headersPart = Uint8Array.prototype.slice.call(buffer, boundaryIndex + boundaryBuffer.length, endOfHeaders).toString();
-            const currentHeaders: IncomingHttpHeaders = {};
-            headersPart.split("\r\n").forEach(headerLine => {
-              const [key, value] = headerLine.split(": ");
-              ok(typeof key === "string");
-              currentHeaders[key.toLowerCase()] = value;
-            });
-            // Parse the content disposition header
-            const contentDisposition: {
-              name: string | null;
-              filename: string | null;
-            } = {
-              name: null,
-              filename: null
-            };
-            if (currentHeaders["content-disposition"]) {
-              // Split the content-disposition header into semicolon-delimited parts
-              const parts = currentHeaders["content-disposition"].split(";").map(part => part.trim());
-              // Iterate over each part to extract name and filename if they exist
-              parts.forEach(part => {
-                if (part.startsWith("name=")) {
-                  // Remove "name=" and trim quotes
-                  contentDisposition.name = part.substring(6, part.length - 1);
-                } else if (part.startsWith("filename=")) {
-                  // Remove "filename=" and trim quotes
-                  contentDisposition.filename = part.substring(10, part.length - 1);
-                }
-              });
-            }
-            processingPart = true;
-            options.cbPartStart(currentHeaders, contentDisposition.name, contentDisposition.filename);
-            // Slice the buffer to the next part
-            buffer = Buffer.from(buffer, endOfHeaders + 4);
-          } else {
-            const boundaryIndex = buffer.indexOf(boundaryBuffer);
-            if (boundaryIndex >= 0) {
-              // Return the part up to the boundary minus the terminating LF CR
-              options.cbPartChunk(Buffer.from(buffer, 0, boundaryIndex - 2));
-              options.cbPartEnd();
-              processingPart = false;
-              // this starts at the boundary marker, which gets picked up on the next loop
-              buffer = Buffer.from(buffer, boundaryIndex);
-            } else {
-              // Return the rest of the buffer
-              options.cbPartChunk(buffer);
-              // Reset the buffer and wait for more data
-              buffer = Buffer.alloc(0);
-              break;
-            }
-          }
-        }
-      });
 
-      // All done
-      this.reader.on("end", () => {
-        resolve();
-      });
-    }).then(() => {
-      options.cbFinished?.(null);
-    }, (err) => {
-      options.cbFinished?.(err);
-      throw err;
-    });
 
-  }
-
-  async readMultipartData2(
+  async readMultipartData(
     this: ServerRequest<"stream", any>,
     options: {
       cbPartStart: (part: MultipartPart) => void;
@@ -244,26 +127,22 @@ export class ServerRequestClass<
       cbPartEnd: (part: MultipartPart) => void;
     }
   ) {
+
     const contentType = this.headers['content-type'];
-    if (!contentType || !isMultipartRequestHeader(contentType)) return false;
+    if (!contentType || !isMultipartRequestHeader(contentType))
+      throw new SendError("MULTIPART_INVALID_CONTENT_TYPE", 400, null);
+
     const boundary = getMultipartBoundary(contentType);
-    if (!boundary) throw 'Invalid Content-Type header: missing boundary';
+    if (!boundary)
+      throw new SendError("MULTIPART_MISSING_BOUNDARY", 400, null);
+
     for await (let part of parseNodeMultipartStream(this.reader, {
       boundary,
+      useContentPart: false,
       onCreatePart: (part) => {
-        //@ts-ignore
-        const arr = part.content = new RxArray<Uint8Array>(...part.content);
-        if (part.isFile) {
-          arr.asObservable().subscribe((e) => {
-            if (!e) return;
-            const [event, args, res] = e;
-            if (event === "push") {
-              args.forEach((chunk) => {
-                options.cbPartChunk(part, Buffer.from(chunk));
-              });
-            }
-          });
-        }
+        part.append = (chunk: Uint8Array) => {
+          options.cbPartChunk(part, Buffer.from(chunk));
+        };
         options.cbPartStart(part);
       }
     })) {
@@ -271,38 +150,6 @@ export class ServerRequestClass<
     }
   }
 
-}
-
-type RxArrayEvents<T> = {
-  [K in "push" | "pop" | "shift" | "unshift" | "splice" | "sort" | "copyWithin" | "reverse"]?:
-  K extends "push" ? [K, T[], number] :
-  [K, Parameters<Array<T>[K]>, ReturnType<Array<T>[K]>];
-}
-class RxArray<T> extends Array<T> implements InteropObservable<RxArrayEvents<T>[keyof RxArrayEvents<T>]> {
-  #subject = new Subject<RxArrayEvents<T>[keyof RxArrayEvents<T>]>();
-  [Symbol.observable]() { return this.#subject.asObservable(); }
-  asObservable() { return this.#subject.asObservable(); }
-
-  constructor(length: number);
-  constructor(...items: T[]);
-  constructor(...args: any[]) {
-    super(...args);
-    const factory = (method: keyof RxArrayEvents<T>) => {
-      return (...args: any[]) => {
-        const result = Array.prototype[method].apply(this, args);
-        this.#subject.next([method as any, args, result]);
-        return result;
-      };
-    };
-    this.push = factory("push");
-    this.pop = factory("pop");
-    this.shift = factory("shift");
-    this.unshift = factory("unshift");
-    this.splice = factory("splice");
-    this.sort = factory("sort");
-    this.copyWithin = factory("copyWithin");
-    this.reverse = factory("reverse");
-  }
 }
 
 const zodURIComponent = (val: string, ctx: zod.RefinementCtx) => {

@@ -174,7 +174,7 @@ export class SuperHeaders extends Headers {
         }
       } else if (typeof init === 'object') {
         for (let name of Object.getOwnPropertyNames(init)) {
-          let value = init[name];
+          let value = init[name as keyof typeof init];
 
           let descriptor = Object.getOwnPropertyDescriptor(SuperHeaders.prototype, name);
           if (descriptor?.set) {
