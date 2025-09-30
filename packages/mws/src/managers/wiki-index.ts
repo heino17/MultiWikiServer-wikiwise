@@ -85,7 +85,7 @@ serverEvents.on("mws.routes", (root, config) => {
       const error = new SendError("RECIPE_NOT_FOUND", 404, {
         recipeName: state.pathParams.recipe_name
       })
-      throw await state.sendAdmin(error.status, { sendError: error.toJSON() });
+      throw await state.sendAdmin(error.status, { sendError: error });
     }
 
     if (Debug.enabled("server:handler:timing")) console.time(timekey);
@@ -102,7 +102,7 @@ serverEvents.on("mws.routes", (root, config) => {
     throw STREAM_ENDED;
   }, async (state, e) => {
     if (e instanceof SendError) {
-      await state.sendAdmin(e.status, { sendError: e.toJSON() });
+      await state.sendAdmin(e.status, { sendError: e });
     } else {
       console.log("Unexpected error in wiki index route", e);
       const error = new SendError("INTERNAL_SERVER_ERROR", 500, {
