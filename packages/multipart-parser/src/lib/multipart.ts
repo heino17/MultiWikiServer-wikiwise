@@ -1,16 +1,16 @@
-import Headers from '../headers';
+import Headers from '../headers'
 
-import { readStream } from './read-stream.ts';
-import type { SearchFunction, PartialTailSearchFunction } from './buffer-search.ts';
-import { createSearch, createPartialTailSearch } from './buffer-search.ts';
+import { readStream } from './read-stream.ts'
+import type { SearchFunction, PartialTailSearchFunction } from './buffer-search.ts'
+import { createSearch, createPartialTailSearch } from './buffer-search.ts'
 
 /**
  * The base class for errors thrown by the multipart parser.
  */
 export class MultipartParseError extends Error {
   constructor(message: string) {
-    super(message);
-    this.name = 'MultipartParseError';
+    super(message)
+    this.name = 'MultipartParseError'
   }
 }
 
@@ -19,8 +19,8 @@ export class MultipartParseError extends Error {
  */
 export class MaxHeaderSizeExceededError extends MultipartParseError {
   constructor(maxHeaderSize: number) {
-    super(`Multipart header size exceeds maximum allowed size of ${maxHeaderSize} bytes`);
-    this.name = 'MaxHeaderSizeExceededError';
+    super(`Multipart header size exceeds maximum allowed size of ${maxHeaderSize} bytes`)
+    this.name = 'MaxHeaderSizeExceededError'
   }
 }
 
@@ -29,8 +29,8 @@ export class MaxHeaderSizeExceededError extends MultipartParseError {
  */
 export class MaxFileSizeExceededError extends MultipartParseError {
   constructor(maxFileSize: number) {
-    super(`File size exceeds maximum allowed size of ${maxFileSize} bytes`);
-    this.name = 'MaxFileSizeExceededError';
+    super(`File size exceeds maximum allowed size of ${maxFileSize} bytes`)
+    this.name = 'MaxFileSizeExceededError'
   }
 }
 
@@ -39,24 +39,24 @@ export interface ParseMultipartOptions {
    * The boundary string used to separate parts in the multipart message,
    * e.g. the `boundary` parameter in the `Content-Type` header.
    */
-  boundary: string;
+  boundary: string
   /**
    * The maximum allowed size of a header in bytes. If an individual part's header
    * exceeds this size, a `MaxHeaderSizeExceededError` will be thrown.
    *
    * Default: 8 KiB
    */
-  maxHeaderSize?: number;
+  maxHeaderSize?: number
   /**
    * The maximum allowed size of a file in bytes. If an individual part's content
    * exceeds this size, a `MaxFileSizeExceededError` will be thrown.
    *
    * Default: 2 MiB
    */
-  maxFileSize?: number;
+  maxFileSize?: number
 
-  useContentPart?: boolean;
-  onCreatePart?(part: MultipartPart): void;
+  useContentPart?: boolean
+  onCreatePart?(part: MultipartPart): Promise<void> | void
 }
 
 /**
@@ -69,29 +69,28 @@ export interface ParseMultipartOptions {
  * @param options Options for the parser
  * @return A generator that yields `MultipartPart` objects
  */
-export function* parseMultipart(
+export async function* parseMultipart(
   message: Uint8Array | Iterable<Uint8Array>,
   options: ParseMultipartOptions,
-): Generator<MultipartPart, void, unknown> {
+): AsyncGenerator<MultipartPart, void, unknown> {
   let parser = new MultipartParser(options.boundary, {
     maxHeaderSize: options.maxHeaderSize,
     maxFileSize: options.maxFileSize,
-    onCreatePart: options.onCreatePart,
-  });
+  })
 
   if (message instanceof Uint8Array) {
     if (message.length === 0) {
-      return; // No data to parse
+      return // No data to parse
     }
 
-    yield* parser.write(message);
+    yield* parser.write(message)
   } else {
     for (let chunk of message) {
-      yield* parser.write(chunk);
+      yield* parser.write(chunk)
     }
   }
 
-  parser.finish();
+  parser.finish()
 }
 
 /**
@@ -111,66 +110,67 @@ export async function* parseMultipartStream(
   let parser = new MultipartParser(options.boundary, {
     maxHeaderSize: options.maxHeaderSize,
     maxFileSize: options.maxFileSize,
-  });
+  })
 
   for await (let chunk of readStream(stream)) {
     if (chunk.length === 0) {
-      continue; // No data to parse
+      continue // No data to parse
     }
 
-    yield* parser.write(chunk);
+    yield* parser.write(chunk)
   }
 
-  parser.finish();
+  parser.finish()
 }
 
-export type MultipartParserOptions = Omit<ParseMultipartOptions, 'boundary'>;
+export type MultipartParserOptions = Omit<ParseMultipartOptions, 'boundary'>
 
-const MultipartParserStateStart = 0;
-const MultipartParserStateAfterBoundary = 1;
-const MultipartParserStateHeader = 2;
-const MultipartParserStateBody = 3;
-const MultipartParserStateDone = 4;
+const MultipartParserStateStart = 0
+const MultipartParserStateAfterBoundary = 1
+const MultipartParserStateHeader = 2
+const MultipartParserStateBody = 3
+const MultipartParserStateDone = 4
 
-const findDoubleNewline = createSearch('\r\n\r\n');
+const findDoubleNewline = createSearch('\r\n\r\n')
 
-const oneKb = 1024;
-const oneMb = 1024 * oneKb;
+const oneKb = 1024
+const oneMb = 1024 * oneKb
 
 /**
  * A streaming parser for `multipart/*` HTTP messages.
  */
 export class MultipartParser {
-  readonly boundary: string;
-  readonly maxHeaderSize: number;
-  readonly maxFileSize: number;
+  readonly boundary: string
+  readonly maxHeaderSize: number
+  readonly maxFileSize: number
 
-  #findOpeningBoundary: SearchFunction;
-  #openingBoundaryLength: number;
-  #findBoundary: SearchFunction;
-  #findPartialTailBoundary: PartialTailSearchFunction;
-  #boundaryLength: number;
+  #findOpeningBoundary: SearchFunction
+  #openingBoundaryLength: number
+  #findBoundary: SearchFunction
+  #findPartialTailBoundary: PartialTailSearchFunction
+  #boundaryLength: number
 
-  #state = MultipartParserStateStart;
-  #buffer: Uint8Array | null = null;
-  #currentPart: MultipartPart | null = null;
-  #contentLength = 0;
+  #state = MultipartParserStateStart
+  #buffer: Uint8Array | null = null
+  #currentPart: MultipartPart | null = null
+  #contentLength = 0
 
-  #onCreatePart: MultipartParserOptions['onCreatePart'];
-  #useContentPart: MultipartParserOptions['useContentPart'] & boolean;
+  #useContentPart: MultipartParserOptions['useContentPart']
+  #onCreatePart: MultipartParserOptions['onCreatePart']
 
   constructor(boundary: string, options?: MultipartParserOptions) {
-    this.boundary = boundary;
-    this.maxHeaderSize = options?.maxHeaderSize ?? 8 * oneKb;
-    this.maxFileSize = options?.maxFileSize ?? 2 * oneMb;
+    this.boundary = boundary
+    this.maxHeaderSize = options?.maxHeaderSize ?? 8 * oneKb
+    this.maxFileSize = options?.maxFileSize ?? 2 * oneMb
 
-    this.#findOpeningBoundary = createSearch(`--${boundary}`);
-    this.#openingBoundaryLength = 2 + boundary.length; // length of '--' + boundary
-    this.#findBoundary = createSearch(`\r\n--${boundary}`);
-    this.#findPartialTailBoundary = createPartialTailSearch(`\r\n--${boundary}`);
-    this.#boundaryLength = 4 + boundary.length; // length of '\r\n--' + boundary
-    this.#onCreatePart = options?.onCreatePart;
-    this.#useContentPart = options?.useContentPart ?? true;
+    this.#findOpeningBoundary = createSearch(`--${boundary}`)
+    this.#openingBoundaryLength = 2 + boundary.length // length of '--' + boundary
+    this.#findBoundary = createSearch(`\r\n--${boundary}`)
+    this.#findPartialTailBoundary = createPartialTailSearch(`\r\n--${boundary}`)
+    this.#boundaryLength = 4 + boundary.length // length of '\r\n--' + boundary
+
+    this.#onCreatePart = options?.onCreatePart
+    this.#useContentPart = options?.useContentPart ?? true
   }
 
   /**
@@ -179,130 +179,132 @@ export class MultipartParser {
    * @param chunk A chunk of data to write to the parser
    * @return A generator yielding `MultipartPart` objects as they are parsed
    */
-  *write(chunk: Uint8Array): Generator<MultipartPart, void, unknown> {
+  async *write(chunk: Uint8Array): AsyncGenerator<MultipartPart, void, unknown> {
     if (this.#state === MultipartParserStateDone) {
-      throw new MultipartParseError('Unexpected data after end of stream');
+      throw new MultipartParseError('Unexpected data after end of stream')
     }
 
-    let index = 0;
-    let chunkLength = chunk.length;
+    let index = 0
+    let chunkLength = chunk.length
 
     if (this.#buffer !== null) {
-      let newChunk = new Uint8Array(this.#buffer.length + chunkLength);
-      newChunk.set(this.#buffer, 0);
-      newChunk.set(chunk, this.#buffer.length);
-      chunk = newChunk;
-      chunkLength = chunk.length;
-      this.#buffer = null;
+      let newChunk = new Uint8Array(this.#buffer.length + chunkLength)
+      newChunk.set(this.#buffer, 0)
+      newChunk.set(chunk, this.#buffer.length)
+      chunk = newChunk
+      chunkLength = chunk.length
+      this.#buffer = null
     }
 
     while (true) {
       if (this.#state === MultipartParserStateBody) {
         if (chunkLength - index < this.#boundaryLength) {
-          this.#buffer = chunk.subarray(index);
-          break;
+          this.#buffer = chunk.subarray(index)
+          break
         }
 
-        let boundaryIndex = this.#findBoundary(chunk, index);
+        let boundaryIndex = this.#findBoundary(chunk, index)
 
         if (boundaryIndex === -1) {
           // No boundary found, but there may be a partial match at the end of the chunk.
-          let partialTailIndex = this.#findPartialTailBoundary(chunk);
+          let partialTailIndex = this.#findPartialTailBoundary(chunk)
 
           if (partialTailIndex === -1) {
-            this.#append(index === 0 ? chunk : chunk.subarray(index));
+            await this.#append(index === 0 ? chunk : chunk.subarray(index))
           } else {
-            this.#append(chunk.subarray(index, partialTailIndex));
-            this.#buffer = chunk.subarray(partialTailIndex);
+            await this.#append(chunk.subarray(index, partialTailIndex))
+            this.#buffer = chunk.subarray(partialTailIndex)
           }
 
-          break;
+          break
         }
 
-        this.#append(chunk.subarray(index, boundaryIndex));
+        await this.#append(chunk.subarray(index, boundaryIndex))
 
-        yield this.#currentPart!;
+        yield this.#currentPart!
 
-        index = boundaryIndex + this.#boundaryLength;
+        index = boundaryIndex + this.#boundaryLength
 
-        this.#state = MultipartParserStateAfterBoundary;
+        this.#state = MultipartParserStateAfterBoundary
       }
 
       if (this.#state === MultipartParserStateAfterBoundary) {
         if (chunkLength - index < 2) {
-          this.#buffer = chunk.subarray(index);
-          break;
+          this.#buffer = chunk.subarray(index)
+          break
         }
 
         if (chunk[index] === 45 && chunk[index + 1] === 45) {
-          this.#state = MultipartParserStateDone;
-          break;
+          this.#state = MultipartParserStateDone
+          break
         }
 
-        index += 2; // Skip \r\n after boundary
+        index += 2 // Skip \r\n after boundary
 
-        this.#state = MultipartParserStateHeader;
+        this.#state = MultipartParserStateHeader
       }
 
       if (this.#state === MultipartParserStateHeader) {
         if (chunkLength - index < 4) {
-          this.#buffer = chunk.subarray(index);
-          break;
+          this.#buffer = chunk.subarray(index)
+          break
         }
 
-        let headerEndIndex = findDoubleNewline(chunk, index);
+        let headerEndIndex = findDoubleNewline(chunk, index)
 
         if (headerEndIndex === -1) {
           if (chunkLength - index > this.maxHeaderSize) {
-            throw new MaxHeaderSizeExceededError(this.maxHeaderSize);
+            throw new MaxHeaderSizeExceededError(this.maxHeaderSize)
           }
 
-          this.#buffer = chunk.subarray(index);
-          break;
+          this.#buffer = chunk.subarray(index)
+          break
         }
 
         if (headerEndIndex - index > this.maxHeaderSize) {
-          throw new MaxHeaderSizeExceededError(this.maxHeaderSize);
+          throw new MaxHeaderSizeExceededError(this.maxHeaderSize)
         }
 
         const header = chunk.subarray(index, headerEndIndex);
         this.#currentPart = this.#useContentPart
           ? new MultipartContentPart(header, [])
-          : new MultipartPart(header);
-        this.#onCreatePart?.(this.#currentPart);
-        this.#contentLength = 0;
+          : new MultipartPart(header)
 
-        index = headerEndIndex + 4; // Skip header + \r\n\r\n
+        this.#contentLength = 0
 
-        this.#state = MultipartParserStateBody;
+        index = headerEndIndex + 4 // Skip header + \r\n\r\n
 
-        continue;
+        this.#state = MultipartParserStateBody
+
+        await this.#onCreatePart?.(this.#currentPart)
+
+        continue
       }
 
       if (this.#state === MultipartParserStateStart) {
         if (chunkLength < this.#openingBoundaryLength) {
-          this.#buffer = chunk;
-          break;
+          this.#buffer = chunk
+          break
         }
 
         if (this.#findOpeningBoundary(chunk) !== 0) {
-          throw new MultipartParseError('Invalid multipart stream: missing initial boundary');
+          throw new MultipartParseError('Invalid multipart stream: missing initial boundary')
         }
 
-        index = this.#openingBoundaryLength;
+        index = this.#openingBoundaryLength
 
-        this.#state = MultipartParserStateAfterBoundary;
+        this.#state = MultipartParserStateAfterBoundary
       }
     }
   }
 
-  #append(chunk: Uint8Array): void {
+  async #append(chunk: Uint8Array): Promise<void> {
     if (this.#contentLength + chunk.length > this.maxFileSize) {
-      throw new MaxFileSizeExceededError(this.maxFileSize);
+      throw new MaxFileSizeExceededError(this.maxFileSize)
     }
 
-    this.#currentPart!.append(chunk);
-    this.#contentLength += chunk.length;
+    await this.#currentPart!.append(chunk)
+    this.#contentLength += chunk.length
   }
 
   /**
@@ -315,30 +317,27 @@ export class MultipartParser {
    */
   finish(): void {
     if (this.#state !== MultipartParserStateDone) {
-      throw new MultipartParseError('Multipart stream not finished');
+      throw new MultipartParseError('Multipart stream not finished')
     }
   }
 }
 
-const decoder = new TextDecoder('utf-8', { fatal: true });
-
-export type MultipartContentFields = "bytes" | "size" | "text" | "arrayBuffer";
+const decoder = new TextDecoder('utf-8', { fatal: true })
 
 /**
  * A part of a `multipart/*` HTTP message.
  */
 export class MultipartPart {
 
-
-  #header: Uint8Array;
-  #headers?: Headers;
+  #header: Uint8Array
+  #headers?: Headers
 
   constructor(header: Uint8Array) {
-    this.#header = header;
+    this.#header = header
   }
 
-  append(chunk: Uint8Array): void {
-    throw new Error('Not implemented');
+  async append(chunk: Uint8Array) {
+    throw new Error("Not implemented. Please assign or override this method.");
   }
 
   /**
@@ -346,69 +345,70 @@ export class MultipartPart {
    */
   get headers(): Headers {
     if (!this.#headers) {
-      this.#headers = new Headers(decoder.decode(this.#header));
+      this.#headers = new Headers(decoder.decode(this.#header))
     }
 
-    return this.#headers;
+    return this.#headers
   }
 
   /**
    * True if this part originated from a file upload.
    */
   get isFile(): boolean {
-    return this.filename !== undefined || this.mediaType === 'application/octet-stream';
+    return this.filename !== undefined || this.mediaType === 'application/octet-stream'
   }
 
   /**
    * True if this part originated from a text input field in a form submission.
    */
   get isText(): boolean {
-    return !this.isFile;
+    return !this.isFile
   }
 
   /**
    * The filename of the part, if it is a file upload.
    */
   get filename(): string | undefined {
-    return this.headers.contentDisposition.preferredFilename;
+    return this.headers.contentDisposition.preferredFilename
   }
 
   /**
    * The media type of the part.
    */
   get mediaType(): string | undefined {
-    return this.headers.contentType.mediaType;
+    return this.headers.contentType.mediaType
   }
 
   /**
    * The name of the part, usually the `name` of the field in the `<form>` that submitted the request.
    */
   get name(): string | undefined {
-    return this.headers.contentDisposition.name;
+    return this.headers.contentDisposition.name
   }
 
-
 }
+
 export class MultipartContentPart extends MultipartPart {
+
   /**
    * The raw content of this part as an array of `Uint8Array` chunks.
    */
-  readonly content: Uint8Array[];
+  readonly content: Uint8Array[]
+
+  async append(chunk: Uint8Array): Promise<void> {
+    this.content.push(chunk)
+  }
 
   constructor(header: Uint8Array, content: Uint8Array[]) {
     super(header);
-    this.content = content;
-  }
-
-  append(chunk: Uint8Array) {
-    this.content.push(chunk);
+    this.content = content
   }
 
   /**
    * The content of this part as an `ArrayBuffer`.
    */
   get arrayBuffer(): ArrayBuffer {
-    return this.bytes.buffer as ArrayBuffer;
+    return this.bytes.buffer as ArrayBuffer
   }
 
   /**
@@ -416,28 +416,28 @@ export class MultipartContentPart extends MultipartPart {
    * for reading the value of files that were uploaded using `<input type="file">` fields.
    */
   get bytes(): Uint8Array {
-    let buffer = new Uint8Array(this.size);
+    let buffer = new Uint8Array(this.size)
 
-    let offset = 0;
+    let offset = 0
     for (let chunk of this.content) {
-      buffer.set(chunk, offset);
-      offset += chunk.length;
+      buffer.set(chunk, offset)
+      offset += chunk.length
     }
 
-    return buffer;
+    return buffer
   }
 
   /**
    * The size of the content in bytes.
    */
   get size(): number {
-    let size = 0;
+    let size = 0
 
     for (let chunk of this.content) {
-      size += chunk.length;
+      size += chunk.length
     }
 
-    return size;
+    return size
   }
 
   /**
@@ -447,6 +447,6 @@ export class MultipartContentPart extends MultipartPart {
    * Note: Do not use this for binary data, use `part.bytes` or `part.arrayBuffer` instead.
    */
   get text(): string {
-    return decoder.decode(this.bytes);
+    return decoder.decode(this.bytes)
   }
 }

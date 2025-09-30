@@ -90,10 +90,12 @@ export async function recieveTiddlerMultipartUpload(state: ZodState<"POST", "str
       }
 
     },
-    cbPartChunk: function (part, chunk) {
+    cbPartChunk: async function (part, chunk) {
       const part2 = incomingParts.get(part)!;
       if (part2.fileStream) {
-        part2.fileStream.write(chunk);
+        await new Promise<void>((res) => {
+          part2.fileStream!.write(chunk) ? res() : part2.fileStream!.once("drain", () => res());
+        });
       } else {
         const encoding = part.headers.contentType?.charset || "utf8";
         if (!Buffer.isEncoding(encoding)) {

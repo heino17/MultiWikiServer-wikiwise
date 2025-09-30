@@ -1287,6 +1287,7 @@ declare module "packages/multipart-parser/src/lib/multipart" {
          * Default: 2 MiB
          */
         maxFileSize?: number;
+        useContentPart?: boolean;
         onCreatePart?(part: MultipartPart): void;
     }
     /**
@@ -1338,25 +1339,14 @@ declare module "packages/multipart-parser/src/lib/multipart" {
          */
         finish(): void;
     }
+    export type MultipartContentFields = "bytes" | "size" | "text" | "arrayBuffer";
     /**
      * A part of a `multipart/*` HTTP message.
      */
     export class MultipartPart {
         #private;
-        /**
-         * The raw content of this part as an array of `Uint8Array` chunks.
-         */
-        readonly content: Uint8Array[];
-        constructor(header: Uint8Array, content: Uint8Array[]);
-        /**
-         * The content of this part as an `ArrayBuffer`.
-         */
-        get arrayBuffer(): ArrayBuffer;
-        /**
-         * The content of this part as a single `Uint8Array`. In `multipart/form-data` messages, this is useful
-         * for reading the value of files that were uploaded using `<input type="file">` fields.
-         */
-        get bytes(): Uint8Array;
+        constructor(header: Uint8Array);
+        append(chunk: Uint8Array): void;
         /**
          * The headers associated with this part.
          */
@@ -1381,6 +1371,23 @@ declare module "packages/multipart-parser/src/lib/multipart" {
          * The name of the part, usually the `name` of the field in the `<form>` that submitted the request.
          */
         get name(): string | undefined;
+    }
+    export class MultipartContentPart extends MultipartPart {
+        /**
+         * The raw content of this part as an array of `Uint8Array` chunks.
+         */
+        readonly content: Uint8Array[];
+        constructor(header: Uint8Array, content: Uint8Array[]);
+        append(chunk: Uint8Array): void;
+        /**
+         * The content of this part as an `ArrayBuffer`.
+         */
+        get arrayBuffer(): ArrayBuffer;
+        /**
+         * The content of this part as a single `Uint8Array`. In `multipart/form-data` messages, this is useful
+         * for reading the value of files that were uploaded using `<input type="file">` fields.
+         */
+        get bytes(): Uint8Array;
         /**
          * The size of the content in bytes.
          */
@@ -1500,6 +1507,22 @@ declare module "packages/multipart-parser/src/headers/lib/if-none-match.test" { 
 declare module "packages/multipart-parser/src/headers/lib/param-values.test" { }
 declare module "packages/multipart-parser/src/headers/lib/set-cookie.test" { }
 declare module "packages/multipart-parser/src/headers/lib/super-headers.test" { }
+declare module "packages/utils/src/ReactiveArray" {
+    export type RxArrayEvents<T> = {
+        [K in "push" | "pop" | "shift" | "unshift" | "splice" | "sort" | "copyWithin" | "reverse"]?: [
+            K,
+            Parameters<Array<T>[K]>,
+            ReturnType<Array<T>[K]>
+        ];
+    };
+    /** An array which emits events for each call to mutable functions on the array. */
+    export class ReactiveArray<T> extends Array<T> {
+        #private;
+        get events(): import("rxjs").Observable<["pop", [], T | undefined] | ["push", T[], number] | ["reverse", [], T[]] | ["shift", [], T | undefined] | ["sort", [compareFn?: ((a: T, b: T) => number) | undefined], T[]] | ["splice", [start: number, deleteCount: number, ...items: T[]], T[]] | ["unshift", T[], number] | ["copyWithin", [target: number, start: number, end?: number | undefined], T[]] | undefined>;
+        constructor(length: number);
+        constructor(...items: T[]);
+    }
+}
 declare module "packages/utils/src/index" {
     global {
         /** Awaited Return Type */
@@ -1522,6 +1545,7 @@ declare module "packages/utils/src/index" {
         function truthy<T>(obj: T): obj is Exclude<T, false | null | undefined | 0 | '' | void>;
     }
     export {};
+    export * from "packages/utils/src/ReactiveArray";
 }
 declare module "packages/server/src/utils" {
     export function is<T>(a: any, b: boolean): a is T;
@@ -1973,8 +1997,12 @@ declare module "packages/server/src/SendError" {
         }>;
         "INVALID_BODY_FORMAT": SendErrorItem<500, null>;
         "REQUEST_DROPPED": SendErrorItem<500, null>;
-        MULTIPART_INVALID_REQUEST: SendErrorItem<400, null>;
-        MULTIPART_MISSING_BOUNDARY: SendErrorItem<400, null>;
+        "MULTIPART_INVALID_CONTENT_TYPE": SendErrorItem<400, null>;
+        "MULTIPART_MISSING_BOUNDARY": SendErrorItem<400, null>;
+        "MULTIPART_INVALID_PART_ENCODING": SendErrorItem<400, {
+            partIndex: number;
+            partEncoding: string;
+        }>;
     }
     export class SendError<REASON extends SendErrorReason> extends Error {
         reason: REASON;

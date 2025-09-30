@@ -10,7 +10,6 @@ import {
   SuperHeaders
 } from '@mjackson/multipart-parser';
 import { SendError } from './SendError';
-import { MultipartContentFields, MultipartContentPart } from '@mjackson/multipart-parser/src/lib/multipart';
 
 export interface ServerRequest<
   B extends BodyFormat = BodyFormat,
@@ -123,7 +122,7 @@ export class ServerRequestClass<
     this: ServerRequest<"stream", any>,
     options: {
       cbPartStart: (part: MultipartPart) => void;
-      cbPartChunk: (part: MultipartPart, chunk: Buffer) => void;
+      cbPartChunk: (part: MultipartPart, chunk: Buffer) => Promise<void>;
       cbPartEnd: (part: MultipartPart) => void;
     }
   ) {
@@ -140,8 +139,8 @@ export class ServerRequestClass<
       boundary,
       useContentPart: false,
       onCreatePart: (part) => {
-        part.append = (chunk: Uint8Array) => {
-          options.cbPartChunk(part, Buffer.from(chunk));
+        part.append = async (chunk: Uint8Array) => {
+          await options.cbPartChunk(part, Buffer.from(chunk));
         };
         options.cbPartStart(part);
       }

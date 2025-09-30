@@ -1,4 +1,3 @@
-/// <reference lib="dom" />
 
 import "./boot/boot";
 import "./core/modules/wiki";

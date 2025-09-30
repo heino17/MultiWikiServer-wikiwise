@@ -5,7 +5,8 @@
       "node",
     ],
     "lib": [
-      "es2020"
+      "es2020",
+      "dom",
     ],
     "target": "es2020",
     "module": "preserve",
@@ -29,6 +30,7 @@
   "exclude": [
     "dist",
     "packages/react-admin",
+    "packages/react-admin/src/*",
     "plugins/client/src/types.d.ts"
   ],
   "include": [
