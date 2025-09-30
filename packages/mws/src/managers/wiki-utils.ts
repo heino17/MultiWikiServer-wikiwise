@@ -74,7 +74,7 @@ export async function recieveTiddlerMultipartUpload(state: ZodState<"POST", "str
   const valueParts = new WeakMap<MultipartPart, string>();
 
   await state.readMultipartData({
-    cbPartStart: function (part) {
+    cbPartStart: async function (part) {
       const part2: UploadPart2 = {
         hasher: createHash("sha-256"),
         length: 0,
@@ -109,7 +109,7 @@ export async function recieveTiddlerMultipartUpload(state: ZodState<"POST", "str
       part2.length += chunk.length;
       part2.hasher!.update(chunk);
     },
-    cbPartEnd: function (part) {
+    cbPartEnd: async function (part) {
       const part2 = incomingParts.get(part)!;
 
       if (part2.fileStream) part2.fileStream.end();
