@@ -29,5 +29,3 @@ export {
   parseMultipart as parseNodeMultipart,
   parseMultipartStream as parseNodeMultipartStream
 } from './lib/multipart.node.ts';
-
-export * from "./headers";

@@ -7,7 +7,6 @@ import {
   isMultipartRequestHeader,
   MultipartPart,
   parseNodeMultipartStream,
-  SuperHeaders
 } from '@mjackson/multipart-parser';
 import { SendError } from './SendError';
 
