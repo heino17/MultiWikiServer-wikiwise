@@ -121,9 +121,9 @@ export class ServerRequestClass<
   async readMultipartData(
     this: ServerRequest<"stream", any>,
     options: {
-      cbPartStart: (part: MultipartPart) => void;
+      cbPartStart: (part: MultipartPart) => Promise<void>;
       cbPartChunk: (part: MultipartPart, chunk: Buffer) => Promise<void>;
-      cbPartEnd: (part: MultipartPart) => void;
+      cbPartEnd: (part: MultipartPart) => Promise<void>;
     }
   ) {
 
@@ -138,14 +138,14 @@ export class ServerRequestClass<
     for await (let part of parseNodeMultipartStream(this.reader, {
       boundary,
       useContentPart: false,
-      onCreatePart: (part) => {
+      onCreatePart: async (part) => {
         part.append = async (chunk: Uint8Array) => {
           await options.cbPartChunk(part, Buffer.from(chunk));
         };
-        options.cbPartStart(part);
+        await options.cbPartStart(part);
       }
     })) {
-      options.cbPartEnd(part);
+      await options.cbPartEnd(part);
     }
   }
 
