@@ -13,5 +13,8 @@
   "license": "MIT",
   "type": "module",
   "types": "./src/index.ts",
-  "module": "./src/index.ts"
+  "module": "./src/index.ts",
+  "dependencies": {
+    "@remix-run/headers": "^0.12.0"
+  }
 }
