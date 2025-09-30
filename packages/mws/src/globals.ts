@@ -1,4 +1,5 @@
-import type { Prisma } from "prisma-client";
+import type { Prisma } from "@tiddlywiki/mws-prisma";
+
 
 declare global {
   namespace PrismaJson {
@@ -51,3 +52,4 @@ declare global {
   type PrismaPayloadScalars<T extends Prisma.ModelName>
     = Prisma.TypeMap["model"][T]["payload"]["scalars"]
 }
+export { };

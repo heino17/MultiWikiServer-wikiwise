@@ -1,5 +1,5 @@
-import { Prisma } from 'prisma-client';
-import { Types } from 'prisma-client/runtime/library';
+import { Prisma } from '@tiddlywiki/mws-prisma';
+import { Types } from '@tiddlywiki/mws-prisma/runtime/library';
 import { ServerState } from "./ServerState";
 import { BodyFormat, RouteMatch, Router, ServerRequestClass, Streamer } from "@tiddlywiki/server";
 import { SendError, SendErrorReasonData } from "@tiddlywiki/server";

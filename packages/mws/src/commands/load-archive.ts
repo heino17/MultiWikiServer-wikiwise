@@ -1,6 +1,6 @@
 
 import { join, resolve } from "path";
-import { Prisma } from "prisma-client";
+import { Prisma } from "@tiddlywiki/mws-prisma";
 import * as _fsp from "fs/promises";
 import { existsSync } from "fs";
 import { v7 as uuidv7 } from "uuid";

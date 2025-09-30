@@ -1,0 +1,17 @@
+{
+  "name": "@mjackson/headers",
+  "version": "0.11.1",
+  "private": true,
+  "description": "A toolkit for working with HTTP headers in JavaScript",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "directory": "packages/headers"
+  },
+  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/headers#readme",
+  "type": "module",
+  "types": "./src/headers.ts",
+  "module": "./src/headers.ts"
+}

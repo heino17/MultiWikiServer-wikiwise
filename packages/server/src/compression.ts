@@ -14,7 +14,8 @@ const bytes = require('bytes')
 const compressible = require('compressible')
 const debug = require('debug')('compression')
 const vary = require('vary')
-import zlib, { BrotliOptions, ZlibOptions } from 'zlib';
+import { BrotliOptions, ZlibOptions } from 'zlib';
+import * as zlib from 'zlib';
 
 
 /**

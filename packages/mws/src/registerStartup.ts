@@ -1,4 +1,4 @@
-import { PrismaClient } from "prisma-client";
+import { PrismaClient } from "@tiddlywiki/mws-prisma";
 import Debug from "debug";
 import { serverEvents } from "@tiddlywiki/events";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";

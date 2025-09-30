@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient } from "prisma-client";
+import { Prisma, PrismaClient } from "@tiddlywiki/mws-prisma";
 
 class ProxyPromise {
   static getErrorStack(t: ProxyPromise) { return t.#error.stack; }

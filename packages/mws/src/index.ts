@@ -1,4 +1,4 @@
-import "../../../prisma/global";
+import "./globals";
 import "@tiddlywiki/utils";
 import { serverEvents } from "@tiddlywiki/events";
 

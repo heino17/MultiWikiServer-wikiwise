@@ -1,11 +1,18 @@
 import { Streamer, StreamerState } from './streamer';
-import { PassThrough } from 'node:stream';
 import { BodyFormat, Router } from "./router";
 import { RouteMatch } from './router';
 import { ok } from 'assert';
 import { IncomingHttpHeaders } from 'http';
 import { zod } from './Z2';
-import { serverEvents } from '@tiddlywiki/events';
+import {
+  getMultipartBoundary,
+  isMultipartRequestHeader,
+  MultipartPart,
+  parseNodeMultipartStream,
+  SuperHeaders,
+} from '@mjackson/multipart-parser';
+import { InteropObservable, Observable, Operator, Subject } from 'rxjs';
+import { is } from './utils';
 
 export interface ServerRequest<
   B extends BodyFormat = BodyFormat,
@@ -121,7 +128,7 @@ export class ServerRequestClass<
                         as it is called immediately before resolving or rejecting the promise.
                         The promise will reject with err if there is an error.
   */
-  readMultipartData(this: ServerRequest<any, any>, options: {
+  readMultipartData(this: ServerRequest<"stream", any>, options: {
     cbPartStart: (headers: IncomingHttpHeaders, name: string | null, filename: string | null) => void;
     cbPartChunk: (chunk: Buffer) => void;
     cbPartEnd: () => void;
@@ -229,7 +236,73 @@ export class ServerRequestClass<
 
   }
 
+  async readMultipartData2(
+    this: ServerRequest<"stream", any>,
+    options: {
+      cbPartStart: (part: MultipartPart) => void;
+      cbPartChunk: (part: MultipartPart, chunk: Buffer) => void;
+      cbPartEnd: (part: MultipartPart) => void;
+    }
+  ) {
+    const contentType = this.headers['content-type'];
+    if (!contentType || !isMultipartRequestHeader(contentType)) return false;
+    const boundary = getMultipartBoundary(contentType);
+    if (!boundary) throw 'Invalid Content-Type header: missing boundary';
+    for await (let part of parseNodeMultipartStream(this.reader, {
+      boundary,
+      onCreatePart: (part) => {
+        //@ts-ignore
+        const arr = part.content = new RxArray<Uint8Array>(...part.content);
+        if (part.isFile) {
+          arr.asObservable().subscribe((e) => {
+            if (!e) return;
+            const [event, args, res] = e;
+            if (event === "push") {
+              args.forEach((chunk) => {
+                options.cbPartChunk(part, Buffer.from(chunk));
+              });
+            }
+          });
+        }
+        options.cbPartStart(part);
+      }
+    })) {
+      options.cbPartEnd(part);
+    }
+  }
 
+}
+
+type RxArrayEvents<T> = {
+  [K in "push" | "pop" | "shift" | "unshift" | "splice" | "sort" | "copyWithin" | "reverse"]?:
+  K extends "push" ? [K, T[], number] :
+  [K, Parameters<Array<T>[K]>, ReturnType<Array<T>[K]>];
+}
+class RxArray<T> extends Array<T> implements InteropObservable<RxArrayEvents<T>[keyof RxArrayEvents<T>]> {
+  #subject = new Subject<RxArrayEvents<T>[keyof RxArrayEvents<T>]>();
+  [Symbol.observable]() { return this.#subject.asObservable(); }
+  asObservable() { return this.#subject.asObservable(); }
+
+  constructor(length: number);
+  constructor(...items: T[]);
+  constructor(...args: any[]) {
+    super(...args);
+    const factory = (method: keyof RxArrayEvents<T>) => {
+      return (...args: any[]) => {
+        const result = Array.prototype[method].apply(this, args);
+        this.#subject.next([method as any, args, result]);
+        return result;
+      };
+    };
+    this.push = factory("push");
+    this.pop = factory("pop");
+    this.shift = factory("shift");
+    this.unshift = factory("unshift");
+    this.splice = factory("splice");
+    this.sort = factory("sort");
+    this.copyWithin = factory("copyWithin");
+    this.reverse = factory("reverse");
+  }
 }
 
 const zodURIComponent = (val: string, ctx: zod.RefinementCtx) => {

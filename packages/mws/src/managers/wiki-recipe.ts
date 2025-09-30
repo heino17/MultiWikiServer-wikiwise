@@ -5,7 +5,7 @@ import { WikiStateStore } from "./WikiStateStore";
 import Debug from "debug";
 import { zodRoute } from "@tiddlywiki/server";
 import { serverEvents } from "@tiddlywiki/events";
-import { Prisma } from "prisma-client";
+import { Prisma } from "@tiddlywiki/mws-prisma";
 import { parseTiddlerFields, RECIPE_PREFIX, rethrow } from "./wiki-utils";
 import { SendError } from "@tiddlywiki/server";
 const debugCORS = Debug("mws:cors");

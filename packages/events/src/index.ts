@@ -1,7 +1,7 @@
 
 // the keys in the arrays are labels which get used for the 
 
-import EventEmitter from "events";
+import { EventEmitter } from "events";
 
 // argument names when the tuple is used in a function definition
 /**

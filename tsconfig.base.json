@@ -18,7 +18,7 @@
     "noImplicitThis": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
+    "noUncheckedIndexedAccess": false,
     "forceConsistentCasingInFileNames": true,
     "allowImportingTsExtensions": true,
     "checkJs": true,
@@ -28,14 +28,13 @@
       // "@tiddlywiki/server": [
       //   "./packages/server/src"
       // ],
-    }
+    },
   },
-  "include":[
-    "prisma/global.ts",
-    "packages/**/src",
-  ],
   "exclude": [
-    "dist",
-    "packages/**/dist"
+    "./packages/react-admin",
+    "./plugins/client/src/types.d.ts"
+  ],
+    "include":[
+    "./packages/**/src"
   ],
 }

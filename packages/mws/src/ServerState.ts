@@ -1,10 +1,10 @@
-import { PrismaClient, Prisma } from "prisma-client";
-import { ITXClientDenyList } from "prisma-client/runtime/library";
+import { PrismaClient, Prisma } from "@tiddlywiki/mws-prisma";
+import { ITXClientDenyList } from "@tiddlywiki/mws-prisma/runtime/library";
 import { TW } from "tiddlywiki";
 import pkg from "../../../package.json";
 import { createPasswordService } from "./services/PasswordService";
 import { startupCache } from "./services/cache";
-import { Types } from "prisma-client/runtime/library";
+import { Types } from "@tiddlywiki/mws-prisma/runtime/library";
 
 /** This is an alias for ServerState in case we want to separate the two purposes. */
 export type SiteConfig = ServerState;

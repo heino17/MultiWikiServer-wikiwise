@@ -2,18 +2,18 @@
 // docs: `ENABLE_DOCS_ROUTE=1 npm start`
 // postinstall: `PRISMA_CLIENT_FORCE_WASM=true prisma generate`
 
+/// <reference lib="es2023" />
+/// <reference types="node" />
+//@ts-check
+
+
 import { spawn } from "child_process";
-import EventEmitter from "events";
+import { EventEmitter } from "events";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "fs";
 import * as path from "path";
 const events = new EventEmitter();
-const workspaces = [
-  "packages/server",
-  "packages/mws",
-  "packages/react-admin",
-  "packages/tiddlywiki-types",
-  "plugins/client"
-];
+const prismaFolder = "prisma";
+
 (async function run(arg) {
   switch(arg) {
     case "start":
@@ -33,22 +33,39 @@ const workspaces = [
       await run("start");
       break;
     case "prisma:generate":
-      // rm -rf prisma/client && PRISMA_CLIENT_FORCE_WASM=true npx prisma generate && npm run prisma:format && rm -f prisma/client/*.node
+
       console.log("Generating Prisma client...");
       // remove the old client
-      await start("rm -rf prisma/client");
-      await start("prisma generate", [], { PRISMA_CLIENT_FORCE_WASM: "true" });
-      // await start("npm run prisma:format");
+      await start(`rm -rf ${prismaFolder}/client`);
+      await start(`prisma generate --schema=${prismaFolder}/schema.prisma`, [], {
+        PRISMA_CLIENT_FORCE_WASM: "true"
+      });
       console.log("Formatting Prisma client...");
-      await start("prettier --write prisma/client/*.js prisma/client/*/*.js");
+      await start(`prettier --write ${prismaFolder}/client/*.js ${prismaFolder}/client/*/*.js`);
       // remove the .node files, we don't need them in the client
       console.log("Removing .node files from Prisma client...");
-      readdirSync("prisma/client").forEach(file => {
+      readdirSync(`${prismaFolder}/client`).forEach(file => {
         if(file.endsWith(".node")) {
-          const filePath = path.join("prisma/client", file);
+          const filePath = path.join(`${prismaFolder}/client`, file);
           console.log(`Removing ${filePath}`);
           if(existsSync(filePath)) rmSync(filePath);
         }
+      });
+      console.log("Updating Prisma client package.json...");
+      /** @type {any} */
+      const pkg = JSON.parse(readFileSync(path.join(prismaFolder, "client/package.json")).toString());
+      pkg.name = "@tiddlywiki/mws-prisma";
+      pkg.private = true;
+      writeFileSync(path.join(prismaFolder, "client/package.json"), JSON.stringify(pkg, null, 2));
+      console.log("Prisma client generated.");
+      break;
+    case "prisma:migrate":
+      await start("prisma migrate dev", [
+        "--schema", "prisma/schema.prisma",
+        "--create-only",
+        "--skip-generate"
+      ], {
+        DATABASE_URL: "file:test.sqlite"
       });
       break;
     case "client-types": {
@@ -102,11 +119,34 @@ const workspaces = [
   }
 })(process.argv[2]).catch(console.log);
 
-const exit = (code) => { events.emit("exit", code); };
+const exit = (/** @type {any} */ code) => { events.emit("exit", code); };
 process.on("SIGTERM", exit);
 process.on("SIGINT", exit);
 process.on("SIGHUP", exit);
 
+/**
+ * 
+
+ * 
+ * @overload
+ * @param {string} cmd
+ * @param {string[]} [args]
+ * @param {NodeJS.ProcessEnv} [env2]
+ * @param {{cwd?: string, pipeOut: true}} [options]
+ * @returns {Promise<string>}
+ * 
+ * @overload
+ * @param {string} cmd
+ * @param {string[]} [args]
+ * @param {NodeJS.ProcessEnv} [env2]
+ * @param {{cwd?: string, pipeOut?: false}} [options]
+ * @returns {Promise<void>}
+ * 
+ * @param {string} cmd
+ * @param {string[]} [args]
+ * @param {NodeJS.ProcessEnv} [env2]
+ * @param {{cwd?: string, pipeOut?: boolean}} [options]
+ */
 function start(cmd, args = [], env2 = {}, { cwd = process.cwd(), pipeOut } = {}) {
   const cp = spawn(cmd, args, {
     cwd,
@@ -119,11 +159,12 @@ function start(cmd, args = [], env2 = {}, { cwd = process.cwd(), pipeOut } = {})
 
   if(pipeOut) {
     return new Promise((r, c) => {
+      /** @type {any[]} */
       const chunks = [];
-      cp.stdout.on("data", (data) => {
+      cp.stdout?.on("data", (data) => {
         chunks.push(data);
       });
-      cp.stdout.on("end", () => {
+      cp.stdout?.on("end", () => {
         r(chunks.map(e => e.toString()).join(""));
       });
       // if any process errors it will immediately exit the script
@@ -132,10 +173,10 @@ function start(cmd, args = [], env2 = {}, { cwd = process.cwd(), pipeOut } = {})
       });
     });
   } else {
-    return new Promise((r, c) => {
+    return /** @type {Promise<void>} */(new Promise((r, c) => {
       // if any process errors it will immediately exit the script
       cp.on("exit", (code) => { if(code) c(code); else r(); });
-    });
+    }));
   }
 }
 

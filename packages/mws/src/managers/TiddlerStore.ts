@@ -77,7 +77,7 @@ export class TiddlerStore_PrismaBase {
     if (validationRecipeName) throw validationRecipeName;
     if (bags.length === 0) throw new SendError("RECIPE_MUST_HAVE_BAGS", 400, { recipeName: recipe_name });
 
-    return tuple(
+    return Tuple(
       this.prisma.recipes.upsert({
         where: { recipe_name },
         update: { description, recipe_bags: { deleteMany: {} }, plugin_names },
@@ -122,7 +122,7 @@ export class TiddlerStore_PrismaBase {
     bag_id: PrismaField<"Bags", "bag_id">,
     tiddlers: TiddlerFields[]
   ) {
-    return tuple(
+    return Tuple(
       this.prisma.tiddlers.deleteMany({
         where: { bag: { bag_id } }
       }),
@@ -170,7 +170,7 @@ export class TiddlerStore_PrismaBase {
       }
     });
 
-    return tuple(deletion, creation);
+    return Tuple(deletion, creation);
 
   }
 
@@ -181,7 +181,7 @@ export class TiddlerStore_PrismaBase {
     bag_id: PrismaField<"Bags", "bag_id">,
     title: PrismaField<"Tiddlers", "title">,
   ) {
-    return tuple(
+    return Tuple(
       this.prisma.tiddlers.deleteMany({
         where: { bag_id, title },
       }),

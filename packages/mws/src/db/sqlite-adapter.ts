@@ -20,12 +20,13 @@ export class SqliteAdapter {
 
     // this is used to test the upgrade path
     if (process.env.RUN_FIRST_MWS_DB_SETUP_FOR_TESTING_0_0) {
+      throw new Error("this is disabled");
       await libsql.executeScript(await readFile(dist_resolve(
-        "../prisma-20250406/migrations/" + INIT_0_0 + "/migration.sql"
+        "../packages/prisma-20250406/migrations/" + INIT_0_0 + "/migration.sql"
       ), "utf8"));
     } else if (process.env.RUN_FIRST_MWS_DB_SETUP_FOR_TESTING_0_1) {
       await libsql.executeScript(await readFile(dist_resolve(
-        "../prisma/migrations/" + INIT_0_1 + "/migration.sql"
+        "../packages/prisma/migrations/" + INIT_0_1 + "/migration.sql"
       ), "utf8"));
     }
 
@@ -71,13 +72,13 @@ export class SqliteAdapter {
         "npm install @tiddlywiki/mws@0.0",
         "=======================================================================================",
       ].join("\n"))
-      await this.checkMigrationsTable(libsql, hasExisting && !hasMigrationsTable, applied_migrations, "prisma-20250406", INIT_0_0);
+      await this.checkMigrationsTable(libsql, hasExisting && !hasMigrationsTable, applied_migrations, "packages/prisma-20250406", INIT_0_0);
       console.log("Your database is updated to the final version for 0.0.x");
       console.log("This database is for a previous version of MWS. We will now exit to prevent data loss.");
       console.log("=======================================================================================");
       process.exit(1);
     } else if (!applied_migrations.size || applied_migrations.has(INIT_0_1)) {
-      await this.checkMigrationsTable(libsql, hasExisting && !hasMigrationsTable, applied_migrations, "prisma", INIT_0_1);
+      await this.checkMigrationsTable(libsql, hasExisting && !hasMigrationsTable, applied_migrations, "packages/prisma", INIT_0_1);
     } else if (this.isDevMode) {
       console.log([
         "===============================================================",

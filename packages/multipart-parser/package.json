@@ -1,0 +1,17 @@
+{
+  "name": "@mjackson/multipart-parser",
+  "version": "0.10.1",
+  "private": true,
+  "description": "A fast, efficient parser for multipart streams in any JavaScript environment",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mjackson/remix-the-web.git",
+    "directory": "packages/multipart-parser"
+  },
+  "homepage": "https://github.com/mjackson/remix-the-web/tree/main/packages/multipart-parser#readme",
+  "license": "MIT",
+  "type": "module",
+  "types": "./src/index.ts",
+  "module": "./src/index.ts"
+}
