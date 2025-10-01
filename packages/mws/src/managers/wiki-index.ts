@@ -108,7 +108,7 @@ serverEvents.on("mws.routes", (root, config) => {
       const error = new SendError("INTERNAL_SERVER_ERROR", 500, {
         message: "An unexpected error occurred. Details have been logged.",
       });
-      await state.sendAdmin(error.status, { sendError: e.toJSON() });
+      await state.sendAdmin(error.status, { sendError: error });
     }
     throw STREAM_ENDED;
   });

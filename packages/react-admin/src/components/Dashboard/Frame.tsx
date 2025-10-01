@@ -127,7 +127,7 @@ export function PageRoot() {
         ?? {
         reason: "INCORRECT_SERVER_RESPONSE_SENT",
         status: 500,
-        details: { instead: embeddedServerResponse }
+        details: { found: embeddedServerResponse }
       }} />, "Wiki Error"]
   ];
   const route = location.pathname.slice(pathPrefix.length);

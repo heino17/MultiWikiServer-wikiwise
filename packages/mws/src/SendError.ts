@@ -44,6 +44,6 @@ declare module "@tiddlywiki/server" {
     SendErrorItem<403, null>;
 
     "INCORRECT_SERVER_RESPONSE_SENT":
-    SendErrorItem<500, { instead: any }>
+    SendErrorItem<500, { found: any }>
   }
 }
