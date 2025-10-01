@@ -29,14 +29,14 @@ export class WikiStatusRoutes {
 
       if (!recipe) throw state.sendEmpty(404, { "x-reason": "recipe not found" });
       if (!canRead) throw state.sendEmpty(403, { "x-reason": "read access denied" });
-
-      const { isAdmin, user_id, username } = state.user;
+      
+      const { isAdmin, user_id, username, isLoggedIn } = state.user;
 
       return {
         isAdmin,
         user_id,
         username,
-        isLoggedIn: state.user.isLoggedIn,
+        isLoggedIn,
         isReadOnly: !canWrite,
       };
     }

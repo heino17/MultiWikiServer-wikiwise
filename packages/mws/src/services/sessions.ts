@@ -9,7 +9,10 @@ export interface AuthUser {
   /** User ID. 0 if the user is not logged in. */
   user_id: PrismaField<"Users", "user_id">;
   /** User role_ids. This may have length even if the user isn't logged in, to allow ACL for anon. */
-  role_ids: PrismaField<"Roles", "role_id">[];
+  roles: {
+    role_id: PrismaField<"Roles", "role_id">;
+    role_name: PrismaField<"Roles", "role_name">;
+  }[];
   /** Username passed to the client */
   username: PrismaField<"Users", "username">;
   /** A session_id isn't guarenteed. There may be a session even if the user isn't logged in, and may not be even if they are, depending on the the situation. */
@@ -18,6 +21,8 @@ export interface AuthUser {
   isAdmin: boolean;
   /** Is the user logged in? This also means that user_id should be 0. role_ids may still be specified. */
   isLoggedIn: boolean;
+  /** Web URL for the user's avatar. */
+  avatarUrl?: string;
 }
 
 export const SessionKeyMap: RouterKeyMap<SessionManager, true> = {
@@ -96,7 +101,10 @@ export class SessionManager {
       user_id: session.user.user_id,
       username: session.user.username,
       isAdmin: session.user.roles.some(e => e.role_name === "ADMIN"),
-      role_ids: session.user.roles.map(e => e.role_id),
+      roles: session.user.roles.map(e => ({
+        role_id: e.role_id,
+        role_name: e.role_name
+      })),
       sessionId: session.session_id,
       isLoggedIn: true,
     };
@@ -104,8 +112,8 @@ export class SessionManager {
       user_id: "" as PrismaField<"Users", "user_id">,
       username: "(anon)" as PrismaField<"Users", "username">,
       isAdmin: false,
-      role_ids: [] as PrismaField<"Roles", "role_id">[],
-      sessionId: undefined as PrismaField<"Sessions", "session_id"> | undefined,
+      roles: [],
+      sessionId: undefined,
       isLoggedIn: false,
     };
   }

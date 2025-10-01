@@ -3,6 +3,7 @@ import "./admin-recipes";
 import "./admin-users";
 import "./admin-settings";
 import "./wiki-index";
+import "./root-status";
 
 // other imports
 import { admin } from "./admin-utils";
@@ -50,8 +51,8 @@ export class StatusManager {
 
   index_json = admin(z => z.undefined(), async (state, prisma) => {
 
-    const { isAdmin, user_id, username, role_ids } = state.user;
-
+    const { isAdmin, user_id, username, roles } = state.user;
+    const role_ids = roles.map(r => r.role_id);
     const OR = state.getBagWhereACL({ permission: "READ", user_id, role_ids });
 
     const clientPlugins = [...state.pluginCache.pluginFiles.keys()];

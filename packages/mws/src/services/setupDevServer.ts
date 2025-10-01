@@ -24,6 +24,7 @@ class ExtString {
 
 const rootdir = dist_resolve('../packages/react-admin');
 const publicdir = dist_resolve('../public/react-admin');
+const DEV_HOST = process.env.MWS_DEV_HOST || "127.0.0.20";
 
 export async function setupDevServer(
   config: ServerState,
@@ -77,7 +78,7 @@ export async function setupDevServer(
         delete headers[":scheme"];
         headers.host = "localhost";
         const proxyReq = request({
-          hostname: "127.0.0.20",
+          hostname: DEV_HOST,
           port: port,
           path: state.url,
           method: state.method,
@@ -143,7 +144,7 @@ export async function esbuildStartup() {
 
   const { port } = await ctx.serve({
     servedir: publicdir,
-    host: "127.0.0.20"
+    host: DEV_HOST
   });
 
   const result = await ctx.rebuild();
