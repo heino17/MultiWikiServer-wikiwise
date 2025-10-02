@@ -3,7 +3,7 @@ import "./admin-recipes";
 import "./admin-users";
 import "./admin-settings";
 import "./wiki-index";
-import "./root-status";
+import "./user-status";
 
 // other imports
 import { admin } from "./admin-utils";

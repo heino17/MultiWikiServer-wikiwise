@@ -10,7 +10,7 @@ export class WikiStatusRoutes {
 
   handleGetLoginStatus = zodRoute({
     method: ["GET", "HEAD"],
-    path: "/status",
+    path: "/user/status",
     zodPathParams: z => ({}),
     bodyFormat: "ignore",
     securityChecks: { requestedWithHeader: true },
