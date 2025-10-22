@@ -60,7 +60,7 @@
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "6.10.1",
     "@serenity-kit/opaque": "^0.8.4",
-    "prisma-client": "file:prisma/client",
+    "@tiddlywiki/mws-prisma": "file:prisma/client",
     "rxjs": "^7.8.2",
     "source-map-support": "^0.5.21",
     "tiddlywiki": "^5.3.2"

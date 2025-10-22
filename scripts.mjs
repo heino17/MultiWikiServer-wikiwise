@@ -1,3 +1,4 @@
+// Cross-platform build and development scripts for Windows, Mac, and Linux
 // start: `SKIPDTS=1 tsup && ENABLE_DEV_SERVER=1 node mws.dev.mjs`
 // docs: `ENABLE_DOCS_ROUTE=1 npm start`
 // postinstall: `PRISMA_CLIENT_FORCE_WASM=true prisma generate`
@@ -9,10 +10,48 @@
 
 import { spawn } from "child_process";
 import { EventEmitter } from "events";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync, renameSync } from "fs";
 import * as path from "path";
+import * as os from "os";
 const events = new EventEmitter();
 const prismaFolder = "prisma";
+
+// Cross-platform helper functions
+const isWindows = os.platform() === "win32";
+
+/**
+ * Cross-platform file/directory removal
+ * @param {string} targetPath 
+ */
+function removeRecursive(targetPath) {
+  if (existsSync(targetPath)) {
+    rmSync(targetPath, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Cross-platform move/rename operation
+ * @param {string} oldPath 
+ * @param {string} newPath 
+ */
+function moveFile(oldPath, newPath) {
+  try {
+    if (existsSync(oldPath)) {
+      // Remove target if it exists
+      if (existsSync(newPath)) {
+        removeRecursive(newPath);
+      }
+      renameSync(oldPath, newPath);
+      console.log(`Moved ${oldPath} to ${newPath}`);
+    } else {
+      console.log(`Source path ${oldPath} does not exist, skipping move`);
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`Failed to move ${oldPath} to ${newPath}:`, errorMessage);
+    throw error;
+  }
+}
 
 (async function run(arg) {
   switch(arg) {
@@ -35,20 +74,20 @@ const prismaFolder = "prisma";
     case "prisma:generate":
 
       console.log("Generating Prisma client...");
-      // remove the old client
-      await start(`rm -rf ${prismaFolder}/client`);
+      // remove the old client - cross-platform
+      removeRecursive(path.join(prismaFolder, "client"));
       await start(`prisma generate --schema=${prismaFolder}/schema.prisma`, [], {
         PRISMA_CLIENT_FORCE_WASM: "true"
       });
       console.log("Formatting Prisma client...");
       await start(`prettier --write ${prismaFolder}/client/*.js ${prismaFolder}/client/*/*.js`);
-      // remove the .node files, we don't need them in the client
+      // remove the .node files, we don't need them in the client - cross-platform
       console.log("Removing .node files from Prisma client...");
       readdirSync(`${prismaFolder}/client`).forEach(file => {
         if(file.endsWith(".node")) {
           const filePath = path.join(`${prismaFolder}/client`, file);
           console.log(`Removing ${filePath}`);
-          if(existsSync(filePath)) rmSync(filePath);
+          if(existsSync(filePath)) rmSync(filePath, { force: true });
         }
       });
       console.log("Updating Prisma client package.json...");
@@ -86,7 +125,8 @@ const prismaFolder = "prisma";
 
 
       await Promise.resolve().then(async () => {
-        await start("mv node_modules node_modules_off");
+        // Cross-platform move operation
+        moveFile("node_modules", "node_modules_off");
       }).then(async () => {
         await start("git clean -dfx tests");
         const filesFolder = path.resolve("create-package/files");
@@ -106,11 +146,15 @@ const prismaFolder = "prisma";
           writeFileSync(newPath, readFileSync(oldPath));
         });
         await start("npm pack --pack-destination tests");
-        await start("npm install ./tiddlywiki-mws-$npm_package_version.tgz tiddlywiki", [], {}, { cwd: "tests" });
+        // Read package.json to get version for cross-platform compatibility
+        const packageJson = JSON.parse(readFileSync("package.json").toString());
+        const packageVersion = packageJson.version;
+        await start(`npm install ./tiddlywiki-mws-${packageVersion}.tgz tiddlywiki`, [], {}, { cwd: "tests" });
       }).then(async () => {
         await start("npx mws init-store", [], {}, { cwd: "tests" });
       }).finally(async () => {
-        await start("mv node_modules_off node_modules");
+        // Cross-platform move operation
+        moveFile("node_modules_off", "node_modules");
       });
       break;
     }
@@ -148,10 +192,12 @@ process.on("SIGHUP", exit);
  * @param {{cwd?: string, pipeOut?: boolean}} [options]
  */
 function start(cmd, args = [], env2 = {}, { cwd = process.cwd(), pipeOut } = {}) {
+  // Cross-platform shell execution
+  const shell = isWindows ? true : true; // Use shell on all platforms
   const cp = spawn(cmd, args, {
     cwd,
     env: { ...process.env, ...env2, },
-    shell: true,
+    shell,
     stdio: ["inherit", pipeOut ? "pipe" : "inherit", "inherit"],
   });
 
