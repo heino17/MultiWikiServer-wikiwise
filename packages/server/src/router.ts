@@ -1,6 +1,6 @@
 import { zod } from "./Z2";
 import { ServerRequest, ServerRequestClass } from "./StateObject";
-import { Streamer } from "./streamer";
+import { GenericRequest, GenericResponse, Streamer } from "./streamer";
 import Debug from "debug";
 import { IncomingMessage, ServerResponse } from "node:http";
 import { Http2ServerRequest, Http2ServerResponse } from "node:http2";
@@ -26,8 +26,8 @@ export class Router {
   }
 
   handle(
-    req: IncomingMessage | Http2ServerRequest,
-    res: ServerResponse | Http2ServerResponse,
+    req: GenericRequest,
+    res: GenericResponse,
     options: ListenOptions
   ) {
 
@@ -55,8 +55,8 @@ export class Router {
   }
 
   async handleRequest(
-    req: IncomingMessage | Http2ServerRequest,
-    res: ServerResponse | Http2ServerResponse,
+    req: GenericRequest,
+    res: GenericResponse,
     options: ListenOptions
   ) {
 

@@ -5,6 +5,8 @@
   "type": "module",
   "types": "./src/index.ts",
   "module": "./src/index.ts",
-  "dependencies": {},
+  "dependencies": {
+    "rxjs": "^7.8.2"
+  },
   "devDependencies": {}
 }

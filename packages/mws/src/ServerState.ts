@@ -1,10 +1,12 @@
 import { PrismaClient, Prisma } from "@tiddlywiki/mws-prisma";
 import { ITXClientDenyList } from "@tiddlywiki/mws-prisma/runtime/library";
 import { TW } from "tiddlywiki";
-import pkg from "../../../package.json";
+import pkg from "../package.json";
 import { createPasswordService } from "./services/PasswordService";
 import { startupCache } from "./services/cache";
 import { Types } from "@tiddlywiki/mws-prisma/runtime/library";
+import { dist_resolve } from "@tiddlywiki/server";
+import { readFileSync } from "fs";
 
 /** This is an alias for ServerState in case we want to separate the two purposes. */
 export type SiteConfig = ServerState;
@@ -33,6 +35,8 @@ export class ServerState {
 
     this.fieldModules = $tw.Tiddler.fieldModules;
     this.contentTypeInfo = $tw.config.contentTypeInfo;
+
+    const pkg = JSON.parse(readFileSync(dist_resolve("../package.json"), "utf8"));
 
     if (!this.contentTypeInfo[DEFAULT_CONTENT_TYPE])
       throw new Error(

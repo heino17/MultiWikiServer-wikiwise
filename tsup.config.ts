@@ -12,7 +12,7 @@ export default defineConfig({
     // server: 'packages/server/src/index.ts',
     mws: 'packages/mws/src/index.ts',
   },
-  tsconfig: "tsconfig.base.json",
+  tsconfig: "tsconfig.json",
   format: ['esm'],
   outDir: "dist",
   external: [
@@ -60,10 +60,12 @@ export default defineConfig({
     ].join("\n"));
     console.log("TSC dist/mws.d.ts");
 
+    writeFileSync("public/react-admin/stats/server.json", readFileSync("dist/metafile-esm.json"));
+
     if (process.env.TSCMWS) {
       const tag = "TSC ⚡️ done";
       console.time(tag);
-      await start("npx tsc -p tsconfig.types.json --noEmit", []).catch((code) => code);
+      await start("npx tsc -p tsconfig.json --noEmit", []).catch((code) => code);
       console.timeEnd(tag);
     }
 

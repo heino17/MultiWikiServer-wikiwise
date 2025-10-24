@@ -24,7 +24,7 @@ const isWindows = os.platform() === "win32";
  * @param {string} targetPath 
  */
 function removeRecursive(targetPath) {
-  if (existsSync(targetPath)) {
+  if(existsSync(targetPath)) {
     rmSync(targetPath, { recursive: true, force: true });
   }
 }
@@ -36,9 +36,9 @@ function removeRecursive(targetPath) {
  */
 function moveFile(oldPath, newPath) {
   try {
-    if (existsSync(oldPath)) {
+    if(existsSync(oldPath)) {
       // Remove target if it exists
-      if (existsSync(newPath)) {
+      if(existsSync(newPath)) {
         removeRecursive(newPath);
       }
       renameSync(oldPath, newPath);
@@ -46,7 +46,7 @@ function moveFile(oldPath, newPath) {
     } else {
       console.log(`Source path ${oldPath} does not exist, skipping move`);
     }
-  } catch (error) {
+  } catch(error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`Failed to move ${oldPath} to ${newPath}:`, errorMessage);
     throw error;
@@ -118,6 +118,12 @@ function moveFile(oldPath, newPath) {
       await start("npx tsc -p tsconfig.types.json", process.argv.slice(3));
       break;
     }
+    case "dev-quick-reset": {
+      // "rm -rf dev/wiki/store && DEBUG= npm start init-store",
+      removeRecursive("dev/wiki/store");
+      await start("npm start init-store");
+      break;
+    } 
     case "test": {
       // "test:pack": "(git clean -dfx tests && npm pack --pack-destination tests && cd tests && npm install && npm install ./tiddlywiki-mws-$npm_package_version.tgz --no-save && npm test)",
       // "test": "(git clean -dfx tests && cd tests && npm install .. --no-save && npm test)",

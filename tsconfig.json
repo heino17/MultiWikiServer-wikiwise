@@ -1,8 +1,27 @@
 {
-  "$schema": "https://json.schemastore.org/tsconfig.json",
-  "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "allowJs": true,
+    "target": "es2022",
+    "lib": [
+      "es2022",
+      "DOM"
+    ],
+    "module": "preserve",
+    "moduleResolution": "bundler",
     "checkJs": true,
+    "allowJs": true,
+    "jsx": "preserve",
+    "allowImportingTsExtensions": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "alwaysStrict": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "noImplicitThis": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": false,
   },
+  "include": [
+    "packages/**/src",
+  ]
 }

@@ -23,7 +23,7 @@
       </div>
       <p>
         This page provides a way to visualize the contents of your esbuild bundle.
-        Add the <a href="/api/#metafile">metafile</a> option to your esbuild command, then import it using the button
+        Add the <a href="https://esbuild.github.io/api/#metafile">metafile</a> option to your esbuild command, then import it using the button
         below:
       </p>
       <p class="center">
@@ -54,6 +54,9 @@
     <div id="chartPanel"></div>
   </div>
   <script src="stats.js"></script>
+  <script>
+    fetch("server.json").then(e => e.text()).then(displayStats);
+  </script>
 </body>
 
 </html>

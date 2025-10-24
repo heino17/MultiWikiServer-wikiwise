@@ -2008,6 +2008,7 @@
     //         history.replaceState({}, "", location.pathname)
     //     } catch (e) {}
     // }
-    fetch("stats.json").then(e => e.text()).then(et);
+
+    window.displayStats = et;
 }
 )();

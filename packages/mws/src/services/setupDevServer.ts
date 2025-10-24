@@ -142,19 +142,9 @@ export async function esbuildStartup() {
     throw new Error(`Entry file ${entry} does not exist. You might be running this in production via the ENABLE_DEV_SERVER=mws environment variable, which is only valid in the git repo.`);
   }
 
-  let ctx = await esbuild.context({
-    entryPoints: [resolve(rootdir, 'src/main.tsx')],
-    bundle: true,
-    target: 'es2020',
-    platform: 'browser',
-    jsx: 'automatic',
-    outdir: publicdir,
-    minify: true,
-    sourcemap: true,
-    metafile: true,
-    splitting: true,
-    format: "esm",
-  });
+  const { context } = await import(resolve(rootdir, "esbuild.context.mjs"));
+
+  const ctx = await context(rootdir, publicdir);
 
   const { port } = await ctx.serve({
     servedir: publicdir,
@@ -163,9 +153,7 @@ export async function esbuildStartup() {
 
   const result = await ctx.rebuild();
 
-  writeFileSync(resolve(publicdir, 'stats.json'), JSON.stringify(result.metafile));
-
+  writeFileSync(resolve(publicdir, 'stats/client.json'), JSON.stringify(result.metafile));
 
   return { ctx, port, result, rootdir, publicdir };
 }
-

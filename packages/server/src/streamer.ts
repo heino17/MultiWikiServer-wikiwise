@@ -1,7 +1,7 @@
 import * as http2 from 'node:http2';
 import send, { SendOptions } from 'send';
 import { Readable } from 'stream';
-import { IncomingMessage, ServerResponse, IncomingHttpHeaders as NodeIncomingHeaders, OutgoingHttpHeaders } from 'node:http';
+import { IncomingMessage, ServerResponse, IncomingHttpHeaders as NodeIncomingHeaders, OutgoingHttpHeaders, OutgoingHttpHeader } from 'node:http';
 import { is } from './utils';
 import { createReadStream } from 'node:fs';
 import { Writable } from 'node:stream';
@@ -43,6 +43,53 @@ export interface SendFileOptions extends Omit<SendOptions, "root" | "dotfiles" |
 
 export type StreamerChunk = { data: string, encoding: NodeJS.BufferEncoding } | NodeJS.ReadableStream | Readable | Buffer;
 
+export interface GenericRequest extends IncomingMessage, http2.Http2ServerRequest {
+  aborted: never;
+  addListener: never;
+  complete: never;
+  connection: never;
+  emit: never;
+  headers: IncomingHttpHeaders;
+  httpVersion: never;
+  httpVersionMajor: never;
+  httpVersionMinor: never;
+  method: never;
+  on: never;
+  once: never;
+  prependListener: never;
+  prependOnceListener: never;
+  rawHeaders: never;
+  rawTrailers: never;
+  read: never;
+  setTimeout: never;
+  socket: never;
+  trailers: never;
+  url: string;
+
+}
+export interface GenericResponse extends ServerResponse, http2.Http2ServerResponse {
+  addTrailers: never;
+  appendHeader(name: string, value: string | string[]): this;
+  /** @deprecated - Use `socket` instead. */
+  connection: import("net").Socket | import("tls").TLSSocket;
+  end(callback?: () => void): this;
+  end(data: string | Uint8Array, callback?: () => void): this;
+  end(data: string | Uint8Array, encoding: BufferEncoding, callback?: () => void): this;
+  finished: boolean;
+  getHeader(name: string): string;
+  req: GenericRequest;
+  setHeader(name: string, value: string | readonly string[]): this;
+  setTimeout(timeout: number, callback?: () => void): this;
+  socket: import("net").Socket | import("tls").TLSSocket;
+  statusMessage: never;
+  write(buffer: Uint8Array): boolean;
+  write(str: string, encoding?: BufferEncoding): boolean;
+  writeContinue(): void;
+  writeEarlyHints(hints: Record<string, string | string[]>): void;
+  writeHead(statusCode: number, headers?: OutgoingHttpHeaders): this;
+  writeHead(statusCode: number, statusMessage?: string): this;
+
+}
 /**
  * The HTTP2 shims used in the request handler are only used for HTTP2 requests. 
  * The NodeJS HTTP2 server actually calls the HTTP1 parser for all HTTP1 requests. 
@@ -57,8 +104,8 @@ export class Streamer {
   cookies: URLSearchParams;
   compressor;
   constructor(
-    private req: IncomingMessage | http2.Http2ServerRequest,
-    private res: ServerResponse | http2.Http2ServerResponse,
+    private req: GenericRequest,
+    private res: GenericResponse,
     public pathPrefix: string,
     public expectSecure: boolean,
   ) {
@@ -82,7 +129,7 @@ export class Streamer {
     }
 
     if (is<http2.Http2ServerRequest>(req, req.httpVersionMajor > 1))
-      req.headers.host = req.headers[":authority"];
+      req.headers.host = req.headers[":authority"] as string;
     if (!req.headers.host) throw new Error("This should never happen");
     this.host = req.headers.host;
 

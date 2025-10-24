@@ -19,14 +19,7 @@
     }
   },
   "workspaces": [
-    "packages/events",
-    "packages/commander",
-    "packages/server",
-    "packages/mws",
-    "packages/react-admin",
-    "packages/tiddlywiki-types",
-    "packages/utils",
-    "packages/multipart-parser",
+    "packages/*",
     "prisma/client"
   ],
   "files": [
@@ -47,11 +40,12 @@
     "start": "node scripts.mjs start",
     "certs": "(cd dev && bash localhost_certs.sh)",
     "tsc": "TSCMWS=1 npx tsup",
+    "tsc-client": "cd packages/react-admin && npm run tsc",
     "build": "tsup && npm run build:admin",
     "build:admin": "node scripts.mjs client-build",
     "build:client": "cd plugins/client && tsc",
     "build:types": "PLUGINDTS=1 npx tsup",
-    "dev:init-store": "rm -rf dev/wiki/store && DEBUG= npm start init-store",
+    "dev-quick-reset": "node scripts.mjs dev-quick-reset",
     "env": "env",
     "test": "node scripts.mjs test",
     "prisma:generate": "node scripts.mjs prisma:generate",
@@ -61,7 +55,6 @@
     "@prisma/adapter-better-sqlite3": "6.10.1",
     "@serenity-kit/opaque": "^0.8.4",
     "@tiddlywiki/mws-prisma": "file:prisma/client",
-    "rxjs": "^7.8.2",
     "source-map-support": "^0.5.21",
     "tiddlywiki": "^5.3.2"
   },

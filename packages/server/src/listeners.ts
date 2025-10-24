@@ -4,6 +4,7 @@ import { createServer, IncomingMessage, Server, ServerResponse } from "node:http
 import { createSecureServer, Http2SecureServer, Http2ServerRequest, Http2ServerResponse } from "node:http2";
 import { Router } from "./router";
 import { serverEvents } from '@tiddlywiki/events';
+import { GenericRequest, GenericResponse } from './streamer';
 
 export class ListenerBase {
 
@@ -20,8 +21,8 @@ export class ListenerBase {
       console.log("HTTPS server closed");
     });
     this.server.on("request", (
-      req: IncomingMessage | Http2ServerRequest,
-      res: ServerResponse | Http2ServerResponse
+      req: GenericRequest,
+      res: GenericResponse
     ) => {
       this.handleRequest(req, res);
     });
@@ -62,8 +63,8 @@ export class ListenerBase {
   }
 
   handleRequest(
-    req: IncomingMessage | Http2ServerRequest,
-    res: ServerResponse | Http2ServerResponse
+    req: GenericRequest,
+    res: GenericResponse
   ) {
     this.router.handle(req, res, this.options);
   }

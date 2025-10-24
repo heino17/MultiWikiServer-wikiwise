@@ -7,7 +7,12 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { ErrorBoundary } from "react-error-boundary";
 import { TestColors } from './colors';
-import { } from "@tiddlywiki/mws";
+
+
+declare global {
+  const BUILD_VERSION: string;
+}
+
 const theme = createTheme({
   palette: {
     background: {

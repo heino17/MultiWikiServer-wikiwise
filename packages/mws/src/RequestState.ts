@@ -79,11 +79,11 @@ export class StateObject<
     recipe_name: PrismaField<"Recipes", "recipe_name">,
     needWrite: boolean
   ) {
-    const { user_id, isAdmin, role_ids } = this.user;
+    const { user_id, isAdmin, roles } = this.user;
 
     const prisma = this.engine;
-    const read = this.getBagWhereACL({ permission: "READ", user_id, role_ids });
-    const write = this.getBagWhereACL({ permission: "WRITE", user_id, role_ids });
+    const read = this.getBagWhereACL({ permission: "READ", user_id, role_ids: roles.map(e => e.role_id) });
+    const write = this.getBagWhereACL({ permission: "WRITE", user_id, role_ids: roles.map(e => e.role_id) });
     const referer = this.getRefererRecipe();
 
     const [recipe, canRead, canWrite] = await prisma.$transaction([
@@ -166,10 +166,10 @@ export class StateObject<
     bag_name: PrismaField<"Bags", "bag_name">,
     needWrite: boolean
   ) {
-    const { user_id, isAdmin, role_ids } = this.user;
+    const { user_id, isAdmin, roles } = this.user;
     const prisma = this.engine;
-    const read = this.getBagWhereACL({ permission: "READ", user_id, role_ids });
-    const write = this.getBagWhereACL({ permission: "WRITE", user_id, role_ids });
+    const read = this.getBagWhereACL({ permission: "READ", user_id, role_ids: roles.map(e => e.role_id) });
+    const write = this.getBagWhereACL({ permission: "WRITE", user_id, role_ids: roles.map(e => e.role_id) });
     const [bag, canRead, canWrite] = await prisma.$transaction([
       prisma.bags.findUnique({
         select: { bag_id: true, owner_id: true },
