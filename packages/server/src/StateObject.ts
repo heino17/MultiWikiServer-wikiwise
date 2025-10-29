@@ -27,7 +27,7 @@ export class ServerRequestClass<
 
   get method(): M { return super.method as M; }
 
-
+  dataBuffer?: Buffer;
   data!:
     B extends "string" ? string :
     B extends "buffer" ? Buffer :

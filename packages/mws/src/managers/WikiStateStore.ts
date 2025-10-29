@@ -188,6 +188,7 @@ $tw.preloadTiddler = function(fields) {
           await state.pipeFrom(fileStreams[i]!);
           state.write(",");
         }
+        
       }
 
       await this.writeStoreTiddlers(state, recipe, recipe_name);

@@ -129,8 +129,11 @@ export class Router {
       // no further body handling required
       return await this.handleRoute(state, routePath);
     }
+
+    state.dataBuffer = await state.readBody();
+
     if (state.bodyFormat === "string" || state.bodyFormat === "json") {
-      state.data = (await state.readBody()).toString("utf8");
+      state.data = state.dataBuffer.toString("utf8");
       if (state.bodyFormat === "json") {
         // make sure this parses as valid data
         const { success, data } = zod.string().transform(zodTransformJSON).safeParse(state.data);
@@ -139,10 +142,10 @@ export class Router {
       }
     } else if (state.bodyFormat === "www-form-urlencoded-urlsearchparams"
       || state.bodyFormat === "www-form-urlencoded") {
-      const data = state.data = new URLSearchParams((await state.readBody()).toString("utf8"));
+      const data = state.data = new URLSearchParams(state.dataBuffer.toString("utf8"));
       if (state.bodyFormat === "www-form-urlencoded") state.data = Object.fromEntries(data);
     } else if (state.bodyFormat === "buffer") {
-      state.data = await state.readBody();
+      state.data = state.dataBuffer;
     } else {
       // because it's a union, state becomes never at this point if we matched every route correctly
       // make sure state is never by assigning it to a never const. This will error if something is missed.

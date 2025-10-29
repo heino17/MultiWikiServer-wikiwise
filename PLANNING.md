@@ -51,6 +51,7 @@ Internal notes by core developers
 - webdav or samba for importing or editing tiddlers
   - multiple folder views (flat, folder, tag)
 - active node server for a specific folder (also a massive security bypass)
-- 
+- instructions for process users on different platforms (e.g. linux permission users)
+- Recipe templates, which have a simple list of plugins and readonly bags, and are assigned to the writable bag.
 
 
