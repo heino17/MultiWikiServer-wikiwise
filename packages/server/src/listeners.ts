@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { ok } from "node:assert";
 import { createServer, IncomingMessage, Server, ServerResponse } from "node:http";
-import { createSecureServer, Http2SecureServer, Http2ServerRequest, Http2ServerResponse } from "node:http2";
+import { createSecureServer, Http2SecureServer, Http2ServerRequest, Http2ServerResponse, SecureServerOptions } from "node:http2";
 import { Router } from "./router";
 import { serverEvents } from '@tiddlywiki/events';
 import { GenericRequest, GenericResponse } from './streamer';
@@ -75,10 +75,13 @@ export class ListenerHTTPS extends ListenerBase {
   constructor(router: Router, config: ListenOptions) {
     const { port, host, prefix } = config;
     const bindInfo = `HTTPS ${host} ${port} ${prefix}`;
-    ok(config.key && existsSync(config.key), "Key file not found at " + config.key);
-    ok(config.cert && existsSync(config.cert), "Cert file not found at " + config.cert);
-    const key = readFileSync(config.key), cert = readFileSync(config.cert);
-    super(createSecureServer({ key, cert, allowHTTP1: true, }), router, bindInfo, config);
+    const options = config.secureServerOptions ?? (() => {
+      ok(config.key && existsSync(config.key), "Key file not found at " + config.key);
+      ok(config.cert && existsSync(config.cert), "Cert file not found at " + config.cert);
+      const key = readFileSync(config.key), cert = readFileSync(config.cert);
+      return { key, cert, allowHTTP1: true, };
+    })();
+    super(createSecureServer(options), router, bindInfo, config);
 
   }
 
@@ -98,6 +101,8 @@ export interface ListenOptions {
   host: string;
   prefix: string;
   secure: boolean;
+  /** If this is set, key and cert will be ignored */
+  secureServerOptions?: SecureServerOptions<typeof IncomingMessage, typeof ServerResponse, typeof Http2ServerRequest, typeof Http2ServerResponse>
   key?: string;
   cert?: string;
   redirect?: number;
