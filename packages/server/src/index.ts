@@ -55,6 +55,7 @@ const listenOptionsCheck = z.object({
       "Listener path prefix must NOT end with a slash"),
   key: z.string().optional(),
   cert: z.string().optional(),
+  secureServerOptions: z.any(),
   secure: z.boolean().optional(),
   redirect: z.number().optional(),
 }).strict().array();
