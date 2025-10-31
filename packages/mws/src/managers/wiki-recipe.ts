@@ -8,6 +8,7 @@ import { serverEvents } from "@tiddlywiki/events";
 import { Prisma } from "@tiddlywiki/mws-prisma";
 import { parseTiddlerFields, RECIPE_PREFIX, rethrow } from "./wiki-utils";
 import { SendError } from "@tiddlywiki/server";
+import { truthy } from "@tiddlywiki/utils";
 const debugCORS = Debug("mws:cors");
 const debugSSE = Debug("mws:sse");
 

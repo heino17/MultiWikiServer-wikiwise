@@ -4,6 +4,7 @@ import { CacheState } from "../services/cache";
 import { TiddlerFields, TW } from "tiddlywiki";
 import * as fs from "fs";
 import * as path from "path";
+import { truthy } from "@tiddlywiki/utils";
 
 
 export const info: CommandInfo = {

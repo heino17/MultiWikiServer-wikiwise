@@ -7,6 +7,7 @@ import { serverEvents } from "@tiddlywiki/events";
 import { ServerRoute } from "@tiddlywiki/server";
 import { createRootRoute } from "@tiddlywiki/server";
 import { ServerState } from "../ServerState";
+import { truthy } from "@tiddlywiki/utils";
 
 serverEvents.on("cli.register", (commands) => {
   commands.listen = { info, Command };

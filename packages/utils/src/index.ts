@@ -9,7 +9,7 @@ declare global {
    * helper function which returns the arguments as an array, 
    * but typed as a tuple, which is still an array, but positional. 
    */
-  function Tuple<P extends any[]>(...arg: P): P;
+  // function Tuple<P extends any[]>(...arg: P): P;
   /** 
    * Helper function which returns tells whether an item is truthy.
    * 
@@ -17,11 +17,11 @@ declare global {
    * 
    * It uses `!!` to to determine truthiness
    */
-  function truthy<T>(obj: T): obj is Exclude<T, false | null | undefined | 0 | '' | void>
+  // function truthy<T>(obj: T): obj is Exclude<T, false | null | undefined | 0 | '' | void>
 }
 
-(global as any).Tuple = function Tuple(...args: any[]) { return args; };
-(global as any).truthy = function truthy(obj: any) { return !!obj; };
+export function Tuple<P extends any[]>(...args: P): P { return args; };
+export function truthy<T>(obj: T): obj is Exclude<T, false | null | undefined | 0 | '' | void> { return !!obj; };
 
 export { };
 

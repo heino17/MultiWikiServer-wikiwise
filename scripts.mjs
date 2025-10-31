@@ -123,7 +123,7 @@ function moveFile(oldPath, newPath) {
       removeRecursive("dev/wiki/store");
       await start("npm start init-store");
       break;
-    } 
+    }
     case "test": {
       // "test:pack": "(git clean -dfx tests && npm pack --pack-destination tests && cd tests && npm install && npm install ./tiddlywiki-mws-$npm_package_version.tgz --no-save && npm test)",
       // "test": "(git clean -dfx tests && cd tests && npm install .. --no-save && npm test)",
