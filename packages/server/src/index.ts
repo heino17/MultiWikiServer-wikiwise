@@ -89,9 +89,10 @@ export async function startListening(
       key: e.key,
       cert: e.cert,
       redirect: e.redirect,
+      secureServerOptions: e.secureServerOptions
     }
 
-    return e.key && e.cert
+    return (e.secureServerOptions || e.key && e.cert)
       ? new ListenerHTTPS(router, options2)
       : new ListenerHTTP(router, options2);
 
