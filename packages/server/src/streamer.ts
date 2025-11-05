@@ -25,8 +25,6 @@ export interface IncomingHttpHeaders extends NodeIncomingHeaders {
   "x-requested-with"?: string;
 }
 
-export const SYMBOL_IGNORE_ERROR: unique symbol = Symbol("IGNORE_ERROR");
-
 export interface SendFileOptions extends Omit<SendOptions, "root" | "dotfiles" | "index" | "start" | "end"> {
   root: string;
   reqpath: string;
@@ -206,11 +204,9 @@ export class Streamer {
 
   throw(statusCode: number) {
     this.sendEmpty(statusCode);
-    throw SYMBOL_IGNORE_ERROR;
   }
 
   catcher = (error: unknown) => {
-    if (error === SYMBOL_IGNORE_ERROR) return;
     if (error === STREAM_ENDED) return;
     const tag = this.urlInfo.href;
     console.error(tag, error);
