@@ -15,10 +15,7 @@ export class ListenerBase {
     public options: ListenOptions,
   ) {
     serverEvents.on("exit", async () => {
-      await new Promise<any>((resolve) => {
-        this.server.close(resolve);
-      });
-      console.log("HTTPS server closed");
+      await new Promise<any>((resolve) => { this.server.close(resolve); });
     });
     this.server.on("request", (
       req: GenericRequest,

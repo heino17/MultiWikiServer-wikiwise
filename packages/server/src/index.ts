@@ -7,6 +7,7 @@ import type { IncomingMessage, ServerResponse } from "http";
 import type { Http2ServerRequest, Http2ServerResponse } from "http2";
 import type { ServerRequest } from "./StateObject";
 import { Z2, zod as z } from "./Z2";
+import { dump } from "wtfnode";
 
 export * from "./listeners";
 export * from "./router";
@@ -24,21 +25,39 @@ export * from "./zodRoute";
  * - `"zod.make"`
  */
 export async function startup() {
-  await serverEvents.emitAsync("zod.make", Z2);
+
 }
+
+function caughtPromise<F extends (...args: any) => any>(
+  wrapped: F,
+  onrejected: (reason: any) => ReturnType<F>
+): (...args: Parameters<F>) => ReturnType<F> {
+  return (...args: Parameters<F>) => wrapped(...args).catch(onrejected);
+}
+
+
 let exiting = false;
-const exit = async (signal: any) => {
+export const exiter = caughtPromise(async (signal: any) => {
   if (exiting) return;
   exiting = true;
-  console.log(` Server exiting due to ${signal}...`);
-  console.time("Server exit");
-  await serverEvents.emitAsync("exit");
-  console.timeEnd("Server exit");
-  await new Promise<void>((r) => setTimeout(r, 5000));
-  console.log("Server exit timeout reached, forcing exit.");
-  console.log("Exiting process...");
-  process.exit(0);
-};
+  console.log(`Server exiting due to ${signal}...`);
+
+  setTimeout(() => {
+    console.log("Server exit timeout reached, forcing exit.");
+    dump(); // prints out everything that might have kept the process from exiting
+    console.log("Exiting process...");
+    process.exit(0);
+  }, 5000).unref();
+
+  console.time("Server exit events");
+  await serverEvents.emitAsync("exit").catch(e => {
+    console.error("Error in exit events:", e);
+  });
+  console.timeEnd("Server exit events");
+}, e => {
+  console.error("Error in exiter", e);
+  process.exit(1);
+});
 
 // process.on("SIGINT", exit);
 // process.on("SIGTERM", exit);

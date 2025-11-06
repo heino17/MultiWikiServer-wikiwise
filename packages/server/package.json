@@ -13,6 +13,7 @@
     "@types/mime-types": "^2.1.4",
     "@types/negotiator": "^0.6.3",
     "@types/send": "^0.17.4",
+    "@types/wtfnode": "^0.10.0",
     "bytes": "^3.1.2",
     "compressible": "^2.0.18",
     "compression": "^1.8.0",
@@ -26,6 +27,7 @@
     "uuid": "^11.1.0",
     "vary": "^1.1.2",
     "zod": "^3.25.49",
-    "zod-validation-error": "^3.4.1"
+    "zod-validation-error": "^3.4.1",
+    "wtfnode": "^0.10.1"
   }
 }
