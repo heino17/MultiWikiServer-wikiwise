@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { ok } from "node:assert";
 import { createServer, IncomingMessage, Server, ServerResponse } from "node:http";
-import { createSecureServer, Http2SecureServer, Http2ServerRequest, Http2ServerResponse, SecureServerOptions } from "node:http2";
+import { createSecureServer, Http2SecureServer, Http2ServerRequest, Http2ServerResponse, Http2Session, SecureServerOptions } from "node:http2";
 import { Router } from "./router";
 import { serverEvents } from '@tiddlywiki/events';
 import { GenericRequest, GenericResponse } from './streamer';
@@ -23,6 +23,7 @@ export class ListenerBase {
     ) => {
       this.handleRequest(req, res);
     });
+
     this.server.on('error', (error: NodeJS.ErrnoException) => {
 
       if (error.syscall !== 'listen') {
@@ -79,7 +80,11 @@ export class ListenerHTTPS extends ListenerBase {
       return { key, cert, allowHTTP1: true, };
     })();
     super(createSecureServer(options), router, bindInfo, config);
-
+    this.server.on("session", (session: Http2Session) => {
+      const closeSession = () => { session.close(); }
+      serverEvents.on("exit", closeSession);
+      session.on("close", () => { serverEvents.off("exit", closeSession); })
+    });
   }
 
 }

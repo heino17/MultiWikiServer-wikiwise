@@ -22,10 +22,8 @@ export class ServerEvents extends EventEmitter<ServerEventsMap> {
     eventName: keyof ServerEventsMap | K,
     ...args: K extends keyof ServerEventsMap ? ServerEventsMap[K] : never
   ) {
-    // console.log(eventName);
-    // console.time(eventName as string);
+    // the node implementation handles once in the once handler, not in emit
     await Promise.all(this.listeners(eventName).map(e => e(...args)));
-    // console.timeEnd(eventName as string);
   }
 }
 

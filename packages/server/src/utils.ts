@@ -156,4 +156,9 @@ export declare interface JsonArray extends Array<JsonValue> { }
 export declare type JsonObject = { [Key in string]?: JsonValue; };
 export declare type JsonValue = string | number | boolean | JsonObject | JsonArray | null | Date;
 
-
+export function caughtPromise<F extends (...args: any) => any, C extends (reason: any) => any>(
+  wrapped: F,
+  onrejected: C
+): (...args: Parameters<F>) => ReturnType<F | C> {
+  return (...args: Parameters<F>) => wrapped(...args).catch(onrejected);
+}

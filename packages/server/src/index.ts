@@ -8,6 +8,7 @@ import type { Http2ServerRequest, Http2ServerResponse } from "http2";
 import type { ServerRequest } from "./StateObject";
 import { Z2, zod as z } from "./Z2";
 import { dump } from "wtfnode";
+import { caughtPromise } from "./utils";
 
 export * from "./listeners";
 export * from "./router";
@@ -28,12 +29,7 @@ export async function startup() {
 
 }
 
-function caughtPromise<F extends (...args: any) => any>(
-  wrapped: F,
-  onrejected: (reason: any) => ReturnType<F>
-): (...args: Parameters<F>) => ReturnType<F> {
-  return (...args: Parameters<F>) => wrapped(...args).catch(onrejected);
-}
+
 
 
 let exiting = false;

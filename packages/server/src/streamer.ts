@@ -2,7 +2,7 @@ import * as http2 from 'node:http2';
 import send, { SendOptions } from 'send';
 import { Readable } from 'stream';
 import { IncomingMessage, ServerResponse, IncomingHttpHeaders as NodeIncomingHeaders, OutgoingHttpHeaders, OutgoingHttpHeader } from 'node:http';
-import { is } from './utils';
+import { caughtPromise, is } from './utils';
 import { createReadStream } from 'node:fs';
 import { Writable } from 'node:stream';
 import Debug from "debug";
@@ -361,19 +361,32 @@ export class Streamer {
     });
     return new Promise<typeof STREAM_ENDED>((resolve, reject) => {
 
-      sender.on("error", (err) => Promise.resolve().then(async (): Promise<typeof STREAM_ENDED> => {
+      sender.on("error", caughtPromise(async (err) => {
+        interface SendError {
+          errno: -2,
+          code: 'ENOENT',
+          syscall: 'stat',
+          /** The absolute file path that was resolved and didn't exist */
+          path: string,
+          expose: boolean,
+          /** status and statusCode are identical */
+          statusCode: number,
+          /** status and statusCode are identical */
+          status: number
+        }
         if (err === 404 || err?.statusCode === 404) {
-          return (await on404?.()) ?? this.sendEmpty(404);
+          if (on404) on404();
+          else this.sendEmpty(404);
         } else {
           console.log(err);
-          throw this.sendEmpty(500);
+          this.sendEmpty(500);
         }
-      }).then(resolve, reject));
+      }, reject));
 
-      sender.on("directory", () => Promise.resolve().then(async (): Promise<typeof STREAM_ENDED> => {
-        return (await onDir?.())
-          ?? this.sendEmpty(404, { "x-reason": "Directory listing not allowed" })
-      }).then(resolve, reject));
+      sender.on("directory", caughtPromise(async () => {
+        if (onDir) onDir();
+        else this.sendEmpty(404, { "x-reason": "Directory listing not allowed" })
+      }, reject));
 
       sender.on("stream", (fileStream) => {
         this.compressor.beforeWriteHead();
