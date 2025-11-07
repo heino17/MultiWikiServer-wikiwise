@@ -81,7 +81,7 @@ export class ListenerHTTPS extends ListenerBase {
     })();
     super(createSecureServer(options), router, bindInfo, config);
     this.server.on("session", (session: Http2Session) => {
-      const closeSession = () => { session.close(); }
+      const closeSession = () => { console.log("close session"); session.close(); }
       serverEvents.on("exit", closeSession);
       session.on("close", () => { serverEvents.off("exit", closeSession); })
     });
