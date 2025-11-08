@@ -74,7 +74,40 @@ export interface ZodRoute<
 
   securityChecks?: RouteDef["securityChecks"];
   method: M[];
-  path: string;
+  /** 
+   * The filter to match requests to. It can either be a string or a regex.
+   * 
+   * The following string is converted to the following regex. Notice the last param entirely 
+   * matches the rest of the path, and it may be zero length (the url may be `/literal/test/hello/world/`)
+   *   - `/literal/:param1/hello/world/:param2`
+   *   - `/^\/literal\/(?<param1>[^\/]+)\/literal\/literal\/(?<param2>.*)$/`
+   * 
+   * The following string is converted to the following regex to allow child routes to 
+   * be nested under it. The regex uses the lookahead group syntax to ensure that 
+   * the child route begins with a forward slash and isn't a partial match.
+   * 
+   *   - `/literal/:param1/hello/world/:param2/`
+   *   - `/^\/literal\/(?<param1>[^\/]+)\/literal\/literal\/(?<param2>[^\/]+)(?=\/)/`
+   * 
+   * Regex must start with `^`. The matched portion is removed from child route matches. 
+   * 
+   * 
+   * If the last portion of the string is a param, and is not followed by a slash, 
+   * it will match the rest of the request path. If it ends with a slash, the matching
+   * portion of the request path will be consumed and child routes will match the remaining 
+   * portion. 
+   * 
+   * So `/literal//hello/world/` would be invalid, but `/literal/test/hello/world/` would match. 
+   * 
+   * The regex is not checked in any way, so children will be matched against the 
+   * remaining portion of the path. Lookaheads may be used to match portions of the url 
+   * without capturing the path, such as a trailing slash (`/^\/test(?=\/)`)
+   * 
+   * Name collisions are possible between parent and child routes. The child route takes precedent,
+   * and the parent route handler will see the child path param value. 
+   * 
+   */
+  path: string | RegExp;
   bodyFormat: B;
   registerError: Error;
   inner: (state: { [K in M]: ZodState<K, B, P, Q, T> }[M]) => Promise<R>;

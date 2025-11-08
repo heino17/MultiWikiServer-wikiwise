@@ -18,7 +18,10 @@ export interface AllowedRequestedWithHeaderKeys {
 }
 
 export class Router {
-  allowedRequestedWithHeaders: (keyof AllowedRequestedWithHeaderKeys)[] = ["fetch", "XMLHttpRequest"];
+  static allowedRequestedWithHeaders: AllowedRequestedWithHeaderKeys = {
+    fetch: true,
+    XMLHttpRequest: true,
+  }
   constructor(
     public rootRoute: ServerRoute
   ) {
@@ -101,7 +104,7 @@ export class Router {
       // If the method is not GET, HEAD, or OPTIONS, 
       if (!["GET", "HEAD", "OPTIONS"].includes(streamer.method))
         // If the x-requested-with header is not set to "fetch", 
-        if (!reqwith || !this.allowedRequestedWithHeaders.includes(reqwith))
+        if (!reqwith || !Router.allowedRequestedWithHeaders[reqwith])
           // we reject the request with a 403 Forbidden.
           throw new SendError("INVALID_X_REQUESTED_WITH", 400, null);
 
@@ -219,10 +222,11 @@ export class Router {
         // Remove the matched portion from the testPath.
         const remainingPath = testPath.slice(matchedPortion.length) || "/";
 
-        const result = {
+        const result: RouteMatch = {
           route: potentialRoute,
           params: match.slice(1),
           remainingPath,
+          groups: match.groups ?? {},
         };
         const { childRoutes = [] } = potentialRoute as any; // see this.defineRoute
         debug(potentialRoute.path.source, testPath, match[0], match[0].length, remainingPath, childRoutes.length);
@@ -280,6 +284,7 @@ export interface RouteMatch {
   route: ServerRoute;
   params: (string | undefined)[];
   remainingPath: string;
+  groups: { [key: string]: string; };
 }
 
 
@@ -326,10 +331,13 @@ export interface RouteDef {
 
   /** 
    * Regex to test the pathname on. It must start with `^`. If this is a child route, 
-   * it will be tested against the remaining portion of the parent route.  
+   * it will be tested against the remaining portion of the parent route. 
+   * - Use named capture groups `(?<name>regex)` to set path params. 
+   * - Child route param names take precedent.
+   * - Use lookahead `(?=\/)` at the end of the regex to make sure the matched portion ends with
+   *   a slash while still preserving the slash for the start of the child route. 
    */
   path: RegExp;
-  pathParams?: string[];
   /** 
    * The uppercase method names to match this route.
    * 
@@ -339,20 +347,24 @@ export interface RouteDef {
    */
   method: string[];
   /** 
-   * The highest bodyformat in the chain always takes precedent. Type-wise, only one is allowed, 
-   * but at runtime the first one found is the one used. 
+   * The highest bodyformat in the chain always takes precedent. 
+   * At runtime the first one found is the one used. 
    * 
-   * Note that bodyFormat is completely ignored for GET and HEAD requests.
+   * Note that bodyFormat is always "ignore" for GET and HEAD requests.
    */
   bodyFormat?: BodyFormat;
-  /** If this route is the last one matched, it will NOT be called, and a 404 will be returned. */
+  /** 
+   * If this route is matched, but no children are matched, 
+   * it will NOT be called, and a 404 will be returned. 
+   */
   denyFinal?: boolean;
 
   securityChecks?: {
     /**
-     * If true, the request must have the "x-requested-with" header set to keyof AllowedRequestedWithHeaderKeys.
+     * If true, the request must have the "x-requested-with" header 
+     * set to keyof AllowedRequestedWithHeaderKeys.
      * This is a common way to check if the request is an AJAX request.
-     * If the header is not set, the request will be rejected with a 403 Forbidden.
+     * If this is true and the header is not set, the request will be rejected with a 403 Forbidden.
      * 
      * @see {@link AllowedRequestedWithHeaderKeys}
      */

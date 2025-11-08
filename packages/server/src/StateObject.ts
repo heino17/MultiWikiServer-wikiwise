@@ -64,12 +64,7 @@ export class ServerRequestClass<
   ) {
     super(streamer);
 
-    this.pathParams = Object.fromEntries<string | undefined>(routePath.map(r =>
-      r.route.pathParams
-        ?.map((e, i) => [e, r.params[i]] as const)
-        .filter(<T>(e: T): e is T & {} => !!e)
-      ?? []
-    ).flat()) as any;
+    this.pathParams = routePath.reduce((n, e) => Object.assign(n, e.groups), {});
 
     const pathParamsZodCheck = zod.record(zod.string(), zod.string().transform(zodURIComponent).optional()).safeParse(this.pathParams);
     if (!pathParamsZodCheck.success) console.log("BUG: Path params zod error", pathParamsZodCheck.error, this.pathParams);

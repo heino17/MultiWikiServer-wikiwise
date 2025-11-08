@@ -10,66 +10,86 @@ const debugCORS = Debug("mws:cors");
 
 
 
-export const registerZodRoutes = (parent: ServerRoute, router: any, keys: string[]) => {
-  // const router = new TiddlerRouter();
-  keys.forEach((key) => {
-    const route = router[key as keyof typeof router] as ZodRoute<any, any, any, any, any, any>;
-    const {
-      method, path, bodyFormat, registerError,
-      zodPathParams,
-      zodQueryParams = (z => ({}) as any),
-      zodRequestBody = ["string", "json", "www-form-urlencoded"].includes(bodyFormat)
-        ? z => z.undefined() : (z => z.any() as any),
-      inner,
-      securityChecks,
-    } = route;
+export const registerZodRoutes = (parent: ServerRoute, router: any, keys: string[], keyReplacer: string = "$key") => {
+  return keys.map((key) => {
+    defineZodRoute(parent, key, keyReplacer, router[key]);
+  });
+}
 
-    if (method.includes("OPTIONS"))
-      throw new Error(key + " includes OPTIONS. Use corsRequest instead.");
+function buildPathRegex(path: string, key: string, keyReplacer: string) {
+  if (!path.startsWith("/")) throw new Error(`Path ${path} must start with a forward slash`);
+  if (key.startsWith(":")) throw new Error(`Key ${key} must not start with a colon`)
+  if (path !== path.trim()) throw new Error(`Path ${path} must not have leading and trailing white space or line terminator characters`);
+  const parts = path.split("/");
+  const final = path.endsWith("/");
+  return "^" + parts.map((e, i) => {
 
-    const pathParams = path.split("/").filter(e => e.startsWith(":")).map(e => e.substring(1));
-    ///^\/recipes\/([^\/]+)\/tiddlers\/(.+)$/,
-    if (!path.startsWith("/")) throw new Error(`Path ${path} must start with a forward slash`);
-    if (key.startsWith(":")) throw new Error(`Key ${key} must not start with a colon`)
-    const pathregex = "^" + path.split("/").map(e =>
-      e === "$key" ? key : e.startsWith(":") ? "([^/]+)" : e
-    ).join("\\/") + "$";
+    const last = i === parts.length - 1;
+    if (e.length === 0) {
+      if (!last && i !== 0) throw new Error(`Path ${path} has an empty part at index ${i}`);
+      return "";
+    }
+    const name = e.startsWith(":") && e.slice(1);
+    if (e === keyReplacer) return key;
+    if (!name) return e;
+    return (last && final) ? `(?<${name}>.+)` : `(?<${name}>[^/]+)`;
+  }).join("\\/") + (final ? "$" : "(?=\/)");
+}
 
-    parent.defineRoute({
-      method,
-      path: new RegExp(pathregex),
-      pathParams,
-      bodyFormat,
-      denyFinal: false,
-      securityChecks,
-    }, async state => {
+export function defineZodRoute(
+  parent: ServerRoute,
+  key: string,
+  keyReplacer: string,
+  route: ZodRoute<any, any, any, any, any, any>
+) {
+  const {
+    method, path, bodyFormat, registerError,
+    zodPathParams,
+    zodQueryParams = (z => ({}) as any),
+    zodRequestBody = ["string", "json", "www-form-urlencoded"].includes(bodyFormat)
+      ? z => z.undefined() : (z => z.any() as any),
+    inner,
+    securityChecks,
+  } = route;
 
-      checkPath(state, zodPathParams, registerError);
+  if (method.includes("OPTIONS"))
+    throw new Error(key + " includes OPTIONS. Use corsRequest instead.");
 
-      checkQuery(state, zodQueryParams, registerError);
+  const pathregex = typeof path === "string" ? buildPathRegex(path, key, keyReplacer) : path;
 
-      checkData(state, zodRequestBody, registerError);
+  return parent.defineRoute({
+    method,
+    path: new RegExp(pathregex),
+    bodyFormat,
+    denyFinal: false,
+    securityChecks,
+  }, async state => {
 
-      const timekey = `handler ${state.bodyFormat} ${state.method} ${state.urlInfo.pathname}`;
-      if (Debug.enabled("server:handler:timing")) console.time(timekey);
-      const [good, error, res] = await inner(state)
-        .then(e => [true, undefined, e] as const, e => [false, e, undefined] as const);
-      if (Debug.enabled("server:handler:timing")) console.timeEnd(timekey);
+    checkPath(state, zodPathParams, registerError);
 
-      if (!good) {
-        if (error === STREAM_ENDED) {
-          return error;
-        } else if (typeof error === "string") {
-          return state.sendString(400, { "x-reason": "zod-handler" }, error, "utf8");
-        } else if (error instanceof Error && error.name === "UserError") {
-          return state.sendString(400, { "x-reason": "user-error" }, error.message, "utf8");
-        } else {
-          throw error;
-        }
+    checkQuery(state, zodQueryParams, registerError);
+
+    checkData(state, zodRequestBody, registerError);
+
+    const timekey = `handler ${state.bodyFormat} ${state.method} ${state.urlInfo.pathname}`;
+    if (Debug.enabled("server:handler:timing")) console.time(timekey);
+    const [good, error, res] = await inner(state)
+      .then(e => [true, undefined, e] as const, e => [false, e, undefined] as const);
+    if (Debug.enabled("server:handler:timing")) console.timeEnd(timekey);
+
+    if (!good) {
+      if (error === STREAM_ENDED) {
+        return error;
+      } else if (typeof error === "string") {
+        return state.sendString(400, { "x-reason": "zod-handler" }, error, "utf8");
+      } else if (error instanceof Error && error.name === "UserError") {
+        return state.sendString(400, { "x-reason": "user-error" }, error.message, "utf8");
+      } else {
+        throw error;
       }
+    }
 
-      return state.sendJSON(200, res);
-    });
+    return state.sendJSON(200, res);
   });
 }
 
