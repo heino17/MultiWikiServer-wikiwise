@@ -14,7 +14,6 @@ serverEvents.on("mws.routes", (rootRoute, config) => {
       method: ["OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE"],
       bodyFormat: "stream",
       path: new RegExp("^" + mountPath + "(/|$)"),
-      pathParams: []
     }, TW5Route({
       mountPath,
       singleFile: true,

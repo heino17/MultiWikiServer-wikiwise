@@ -42,7 +42,7 @@ declare module "@tiddlywiki/server" {
 
 
 
-export function prismaField(table: any, field: any, fieldtype: ExtraFieldType, nullable?: boolean): any {
+Z2.prismaField = function prismaField(table: any, field: any, fieldtype: ExtraFieldType, nullable?: boolean): any {
   const z = zod;
   const check = (() => {
     switch (fieldtype) {
@@ -67,6 +67,3 @@ export function prismaField(table: any, field: any, fieldtype: ExtraFieldType, n
 
 }
 
-serverEvents.on("zod.make", (zod: Z2<any>) => {
-  zod.prismaField = prismaField;
-});

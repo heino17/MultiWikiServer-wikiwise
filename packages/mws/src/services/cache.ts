@@ -50,9 +50,8 @@ export async function startupCache($tw: TW, cachePath: string) {
 serverEvents.on("mws.routes", (root, config) => {
   root.defineRoute({
     method: ["GET", "HEAD"],
-    path: /^\/\$cache\/(.*)\/plugin\.js$/,
+    path: /^\/\$cache\/(?<plugin>.*)\/plugin\.js$/,
     bodyFormat: "ignore",
-    pathParams: ["plugin"]
   }, async (state: ServerRequest<BodyFormat, string, unknown>) => {
 
     checkPath(state, z => ({ plugin: z.string() }), new Error());

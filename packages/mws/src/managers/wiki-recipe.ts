@@ -45,6 +45,7 @@ export class WikiRecipeRoutes {
   rpcLoadRecipeTiddlerList = zodRoute({
     method: ["PUT"],
     path: RECIPE_PREFIX + "/:recipe_name/rpc/$key",
+    keyReplacer: "$key",
     bodyFormat: "json",
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
@@ -152,6 +153,7 @@ export class WikiRecipeRoutes {
   rpcSaveRecipeTiddlerList = zodRoute({
     method: ["PUT"],
     path: RECIPE_PREFIX + "/:recipe_name/rpc/$key",
+    keyReplacer: "$key",
     bodyFormat: "json",
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),
@@ -237,6 +239,7 @@ export class WikiRecipeRoutes {
   rpcDeleteRecipeTiddlerList = zodRoute({
     method: ["PUT"],
     path: RECIPE_PREFIX + "/:recipe_name/rpc/$key",
+    keyReplacer: "$key",
     bodyFormat: "json",
     zodPathParams: z => ({
       recipe_name: z.prismaField("Recipes", "recipe_name", "string"),

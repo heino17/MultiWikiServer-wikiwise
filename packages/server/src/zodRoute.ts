@@ -108,6 +108,14 @@ export interface ZodRoute<
    * 
    */
   path: string | RegExp;
+  /** 
+   * @internal - Mostly used internally. 
+   * 
+   * If specifed, it will be replaced with the provided key. 
+   * 
+   * 
+   */
+  keyReplacer?: string
   bodyFormat: B;
   registerError: Error;
   inner: (state: { [K in M]: ZodState<K, B, P, Q, T> }[M]) => Promise<R>;

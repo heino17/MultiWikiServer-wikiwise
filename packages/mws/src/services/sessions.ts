@@ -46,7 +46,8 @@ export function zodSession<P extends string, T extends zod.ZodTypeAny, R extends
 ): ZodSessionRoute<P, T, R> {
   return {
     ...zodRoute({
-      method: ["POST"], path,
+      method: ["POST"], 
+      path,
       bodyFormat: "json",
       zodPathParams: z => ({}),
       zodQueryParams: z => ({}),

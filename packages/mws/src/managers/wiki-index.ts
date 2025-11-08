@@ -70,11 +70,12 @@ serverEvents.on("mws.routes", (root, config) => {
 
   // the wiki index route
   root.defineRoute({
-    method: ["GET", "HEAD"],
-    path: /^\/wiki\/(.*)$/,
-    pathParams: ["recipe_name"],
+    method: ["GET", "HEAD", "OPTIONS"],
+    path: /^\/wiki\/(?<recipe_name>.*)$/,
     bodyFormat: "ignore",
   }, async (state) => {
+    if (state.method === "OPTIONS") throw state.sendEmpty(405, {});
+
     const timekey = `handler ${state.bodyFormat} ${state.method} ${state.urlInfo.pathname} ${Date.now()}`;
 
     checkPath(state, z => ({
@@ -102,7 +103,11 @@ serverEvents.on("mws.routes", (root, config) => {
     throw STREAM_ENDED;
   }, async (state, e) => {
     if (e instanceof SendError) {
-      await state.sendAdmin(e.status, { sendError: e });
+      if (state.headersSent) {
+        console.log(e + "\n" + new Error("").stack?.split("\n").slice(2).join("\n"));
+      } else {
+        await state.sendAdmin(e.status, { sendError: e });
+      }
     } else {
       console.log("Unexpected error in wiki index route", e);
       const error = new SendError("INTERNAL_SERVER_ERROR", 500, {

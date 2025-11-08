@@ -560,11 +560,13 @@ export class Streamer {
     if (Debug.enabled("send"))
       console.error("writeHead", status, headers);
 
+    this.checkHeadersSentBy(true);
+
     Object.entries(headers).forEach(([k, v]) => {
       if (v != null) this.setHeader(k, `${v}`);
     });
 
-    this.checkHeadersSentBy(true);
+
     this.compressor.beforeWriteHead();
     this.res.writeHead(status);
   }

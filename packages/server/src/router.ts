@@ -18,10 +18,10 @@ export interface AllowedRequestedWithHeaderKeys {
 }
 
 export class Router {
-  static allowedRequestedWithHeaders: AllowedRequestedWithHeaderKeys = {
+  static allowedRequestedWithHeaders: Partial<AllowedRequestedWithHeaderKeys> = {
     fetch: true,
     XMLHttpRequest: true,
-  }
+  };
   constructor(
     public rootRoute: ServerRoute
   ) {
@@ -185,6 +185,7 @@ export class Router {
       await Promise.resolve().then(() => {
         return match.route.handler(result);
       }).catch(e => {
+        if (e === STREAM_ENDED) throw e;
         if (match.route.catchHandler) {
           return match.route.catchHandler(result, e);
         } else {

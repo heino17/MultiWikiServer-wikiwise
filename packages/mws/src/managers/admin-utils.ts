@@ -11,6 +11,7 @@ export function admin<T extends zod.ZodTypeAny, R extends JsonValue>(
   return zodRoute({
     method: ["POST"],
     path: "/admin/$key",
+    keyReplacer: "$key",
     zodPathParams: z => ({}),
     zodQueryParams: z => ({}),
     bodyFormat: "json",

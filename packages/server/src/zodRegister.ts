@@ -10,9 +10,9 @@ const debugCORS = Debug("mws:cors");
 
 
 
-export const registerZodRoutes = (parent: ServerRoute, router: any, keys: string[], keyReplacer: string = "$key") => {
+export const registerZodRoutes = (parent: ServerRoute, router: any, keys: string[]) => {
   return keys.map((key) => {
-    defineZodRoute(parent, key, keyReplacer, router[key]);
+    defineZodRoute(parent, key, router[key]);
   });
 }
 
@@ -21,29 +21,28 @@ function buildPathRegex(path: string, key: string, keyReplacer: string) {
   if (key.startsWith(":")) throw new Error(`Key ${key} must not start with a colon`)
   if (path !== path.trim()) throw new Error(`Path ${path} must not have leading and trailing white space or line terminator characters`);
   const parts = path.split("/");
-  const final = path.endsWith("/");
+
   return "^" + parts.map((e, i) => {
 
     const last = i === parts.length - 1;
-    if (e.length === 0) {
+    if (e === "") {
       if (!last && i !== 0) throw new Error(`Path ${path} has an empty part at index ${i}`);
       return "";
     }
     const name = e.startsWith(":") && e.slice(1);
     if (e === keyReplacer) return key;
     if (!name) return e;
-    return (last && final) ? `(?<${name}>.+)` : `(?<${name}>[^/]+)`;
-  }).join("\\/") + (final ? "$" : "(?=\/)");
+    return (last && !path.endsWith("/")) ? `(?<${name}>.+)` : `(?<${name}>[^/]+)`;
+  }).join("/") + (path.endsWith("/") ? "(?=/)" : "$");
 }
 
 export function defineZodRoute(
   parent: ServerRoute,
   key: string,
-  keyReplacer: string,
   route: ZodRoute<any, any, any, any, any, any>
 ) {
   const {
-    method, path, bodyFormat, registerError,
+    method, path, bodyFormat, registerError, keyReplacer,
     zodPathParams,
     zodQueryParams = (z => ({}) as any),
     zodRequestBody = ["string", "json", "www-form-urlencoded"].includes(bodyFormat)
@@ -55,7 +54,7 @@ export function defineZodRoute(
   if (method.includes("OPTIONS"))
     throw new Error(key + " includes OPTIONS. Use corsRequest instead.");
 
-  const pathregex = typeof path === "string" ? buildPathRegex(path, key, keyReplacer) : path;
+  const pathregex = typeof path === "string" ? buildPathRegex(path, key, keyReplacer ?? "") : path;
 
   return parent.defineRoute({
     method,
