@@ -10,7 +10,7 @@ import { SendError } from "@tiddlywiki/server";
 /** Basically a bunch of methods to help with wiki routes. */
 export class WikiStateStore extends TiddlerStore_PrismaTransaction {
   constructor(
-    protected state: ServerRequest,
+    protected state: ServerRequest<any, any>,
     prisma: PrismaTxnClient
   ) {
     super(prisma);
