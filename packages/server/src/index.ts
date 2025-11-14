@@ -2,10 +2,10 @@ import "@tiddlywiki/utils";
 import { serverEvents } from "@tiddlywiki/events";
 import { createRootRoute, Router, ServerRoute, type RouteMatch } from "./router";
 import { ListenerBase, ListenerHTTP, ListenerHTTPS, ListenOptions } from "./listeners";
-import type { Streamer } from "./streamer";
+import type { Streamer, ParsedRequest, GenericRequest, GenericResponse } from "./streamer";
 import type { IncomingMessage, ServerResponse } from "http";
 import type { Http2ServerRequest, Http2ServerResponse } from "http2";
-import type { ServerRequest } from "./StateObject";
+import type { ServerRequest } from "./router";
 import { Z2, zod as z } from "./Z2";
 import { dump } from "wtfnode";
 import { caughtPromise } from "./utils";
@@ -13,7 +13,6 @@ import { caughtPromise } from "./utils";
 export * from "./listeners";
 export * from "./router";
 export * from "./SendError";
-export * from "./StateObject";
 export * from "./streamer";
 export * from "./utils";
 export * from "./Z2";
@@ -21,9 +20,7 @@ export * from "./zodRegister";
 export * from "./zodRoute";
 
 /**
- * 
  * Runs the following events in order:
- * - `"zod.make"`
  */
 export async function startup() {
 
@@ -120,11 +117,9 @@ export async function startListening(
 declare module "@tiddlywiki/events" {
   interface ServerEventsMap {
     "zod.make": [zod: Z2<any>]
-    "request.middleware": [router: Router, req: IncomingMessage | Http2ServerRequest, res: ServerResponse | Http2ServerResponse, options: ListenOptions]
-    "request.streamer": [router: Router, streamer: Streamer]
-    "request.state": [router: Router, state: ServerRequest, streamer: Streamer]
-    "request.handle": [state: ServerRequest, route: RouteMatch[]]
-    "request.fallback": [state: ServerRequest, route: RouteMatch[]]
+    "request.middleware": [router: Router, req: GenericRequest, res: GenericResponse, options: ListenOptions]
+    "request.state": [router: Router, state: ServerRequest]
+    "request.fallback": [router: Router, state: ServerRequest]
     "exit": []
   }
 }

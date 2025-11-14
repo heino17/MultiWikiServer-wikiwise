@@ -16,6 +16,7 @@ const debug = require('debug')('compression')
 const vary = require('vary')
 import { BrotliOptions, ZlibOptions } from 'zlib';
 import * as zlib from 'zlib';
+import { GenericRequest, GenericResponse } from "./streamer";
 
 
 /**
@@ -57,8 +58,8 @@ export interface CompressorOptions {
 export class Compressor {
 
   constructor(
-    private req: import("http").IncomingMessage | import("http2").Http2ServerRequest,
-    private res: import("http").ServerResponse | import("http2").Http2ServerResponse,
+    private req: GenericRequest,
+    private res: GenericResponse,
     { identity, brotli, threshold, defaultEncoding, deflate, gzip }: CompressorOptions,
   ) {
     var optsBrotli: any = {}

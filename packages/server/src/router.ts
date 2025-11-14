@@ -1,21 +1,54 @@
 import { zod } from "./Z2";
-import { ServerRequest, ServerRequestClass } from "./StateObject";
-import { GenericRequest, GenericResponse, Streamer } from "./streamer";
+import { GenericRequest, GenericResponse, Streamer, ParsedRequest, IncomingHttpHeaders } from "./streamer";
 import Debug from "debug";
-import { IncomingMessage, ServerResponse } from "node:http";
-import { Http2ServerRequest, Http2ServerResponse } from "node:http2";
+import { Http2ServerRequest } from "node:http2";
 import { ListenOptions } from "./listeners";
 import { serverEvents } from "@tiddlywiki/events";
 import { SendError } from "./SendError";
+import { zodTransformJSON } from "./utils";
+import { Compressor } from "./compression";
+import { MultipartPart } from "@mjackson/multipart-parser";
 
 
 const debug = Debug("mws:router:matching");
 const debugnomatch = Debug("mws:router:nomatch");
 
+type ServerRequestTypes = { [K in BodyFormat]: ServerRequest<K>; }[BodyFormat];
+
 export interface AllowedRequestedWithHeaderKeys {
   fetch: true;
   XMLHttpRequest: true;
 }
+
+
+export interface ServerRequest<
+  B extends BodyFormat = BodyFormat,
+  M extends string = string,
+  D = unknown
+> extends Streamer {
+  method: M;
+  bodyFormat: B;
+  /** type-narrowing helper function. This affects anywhere T is used. */
+  isBodyFormat: <T extends B, S extends { [K in B]: ServerRequest<K, M, D> }[T]>(format: T) => this is S;
+  readMultipartData: (
+    this: ServerRequest<"stream", M>,
+    options: {
+      cbPartStart: (part: MultipartPart) => Promise<void>;
+      cbPartChunk: (part: MultipartPart, chunk: Buffer) => Promise<void>;
+      cbPartEnd: (part: MultipartPart) => Promise<void>;
+    }
+  ) => Promise<void>;
+
+  data:
+  B extends "string" ? string :
+  B extends "buffer" ? Buffer :
+  B extends "www-form-urlencoded-urlsearchparams" ? URLSearchParams :
+  B extends "stream" ? undefined :
+  B extends "ignore" ? undefined :
+  D;
+
+}
+
 
 export class Router {
   static allowedRequestedWithHeaders: Partial<AllowedRequestedWithHeaderKeys> = {
@@ -38,7 +71,7 @@ export class Router {
     if (Debug.enabled("server:timing:handle")) console.time(timekey);
     // the sole purpose of this method is to catch errors
     this.handleRequest(req, res, options).catch(err2 => {
-      if (err2 === STREAM_ENDED || res.headersSent) return;
+      if (err2 === STREAM_ENDED) return;
       if (!(err2 instanceof SendError)) {
         err2 = new SendError("INTERNAL_SERVER_ERROR", 500, {
           message: "Internal Server Error. Details have been logged."
@@ -46,6 +79,7 @@ export class Router {
       }
       console.log(timekey, err2);
       const err3 = err2 as SendError<any>;
+      if (res.headersSent) return;
       res.writeHead(err3.status, {
         "content-type": "application/json",
         "x-reason": err3.reason,
@@ -57,83 +91,46 @@ export class Router {
 
   }
 
-  async handleRequest(
+  private async handleRequest(
     req: GenericRequest,
     res: GenericResponse,
     options: ListenOptions
   ) {
 
+
     await serverEvents.emitAsync("request.middleware", this, req, res, options);
+    const secure = !!(options.key && options.cert || options.secure);
+    const request = Streamer.parseRequest(req, res, options.prefix ?? "", secure);
 
-    const streamer = new Streamer(
-      req, res, options.prefix ?? "",
-      !!(options.key && options.cert || options.secure)
-    );
+    // This should always have a length of at least 1 because of the root route.
+    const { routePath, bodyFormat } = this.handleRouteMatching(request);
+    const state = await this.createServerRequest(request, routePath, bodyFormat);
+    await serverEvents.emitAsync("request.state", this, state as ServerRequest);
+    if (state.headersSent) return;
 
-    await this.handleStreamer(streamer).catch(streamer.catcher);
-
+    await this.handleStateBody(state as ServerRequestTypes, routePath);
+    await this.handleRoute(state as ServerRequest, routePath);
+    if (state.headersSent) return;
+    
+    await serverEvents.emitAsync("request.fallback", this, state as ServerRequest);
+    console.log("No handler sent headers before the promise resolved.", state.url);
+    throw new SendError("REQUEST_DROPPED", 500, null);
   }
 
-  async handleStreamer(streamer: Streamer) {
+  private async handleStateBody(state: ServerRequestTypes, routePath: RouteMatch[]) {
 
-    await serverEvents.emitAsync("request.streamer", this, streamer);
-
-    /** This should always have a length of at least 1 because of the root route. */
-    const routePath = this.findRoute(streamer);
-
-    // return 400 rather than 404 to protect the semantic meaning of 404 NOT FOUND,
-    // because if the request does not match a route, we have no way of knowing what
-    // resource they thought they were requesting and whether or not it exists.
-    if (!routePath.length || routePath[routePath.length - 1]?.route.denyFinal) {
-      console.log("No route found for", streamer.method, streamer.urlInfo.pathname, routePath.length);
-      routePath.forEach(e => console.log(e.route.method, e.route.path.source, e.route.denyFinal));
-      throw new SendError("NO_ROUTE_MATCHED", 400, null);
-    }
-
-    // A basic CSRF prevention so that basic HTML forms and AJAX requests
-    // cannot be submitted unless custom headers can be sent.
-    // Full CSRF protection would look like this:
-    // 1. The server sends a CSRF token in the HTML form or AJAX request.
-    // 2. The client sends the CSRF token back in the request headers.
-    // 3. The server checks the CSRF token against the session.
-    // 4. If the CSRF token is valid, the request is processed.
-    // 5. If the CSRF token is invalid, the request is rejected with a 403 Forbidden.
-    const reqwith = streamer.headers["x-requested-with"] as keyof AllowedRequestedWithHeaderKeys | undefined;
-    // If the route requires a CSRF check,
-    if (routePath.some(e => e.route.securityChecks?.requestedWithHeader))
-      // If the method is not GET, HEAD, or OPTIONS, 
-      if (!["GET", "HEAD", "OPTIONS"].includes(streamer.method))
-        // If the x-requested-with header is not set to "fetch", 
-        if (!reqwith || !Router.allowedRequestedWithHeaders[reqwith])
-          // we reject the request with a 403 Forbidden.
-          throw new SendError("INVALID_X_REQUESTED_WITH", 400, null);
-
-    // if no bodyFormat is specified, we default to ignore
-    const bodyFormat = routePath.find(e => e.route.bodyFormat)?.route.bodyFormat || "ignore";
-
-    type statetype = {
-      [K in BodyFormat]: ServerRequest<K>;
-    }[BodyFormat];
-
-    const state = this.createServerRequest(streamer, routePath, bodyFormat) as statetype;
-
-    await serverEvents.emitAsync("request.state", this, state, streamer);
-
-    // if headers are already sent, we're supposed to have ended.
-    if (streamer.headersSent) return streamer.end();
-
-    const method = streamer.method;
+    const { method } = state;
     if (["GET", "HEAD"].includes(method)) state.bodyFormat = "ignore";
 
     if (state.bodyFormat === "stream" || state.bodyFormat === "ignore") {
       // this starts dumping bytes early, rather than letting node do it once the res finishes.
       // the only advantage is letting the request end faster.
-      if (state.bodyFormat === "ignore") streamer.reader.resume();
+      if (state.bodyFormat === "ignore") state.reader.resume();
       // no further body handling required
-      return await this.handleRoute(state, routePath);
+      return;
     }
 
-    state.dataBuffer = await state.readBody();
+    state.dataBuffer = await state.readBuffer();
 
     if (state.bodyFormat === "string" || state.bodyFormat === "json") {
       state.data = state.dataBuffer.toString("utf8");
@@ -153,32 +150,28 @@ export class Router {
       // because it's a union, state becomes never at this point if we matched every route correctly
       // make sure state is never by assigning it to a never const. This will error if something is missed.
       const t: never = state;
-      const state2: ServerRequest = state as any;
       throw new SendError("INVALID_BODY_FORMAT", 500, null);
     }
 
-    return await this.handleRoute(state, routePath);
 
   }
 
 
   /** 
-   * This is for overriding the server request that gets created. It is not async. 
-   * If you need to do anything substantial, use the server events. 
+   * This is for overriding the server request that gets created. 
    */
-  createServerRequest<B extends BodyFormat>(
-    streamer: Streamer,
+  async createServerRequest<B extends BodyFormat>(
+    stream: ParsedRequest,
     /** The array of Route tree nodes the request matched. */
     routePath: RouteMatch[],
     /** The bodyformat that ended up taking precedence. This should be correctly typed. */
     bodyFormat: B,
   ) {
-    return new ServerRequestClass(streamer, routePath, bodyFormat, this);
+    return new Streamer(stream, routePath, bodyFormat);
   }
 
   async handleRoute(state: ServerRequest<BodyFormat>, route: RouteMatch[]) {
 
-    await serverEvents.emitAsync("request.handle", state, route);
 
     let result: any = state;
     for (const match of route) {
@@ -194,12 +187,6 @@ export class Router {
       });
       if (state.headersSent) return;
     }
-    if (!state.headersSent) {
-      await serverEvents.emitAsync("request.fallback", state, route);
-      console.log("No handler sent headers before the promise resolved.");
-      throw new SendError("REQUEST_DROPPED", 500, null);
-    }
-
   }
 
   findRouteRecursive(
@@ -261,22 +248,44 @@ export class Router {
    * @param streamer
    * @returns The tree path matched
    */
-  findRoute(streamer: Streamer): RouteMatch[] {
-    const { method, urlInfo } = streamer;
+  handleRouteMatching(streamer: { method: string, urlInfo: URL, headers: IncomingHttpHeaders }): { routePath: RouteMatch[], bodyFormat: BodyFormat } {
+    const { method, urlInfo, headers } = streamer;
     let testPath = urlInfo.pathname || "/";
     const routes = this.findRouteRecursive([this.rootRoute as any], testPath, method, false);
-    // const routes = this.findRouteRecursive([this.rootRoute as any], testPath, null, true);
-    // console.log(routes);
-    // routes.forEach(e => {
-    //   console.log(e[e.length - 1]?.route.method, e[e.length - 1]?.route.path.source)
-    // });
-    // const matchedMethods = new Set(
-    //   routes.map(e =>
-    //     e.filter(f => !f.route.denyFinal).map(f => f.route.method).flat()
-    //   ).flat()
-    // );
-    // console.log(matchedMethods);
-    return routes.find(e => e.every(f => !f.route.method.length || f.route.method.includes(method))) ?? [];
+    const routePath = routes.find(e => e.every(f => !f.route.method.length || f.route.method.includes(method))) ?? [];
+
+    // return 400 rather than 404 to protect the semantic meaning of 404 NOT FOUND,
+    // because if the request does not match a route, we have no way of knowing what
+    // resource they thought they were requesting and whether or not it exists.
+    if (!routePath.length || routePath[routePath.length - 1]?.route.denyFinal) {
+      console.log("No route found for", method, urlInfo.pathname, routePath.length);
+      routePath.forEach(e => console.log(e.route.method, e.route.path.source, e.route.denyFinal));
+      throw new SendError("NO_ROUTE_MATCHED", 400, null);
+    }
+
+    // A basic CSRF prevention so that basic HTML forms and AJAX requests
+    // cannot be submitted unless custom headers can be sent.
+    // Full CSRF protection would look like this:
+    // 1. The server sends a CSRF token in the HTML form or AJAX request.
+    // 2. The client sends the CSRF token back in the request headers.
+    // 3. The server checks the CSRF token against the session.
+    // 4. If the CSRF token is valid, the request is processed.
+    // 5. If the CSRF token is invalid, the request is rejected with a 403 Forbidden.
+    const reqwith = headers["x-requested-with"] as keyof AllowedRequestedWithHeaderKeys | undefined;
+    // If the route requires a CSRF check,
+    if (routePath.some(e => e.route.securityChecks?.requestedWithHeader))
+      // If the method is not GET, HEAD, or OPTIONS, 
+      if (!["GET", "HEAD", "OPTIONS"].includes(method))
+        // If the x-requested-with header is not set to "fetch", 
+        if (!reqwith || !Router.allowedRequestedWithHeaders[reqwith])
+          // we reject the request with a 403 Forbidden.
+          throw new SendError("INVALID_X_REQUESTED_WITH", 400, null);
+
+    // if no bodyFormat is specified, we default to ignore
+    const bodyFormat = routePath.find(e => e.route.bodyFormat)?.route.bodyFormat || "ignore";
+
+    return { routePath, bodyFormat };
+
   }
 
 }
@@ -289,44 +298,8 @@ export interface RouteMatch {
 }
 
 
-export const zodTransformJSON = (arg: string, ctx: zod.RefinementCtx<string>) => {
-  try {
-    if (arg === "") return undefined;
-    return JSON.parse(arg, (key, value) => {
-      //https://github.com/fastify/secure-json-parse
-      if (key === '__proto__')
-        throw new Error('Invalid key: __proto__');
-      if (key === 'constructor' && Object.prototype.hasOwnProperty.call(value, 'prototype'))
-        throw new Error('Invalid key: constructor.prototype');
-      return value;
-    });
-  } catch (e) {
-    ctx.addIssue({
-      code: "custom",
-      message: e instanceof Error ? e.message : `${e}`,
-      input: arg,
-    });
-    return zod.NEVER;
-  }
-};
-export const zodDecodeURIComponent = (arg: string, ctx: zod.RefinementCtx<string>) => {
-  try {
-    return decodeURIComponent(arg);
-  } catch (e) {
-    ctx.addIssue({
-      code: "custom",
-      message: e instanceof Error ? e.message : `${e}`,
-      input: arg,
-    });
-    return zod.NEVER;
-  }
-};
-
 export const BodyFormats = ["stream", "string", "json", "buffer", "www-form-urlencoded", "www-form-urlencoded-urlsearchparams", "ignore"] as const;
 export type BodyFormat = (typeof BodyFormats)[number];
-
-
-
 
 export interface RouteDef {
 
@@ -342,9 +315,7 @@ export interface RouteDef {
   /** 
    * The uppercase method names to match this route.
    * 
-   * If the array is empty and denyFinal is true, it will match all methods.
-   * 
-   * If the array is empty and denyFinal is false, it will throw an error.
+   * An empty array will match all methods, but the childest route must have at least one method.
    */
   method: string[];
   /** 
@@ -371,7 +342,6 @@ export interface RouteDef {
      */
     requestedWithHeader?: boolean;
   };
-
 
 }
 export interface ServerRoute extends RouteDef {

@@ -90,9 +90,9 @@ export class SessionManager {
     registerZodRoutes(root, new SessionManager(), Object.keys(SessionKeyMap))
   }
 
-  static async parseIncomingRequest(streamer: Streamer, config: ServerState): Promise<AuthUser> {
+  static async parseIncomingRequest(cookies: URLSearchParams, config: ServerState): Promise<AuthUser> {
 
-    const sessionId = streamer.cookies.getAll("session") as PrismaField<"Sessions", "session_id">[];
+    const sessionId = cookies.getAll("session") as PrismaField<"Sessions", "session_id">[];
     const session = sessionId && await config.engine.sessions.findFirst({
       where: { session_id: { in: sessionId } },
       select: { session_id: true, user: { select: { user_id: true, username: true, roles: { select: { role_id: true, role_name: true } } } } }

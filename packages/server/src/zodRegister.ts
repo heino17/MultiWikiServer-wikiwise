@@ -1,9 +1,8 @@
 import { fromError } from "zod-validation-error";
-import { ServerRequest } from "./StateObject";
 import Debug from "debug";
 import { ZodRoute } from "./zodRoute";
 import { Z2 } from "./Z2";
-import { ServerRoute } from "./router";
+import { ServerRequest, ServerRoute } from "./router";
 import { zod } from "@tiddlywiki/server";
 import * as core from "zod/v4/core";
 const debugCORS = Debug("mws:cors");

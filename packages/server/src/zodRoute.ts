@@ -1,7 +1,6 @@
 
 import { JsonValue } from "./utils";
-import { BodyFormat } from "./router";
-import { ServerRequest } from "./StateObject";
+import { BodyFormat, ServerRequest } from "./router";
 import { RouteDef } from "./router";
 import { Z2, zod as z } from "./Z2";
 import * as core from "zod/v4/core";

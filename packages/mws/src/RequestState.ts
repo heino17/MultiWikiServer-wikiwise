@@ -1,16 +1,38 @@
 import { Prisma } from '@tiddlywiki/mws-prisma';
 import { Types } from '@tiddlywiki/mws-prisma/runtime/library';
 import { ServerState } from "./ServerState";
-import { BodyFormat, RouteMatch, Router, ServerRequestClass, Streamer } from "@tiddlywiki/server";
+import { BodyFormat, ParsedRequest, RouteMatch, Router, ServerRequest, Streamer } from "@tiddlywiki/server";
 import { SendError, SendErrorReasonData } from "@tiddlywiki/server";
 import { ServerToReactAdmin } from './services/setupDevServer';
 import { truthy } from '@tiddlywiki/utils';
+import { AuthUser } from './services/sessions';
+
+
+declare module "@tiddlywiki/server" {
+  // ServerRequest is the officially typed request object, 
+  // which we are replacing with our own StateObject,
+  // so add the properties from StateObject to ServerRequest
+  // so the route handler definitions coming from server work correctly.
+  interface ServerRequest<
+    B extends BodyFormat = BodyFormat,
+    M extends string = string,
+    D = unknown
+  > extends StateObject<B, M, D> { }
+
+}
+
 
 export class StateObject<
   B extends BodyFormat = BodyFormat,
   M extends string = string,
   D = unknown
-> extends ServerRequestClass<B, M, D> {
+> extends Streamer implements ServerRequest<B, M, D> {
+
+  declare isBodyFormat: ServerRequest<B, M, D>["isBodyFormat"];
+  declare bodyFormat: ServerRequest<B, M, D>["bodyFormat"];
+  declare method: ServerRequest<B, M, D>["method"];
+  declare data: ServerRequest<B, M, D>["data"];
+  declare readMultipartData: ServerRequest<B, M, D>["readMultipartData"];
 
   config;
   user;
@@ -20,17 +42,20 @@ export class StateObject<
   PasswordService;
   pluginCache;
 
-  constructor(streamer: Streamer, routePath: RouteMatch[], bodyFormat: B, router: Router) {
-    super(streamer, routePath, bodyFormat, router);
+  constructor(streamer: ParsedRequest, routePath: RouteMatch[], bodyFormat: B, user: AuthUser, router: Router) {
+    super(streamer, routePath, bodyFormat);
 
+    this.user = user;
     this.config = router.config;
-    this.user = streamer.user;
     this.engine = router.config.engine;
     this.PasswordService = router.config.PasswordService;
     this.pluginCache = router.config.pluginCache;
 
     this.asserted = false;
-    this.sendAdmin = (status: number, response: ServerToReactAdmin) => router.sendAdmin(this, status, response);
+    this.sendAdmin = (status: number, response: ServerToReactAdmin) =>
+      router.sendAdmin(this, status, response);
+
+    this.compressor.enabled = router.config.enableGzip;
   }
 
   okUser() {

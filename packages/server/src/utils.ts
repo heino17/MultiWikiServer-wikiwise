@@ -1,6 +1,7 @@
 import * as path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { zod } from "./Z2";
 
 export function is<T>(a: any, b: boolean): a is T { return b; }
 
@@ -162,3 +163,38 @@ export function caughtPromise<F extends (...args: any) => any, C extends (reason
 ): (...args: Parameters<F>) => ReturnType<F | C> {
   return (...args: Parameters<F>) => wrapped(...args).catch(onrejected);
 }
+
+
+export const zodTransformJSON = (arg: string, ctx: zod.RefinementCtx<string>) => {
+  try {
+    if (arg === "") return undefined;
+    return JSON.parse(arg, (key, value) => {
+      //https://github.com/fastify/secure-json-parse
+      if (key === '__proto__')
+        throw new Error('Invalid key: __proto__');
+      if (key === 'constructor' && Object.prototype.hasOwnProperty.call(value, 'prototype'))
+        throw new Error('Invalid key: constructor.prototype');
+      return value;
+    });
+  } catch (e) {
+    ctx.addIssue({
+      code: "custom",
+      message: e instanceof Error ? e.message : `${e}`,
+      input: arg,
+    });
+    return zod.NEVER;
+  }
+};
+export const zodDecodeURIComponent = (arg: string, ctx: zod.RefinementCtx<string>) => {
+  try {
+    return decodeURIComponent(arg);
+  } catch (e) {
+    ctx.addIssue({
+      code: "custom",
+      message: e instanceof Error ? e.message : `${e}`,
+      input: arg,
+    });
+    return zod.NEVER;
+  }
+};
+

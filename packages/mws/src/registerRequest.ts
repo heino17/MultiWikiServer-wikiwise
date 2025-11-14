@@ -20,21 +20,12 @@ declare module "@tiddlywiki/events" {
 
 }
 declare module "@tiddlywiki/server" {
-  interface ServerRequest<
-    B extends BodyFormat = BodyFormat,
-    M extends string = string,
-    D = unknown
-  > extends StateObject<B, M, D> {
-  }
+
 
   interface Router {
     config: ServerState;
     sendAdmin: ART<typeof setupDevServer>;
     helmet: ART<typeof helmet>;
-  }
-
-  interface Streamer {
-    user: AuthUser;
   }
 
   interface AllowedRequestedWithHeaderKeys {
@@ -45,17 +36,14 @@ declare module "@tiddlywiki/server" {
 Router.allowedRequestedWithHeaders.TiddlyWiki = true;
 
 serverEvents.on("listen.router.init", async (listen, router) => {
-  
+
   router.config = listen.config;
   router.sendAdmin = await setupDevServer(listen.config);
-  router.createServerRequest = <B extends BodyFormat>(
-    streamer: Streamer, routePath: RouteMatch[], bodyFormat: B
-  ) => {
-    return new StateObject(streamer, routePath, bodyFormat, router);
-  };
-  //https://helmetjs.github.io/
-  // we'll start with the defaults and go from there
-  // feel free to open issues on Github for this
+  router.createServerRequest = async (request, routePath, bodyFormat) => {
+    const user = await SessionManager.parseIncomingRequest(request.cookies, router.config);
+    return new StateObject(request, routePath, bodyFormat, user, router);
+  }
+
   router.helmet = helmet({
     contentSecurityPolicy: false,
     strictTransportSecurity: false,
@@ -76,10 +64,4 @@ serverEvents.on("request.middleware", async (router, req, res, options) => {
       err => err ? reject(err) : resolve()
     )
   );
-});
-serverEvents.on("request.streamer", async (router, streamer) => {
-  // This is picked up by our StateObject class
-  streamer.user = await SessionManager.parseIncomingRequest(streamer, router.config);
-  // this tells the server whether to use dynamic compression (it still allows gzip-stream)
-  streamer.compressor.enabled = router.config.enableGzip;
 });

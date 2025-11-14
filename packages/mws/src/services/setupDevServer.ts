@@ -6,8 +6,10 @@ import { readFile } from "fs/promises";
 import { existsSync, writeFileSync } from "fs";
 import { ServerState } from "../ServerState";
 import {
-  dist_resolve, ServerRequest,
-  SendErrorReasonData, SendError,
+  dist_resolve,
+  SendErrorReasonData,
+  SendError,
+  Streamer
 } from "@tiddlywiki/server";
 
 export type ServerToReactAdmin
@@ -41,7 +43,7 @@ const DEV_HOST = process.env.MWS_DEV_HOST || "127.0.0.20";
 
 export async function setupDevServer(
   config: ServerState,
-): Promise<(state: ServerRequest, status: number, serverResponse: ServerToReactAdmin) => Promise<typeof STREAM_ENDED>> {
+): Promise<(state: Streamer, status: number, serverResponse: ServerToReactAdmin) => Promise<typeof STREAM_ENDED>> {
   const { enableDevServer } = config;
 
   // Escaped </script> to avoid ending the script block early
@@ -57,7 +59,7 @@ export async function setupDevServer(
   };
 
   if (!enableDevServer) {
-    return async function sendProdServer(state: ServerRequest, status: number, serverResponse: ServerToReactAdmin) {
+    return async function sendProdServer(state, status, serverResponse) {
       const index_file = await make_index_file(state.pathPrefix, JSON.stringify(serverResponse));
       const index_hash = createHash("sha1").update(index_file).digest().toString("base64");
       const sendIndex = (): typeof STREAM_ENDED => state.sendBuffer(200, {
@@ -78,8 +80,7 @@ export async function setupDevServer(
   } else {
     const { ctx, port } = await esbuildStartup();
 
-    return async function sendDevServer(
-      state: ServerRequest, status: number, serverResponse: ServerToReactAdmin) {
+    return async function sendDevServer(state, status, serverResponse) {
       const index_file = await make_index_file(state.pathPrefix, JSON.stringify(serverResponse));
       const index_hash = createHash("sha1").update(index_file).digest().toString("base64");
       // const sendIndex = (): typeof STREAM_ENDED => ;
@@ -134,7 +135,6 @@ export async function setupDevServer(
 }
 
 export async function esbuildStartup() {
-  const esbuild = await import("esbuild");
 
   const entry = resolve(rootdir, 'src/main.tsx');
 
