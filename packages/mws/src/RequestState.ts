@@ -55,7 +55,8 @@ export class StateObject<
     this.sendAdmin = (status: number, response: ServerToReactAdmin) =>
       router.sendAdmin(this, status, response);
 
-    this.compressor.enabled = router.config.enableGzip;
+    if (this.compressor)
+      this.compressor.enabled = router.config.enableGzip;
   }
 
   okUser() {
