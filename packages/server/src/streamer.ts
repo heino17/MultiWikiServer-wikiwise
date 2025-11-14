@@ -123,7 +123,7 @@ export class Streamer {
   readonly url: string;
   readonly headers: IncomingHttpHeaders;
   readonly cookies: URLSearchParams;
-  protected readonly compressor;
+  protected readonly compressor: Compressor | undefined;
   /** 
    * The path prefix is a essentially folder mount point. 
    * 
@@ -181,13 +181,13 @@ export class Streamer {
     this.cookies = request.cookies;
 
 
-    this.compressor = new Compressor(request.req, request.res, {
-      identity: {
-        allowHalfOpen: false,
-        autoDestroy: true,
-        emitClose: true,
-      }
-    });
+    // this.compressor = new Compressor(request.req, request.res, {
+    //   identity: {
+    //     allowHalfOpen: false,
+    //     autoDestroy: true,
+    //     emitClose: true,
+    //   }
+    // });
 
 
     this.pathParams = routePath.reduce((n, e) => Object.assign(n, e.groups), {});
@@ -296,7 +296,7 @@ export class Streamer {
     if (!this.headersSent && !this.headersSentBy)
       this.headersSentBy = new Error("Possible culprit was given access to the response object here.");
 
-    return this.compressor.stream ?? this.#res;
+    return this.compressor?.stream ?? this.#res;
   }
 
 
@@ -467,12 +467,12 @@ export class Streamer {
       }, reject));
 
       sender.on("stream", (fileStream) => {
-        this.compressor.beforeWriteHead();
+        this.compressor?.beforeWriteHead();
         const orig_pipe = fileStream.pipe as Function;
         fileStream.pipe = () => orig_pipe.call(fileStream, this.writer);
       });
 
-      this.#res.on("end", () => { resolve(STREAM_ENDED); });
+      this.#res.on("end", () => { console.log("ended"); resolve(STREAM_ENDED); });
       this.checkHeadersSentBy(true);
       sender.pipe(this.#res);
     });
@@ -593,13 +593,13 @@ export class Streamer {
    * can only support a subset of normal encodings or have precompressed data.
    */
   acceptsEncoding(encoding: ('br' | 'gzip' | 'deflate' | 'identity')[]) {
-    return this.compressor.getEncodingMethod(encoding);
+    return this.compressor?.getEncodingMethod(encoding);
   }
 
 
   /** End the compression stream, flushing the rest of the compressed data, then begin a brand new stream to concatenate. */
   async splitCompressionStream() {
-    await this.compressor.splitStream();
+    await this.compressor?.splitStream();
   }
 
   STREAM_ENDED: typeof STREAM_ENDED = STREAM_ENDED;
@@ -713,12 +713,8 @@ export class Streamer {
       if (v != null) this.setHeader(k, `${v}`);
     });
 
-
-    this.compressor.beforeWriteHead();
-    if (this.#res.stream)
-      this.#res.writeHead(status, headers);
-    else
-      this.#res.writeHead(status, headers);
+    this.compressor?.beforeWriteHead();
+    this.#res.writeHead(status, headers);
   }
   /**
    * Write early hints using 103 Early Hints, 
