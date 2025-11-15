@@ -1,10 +1,9 @@
 import { Prisma } from '@tiddlywiki/mws-prisma';
 import { Types } from '@tiddlywiki/mws-prisma/runtime/library';
 import { ServerState } from "./ServerState";
-import { BodyFormat, ParsedRequest, RouteMatch, Router, ServerRequest, Streamer } from "@tiddlywiki/server";
+import { BodyFormat, ParsedRequest, RouteMatch, Router, ServerRequest, Streamer, truthy } from "@tiddlywiki/server";
 import { SendError, SendErrorReasonData } from "@tiddlywiki/server";
 import { ServerToReactAdmin } from './services/setupDevServer';
-import { truthy } from '@tiddlywiki/utils';
 import { AuthUser } from './services/sessions';
 
 
@@ -52,8 +51,8 @@ export class StateObject<
     this.pluginCache = router.config.pluginCache;
 
     this.asserted = false;
-    this.sendAdmin = (status: number, response: ServerToReactAdmin) =>
-      router.sendAdmin(this, status, response);
+    this.sendAdmin = (status: number, response: ServerToReactAdmin): Promise<typeof STREAM_ENDED> =>
+      router.sendAdmin(this as ServerRequest<B, M, D>, status, response);
 
     if (this.compressor)
       this.compressor.enabled = router.config.enableGzip;

@@ -2,6 +2,7 @@ import * as path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { zod } from "./Z2";
+import { Subject } from "rxjs";
 
 export function is<T>(a: any, b: boolean): a is T { return b; }
 
@@ -198,3 +199,59 @@ export const zodDecodeURIComponent = (arg: string, ctx: zod.RefinementCtx<string
   }
 };
 
+
+
+declare global {
+
+  /** Awaited Return Type */
+  type ART<T extends (...args: any) => any> = Awaited<ReturnType<T>>
+  interface ObjectConstructor { keys<T>(t: T): (string & keyof T)[]; }
+}
+
+export function Tuple<P extends any[]>(...args: P): P { return args; };
+export function truthy<T>(obj: T): obj is Exclude<T, false | null | undefined | 0 | '' | void> { return !!obj; };
+
+export function objStringSort<T>(selector: (a: T) => string, desc?: boolean): (a: T, b: T) => number {
+  return (a, b) => {
+    return selector(a).localeCompare(selector(b)) * (desc ? -1 : 1);
+  }
+}
+
+export function objNumberSort<T>(selector: (a: T) => number, desc?: boolean): (a: T, b: T) => number {
+  return (a, b) => {
+    return selector(a) - selector(b) * (desc ? -1 : 1);
+  }
+}
+
+
+
+export type RxArrayEvents<T> = {
+  [K in "push" | "pop" | "shift" | "unshift" | "splice" | "sort" | "copyWithin" | "reverse"]?:
+  [K, Parameters<Array<T>[K]>, ReturnType<Array<T>[K]>];
+}
+/** An array which emits events for each call to mutable functions on the array. */
+export class ReactiveArray<T> extends Array<T> {
+  #subject = new Subject<RxArrayEvents<T>[keyof RxArrayEvents<T>]>();
+  get events() { return this.#subject.asObservable(); }
+
+  constructor(length: number);
+  constructor(...items: T[]);
+  constructor(...args: any[]) {
+    super(...args);
+    const factory = (method: keyof RxArrayEvents<T>) => {
+      return (...args: any[]) => {
+        const result = Array.prototype[method].apply(this, args);
+        this.#subject.next([method as any, args, result]);
+        return result;
+      };
+    };
+    this.push = factory("push");
+    this.pop = factory("pop");
+    this.shift = factory("shift");
+    this.unshift = factory("unshift");
+    this.splice = factory("splice");
+    this.sort = factory("sort");
+    this.copyWithin = factory("copyWithin");
+    this.reverse = factory("reverse");
+  }
+}

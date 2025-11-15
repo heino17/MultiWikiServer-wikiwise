@@ -55,6 +55,7 @@
     "@prisma/adapter-better-sqlite3": "6.10.1",
     "@serenity-kit/opaque": "^0.8.4",
     "@tiddlywiki/mws-prisma": "file:prisma/client",
+    "@types/source-map-support": "^0.5.10",
     "source-map-support": "^0.5.21",
     "tiddlywiki": "^5.3.2"
   },

@@ -1,5 +1,6 @@
 import "./globals";
-import "@tiddlywiki/utils";
+import { install } from "source-map-support";
+install();
 import { serverEvents } from "@tiddlywiki/events";
 
 // these all use serverEvents

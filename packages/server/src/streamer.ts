@@ -8,7 +8,7 @@ import { Writable } from 'node:stream';
 import Debug from "debug";
 import { Compressor } from "./compression";
 import { serverEvents } from '@tiddlywiki/events';
-import { truthy } from '@tiddlywiki/utils';
+import { truthy } from './utils';
 import { BodyFormat, RouteMatch } from './router';
 import { zod } from './Z2';
 import { getMultipartBoundary, isMultipartRequestHeader, MultipartPart, parseNodeMultipartStream } from '@mjackson/multipart-parser';

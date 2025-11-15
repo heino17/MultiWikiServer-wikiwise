@@ -60,7 +60,7 @@ export default defineConfig({
     ].join("\n"));
     console.log("TSC dist/mws.d.ts");
 
-    writeFileSync("public/react-admin/stats/server.json", readFileSync("dist/metafile-esm.json"));
+    // writeFileSync("public/stats/server.json", readFileSync("dist/metafile-esm.json"));
 
     if (process.env.TSCMWS) {
       const tag = "TSC ⚡️ done";

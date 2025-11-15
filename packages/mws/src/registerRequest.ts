@@ -1,11 +1,11 @@
 import { serverEvents } from "@tiddlywiki/events";
-import { Router, ServerRoute, BodyFormat, Streamer, RouteMatch } from "@tiddlywiki/server";
+import { Router, ServerRoute, BodyFormat, Streamer, RouteMatch, dist_resolve } from "@tiddlywiki/server";
 import { StateObject } from "./RequestState";
 import { ServerState } from "./ServerState";
 import { AuthUser, SessionManager } from "./services/sessions";
-import { setupDevServer } from "./services/setupDevServer";
 import helmet from "helmet";
 import { IncomingMessage, ServerResponse } from "http";
+import { SendAdmin, setupClientBuild } from "./services/setupDevServer";
 
 declare module "@tiddlywiki/events" {
   /**
@@ -24,7 +24,7 @@ declare module "@tiddlywiki/server" {
 
   interface Router {
     config: ServerState;
-    sendAdmin: ART<typeof setupDevServer>;
+    sendAdmin: SendAdmin;
     helmet: ART<typeof helmet>;
   }
 
@@ -38,7 +38,12 @@ Router.allowedRequestedWithHeaders.TiddlyWiki = true;
 serverEvents.on("listen.router.init", async (listen, router) => {
 
   router.config = listen.config;
-  router.sendAdmin = await setupDevServer(listen.config);
+
+  // router.sendAdmin = await setupDevServer(listen.config);
+  router.sendAdmin = await setupClientBuild({
+    rootdir: dist_resolve("../packages/react-admin"),
+    publicdir: dist_resolve("../public/react-admin")
+  });
   router.createServerRequest = async (request, routePath, bodyFormat) => {
     const user = await SessionManager.parseIncomingRequest(request.cookies, router.config);
     return new StateObject(request, routePath, bodyFormat, user, router);

@@ -62,7 +62,7 @@ function moveFile(oldPath, newPath) {
         SKIPDTS: "1"
       });
       await start("node --trace-uncaught --trace-warnings mws.dev.mjs", process.argv.slice(3), {
-        ENABLE_DEV_SERVER: "mws",
+        DEVSERVER: "watch",
         ENABLE_EXTERNAL_PLUGINS: "1",
       });
       break;
