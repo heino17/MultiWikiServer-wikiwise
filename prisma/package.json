@@ -7,12 +7,7 @@
   "browser": "browser.ts",
   "dependencies": {},
   "devDependencies": {
-    "@prisma/adapter-better-sqlite3": "6.19.0",
-    "@prisma/client": "6.19.0",
     "@types/node": "^24.6.0",
-    "prettier": "^3.6.1",
-    "prisma": "6.19.0",
-    "prisma-json-schema-generator": "5.1.5",
-    "prisma-json-types-generator": "3.6.2"
+    "prettier": "^3.6.1"
   }
 }
