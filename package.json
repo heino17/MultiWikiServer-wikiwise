@@ -20,7 +20,7 @@
   },
   "workspaces": [
     "packages/*",
-    "prisma/client"
+    "prisma"
   ],
   "files": [
     "dist",
@@ -36,23 +36,24 @@
   },
   "scripts": {
     "install-android": "GYP_DEFINES=\"android_ndk_path=''\" npm install",
-    "docs": "node scripts.mjs docs",
-    "start": "node scripts.mjs start",
+    "docs": "node scripts/scripts.mjs docs",
+    "start": "node scripts/scripts.mjs start",
     "certs": "(cd dev && bash localhost_certs.sh)",
     "tsc": "TSCMWS=1 npx tsup",
+    "tsc2": "tsc -p tsconfig.json --noEmit",
     "tsc-client": "cd packages/react-admin && npm run tsc",
     "build": "tsup && npm run build:admin",
-    "build:admin": "node scripts.mjs client-build",
+    "build:admin": "node scripts/scripts.mjs client-build",
     "build:client": "cd plugins/client && tsc",
     "build:types": "PLUGINDTS=1 npx tsup",
-    "dev-quick-reset": "node scripts.mjs dev-quick-reset",
+    "dev-quick-reset": "node scripts/scripts.mjs dev-quick-reset",
     "env": "env",
-    "test": "node scripts.mjs test",
-    "prisma:generate": "node scripts.mjs prisma:generate",
-    "prisma:migrate": "node scripts.mjs prisma:migrate"
+    "test": "node scripts/scripts.mjs test",
+    "prisma:generate": "node scripts/scripts.mjs prisma:generate",
+    "prisma:migrate": "node scripts/scripts.mjs prisma:migrate"
   },
   "dependencies": {
-    "@prisma/adapter-better-sqlite3": "6.10.1",
+    "@prisma/adapter-better-sqlite3": "6.19.0",
     "@serenity-kit/opaque": "^0.8.4",
     "@tiddlywiki/mws-prisma": "file:prisma/client",
     "@types/source-map-support": "^0.5.10",
@@ -60,11 +61,12 @@
     "tiddlywiki": "^5.3.2"
   },
   "devDependencies": {
-    "@prisma/client": "6.10.1",
+    
     "@types/node": "^24.6.0",
     "prettier": "^3.6.1",
-    "prisma": "6.10.1",
-    "prisma-json-types-generator": "3.5.0",
+    "prisma": "6.19.0",
+    "prisma-json-schema-generator": "5.1.5",
+    "prisma-json-types-generator": "3.6.2",
     "tsup": "^8.5.0",
     "typescript": "^5.8.3"
   },

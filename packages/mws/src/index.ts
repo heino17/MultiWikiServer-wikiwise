@@ -20,8 +20,9 @@ import "./SendError";
 
 // startup
 import * as opaque from "@serenity-kit/opaque";
-import { startup } from "@tiddlywiki/server";
+import { dist_resolve, startup } from "@tiddlywiki/server";
 import runCLI from "@tiddlywiki/commander";
+import { runBuildOnce } from "./services/setupDevServer";
 
 // exports
 export { ZodRoute } from "@tiddlywiki/server";
@@ -49,11 +50,17 @@ export default async function runMWS(oldOptions?: any) {
     process.exit(1);
   }
   await opaque.ready;
-  await startup();
-  await runCLI();
+  if (process.env.CLIENT_BUILD) {
+    await runBuildOnce({
+      rootdir: dist_resolve("../packages/react-admin"),
+      publicdir: dist_resolve("../public/react-admin")
+    });
+  } else {
+    await startup();
+    await runCLI();
+  }
+
 }
-
-
 
 serverEvents.on("cli.commander", (program) => {
   program.description("Multi-User Multi-Wiki Server for TiddlyWiki.");

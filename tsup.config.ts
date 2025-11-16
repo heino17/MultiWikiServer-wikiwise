@@ -5,6 +5,8 @@ import { spawn } from 'child_process';
 import { readFile, readFileSync, writeFileSync } from 'fs';
 import { defineConfig } from 'tsup';
 
+const prod = process.env.BUILD_ENV === 'runtime';
+
 export default defineConfig({
   entry: {
     // events: 'packages/events/src/index.ts',
@@ -23,7 +25,6 @@ export default defineConfig({
     "@prisma/adapter-libsql",
     "@prisma/adapter-better-sqlite3",
     "@serenity-kit/opaque",
-    "@tiddlywiki/mws-prisma",
   ],
 
   dts: false,
@@ -39,11 +40,10 @@ export default defineConfig({
     js: [
       "import {createRequire as __createRequire} from 'module';",
       "const require=__createRequire(import.meta.url);",
-      "import 'source-map-support/register.js';",
     ].join("\n")
   } : ctx.format === "cjs" ? {
     js: [
-      "require('source-map-support/register');",
+
     ].join("\n")
   } : {},
   esbuildOptions(options, context) {
@@ -53,6 +53,11 @@ export default defineConfig({
       "build",
     ]
   },
+  define: prod ? {
+    "process.env.CLIENT_BUILD": "false",
+    "process.env.DEVSERVER": "false",
+  } : {},
+  noExternal: ["@tiddlywiki/mws", "@tiddlywiki/mws-prisma"],
   async onSuccess() {
 
     writeFileSync("dist/mws.d.ts", [
@@ -69,19 +74,19 @@ export default defineConfig({
       console.timeEnd(tag);
     }
 
-    if (process.env.PLUGINDTS) {
-      const tag = "TSC ⚡️ done";
-      console.time(tag);
-      await start("npx tsc -p tsconfig.types.json", [
-        "--outFile", "./plugins/client/src/types.d.ts"
-      ]).catch((code) => code);
-      let file = readFileSync("./plugins/client/src/types.d.ts", "utf-8");
-      file = file.replaceAll(`import("@tiddlywiki/server")`, `import("packages/server/src/index")`);
-      file = file.replaceAll(`import("prisma/client")`, `import("@tiddlywiki/mws-prisma")`);
-      writeFileSync("./plugins/client/src/types.d.ts", file);
-      console.log("TSC plugins/client/src/types.d.ts");
-      console.timeEnd(tag);
-    }
+    // if (process.env.PLUGINDTS) {
+    //   const tag = "TSC ⚡️ done";
+    //   console.time(tag);
+    //   await start("npx tsc -p tsconfig.types.json", [
+    //     "--outFile", "./plugins/client/src/types.d.ts"
+    //   ]).catch((code) => code);
+    //   let file = readFileSync("./plugins/client/src/types.d.ts", "utf-8");
+    //   file = file.replaceAll(`import("@tiddlywiki/server")`, `import("packages/server/src/index")`);
+    //   file = file.replaceAll(`import("prisma/client")`, `import("@tiddlywiki/mws-prisma")`);
+    //   writeFileSync("./plugins/client/src/types.d.ts", file);
+    //   console.log("TSC plugins/client/src/types.d.ts");
+    //   console.timeEnd(tag);
+    // }
   },
 });
 

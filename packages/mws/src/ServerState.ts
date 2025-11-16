@@ -1,10 +1,10 @@
 import { PrismaClient, Prisma } from "@tiddlywiki/mws-prisma";
-import { ITXClientDenyList } from "@tiddlywiki/mws-prisma/runtime/library";
+import { ITXClientDenyList } from "@tiddlywiki/mws-prisma";
 import { TW } from "tiddlywiki";
 import pkg from "../package.json";
 import { createPasswordService } from "./services/PasswordService";
 import { startupCache } from "./services/cache";
-import { Types } from "@tiddlywiki/mws-prisma/runtime/library";
+import { Types } from "@tiddlywiki/mws-prisma";
 import { dist_resolve } from "@tiddlywiki/server";
 import { readFileSync } from "fs";
 
@@ -165,7 +165,7 @@ export class ServerState {
 
 declare global {
   type PrismaTxnClient = Omit<PrismaEngineClient, ITXClientDenyList>;
-  type PrismaEngineClient = PrismaClient<Prisma.PrismaClientOptions, never, {
+  type PrismaEngineClient = PrismaClient<never, never, {
     result: {
       [T in Uncapitalize<Prisma.ModelName>]: {
         [K in keyof PrismaPayloadScalars<Capitalize<T>>]: () => {

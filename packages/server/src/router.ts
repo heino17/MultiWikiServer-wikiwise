@@ -72,12 +72,12 @@ export class Router {
     // the sole purpose of this method is to catch errors
     this.handleRequest(req, res, options).catch(err2 => {
       if (err2 === STREAM_ENDED) return;
+      console.log(timekey, err2);
       if (!(err2 instanceof SendError)) {
         err2 = new SendError("INTERNAL_SERVER_ERROR", 500, {
           message: "Internal Server Error. Details have been logged."
         });
       }
-      console.log(timekey, err2);
       const err3 = err2 as SendError<any>;
       if (res.headersSent) return;
       res.writeHead(err3.status, {
@@ -111,7 +111,7 @@ export class Router {
     await this.handleStateBody(state as ServerRequestTypes, routePath);
     await this.handleRoute(state as ServerRequest, routePath);
     if (state.headersSent) return;
-    
+
     await serverEvents.emitAsync("request.fallback", this, state as ServerRequest);
     console.log("No handler sent headers before the promise resolved.", state.url);
     throw new SendError("REQUEST_DROPPED", 500, null);

@@ -3,7 +3,7 @@ import { existsSync, rm, rmSync, writeFileSync } from "fs";
 import { request } from "http";
 import { readFile } from "fs/promises";
 import { basename, join, relative, resolve } from "path";
-import { dist_resolve, SendError, SendErrorReasonData, ServerRequest } from "@tiddlywiki/server";
+import { checkPath, dist_resolve, SendError, SendErrorReasonData, ServerRequest, ServerRoute } from "@tiddlywiki/server";
 import { createHash } from "crypto";
 
 import { BuildOptions, BuildResult } from "esbuild";
@@ -21,18 +21,17 @@ export interface ServerToReactAdminMap {
 }
 
 export interface SendAdmin {
-  (state: ServerRequest, status: number, serverResponse: ServerToReactAdmin): Promise<typeof STREAM_ENDED>;
+  (state: ServerRequest, sendIndex?: { status: number, serverResponse: ServerToReactAdmin }): Promise<typeof STREAM_ENDED>;
 }
 
 
 const DEV_HOST = process.env.MWS_DEV_HOST || "127.0.0.20";
 
-
+const DEV_FALLBACK = await readFile(dist_resolve("../public/.default.html"));
 
 async function buildOptions({ rootdir, publicdir, entryHash }: { rootdir: string; publicdir: string; entryHash: boolean; }) {
   const { default: fn } = await import(resolve(rootdir, "esbuild.options.mjs"));
   const result = await fn({ rootdir, publicdir });
-  console.log(result);
   result.options.metafile = true;
   result.options.entryNames = entryHash ? '[name]-[hash]' : undefined;
   return result;
@@ -64,7 +63,7 @@ function parseMetafileEntryPoints({ entryPoints, result, publicdir }: {
     relative(publicdir, e[1].cssBundle!)
   );
 
-  writeFileSync(resolve(publicdir, "stats.json"), JSON.stringify(result.metafile));
+  writeFileSync(publicdir + ".json", JSON.stringify(result.metafile));
 
   const maxwidth = outputs.reduce((a, [b]) => Math.max(a, b.length), 0);
 
@@ -119,15 +118,11 @@ export async function setupClientBuild({ rootdir, publicdir }: { rootdir: string
 
   if (process.env.DEVSERVER === "build") await runBuildOnce({ rootdir, publicdir });
 
-  // const publicdir = makepublicdir(key);
   if (!existsSync(publicdir)) throw new Error(`${publicdir} does not exist`);
 
-  return async function sendProdServer(state, status, serverResponse) {
-    const sendIndex = () => state.sendFile(200, {}, {
-      root: publicdir,
-      reqpath: "/index.html"
-    });
-    // use sendFile directly instead of having the dev server send it
+  return async function sendProdServer(state, indexOptions) {
+    if (indexOptions) serveIndex({ state, publicdir, status: indexOptions.status, serverResponse: indexOptions.serverResponse });
+    const sendIndex = () => serveIndex({ state, publicdir, status: 200, serverResponse: null });
     return state.sendFile(200, {}, {
       root: publicdir,
       reqpath: state.url,
@@ -136,6 +131,24 @@ export async function setupClientBuild({ rootdir, publicdir }: { rootdir: string
     });
   };
 
+}
+
+async function serveIndex({ state, publicdir, status, serverResponse }: {
+  state: ServerRequest;
+  publicdir: string;
+  status: number;
+  serverResponse: ServerToReactAdmin;
+}): Promise<typeof STREAM_ENDED> {
+
+  const indexBuffer = await make_index_file({
+    publicdir,
+    pathPrefix: state.pathPrefix,
+    serverResponseJSON: JSON.stringify(serverResponse)
+  });
+  return state.sendBuffer(status, {
+    "content-type": "text/html; charset=utf-8",
+    "content-length": "" + indexBuffer.length,
+  }, indexBuffer);
 }
 
 
@@ -172,8 +185,11 @@ async function startDevServer({ rootdir, publicdir }: { rootdir: string; publicd
 
   const { port } = await ctx.serve({
     servedir: publicdir,
+    fallback: dist_resolve("../public/.default.html"),
     host: DEV_HOST,
   });
+
+  console.log(publicdir);
 
   async function rebuild() {
     if (existsSync(publicdir)) rmSync(publicdir, { recursive: true });
@@ -185,13 +201,13 @@ async function startDevServer({ rootdir, publicdir }: { rootdir: string; publicd
 
   serverEvents.on("exit", () => ctx.dispose());
 
-  await rebuild();
-
-  return async function sendDevServer(state: Streamer, status: number, serverResponse: ServerToReactAdmin) {
+  return async function sendDevServer(state: ServerRequest, indexOptions?: { status: number, serverResponse: ServerToReactAdmin }): Promise<typeof STREAM_ENDED> {
     // this will rebuild the html on page load
     // if the build fails, esbuild will serve the error so we just ignore it
 
     if (state.headers["sec-fetch-dest"] === "document") await rebuild().catch(() => { });
+
+    if (indexOptions) return await serveIndex({ state, publicdir, status: indexOptions.status, serverResponse: indexOptions.serverResponse });
 
     const proxyRes = await new Promise<import("http").IncomingMessage>((resolve, reject) => {
       const headers = { ...state.headers };
@@ -210,18 +226,56 @@ async function startDevServer({ rootdir, publicdir }: { rootdir: string; publicd
       state.reader.pipe(proxyReq, { end: true });
     });
     const { statusCode, headers } = proxyRes;
-    if (statusCode === 404) {
-      return state.sendBuffer(200, {
-        "content-type": "text/html",
-      }, await make_index_file({
-        publicdir,
-        pathPrefix: state.pathPrefix,
-        serverResponseJSON: JSON.stringify(serverResponse)
-      }));
+    if (+headers["content-length"]! === DEV_FALLBACK.length) {
+      const resBuffer = await new Promise<Buffer>(resolve => {
+        const chunks: Buffer[] = [];
+        proxyRes.on("data", chunk => chunks.push(chunk));
+        proxyRes.on("end", () => resolve(Buffer.concat(chunks)));
+      });
+      if (resBuffer.every((e, i) => e === DEV_FALLBACK[i])) {
+        return serveIndex({ state, publicdir, status: statusCode!, serverResponse: null });
+      } else {
+        return state.sendBuffer(statusCode!, headers, resBuffer);
+      }
     } else {
-      return state.sendStream(statusCode as number, headers, proxyRes);
+      return state.sendStream(statusCode!, headers, proxyRes);
     }
-
   };
 }
 
+
+export function registerStatsRoute(rootRoute: ServerRoute, folderMap: Record<string, string>) {
+  if (!process.env.DEVSERVER) return;
+
+  rootRoute.defineRoute({
+    method: ['GET', 'HEAD'],
+    path: /^\/stats\/(?<folder>[^\/]+)\/(?<file>.*)/,
+    bodyFormat: "stream",
+  }, async (state) => {
+    checkPath(state, z => ({
+      folder: z.enum(Object.keys(folderMap)),
+      file: z.string(),
+    }), new Error());
+    async function makeStatsHTML() {
+      return (await readFile(dist_resolve("../public/stats/stats.html"), "utf8"))
+        .replaceAll("$$esbuild_stats_file_string$$", `${state.pathPrefix}/stats/${state.pathParams.folder}/stats.json`)
+        .toString();
+    }
+
+    switch (state.pathParams.file) {
+      case "stats.html":
+        return state.sendString(200, {
+          "content-type": "text/html; charset=utf-8"
+        }, await makeStatsHTML(), "utf8");
+      case "stats.json":
+        return state.sendBuffer(200, {
+          "content-type": "application/json"
+        }, await readFile(folderMap[state.pathParams.folder]))
+      default:
+        return await state.sendFile(200, {}, {
+          root: dist_resolve("../public/stats/"),
+          reqpath: state.pathParams.file,
+        });
+    }
+  });
+}

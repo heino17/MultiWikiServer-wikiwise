@@ -5,7 +5,7 @@ import { ServerState } from "./ServerState";
 import { AuthUser, SessionManager } from "./services/sessions";
 import helmet from "helmet";
 import { IncomingMessage, ServerResponse } from "http";
-import { SendAdmin, setupClientBuild } from "./services/setupDevServer";
+import { registerStatsRoute, SendAdmin, setupClientBuild } from "./services/setupDevServer";
 
 declare module "@tiddlywiki/events" {
   /**
@@ -59,6 +59,10 @@ serverEvents.on("listen.router.init", async (listen, router) => {
 
   await serverEvents.emitAsync("mws.routes.important", router.rootRoute, router.config);
   await serverEvents.emitAsync("mws.routes", router.rootRoute, router.config);
+  registerStatsRoute(router.rootRoute, {
+    "react-admin": dist_resolve("../public/react-admin.json"),
+    "server": dist_resolve("metafile-esm.json"),
+  });
   await serverEvents.emitAsync("mws.routes.fallback", router.rootRoute, router.config);
 });
 serverEvents.on("request.middleware", async (router, req, res, options) => {

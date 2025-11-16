@@ -57,7 +57,6 @@ serverEvents.on("cli.execute.before", async (name, params, options, instance) =>
   await serverEvents.emitAsync("mws.adapter.init.before", adapter);
   await adapter.init();
   await serverEvents.emitAsync("mws.adapter.init.after", adapter);
-
   const engine: PrismaEngineClient = new PrismaClient({
     log: [
       ...Debug.enabled("prisma:query") ? ["query" as const] : [],

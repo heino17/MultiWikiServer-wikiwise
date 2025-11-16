@@ -133,8 +133,10 @@ export function checkPath<
   const pathCheck = Z2.strictObject(zodPathParams(Z2)).safeParse(state.pathParams);
   if (!pathCheck.success) {
     console.log(`${pathCheck.error}\nfor\n${registerError.stack?.split("\n").slice(1).join("\n")}`);
-    throw state.sendString(404, { "x-reason": "zod-path" },
-      Z2.prettifyError(pathCheck.error).toString(), "utf8");
+    throw state.sendString(400, {
+      "content-type": "text/plain; charset=utf-8",
+      "x-reason": "zod-path"
+    }, Z2.prettifyError(pathCheck.error).toString(), "utf8");
   }
   state.pathParams = pathCheck.data as any;
 }

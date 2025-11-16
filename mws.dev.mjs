@@ -55,9 +55,9 @@ if(process.argv.length === 2) {
   process.argv = [process.argv[0], process.argv[1], "listen", ...args];
 
 }
-// make the editions/mws directory if it doesn't exist
+// make the dev/wiki directory if it doesn't exist
 mkdirSync("dev/wiki", { recursive: true })
-// change to the editions/mws directory for development
+// change to the dev/wiki directory for development
 process.chdir("dev/wiki");
 // run the cli
 runMWS().catch(console.log);

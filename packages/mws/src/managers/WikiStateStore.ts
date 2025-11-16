@@ -178,22 +178,22 @@ $tw.preloadTiddler = function(fields) {
 
       }
 
-      state.write(`<script>$tw.preloadTiddlers.push(`);
+      state.writeFast(`<script>$tw.preloadTiddlers.push(`);
 
       if (!enableExternalPlugins) {
         const fileStreams = plugins.map(e => createReadStream(join(cachePath, pluginFiles.get(e)!, "plugin.json")));
 
         for (let i = 0; i < fileStreams.length; i++) {
-          state.write("\n");
+          state.writeFast("\n");
           await state.pipeFrom(fileStreams[i]!);
-          state.write(",");
+          state.writeFast(",");
         }
-        
+
       }
 
       await this.writeStoreTiddlers(state, recipe, recipe_name);
 
-      state.write(");</script>\n");
+      state.writeFast(");</script>\n");
 
       await state.write(template.substring(headPos));
 
@@ -225,9 +225,9 @@ $tw.preloadTiddler = function(fields) {
         const fileStreams = plugins.map(e => createReadStream(join(cachePath, pluginFiles.get(e)!, "plugin.json")));
 
         for (let i = 0; i < fileStreams.length; i++) {
-          state.write("\n");
+          state.writeFast("\n");
           await state.pipeFrom(fileStreams[i]!);
-          state.write(",");
+          state.writeFast(",");
         }
 
       }
@@ -327,40 +327,40 @@ $tw.preloadTiddler = function(fields) {
 
       bagInfo[title] = bag_name;
       revisionInfo[title] = revision_id.toString();
-      writeTiddler(tiddler);
+      await writeTiddler(tiddler);
     }
 
     const last_revision_id = Object.values(revisionInfo).reduce((n, e) => n > e ? n : e, "");
 
-    writeTiddler({
+    await writeTiddler({
       title: "$:/state/multiwikiclient/tiddlers/bag",
       text: JSON.stringify(bagInfo),
       type: "application/json"
     });
-    writeTiddler({
+    await writeTiddler({
       title: "$:/state/multiwikiclient/tiddlers/revision",
       text: JSON.stringify(revisionInfo),
       type: "application/json"
     });
-    writeTiddler({
+    await writeTiddler({
       title: "$:/state/multiwikiclient/recipe/last_revision_id",
       text: last_revision_id
     });
 
-    writeTiddler({
+    await writeTiddler({
       title: "$:/config/multiwikiclient/recipe",
       text: recipe_name
     });
 
 
 
-    writeTiddler({
+    await writeTiddler({
       title: "$:/config/multiwikiclient/host",
       text: "$protocol$//$host$" + pathPrefix + "/",
     });
 
     if (enableDevServer)
-      writeTiddler({
+      await writeTiddler({
         title: "$:/state/multiwikiclient/dev-mode",
         text: "yes"
       });

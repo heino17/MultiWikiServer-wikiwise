@@ -11,8 +11,6 @@
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^6.4.7",
     "@mui/material": "^6.4.7",
-    "@tiddlywiki/mws": "file:../packages/mws",
-    "@tiddlywiki/mws-prisma": "file:../packages/prisma",
     "angular-forms-only": "1.0.1",
     "commander": "^14.0.1",
     "react": "^18.3.1",

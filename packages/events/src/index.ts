@@ -18,6 +18,13 @@ export class ServerEvents extends EventEmitter<ServerEventsMap> {
   /** Use emitAsync instead */
   override emit!: never;
 
+  emitSync<K>(
+    eventName: keyof ServerEventsMap | K,
+    ...args: K extends keyof ServerEventsMap ? ServerEventsMap[K] : never
+  ): any[] {
+    return this.listeners(eventName).map(e => e(...args));
+  }
+
   async emitAsync<K>(
     eventName: keyof ServerEventsMap | K,
     ...args: K extends keyof ServerEventsMap ? ServerEventsMap[K] : never

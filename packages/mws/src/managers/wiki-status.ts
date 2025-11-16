@@ -263,12 +263,12 @@ export class WikiStatusRoutes {
       });
       if (match) throw state.end();
 
-      state.write("[");
+      state.writeFast("[");
       for (let i = 0; i < result.length; i++) {
         await state.write((i > 0 ? "," : "") + JSON.stringify(result[i]));
         if (gzip_stream) await state.splitCompressionStream();
       }
-      state.write("]");
+      state.writeFast("]");
       throw state.end();
 
       // this still sets the return type of the function

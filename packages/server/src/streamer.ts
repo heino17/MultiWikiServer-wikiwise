@@ -766,13 +766,14 @@ export class Streamer {
   */
 
   private pause: boolean = false;
-  /** awaiting is not required. everything happens sync'ly */
-  write(chunk: Buffer | string, encoding?: NodeJS.BufferEncoding): Promise<void> {
-    const continueWriting = this.writer.write(typeof chunk === "string" ? Buffer.from(chunk, encoding) : chunk);
-    if (!continueWriting)
-      return new Promise<void>(resolve => this.writer.once("drain", () => { resolve(); }));
-    else
-      return Promise.resolve();
+  /** Writes to the stream, and if pause is indicated, returns a promise that resolves once the drain event emits. */
+  async write(chunk: Buffer | string, encoding?: NodeJS.BufferEncoding): Promise<void> {
+    const continueWriting = this.writeFast(chunk, encoding);
+    if (!continueWriting) return new Promise<void>(resolve => this.writer.once("drain", () => { resolve(); }));
+  }
+  /** This differs from write in that it does not return a Promise or attach a drain listener to the stream */
+  writeFast(chunk: Buffer | string, encoding?: NodeJS.BufferEncoding): boolean {
+    return this.writer.write(typeof chunk === "string" ? Buffer.from(chunk, encoding) : chunk);
   }
   end(): typeof STREAM_ENDED {
     // console.log(this.writer.end.toString());

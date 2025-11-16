@@ -8,24 +8,28 @@
 /// <reference lib="es2023" />
 /// <reference types="node" />
 
-import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from "fs";
-import { start, events, run, removeRecursive, run_bin } from "./helpers.mjs";
-import { join } from "path";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "fs";
+import { start, events, run, removeRecursive, run_bin, moveFile } from "./helpers.mjs";
+import { join, resolve } from "path";
 
 (async function(arg) {
   switch(arg) {
+    case "docs":
     case "start":
       await run("tsup", {});
-      await run_bin({
+      await run("node --trace-warnings --trace-uncaught mws.dev.mjs", {
         DEVHTTPS: "yes",
-        PORT: "4201",
+        PORT: "5000",
         DEVSERVER: true ? "watch" : "build",
+        ENABLE_EXTERNAL_PLUGINS: "1",
+        ENABLE_DOCS_ROUTE: arg === "docs" ? "1" : "",
       });
       break;
+
     case "live":
       await run_bin({
         DEVHTTPS: "yes",
-        PORT: "4201",
+        PORT: "5000",
       });
       break;
     case "build":
@@ -41,22 +45,56 @@ import { join } from "path";
       if(!process.env.SKIP_AUDIT) await run("npm audit", {}).catch(() => {});
       break;
     }
-    case "schema:generate": {
-      await run("tsup", {});
-      await run_bin({ RUNSCHEMA: "1" });
-      const schemas = JSON.parse(readFileSync("schema.prisma.json", "utf8"));
-      await run("prisma validate", { "DATABASE_URL": "postgres://test" }, schemas[0].path);
+    case "prisma:generate": {
+      await run("prisma validate", { "DATABASE_URL": "postgres://test" });
+      await run("prisma format", {});
+      await run("prisma generate", {});
+      break;
+    }
+    case "dev-quick-reset": {
+      // "rm -rf dev/wiki/store && DEBUG= npm start init-store",
+      removeRecursive("dev/wiki/store");
+      await start("npm start init-store");
+      break;
+    }
+    case "test": {
+      // "test:pack": "(git clean -dfx tests && npm pack --pack-destination tests && cd tests && npm install && npm install ./tiddlywiki-mws-$npm_package_version.tgz --no-save && npm test)",
+      // "test": "(git clean -dfx tests && cd tests && npm install .. --no-save && npm test)",
+      // "fulltest": "mv node_modules node_modules_old; npm run test:pack; mv node_modules_old node_modules",
 
-      for(const { path, output, kysely } of schemas) {
-        await run("prisma format", {}, path);
-        if(output) {
-          await run("prisma generate", { PRISMA_CLIENT_FORCE_WASM: "true" }, path);
-          const outputFolder = join(path, output);
-          for(const file of readdirSync(outputFolder)) {
-            if(file.endsWith(".node")) rmSync(join(outputFolder, file));
+
+      await Promise.resolve().then(async () => {
+        // Cross-platform move operation
+        moveFile("node_modules", "node_modules_off");
+      }).then(async () => {
+        await start("git clean -dfx tests");
+        const filesFolder = resolve("create-package/files");
+        const testsFolder = resolve("tests");
+        mkdirSync(testsFolder, { recursive: false });
+        // copy files into the folder
+        console.log(`Copying files`);
+        readdirSync(filesFolder).forEach(file => {
+          const oldPath = join(filesFolder, file);
+          if(!statSync(oldPath).isFile()) return;
+          const newPath = join(testsFolder, file);
+          if(existsSync(newPath)) {
+            console.log(`File ${file} already exists. Skipping...`);
+            return;
           }
-        }
-      }
+          console.log(`├─ ${file}`);
+          writeFileSync(newPath, readFileSync(oldPath));
+        });
+        await start("npm pack --pack-destination tests");
+        // Read package.json to get version for cross-platform compatibility
+        const packageJson = JSON.parse(readFileSync("package.json").toString());
+        const packageVersion = packageJson.version;
+        await start(`npm install ./tiddlywiki-mws-${packageVersion}.tgz tiddlywiki`, [], {}, { cwd: "tests" });
+      }).then(async () => {
+        await start("npx mws init-store", [], {}, { cwd: "tests" });
+      }).finally(async () => {
+        // Cross-platform move operation
+        moveFile("node_modules_off", "node_modules");
+      });
       break;
     }
     case "prisma:generate:oldjsclient": {

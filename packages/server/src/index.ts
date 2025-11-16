@@ -1,12 +1,9 @@
 import { serverEvents } from "@tiddlywiki/events";
-import { createRootRoute, Router, ServerRoute, type RouteMatch } from "./router";
-import { ListenerBase, ListenerHTTP, ListenerHTTPS, ListenOptions } from "./listeners";
-import type { Streamer, ParsedRequest, GenericRequest, GenericResponse } from "./streamer";
-import type { IncomingMessage, ServerResponse } from "http";
-import type { Http2ServerRequest, Http2ServerResponse } from "http2";
+import { Router } from "./router";
+import { ListenerHTTP, ListenerHTTPS, ListenOptions } from "./listeners";
+import type { GenericRequest, GenericResponse } from "./streamer";
 import type { ServerRequest } from "./router";
 import { Z2, zod as z } from "./Z2";
-import { dump } from "wtfnode";
 import { caughtPromise } from "./utils";
 
 export * from "./listeners";
@@ -19,14 +16,11 @@ export * from "./zodRegister";
 export * from "./zodRoute";
 
 /**
- * Runs the following events in order:
+ * A startup function which currently does nothing but might eventually do something.
  */
 export async function startup() {
 
 }
-
-
-
 
 let exiting = false;
 export const exiter = caughtPromise(async (signal: any) => {
@@ -36,7 +30,7 @@ export const exiter = caughtPromise(async (signal: any) => {
 
   setTimeout(() => {
     console.log("Server exit timeout reached, forcing exit.");
-    dump(); // prints out everything that might have kept the process from exiting
+    serverEvents.emitSync("sync-exit-forced");
     console.log("Exiting process...");
     process.exit(0);
   }, 5000).unref();
@@ -120,6 +114,7 @@ declare module "@tiddlywiki/events" {
     "request.state": [router: Router, state: ServerRequest]
     "request.fallback": [router: Router, state: ServerRequest]
     "exit": []
+    "sync-exit-forced": []
   }
 }
 
