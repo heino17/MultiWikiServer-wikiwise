@@ -166,7 +166,7 @@ export class SqliteAdapter {
           'id, migration_name, checksum, finished_at, logs, rolled_back_at, started_at, applied_steps_count' +
           ') VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         args: [randomUUID(), migration, generateChecksum(fileContent), Date.now(), null, null, Date.now(), 1],
-        argTypes: [], // this doesn't appear to be used at the moment
+        argTypes: ["string", "string", "string", "datetime", null, null, "datetime", "int"],
       });
 
     }
