@@ -1,7 +1,7 @@
 import { existsSync, rm, rmSync, writeFileSync } from "fs";
 // import { buildOptions } from "./context";
 import { request } from "http";
-import { readFile } from "fs/promises";
+import { readFile, writeFile } from "fs/promises";
 import { basename, join, relative, resolve } from "path";
 import { checkPath, dist_resolve, SendError, SendErrorReasonData, ServerRequest, ServerRoute } from "@tiddlywiki/server";
 import { createHash } from "crypto";
@@ -63,7 +63,7 @@ function parseMetafileEntryPoints({ entryPoints, result, publicdir }: {
     relative(publicdir, e[1].cssBundle!)
   );
 
-  writeFileSync(publicdir + ".json", JSON.stringify(result.metafile));
+
 
   const maxwidth = outputs.reduce((a, [b]) => Math.max(a, b.length), 0);
 
@@ -162,9 +162,9 @@ export async function runBuildOnce({ rootdir, publicdir }: { rootdir: string; pu
   // errors cause this to reject
   const result = await esbuild.build(options);
   console.timeEnd(timeTag);
-
   const { js, css } = parseMetafileEntryPoints({ entryPoints, result, publicdir });
 
+  await writeFile(publicdir + ".json", JSON.stringify(result.metafile));
   await generateHtml({ js, css, rootdir, publicdir });
 
   return result;
@@ -196,6 +196,7 @@ async function startDevServer({ rootdir, publicdir }: { rootdir: string; publicd
     // errors cause this to reject
     const result = await ctx.rebuild();
     const { css, js } = parseMetafileEntryPoints({ entryPoints, result, publicdir });
+    await writeFile(publicdir + ".json", JSON.stringify(result.metafile));
     await generateHtml({ js, css, rootdir, publicdir });
   }
 
@@ -204,8 +205,8 @@ async function startDevServer({ rootdir, publicdir }: { rootdir: string; publicd
   return async function sendDevServer(state: ServerRequest, indexOptions?: { status: number, serverResponse: ServerToReactAdmin }): Promise<typeof STREAM_ENDED> {
     // this will rebuild the html on page load
     // if the build fails, esbuild will serve the error so we just ignore it
-
-    if (state.headers["sec-fetch-dest"] === "document") await rebuild().catch(() => { });
+    if (state.headers["sec-fetch-dest"] === "document")
+      await rebuild().catch((e) => { if (!(e.errors && e.warnings)) throw e; });
 
     if (indexOptions) return await serveIndex({ state, publicdir, status: indexOptions.status, serverResponse: indexOptions.serverResponse });
 

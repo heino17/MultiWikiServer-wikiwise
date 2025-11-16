@@ -1,19 +1,22 @@
-
+//@ts-check
 import { basename, join, resolve } from 'node:path';
 import { copy } from 'esbuild-plugin-copy';
 import { existsSync } from 'node:fs';
 
 /**
  * @template {import('esbuild').BuildOptions} T
- * @param {Promise<import('esbuild').SameShape<import('esbuild').BuildContext, T>>} options 
+ * @param {import('esbuild').SameShape<import('esbuild').BuildOptions, T>} options 
  * @returns 
  */
 function optionsTyped(options) {
   return options;
 }
 
-
-export default async function({rootdir, publicdir}) {
+/**
+ * 
+ * @param {{rootdir: string, publicdir: string}} param0 
+ */
+export default async function({ rootdir, publicdir }) {
 
   /** @type {{in: string; out: string;}[]} */
   const entryPoints = [
@@ -27,7 +30,7 @@ export default async function({rootdir, publicdir}) {
   });
 
   const options = optionsTyped({
-    entryPoints: [resolve(rootdir, 'src/main.tsx')],
+    entryPoints,
     bundle: true,
     target: 'es2020',
     platform: 'browser',
@@ -43,9 +46,6 @@ export default async function({rootdir, publicdir}) {
         assets: [{
           from: [join(rootdir, "public", "**/*")],
           to: ['.'],
-        }, {
-          from: [join(rootdir, "index.html")],
-          to: ['../' + basename(publicdir) + ".html"]
         }],
       }),
     ]
