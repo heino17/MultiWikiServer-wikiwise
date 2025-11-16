@@ -18,33 +18,15 @@ import { join, resolve } from "path";
     case "start":
       await run("tsup", {});
       await run("node --trace-warnings --trace-uncaught mws.dev.mjs", {
-        DEVHTTPS: "yes",
-        PORT: "5000",
         DEVSERVER: true ? "watch" : "build",
         ENABLE_EXTERNAL_PLUGINS: "1",
         ENABLE_DOCS_ROUTE: arg === "docs" ? "1" : "",
       });
       break;
-
-    case "live":
-      await run_bin({
-        DEVHTTPS: "yes",
-        PORT: "5000",
-      });
-      break;
     case "build":
       await run("tsup", {});
-      await run_bin({
-        CLIENT_BUILD: "1"
-      });
+      await run_bin({ CLIENT_BUILD: "1" });
       break;
-    case "build-prod": {
-      if(!process.env.SKIP_TSUP) await run("tsup", {});
-      await run_bin({ CLIENT_BUILD: "1", BUILD_ENV: "production" });
-      await run("tsup", { BUILD_ENV: "runtime" });
-      if(!process.env.SKIP_AUDIT) await run("npm audit", {}).catch(() => {});
-      break;
-    }
     case "prisma:generate": {
       await run("prisma validate", { "DATABASE_URL": "postgres://test" });
       await run("prisma format", {});
@@ -95,34 +77,6 @@ import { join, resolve } from "path";
         // Cross-platform move operation
         moveFile("node_modules_off", "node_modules");
       });
-      break;
-    }
-    case "prisma:generate:oldjsclient": {
-      const prismaFolder = "prisma";
-      console.log("Generating Prisma client...");
-      // remove the old client - cross-platform
-      removeRecursive(join(prismaFolder, "client"));
-      await start(`prisma generate --schema=${prismaFolder}/schema.prisma`, [], {
-        PRISMA_CLIENT_FORCE_WASM: "true"
-      });
-      console.log("Formatting Prisma client...");
-      await start(`prettier --write ${prismaFolder}/client/*.js ${prismaFolder}/client/*/*.js`);
-      // remove the .node files, we don't need them in the client - cross-platform
-      console.log("Removing .node files from Prisma client...");
-      readdirSync(`${prismaFolder}/client`).forEach(file => {
-        if(file.endsWith(".node")) {
-          const filePath = join(`${prismaFolder}/client`, file);
-          console.log(`Removing ${filePath}`);
-          if(existsSync(filePath)) rmSync(filePath, { force: true });
-        }
-      });
-      console.log("Updating Prisma client package.json...");
-      /** @type {any} */
-      const pkg = JSON.parse(readFileSync(join(prismaFolder, "client/package.json")).toString());
-      pkg.name = "@tiddlywiki/mws-prisma";
-      pkg.private = true;
-      writeFileSync(join(prismaFolder, "client/package.json"), JSON.stringify(pkg, null, 2));
-      console.log("Prisma client generated.");
       break;
     }
     case "prisma:migrate":
