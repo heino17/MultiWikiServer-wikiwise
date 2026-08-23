@@ -231,14 +231,14 @@ export class Streamer extends StreamerRequest {
           this.headersSentBy = new Error("You appear to be sending headers more than once. This was the first attempt. Does it need to throw or return?")
         }
       }
-
+      /** Call `this.checkHeadersSentBy();` first. */
       private set finalResponse(res: Response) {
-        this.checkHeadersSentBy();
         this.headersSent = true;
         onResponse(res);
       }
 
       sendWriter = () => {
+        this.checkHeadersSentBy();
         this.finalResponse = new Response(
           (this.statusCode === 204 || this.statusCode === 304)
             ? undefined
@@ -247,6 +247,7 @@ export class Streamer extends StreamerRequest {
         );
       }
       sendResponse = (res: Response) => {
+        this.checkHeadersSentBy();
         this.finalResponse = res;
       }
       sendFile = async (
@@ -269,7 +270,11 @@ export class Streamer extends StreamerRequest {
         }
         const res = await serveStatic(options)(context, async () => { });
         // get the file response
-        if (res) this.finalResponse = res;
+
+        if (res) {
+          this.checkHeadersSentBy();
+          this.finalResponse = res;
+        }
       }
 
       honoNotFound = async () => await context.notFound();
