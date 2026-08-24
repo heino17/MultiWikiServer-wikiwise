@@ -15,7 +15,7 @@ import { join, resolve } from "node:path";
 import { mapGetInit } from "./wiki-utils";
 import { IdString } from "@mws/admin-vanilla/src/definition/tabs";
 import { serverEvents } from "@tiddlywiki/events";
-import { defaultPreloadFunction, TiddlerHasher, WikiPluginCache } from "../plugin-cache";
+import { defaultPreloadFunction, TiddlerHasher, PluginCache, requiredPlugins } from "../plugin-cache";
 import { AuthUser } from "./sessions";
 
 // ---------------------------------------------------------------------------
@@ -388,25 +388,25 @@ export class RecipeResolver {
     }) : [];
     const lastEventId = String(maxSeq._max.seq ?? 0);
 
-    const getIndexEtag = (template: string, pluginCache: WikiPluginCache) => {
+    const getIndexEtag = (temp: string, pluginCache: PluginCache) => {
       const plugins = getPluginList(pluginCache);
       // this.assertPlugins();
       const hash = createHash("md5");
-      hash.update(template);
+      hash.update(temp);
       hash.update(this.recipe.recipe_bags.map(e => e.bag.name).join(","));
       // this is always needed because of the integrity hashes
-      hash.update(plugins.map(e => pluginCache.pluginHashes(injectionFunction).get(e) ?? "").join(","));
+      hash.update(plugins.map(e => pluginCache.getHashForTitle(template.twVersion, injectionFunction, e) ?? "").join(","));
       hash.update(lastEventId);
       const contentDigest = hash.digest("hex");
       return `"${contentDigest}"`;
     }
 
-    const getPluginList = (pluginCache: WikiPluginCache) => {
+    const getPluginList = (pluginCache: PluginCache) => {
       const { customHtmlEnabled, requiredPluginsEnabled } = template;
 
       const plugins = [...new Set([
         ...(!customHtmlEnabled ? ["$:/core"] : []),
-        ...(requiredPluginsEnabled ? pluginCache.requiredPlugins : []),
+        ...(requiredPluginsEnabled ? requiredPlugins : []),
         ...this.recipe.plugins as string[],
       ]).values()];
 

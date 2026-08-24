@@ -614,7 +614,7 @@ export const AdminLoad = zodRoute({
         users: await new UserDataAdapter(state.user).getList(prisma, roles),
         availablePlugins: state.pluginCache.pluginsList.map(e => ({
           name: e.title,
-          description: `${e.name}: ${e.description}`,
+          description: `${e.name}: ${e.desc}`,
         })),
       } satisfies Omit<DataStore, "availableBagNames" | "availablePluginNames">;
     });

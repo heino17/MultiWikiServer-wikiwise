@@ -73,15 +73,15 @@ serverEvents.on("mws.routes", (root) => {
 
   parent.defineRoute<"ignore">({
     method: ["GET", "HEAD", "OPTIONS"],
-    path: new RegExp(`^/tw5/$`),
+    path: new RegExp(`^/tw5/(?<version>.*)$`),
     bodyFormat: "ignore",
   }, async (state) => {
 
-    if (state.method === "OPTIONS")
-      return state.sendEmpty(405);
+    if (state.method === "OPTIONS") return state.sendEmpty(405);
 
-    const { plugins, tiddlers, version } = state.pluginCache.tw5Docs;
-    return await serveDocsIndex(state, tiddlers, plugins, version);
+    checkPath(state, z => ({ version: z.string() }), new Error());
+
+    return await serveDocsIndex(state, state.pathParams.version);
 
   });
 

@@ -278,7 +278,7 @@ export class SessionManager {
       await prisma.sessions.delete({ where: { session_id: state.user.sessionId } });
     }
 
-    state.cookies.forEach((cookie) => {
+    state.headers.cookie.forEach((cookie) => {
       if (!cookie) return;
       state.setCookie({
         name: cookie,

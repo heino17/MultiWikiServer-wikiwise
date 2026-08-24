@@ -1,5 +1,5 @@
 
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import runMWS from "./dist/mws.js";
 import { resolve } from "node:path";
 Error.stackTraceLimit = 30;
@@ -37,7 +37,7 @@ console.log(process.version);
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 // if args aren't specified on the cli, generate listen args from the json file
 
-if(process.argv.length === 2) {
+if (process.argv.length === 2) {
   const listenerFile = "./dev/mws.dev.json";
 
   /** @type {ListenArgs[]} */
@@ -46,8 +46,8 @@ if(process.argv.length === 2) {
     : [{}];
 
   const args = listeners.flatMap(e => {
-    if(e.key) e.key = resolve("dev", e.key);
-    if(e.cert) e.cert = resolve("dev", e.cert);
+    if (e.key) e.key = resolve("dev", e.key);
+    if (e.cert) e.cert = resolve("dev", e.cert);
     return ["--listener", ...Object.entries(e).map(([k, v]) => `${k}=${v}`)]
   });
 
@@ -57,6 +57,8 @@ if(process.argv.length === 2) {
 }
 // make the dev/wiki directory if it doesn't exist
 mkdirSync("dev/wiki", { recursive: true })
+if (!existsSync("dev/wiki/package.json"))
+  writeFileSync("dev/wiki/package.json", '{"name":"@tiddlywiki/mws-instance","private":true,"version":"0.2.0"}');
 // change to the dev/wiki directory for development
 process.chdir("dev/wiki");
 // run the cli

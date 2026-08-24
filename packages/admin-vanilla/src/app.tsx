@@ -942,15 +942,31 @@ export class App extends JSXElement {
             <p class="hero-copy">All your thoughts, in as many places as you need them.</p>
           </div>
           <div class="hero-account-shell">
-            <a href={pathPrefix + "/tw5/"} class="hero-account-trigger">
-              <span class="hero-account-name">{embeddedServerResponse.tw5Version}</span>
-              <MaterialSymbol icon={tw5logo} class="hero-account-icon" />
-            </a>
+            <details class="hero-account-menu">
+              <summary class="hero-account-trigger">
+                <span class="hero-account-name">
+                  {embeddedServerResponse.tw5Versions.slice(-1)[0]}
+                </span>
+                <span class="hero-account-icon" aria-hidden="true">
+                  <MaterialSymbol icon={tw5logo} class="hero-account-icon" />
+                </span>
+              </summary>
+              <div class="hero-account-dropdown" role="menu" aria-label="Account options">
+                {embeddedServerResponse.tw5Versions.map(e => <>
+                  <a
+                    href={pathPrefix + "/tw5/" + e}
+                    class="hero-account-action"
+                    type="button"
+                    role="menuitem"
+                  >{e}</a>
+                </>)}
+              </div>
+            </details>
+
             <details class="hero-account-menu">
               <summary class="hero-account-trigger" aria-label="Open account menu">
                 <span class="hero-account-name">{embeddedServerResponse.userState.username}</span>
                 <span class="hero-account-icon" aria-hidden="true">
-                  {/* <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Crab_Nebula.jpg/250px-Crab_Nebula.jpg"/> */}
                   {embeddedServerResponse.userState.avatarUrl
                     ? <img src={embeddedServerResponse.userState.avatarUrl} />
                     : <MaterialSymbol icon={accountCircleIcon} />}

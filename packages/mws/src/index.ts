@@ -42,9 +42,7 @@ export {
   PasswordService
 } from "./services/PasswordService";
 export {
-  WikiPluginCache,
-  PluginDefinition,
-  TiddlerHasher,
+  
   defaultPreloadFunction,
 } from "./plugin-cache";
 export * from "./services/setupDevServer";

@@ -1,5 +1,5 @@
 import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
-import { WikiPluginCache, loadWikiTiddlers } from "../plugin-cache";
+import { PluginCache, loadWikiTiddlers } from "../plugin-cache";
 import { TiddlerFields, TW } from "tiddlywiki";
 import * as path from "path";
 import { WikiStore, BagDataAdapter, RecipeDataAdapter, toMappingRows } from "../new-managers";
@@ -201,7 +201,7 @@ async function saveLoadedTiddlers(
 function loadWikiFolder({ $tw, cache, wikiPath, bagNameRoot, bagNamePrefix }: {
 	wikiPath: string,
 	$tw: TW,
-	cache: WikiPluginCache,
+	cache: PluginCache,
 	bagNameRoot: string,
 	bagNamePrefix: string,
 }) {
@@ -214,10 +214,10 @@ function loadWikiFolder({ $tw, cache, wikiPath, bagNameRoot, bagNamePrefix }: {
 
 	for (const bag of bags) {
 		for (const folder of bag.plugins) {
-			const plugin = cache.filePlugins.get(path.join("tiddlywiki", $tw.version, folder).replaceAll("\\", "/"))
+			const plugin = cache.pluginPathsInfo.get(path.join("tiddlywiki", $tw.version, folder).replaceAll("\\", "/"))
 			// this should only happen if someone added third-party plugins to the stock plugin folders.
 			if (!plugin) console.log(`STOCK_PLUGIN_MISSING: Folder ${bag.wikiFolder} needs ${folder.replaceAll("\\", "/")}.`);
-			else pluginTitles.add(plugin);
+			else pluginTitles.add(plugin.title);
 		}
 	}
 

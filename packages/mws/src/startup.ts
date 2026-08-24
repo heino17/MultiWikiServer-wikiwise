@@ -1,23 +1,22 @@
+import * as opaque from "@serenity-kit/opaque";
 import { serverEvents } from "@tiddlywiki/events";
-import { Router, ServerRoute, dist_resolve, is, tryParseJSON } from "@tiddlywiki/server";
-import { StateObject } from "./RequestState";
-import { ServerState, TiddlerCache } from "./ServerState";
-import { SessionManager } from "./new-managers/sessions";
-import { ClientBuildDefinition, registerStatsRoute, SendAdmin, setupClientBuild } from "./services/setupDevServer";
-import { secureHeaders } from 'hono/secure-headers';
 import { PrismaClient } from "@tiddlywiki/mws-prisma";
+import { PrismaClientKnownRequestError } from "@tiddlywiki/mws-prisma/client/internal/prismaNamespace";
+import { dist_resolve, is, Router, ServerRoute } from "@tiddlywiki/server";
 import Debug from "debug";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { secureHeaders } from 'hono/secure-headers';
 import * as path from "path";
 import { TW } from "tiddlywiki";
+import { StateObject } from "./RequestState";
+import { ServerState } from "./ServerState";
 import { SqliteAdapter } from "./db/sqlite-adapter";
-import { bootDefaultTiddlyWiki, defaultPreloadFunction, startupCache } from "./plugin-cache";
-import { createPasswordService } from "./services/PasswordService";
-import { bootTiddlyWiki } from "./services/tiddlywiki";
-import * as opaque from "@serenity-kit/opaque";
 import { UpdateTiddlyWikiCommand } from "./new-commands";
-import { PrismaClientKnownRequestError } from "@tiddlywiki/mws-prisma/client/internal/prismaNamespace";
-import { readFile } from "fs/promises";
+import { SessionManager } from "./new-managers/sessions";
+import { bootDefaultTiddlyWiki, defaultPreloadFunction, startupCache } from "./plugin-cache";
+import { PluginCache } from "./plugin-cache/PluginCache";
+import { createPasswordService } from "./services/PasswordService";
+import { ClientBuildDefinition, registerStatsRoute, SendAdmin, setupClientBuild } from "./services/setupDevServer";
 
 
 declare module "@tiddlywiki/events" {
@@ -27,7 +26,7 @@ declare module "@tiddlywiki/events" {
     "mws.adapter.init.before": [adapter: SqliteAdapter];
     "mws.adapter.init.after": [adapter: SqliteAdapter];
     "mws.cache.init.before": [{ cacheArrayStrings: string[] }];
-    "mws.cache.init.after": [{ cache: TiddlerCache }];
+    "mws.cache.init.after": [{ cache: PluginCache }];
 
   }
 }
