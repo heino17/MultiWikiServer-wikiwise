@@ -1,13 +1,10 @@
-import { PrismaClient, Prisma } from "@tiddlywiki/mws-prisma";
-import { ITXClientDenyList } from "@tiddlywiki/mws-prisma";
-import { TW } from "tiddlywiki";
-import pkg from "../package.json";
-import { createPasswordService } from "./services/PasswordService";
-import { startupCache } from "./plugin-cache";
-import { Types } from "@tiddlywiki/mws-prisma";
+import { ITXClientDenyList, Prisma, PrismaClient, Types } from "@tiddlywiki/mws-prisma";
 import { dist_resolve } from "@tiddlywiki/server";
 import { readFileSync } from "fs";
+import { TW } from "tiddlywiki";
 import { SessionManager, SessionManagerObject } from "./new-managers/sessions";
+import { PluginCache } from "./plugin-cache/PluginCache";
+import { createPasswordService } from "./services/PasswordService";
 
 /** This is an alias for ServerState in case we want to separate the two purposes. */
 export type SiteConfig = ServerState;
@@ -50,7 +47,7 @@ export class ServerState {
     $tw: TW,
     public engine: PrismaEngineClient,
     public PasswordService: PasswordService,
-    public pluginCache: TiddlerCache
+    public pluginCache: PluginCache
   ) {
     this.wikiPath = wikiPath;
     this.cachePath = cachePath;
@@ -184,4 +181,3 @@ export interface ContentTypeInfo {
 };
 
 export type PasswordService = ART<typeof createPasswordService>;
-export type TiddlerCache = ART<typeof startupCache>;

@@ -27,8 +27,9 @@ const info: CommandInfo = {
   description: "Update TiddlyWiki to the latest version",
   arguments: [],
   options: [
-    ["registry-url", "Download the tiddlywiki registry entry from this URL instead of NPM."],
-    ["manual-tarball", "Path to a tarball file to manually extract instead of downloading. This runs the command entirely offline. The version will be extracted from the package.json file."],
+    ["manual-version <string>", "Download the specified version of TiddlyWiki from NPM."],
+    ["registry-url <string>", "Download the tiddlywiki registry entry from this URL instead of NPM."],
+    ["manual-tarball <string>", "Path to a tarball file to manually extract instead of downloading. This runs the command entirely offline. The version will be extracted from the package.json file."],
   ],
   getHelp() {
     return [
@@ -47,6 +48,7 @@ const info: CommandInfo = {
 export class UpdateTiddlyWikiCommand extends BaseCommand<[], {
   "registry-url"?: [string];
   "manual-tarball"?: [string];
+  "manual-version"?: [string];
 }> {
   static info = info;
 
@@ -55,10 +57,10 @@ export class UpdateTiddlyWikiCommand extends BaseCommand<[], {
   async execute() {
     // this gets called early, so it cannot expect the normal MWS config environment
     // from "cli.execute.before" in startup.ts. It cannot call other commands.
-    await new UpdateTiddlyWiki(
+    const { tw5Path, version } = await new UpdateTiddlyWiki(
       this.options["registry-url"]?.[0],
-      this.options["manual-tarball"]?.[0]
-    ).getLatestTiddlyWiki(this.wikiPath);
+      this.options["manual-tarball"]?.[0],
+    ).getLatestTiddlyWiki(this.wikiPath, this.options["manual-version"]?.[0],);
   }
 
 }
@@ -88,7 +90,7 @@ export class UpdateTiddlyWiki {
       throw new Error("extracted files don't make sense.");
   }
 
-  async getLatestTiddlyWiki(wikiPath: string) {
+  async getLatestTiddlyWiki(wikiPath: string, manualVersion: string | undefined) {
     if (!wikiPath) throw new Error("wikiPath is required");
     await mkdir(path.resolve(wikiPath, "tw5"), { recursive: true });
     let tarballPath: string;
@@ -98,8 +100,10 @@ export class UpdateTiddlyWiki {
     } else {
       console.log("Fetching latest TiddlyWiki info...");
       const tw5Info = await this.getTiddlyWikiNPM(wikiPath);
-      const latest = tw5Info["dist-tags"].latest;
+      const latest = manualVersion ?? tw5Info["dist-tags"].latest;
       const latestInfo = tw5Info.versions[latest];
+      if(!latestInfo) 
+        throw "The specified version does not exist";
       tarballPath = path.resolve(wikiPath, "tw5", "tw5-" + latest + ".tgz");
       if (!existsSync(tarballPath)) {
         console.log("Fetching TiddlyWiki", latest, "tarball...");
@@ -131,6 +135,8 @@ export class UpdateTiddlyWiki {
     await rename(extractFolder2, newFolder);
     await rm(extractFolder, { recursive: true, force: true });
     console.log("Tiddlywiki extracted to", path.relative(wikiPath, newFolder))
+
+    return { tw5Path: path.relative(wikiPath, newFolder), version };
 
   }
 

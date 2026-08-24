@@ -4,14 +4,13 @@ import * as fs from "fs";
 import * as path from "path";
 import { TW } from "tiddlywiki";
 import { createGzip } from "zlib";
-import { mapGetInit } from "../new-managers";
-import { open, readdir, stat } from "fs/promises";
-import { WikiPluginCache } from ".";
+import { stat, writeFile } from "fs/promises";
 import { readableBuffers } from "../utils";
-import { BodyFormat, checkPath, checkQueryKeys, dist_resolve, ServerRequest } from "@tiddlywiki/server";
+import { BodyFormat, checkPath, checkQueryKeys, dist_resolve, ServerRequest, truthy } from "@tiddlywiki/server";
 import { serverEvents } from "@tiddlywiki/events";
 import { PassThrough, Readable } from "stream";
 import { pipeline } from "stream/promises";
+import { FileNotFoundError, hashFile, PluginHashes } from "./PluginCache";
 
 export const defaultPreloadFunction = "$tw.preloadTiddler";
 
@@ -29,19 +28,21 @@ serverEvents.on("mws.routes", (root, config) => {
     if (path.relative(path.resolve(config.wikiPath, "cache"), pluginFolder).startsWith(".."))
       throw new Error("Parent path access detected");
 
-    const plugin = state.pluginCache.filePlugins.get(state.pathParams.plugin);
-    if (!plugin) throw state.sendEmpty(404, { "x-reason": "Plugin not found" });
+    await state.pluginCache.assertPathHashes(arrayString, [state.pathParams.plugin]).catch(e => {
+      throw e instanceof FileNotFoundError ? state.sendEmpty(404, { "x-reason": "Plugin not found" }) : e;
+    });
 
     const hasher = state.pluginCache.pluginHashes(arrayString);
-    await hasher.assertTitles(state.pluginCache, [plugin]);
+    const hash = hasher.get(state.pathParams.plugin);
+    if (!hash) throw state.sendEmpty(404, { "x-reason": "Plugin not found" });
 
-    const etag = `"${hasher.get(plugin)}"`;
+    const etag = `"${hash}"`;
 
     // maxage covers preload, staleWhileRevalidate allows a second refresh to clear up stale data
     state.applyHeaders({
       contentType: "application/javascript",
       cacheControl: { public: true, maxAge: 6, staleWhileRevalidate: 86400 },
-      etag
+      etag,
     });
 
     const match = state.headers.ifNoneMatch.has(etag);
@@ -78,11 +79,11 @@ serverEvents.on("mws.routes", (root, config) => {
 
 
 export async function importPlugins(
-  cacheFolder: string,
-  type: string,
   $tw: TW,
+  wikiFolder: string,
+  arrayStrings: readonly string[],
+  pluginHashes: PluginHashes,
   mwsVersion: string,
-  arrayStrings: readonly string[]
 ) {
 
   const twFolder = path.join($tw.boot.corePath, "..");
@@ -112,42 +113,48 @@ export async function importPlugins(
   plugins.push([dist_resolve("../plugins/client"), mwsRelative] as const);
 
   const bootTiddlers = $tw.loadTiddlersFromPath($tw.boot.bootPath).map(e => e.tiddlers).flat();
-  const bootFile = path.join(cacheFolder, "tiddlywiki", $tw.version, "boot.json");
+  const bootFile = path.join(wikiFolder, "cache", "tiddlywiki", $tw.version, "boot.json");
   fs.mkdirSync(path.dirname(bootFile), { recursive: true });
   if (!fs.existsSync(bootFile))
-    fs.writeFileSync(bootFile, JSON.stringify(bootTiddlers, null, 2));
+    await writeFile(bootFile, JSON.stringify(bootTiddlers, null, 2));
 
+  const { pluginInfoKeys, pluginsInfo } = await importPluginsInner(
+    $tw,
+    plugins,
+    wikiFolder,
+    arrayStrings,
+    pluginHashes,
+    mwsRelative,
+    mwsVersion,
+  );
 
-  // it is recommended to add <link rel="preload" to the header since these cannot be deferred
-  // <link rel="preload" href="main.js" as="script" integrity="..." crossorigin="anonymous" />
-  // and recommended to specify the hashes for each file in their script tag. 
-  // <cript
-  //   src="https://example.com/example-framework.js"
-  //   integrity="sha384-oqVuAfXRKap7fdgcCY5uykM6+R9GqQ8K/uxy9rx7HNQlGYl1kPzQho1wx4JwY8wC"
-  //   crossorigin="anonymous"></script>
-  // this needs to be added to the tiddlywiki file before the script tags
-  // $tw = Object.create(null);
-  // $tw.preloadTiddlers = $tw.preloadTiddlers || [];
-  // $tw.preloadTiddler = function(fields) {
-  //   $tw.preloadTiddlers.push(fields);
-  // };
+  // fs.writeFileSync(path.join(wikiFolder, "cache", "tiddlywiki", $tw.version, "plugins.json"), JSON.stringify(pluginsList, null, 2));
+  const pluginPaths = pluginsInfo.map(e => ({
+    version: $tw.version,
+    title: e.title,
+    path: e.newPath,
+    name: e.plugin.name,
+    desc: e.plugin.description,
+  }));
+
+  return { pluginInfoKeys, pluginsInfo, pluginPaths };
+
+}
+
+async function importPluginsInner(
+  $tw: TW,
+  plugins: (readonly [oldPath: string, relPath: string])[],
+  wikiFolder: string,
+  arrayStrings: readonly string[],
+  pluginHashes: PluginHashes,
+  mwsRelative: string,
+  mwsVersion: string,
+) {
   const pluginInfoKeys = new Set<string>();
-  const pluginsList: PluginDefinition[] = [];
-  /** Map of "title" to "dirname of plugin.json relative to cache folder" */
-  const tiddlerFiles = new Map<string, string>();
-  const tiddlerHashesStore = new Map<string, TiddlerHasher>();
-
-  function tiddlerHashes(arrayString: string) {
-    return mapGetInit(tiddlerHashesStore, arrayString, () => new TiddlerHasher(arrayString));
-  }
-  tiddlerHashes.toJSON = () => {
-    return Object.fromEntries(tiddlerHashesStore.entries());
-  };
-
-  await Readable.from(plugins).map(async ([oldPath, relativePluginPath]) => {
+  const pluginsInfoMapper = async ([oldPath, relativePluginPath]: string[]) => {
     const plugin = $tw.loadPluginFolder(oldPath);
     Object.keys(plugin).forEach(e => pluginInfoKeys.add(e));
-    const newPath = path.join(cacheFolder, relativePluginPath);
+    const newPath = path.join(wikiFolder, "cache", relativePluginPath);
     fs.mkdirSync(newPath, { recursive: true });
 
     if (!(plugin && plugin.title && plugin.text)) {
@@ -167,168 +174,43 @@ export async function importPlugins(
       }
     });
 
-    if (type === "server") {
-      // this is for tiddlywiki itself to use, if desired
-      plugin.tiddlers = JSON.parse(plugin.text).tiddlers;
-      delete plugin.text;
-      fs.writeFileSync(path.join(newPath, "plugin.info"), JSON.stringify(plugin));
-    } else if (type === "client") {
-      const jsonFile = path.join(newPath, "plugin.json");
-      const json = Buffer.from(JSON.stringify(plugin).replace(/<\//gi, "\\u003c/"), "utf8");
-      const jsonHash = crypto.createHash("sha384").update(json).digest("base64");
-      const writeFiles = !fs.existsSync(jsonFile) || await hashFile(jsonFile) !== jsonHash;
+    const jsonFile = path.join(newPath, "plugin.json");
+    const json = Buffer.from(JSON.stringify(plugin).replace(/<\//gi, "\\u003c/"), "utf8");
+    const jsonHash = crypto.createHash("sha384").update(json).digest("base64");
+    const writeFiles = !fs.existsSync(jsonFile) || await hashFile(jsonFile) !== jsonHash;
+
+    if (writeFiles) {
+      console.log("writing", jsonFile);
+      await writeFile(jsonFile, json);
+    }
+
+    const hashes = await Promise.all(arrayStrings.map(async (arrayString, index) => {
+      const hasher = pluginHashes(arrayString);
+      const { prefix, suffix } = hasher;
+      const gzpath = path.join(newPath, "plugin." + index + ".js.gz");
+      const hash = hasher.hashPluginFromBufferSync(relativePluginPath.replaceAll("\\", "/"), json);
       if (writeFiles) {
-        console.log("writing", jsonFile);
-        fs.writeFileSync(jsonFile, json);
+        await pipeline(
+          readableBuffers([prefix, json, suffix]),
+          createGzip(),
+          fs.createWriteStream(gzpath)
+        ).catch(e => {
+          console.log("Error writing file", gzpath, e);
+        });
       }
-
-      const hashes = await Promise.all(arrayStrings.map(async (arrayString, index) => {
-        const hasher = tiddlerHashes(arrayString);
-        const { prefix, suffix } = hasher;
-        const gzpath = path.join(newPath, "plugin." + index + ".js.gz");
-        const hash = hasher.hashPluginFromBufferSync(plugin.title, json);
-        if (writeFiles) {
-          await pipeline(
-            readableBuffers([prefix, json, suffix]),
-            createGzip(),
-            fs.createWriteStream(gzpath)
-          ).catch(e => {
-            console.log("Error writing file", gzpath, e);
-          });
-        }
-        return hash;
-      }));
-
-      tiddlerFiles.set(plugin.title, relativePluginPath.replaceAll("\\", "/"));
-
-      pluginsList.push({
-        path: relativePluginPath.replaceAll("\\", "/"),
-        hashes,
-        name: plugin.name,
-        description: plugin.description,
-        reportedVersion: plugin.version,
-        title: plugin.title,
-        pluginType: plugin["plugin-type"],
-        dependents: plugin.dependents,
-        author: plugin.author,
-        contentType: plugin.type,
-        type: "system"
-      });
-    }
-  }).toArray();
-
-  fs.writeFileSync(path.join(cacheFolder, "tiddlywiki-plugins.json"), JSON.stringify(pluginsList, null, 2));
-
-  return { tiddlerFiles, tiddlerHashes, pluginsList };
-
-}
-
-
-
-
-export class TiddlerHasher {
-  static async assertTitleHashes(cache: WikiPluginCache, arrayString: string, titles: string[]) {
-    const hasher = cache.pluginHashes(arrayString);
-    await hasher.assertTitles(cache, titles);
-  }
-  get prefix() { return Buffer.from(`${this.arrayString}(`, "utf8") }
-  get suffix() { return Buffer.from(`);`, "utf8"); }
-  private tiddlerHashes = new Map<string, string>();
-  toJSON() { return Object.fromEntries(this.tiddlerHashes.entries()); }
-  constructor(public arrayString: string) { }
-  async assertTitles(cache: WikiPluginCache, titles: string[]) {
-    return await Promise.all(titles.map(async title => {
-      const folder = cache.pluginFiles.get(title);
-      if (!folder)
-        throw new Error("unable to find plugin path for plugin: " + title);
-      if (!this.get(title))
-        await this.hashPluginFromFile(title, path.join(cache.cachePath, folder));
+      return hash;
     }));
-  }
-  get(title: string) {
-    return this.tiddlerHashes.get(title);
-  }
-  hashPluginFromBufferSync(title: string, json: Buffer) {
-    const hash = crypto.createHash("sha384")
-      .update(this.prefix)
-      .update(json)
-      .update(this.suffix)
-      .digest("base64");
-    this.tiddlerHashes.set(title, "sha384-" + hash);
-    return hash;
-  }
-  async hashPluginFromFile(title: string, newPath: string) {
-    const hasher = crypto.createHash("sha384");
-    const jsonPath = path.join(newPath, "plugin.json");
-    hasher.update(this.prefix);
-    await createFileChunkHasher(jsonPath, hasher, 512 * 1024)
-    hasher.update(this.suffix);
-    const hash = hasher.digest("base64");
-    this.tiddlerHashes.set(title, "sha384-" + hash);
-  }
+
+    return {
+      title: plugin.title,
+      hashes,
+      plugin,
+      newPath: relativePluginPath.replaceAll("\\", "/"),
+      oldPath: path.relative(wikiFolder, oldPath).replaceAll("\\", "/"),
+    };
+
+  };
+  const pluginsInfo: (ART<typeof pluginsInfoMapper> & {})[] = (await Readable.from(plugins).map(pluginsInfoMapper).toArray()).filter(truthy);
+
+  return { pluginsInfo, pluginHashes, pluginInfoKeys }
 }
-
-export interface PluginDefinition {
-  path: string;
-  hashes: readonly string[];
-  name: string;
-  description: string;
-  reportedVersion: string;
-  title: string;
-  pluginType: "plugin" | "theme" | "language";
-  dependents: string;
-  author: string;
-  contentType: string | undefined;
-  type: "system" | "installed";
-}
-
-
-
-const defaultFileChunkSize = 64 * 1024;
-/** Read a file, reusing the same buffer for every block to save GC. */
-async function* createFileChunkReader<T extends { update: (buf: Buffer) => T }>(filepath: string, hasher: T, chunkSize?: number): AsyncGenerator<Buffer, void, undefined> {
-  const s = await stat(filepath);
-  const resolvedChunkSize = chunkSize ?? Math.max(s.blksize || 0, defaultFileChunkSize);
-  if (!Number.isInteger(resolvedChunkSize) || resolvedChunkSize <= 0) {
-    throw new RangeError("chunkSize must be a positive integer");
-  }
-  const fd = await open(filepath, "r");
-  try {
-    while (true) {
-      const chunk = Buffer.allocUnsafe(resolvedChunkSize);
-      const { bytesRead } = await fd.read(chunk, 0, resolvedChunkSize, null);
-      if (bytesRead === 0) { return; }
-      yield bytesRead === resolvedChunkSize ? chunk : chunk.subarray(0, bytesRead);
-    }
-  } finally {
-    await fd.close();
-  }
-}
-
-async function createFileChunkHasher<T extends { update: (buf: Buffer) => T }>(filepath: string, hasher: T, chunkSize?: number) {
-  const s = await stat(filepath);
-  const resolvedChunkSize = chunkSize ?? Math.max(s.blksize || 0, defaultFileChunkSize);
-  if (!Number.isInteger(resolvedChunkSize) || resolvedChunkSize <= 0) {
-    throw new RangeError("chunkSize must be a positive integer");
-  }
-  const fd = await open(filepath, "r");
-  try {
-    const chunk = Buffer.allocUnsafe(resolvedChunkSize);
-    while (true) {
-      const { bytesRead } = await fd.read(chunk, 0, resolvedChunkSize, null);
-      if (bytesRead === 0) { return; }
-      hasher.update(chunk.subarray(0, bytesRead));
-    }
-  } finally {
-    await fd.close();
-  }
-}
-
-/** Read a file, reusing the same buffer for every block to save GC. */
-export async function hashFile(filepath: string) {
-  const hasher = crypto.createHash("sha384");
-  await createFileChunkHasher(filepath, hasher, 512 * 1024)
-  return hasher.digest("base64");
-}
-
-

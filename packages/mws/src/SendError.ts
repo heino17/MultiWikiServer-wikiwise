@@ -77,6 +77,12 @@ declare module "@tiddlywiki/server" {
 
     "ACCESS_DENIED":
     SendErrorItem<403, { reason: string }>
+
+    "INVALID_REQUEST":
+    SendErrorItem<400, null>
+
+    "TW5DOCS_NOT_FOUND":
+    SendErrorItem<404, null>
   }
 }
 SendError.oninstance.push(e => {
@@ -126,6 +132,8 @@ SendError.oninstance.push(e => {
       { e.skiplog = true; break; }
     case "INVALID_BODY_FORMAT": // a bug if this throws
     case "HOST_NOT_RECOGNIZED": // misconfigured server if this throws
+    case "INVALID_REQUEST":
+    case "TW5DOCS_NOT_FOUND":
       { break; }
     default:
       { const t: never = e; }

@@ -13,10 +13,16 @@ import { bootTiddlyWiki } from "../services/tiddlywiki";
 import { Debug } from "@prisma/client/runtime/client";
 import { loadWikiTiddlers } from "./importEditions";
 import { thrower } from "../new-managers";
+import { PluginCache } from "./PluginCache";
 export * from "./importPlugins";
 export * from "./importEditions";
+export * from "./PluginCache";
 
-export type WikiPluginCache = ART<typeof startupCache>;
+export const requiredPlugins = [
+  "$:/plugins/mws/client",
+  "$:/themes/tiddlywiki/snowwhite",
+  "$:/themes/tiddlywiki/vanilla",
+];
 
 const debug = Debug("mws:cache");
 
@@ -72,68 +78,53 @@ export async function startupCache(wikiPath: string, cacheArrayStrings: readonly
   const pkg = JSON.parse(fs.readFileSync(dist_resolve("../package.json"), "utf8"));
   Object.seal(cacheArrayStrings);
 
-  const $tw = await bootDefaultTiddlyWiki(wikiPath);
-  // we only need the client since we don't load plugins server-side
-  const {
-    tiddlerFiles: pluginFiles,
-    tiddlerHashes: pluginHashes,
-    pluginsList
-  } = await importPlugins(
-    cachePath,
-    "client",
-    $tw,
-    pkg.version,
-    cacheArrayStrings
-  );
+  const cache = new PluginCache(wikiPath, cacheArrayStrings);
 
-  const tw5Docs = loadWikiTiddlers($tw, path.resolve($tw.boot.corePath, "../editions/tw5.com"), []);
+  for (const e of await getTW5Paths(wikiPath)) {
+    const tw5path = path.resolve(wikiPath, "tw5", `tw5-5.${e.minor}.${e.patch}${e.extra}`);
+    const { TiddlyWiki } = require(path.resolve(tw5path, "boot/boot.js"));
+    const $tw = await bootTiddlyWiki(wikiPath, TiddlyWiki);
 
-  const requiredPlugins = [
-    "$:/plugins/mws/client",
-    "$:/themes/tiddlywiki/snowwhite",
-    "$:/themes/tiddlywiki/vanilla",
-  ];
+    // we only need the client since we don't load plugins server-side
+    const { pluginPaths } = await importPlugins($tw, wikiPath, cacheArrayStrings, cache.pluginHashes, pkg.version);
 
-  const result = $tw.wiki.renderTiddler("text/plain", "$:/core/templates/tiddlywiki5.html", {
-    variables: {
+    for (const plugin of pluginPaths) {
+      cache.pluginPaths.set(plugin.version, plugin.title, plugin.path);
+      cache.pluginPathsInfo.set(plugin.path, plugin);
+    }
+
+    const tw5Docs = loadWikiTiddlers($tw, path.resolve($tw.boot.corePath, "../editions/tw5.com"), []);
+
+    const result = $tw.wiki.renderTiddler(
+      "text/plain",
+      "$:/core/templates/tiddlywiki5.html",
       // the boot and library tiddlers get rendered into the page
       // this list gets saved in the store array
       // we have to render at least one tiddler
-      saveTiddlerFilter: "$:/SplashScreen"
-    }
-  });
+      { variables: { saveTiddlerFilter: "$:/SplashScreen" } }
+    );
 
-  const filepath = path.resolve(cachePath, "tiddlywiki5.html")
 
-  fs.writeFileSync(filepath, result);
+    await writeFile(path.resolve(cachePath, "tiddlywiki", $tw.version, "tiddlywiki5.html"), result);
 
-  const filePlugins = new Map([...pluginFiles.entries()].map(e => e.reverse() as [string, string]));
-
-  return {
-    /** `(arrayString: string): TiddlerHasher;` */
-    pluginHashes,
-    /** Map of "title" to `relative("/wiki/cache", dirname("plugin.json"))`. Reverse of filePlugins. */
-    pluginFiles,
-    /** Map of `relative("/wiki/cache", dirname("plugin.json"))` to "title". Reverse of pluginFiles. */
-    filePlugins,
-    /** List of plugins saved in the cache. */
-    pluginsList,
-    /** List of plugins generally required to make MWS work. */
-    requiredPlugins,
-    /** The actual path of "/wiki/cache" */
-    cachePath,
-    /** Template "preloadFunction" values which are gzipped at startup and saved to disk to save CPU cycles per request. */
-    cacheArrayStrings,
-    tw5Docs: {
+    const cacheTW5Docs = {
       plugins: [
         "$:/core",
         ...tw5Docs[0].plugins.map(folder =>
-          filePlugins.get(path.join("tiddlywiki", $tw.version, folder).replaceAll("\\", "/"))
+          cache.pluginPathsInfo.get(path.join("tiddlywiki", $tw.version, folder).replaceAll("\\", "/"))?.title
           ?? thrower(new Error("couldn't find the tw5 plugin " + folder))
         )
       ],
       tiddlers: tw5Docs[0].tiddlers,
       version: $tw.version,
-    },
-  };
+    };
+
+    await writeFile(path.resolve(cachePath, "tiddlywiki", $tw.version, "docs.json"), JSON.stringify(cacheTW5Docs));
+
+    cache.versions.add($tw.version);
+
+  }
+
+  return cache;
+
 }
