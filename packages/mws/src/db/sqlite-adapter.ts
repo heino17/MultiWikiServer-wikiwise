@@ -145,6 +145,23 @@ export class SqliteAdapter {
     migrations.sort();
 
     const new_migrations = migrations.filter(m => !applied_migrations.has(m) && m !== "migration_lock.toml");
+
+    const extra_migrations = Array.from(applied_migrations).filter(e => !migrations.includes(e));
+    if (extra_migrations.length) {
+      console.log([
+        "=======================================================================================",
+        "The database you are trying to open is from a newer version of MWS. This is based on",
+        "database updates only, so please use a version with " + applied_migrations.size + " migrations",
+        "",
+        "CWD: " + process.cwd(),
+        "DB: " + this.databasePath,
+        "",
+        "To prevent data loss the program will now exit.",
+        "=======================================================================================",
+      ].join("\n"))
+      process.exit(1);
+    }
+
     if (!new_migrations.length) return;
 
     function generateChecksum(fileContent: string) {
