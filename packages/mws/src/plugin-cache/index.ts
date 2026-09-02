@@ -14,6 +14,7 @@ import { Debug } from "@prisma/client/runtime/client";
 import { loadWikiTiddlers } from "./importEditions";
 import { thrower } from "../new-managers";
 import { PluginCache } from "./PluginCache";
+import { getTW5Paths, startupValidateTW5Folder } from "./UpdateTiddlyWiki";
 export * from "./importPlugins";
 export * from "./importEditions";
 export * from "./PluginCache";
@@ -35,39 +36,18 @@ interface TW5RegistryInfo {
   "dist-tags": { latest: string; };
 }
 
-export async function getTW5Paths(wikiPath: string) {
-  if (!fs.existsSync(path.resolve(wikiPath, "tw5"))) {
-    throw new Error("You need to run update-tiddlywiki first");
-  }
-  const folders = (await Promise.all((await readdir(path.resolve(wikiPath, "tw5"))).map(async e => {
-    const s = await stat(path.resolve(wikiPath, "tw5", e));
-    if (!s.isDirectory()) return;
-    const t = /^tw5-5\.([0-9]+)\.([0-9]+)(.*)/.exec(e);
-    if (!t) return;
-    const [, minor, patch, extra] = t;
-    const name = `tw5-5.${minor}.${patch}${extra}`;
-    return { minor, patch, extra, name };
-  }))).filter(truthy).sort((a, b) => {
-    return +a.minor - +b.minor
-      || +a.patch - +b.patch
-      || a.extra.localeCompare(b.extra);
-  });
-
-  if (!folders.length) {
-    throw new Error("No valid tiddlywiki folder found");
-  }
-
-  await writeFile(
-    path.resolve(wikiPath, "tw5", "versions.txt"),
-    folders.map(e => `tw5-5.${e.minor}.${e.patch}${e.extra}`).join("\n")
-  );
-
-  return folders;
-}
 
 export async function bootDefaultTiddlyWiki(wikiPath: string) {
   const e = (await getTW5Paths(wikiPath)).pop()!;
-  const twPath = path.resolve(wikiPath, "tw5", `tw5-5.${e.minor}.${e.patch}${e.extra}`);
+  const twPath = path.resolve(wikiPath, "tw5", e.name);
+  const { TiddlyWiki } = require(path.resolve(twPath, "boot/boot.js"));
+  return await bootTiddlyWiki(wikiPath, TiddlyWiki);
+}
+
+export async function bootTiddlyWikiVersion(wikiPath: string, version: string) {
+  const twPath = path.resolve(wikiPath, "tw5", version);
+  if (!fs.existsSync(twPath))
+    throw new Error("TiddlyWiki version " + version + " is not installed");
   const { TiddlyWiki } = require(path.resolve(twPath, "boot/boot.js"));
   return await bootTiddlyWiki(wikiPath, TiddlyWiki);
 }
@@ -78,12 +58,13 @@ export async function startupCache(wikiPath: string, cacheArrayStrings: readonly
   const pkg = JSON.parse(fs.readFileSync(dist_resolve("../package.json"), "utf8"));
   Object.seal(cacheArrayStrings);
 
-  const cache = new PluginCache(wikiPath, cacheArrayStrings);
+  await startupValidateTW5Folder(wikiPath);
+  const versions = await getTW5Paths(wikiPath)
+  const cache = new PluginCache(wikiPath, cacheArrayStrings, versions.map(e => e.name));
 
-  for (const e of await getTW5Paths(wikiPath)) {
-    const tw5path = path.resolve(wikiPath, "tw5", `tw5-5.${e.minor}.${e.patch}${e.extra}`);
-    const { TiddlyWiki } = require(path.resolve(tw5path, "boot/boot.js"));
-    const $tw = await bootTiddlyWiki(wikiPath, TiddlyWiki);
+
+  for (const e of versions) {
+    const $tw = await bootTiddlyWikiVersion(wikiPath, e.name);
 
     // we only need the client since we don't load plugins server-side
     const { pluginPaths } = await importPlugins($tw, wikiPath, cacheArrayStrings, cache.pluginHashes, pkg.version);
@@ -120,8 +101,6 @@ export async function startupCache(wikiPath: string, cacheArrayStrings: readonly
     };
 
     await writeFile(path.resolve(cachePath, "tiddlywiki", $tw.version, "docs.json"), JSON.stringify(cacheTW5Docs));
-
-    cache.versions.add($tw.version);
 
   }
 

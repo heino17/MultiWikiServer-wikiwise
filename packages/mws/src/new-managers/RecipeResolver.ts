@@ -389,19 +389,20 @@ export class RecipeResolver {
     const lastEventId = String(maxSeq._max.seq ?? 0);
 
     const getIndexEtag = (temp: string, pluginCache: PluginCache) => {
-      const plugins = getPluginList(pluginCache);
+      const plugins = getPluginList();
       // this.assertPlugins();
       const hash = createHash("md5");
       hash.update(temp);
       hash.update(this.recipe.recipe_bags.map(e => e.bag.name).join(","));
       // this is always needed because of the integrity hashes
-      hash.update(plugins.map(e => pluginCache.getHashForTitle(template.twVersion, injectionFunction, e) ?? "").join(","));
+      const version = pluginCache.versionFromTemplate(template.twVersion);
+      hash.update(plugins.map(e => pluginCache.getHashForTitle(version, injectionFunction, e) ?? "").join(","));
       hash.update(lastEventId);
       const contentDigest = hash.digest("hex");
       return `"${contentDigest}"`;
     }
 
-    const getPluginList = (pluginCache: PluginCache) => {
+    const getPluginList = () => {
       const { customHtmlEnabled, requiredPluginsEnabled } = template;
 
       const plugins = [...new Set([

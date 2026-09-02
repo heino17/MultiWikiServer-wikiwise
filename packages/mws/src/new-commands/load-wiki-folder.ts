@@ -1,5 +1,5 @@
 import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
-import { PluginCache, loadWikiTiddlers } from "../plugin-cache";
+import { PluginCache, bootTiddlyWikiVersion, loadWikiTiddlers } from "../plugin-cache";
 import { TiddlerFields, TW } from "tiddlywiki";
 import * as path from "path";
 import { WikiStore, BagDataAdapter, RecipeDataAdapter, toMappingRows } from "../new-managers";
@@ -71,16 +71,22 @@ export class LoadWikiFolderCommand extends BaseCommand<[string], {
 
 		const ownerRoles = (this.options["owner-roles"] ?? []).map((role) => role);
 
-		// const tiddlywikiVersion = this.options["tiddlywiki-version"]?.[0];
+		const template = await this.config.engine.template.findUnique({
+			where: { name: templateName }
+		})
 
-		if (!templateName) {
+		if (!template) {
 			throw new Error(`Template ${templateName} does not exist.`);
 		}
+
+		const version = this.config.pluginCache.versionFromTemplate(template.definition.twVersion);
+		const $tw = await bootTiddlyWikiVersion(this.config.wikiPath, version);
+
 
 		const { pluginTitles, bags } = loadWikiFolder({
 			wikiPath: path.resolve(this.params[0]),
 			cache: this.config.pluginCache,
-			$tw: this.$tw,
+			$tw,
 			bagNameRoot,
 			bagNamePrefix,
 		});

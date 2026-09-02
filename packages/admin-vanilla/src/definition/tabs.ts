@@ -42,6 +42,7 @@ export type FieldType =
   | "validation-report"
   | "resolver-preview"
   | "search-multiselect"
+  | "search-optional"
   | "prefix-table"
   // | "reference"
   // | "reference-list"
@@ -82,6 +83,7 @@ export const fieldTypeZodShapes = {
   "validation-report": z.string(),
   "resolver-preview": z.string(),
   "search-multiselect": z.string().array(),
+  "search-optional": z.string().nullable(),
   "prefix-table": z.array(z.object({
     prefix: z.string(),
     bagName: z.string(),
@@ -113,6 +115,7 @@ export const fieldTypeCreateFactories = {
   "validation-report": () => "",
   "resolver-preview": () => "",
   "search-multiselect": () => [],
+  "search-optional": () => null,
   "prefix-table": () => [],
   "parameter-list": () => [],
   "relationship-table": () => [],
@@ -353,7 +356,7 @@ const tabs = {
         type: "switch",
         section: "authored",
         mode: "create edit",
-        description: "Core plugins enable wiki sync functionality. Disable them for vanilla wikis or custom sync implementations.",
+        description: "Core plugins enable wiki sync functionality. Disabling removes the plugins, but does not disable the endpoints.",
       },
       {
         key: "externalStore",
@@ -365,20 +368,19 @@ const tabs = {
       },
       {
         key: "externalPlugins",
-        label: "Load Plugins via Script Tags",
+        label: "Enable Plugin Caching",
         type: "switch",
         section: "authored",
         mode: "create edit",
-        description: "Loads plugin JSON on the client via script tags, allowing the browser to cache plugins separate from the store.",
+        description: "Serves plugins separately, allowing the browser to cache plugins separate from the store.",
       },
       {
         key: "twVersion",
         label: "TiddlyWiki Version",
-        type: "select",
+        type: "search-optional",
         section: "authored",
         mode: "create edit",
-        description: "TW5 version pinning.",
-
+        description: "TW5 version pinning. Leave blank to use site default.",
       },
       {
         key: "customHtmlEnabled",
@@ -402,7 +404,7 @@ const tabs = {
         type: "string",
         section: "authored",
         mode: "create edit",
-        description: "Name of the JavaScript function to call with tiddlers, for example $tw.preloadTiddlers.",
+        description: "Name of the JavaScript function to call with each tiddler, for example $tw.preloadTiddler.",
       },
       {
         key: "injectionLocation",
@@ -410,7 +412,7 @@ const tabs = {
         type: "string",
         section: "authored",
         mode: "create edit",
-        description: "Inject the tiddlers before this string in the HTML file. It must not be inside a script tag, for example <!-- INJECT STORE TIDDLERS HERE -->.",
+        description: "Inject the tiddlers before this string in the HTML file, for example <!-- INJECT STORE TIDDLERS HERE -->. It must not be inside a script tag.",
       },
       {
         key: "defaultWritableBag",
@@ -439,13 +441,13 @@ const tabs = {
     ],
     fieldGroups: {
       authored: [
-        { title: "Template basics", keys: ["name", "description"], width: fullWidth, layout: stackLayout },
+        { title: "Template basics", keys: ["name", "description", "twVersion"], width: fullWidth, layout: stackLayout },
         { title: "Writable routing", description: writableRoutingDescription, keys: ["writablePrefixBags"], width: fullWidth },
         { title: "Bags", keys: ["readonlyBags"], width: halfWidth },
         { title: "Plugins", keys: ["plugins", "requiredPluginsEnabled", "externalPlugins"], width: halfWidth, layout: stackLayout },
         { title: "Template Users", description: "Users who can set this template on a recipe. This only applies to the user creating the recipe.", keys: ["templateUsers"], width: halfWidth },
         { title: "Template Admins", description: "Users able to make changes on this page. This affects all recipes that use the template, regardless of any other permissions.", keys: ["templateAdmins"], width: halfWidth },
-        { title: "Custom HTML shell", keys: ["htmlContent", "injectionArray", "injectionLocation"], headerFieldKey: "customHtmlEnabled", disabledWhenHeaderOff: true, width: fullWidth, layout: stackLayout },
+        { title: "Custom HTML shell", keys: ["htmlContent", "injectionFunction", "injectionLocation"], headerFieldKey: "customHtmlEnabled", disabledWhenHeaderOff: true, width: fullWidth, layout: stackLayout },
       ],
       runtime: [
         // { keys: ["defaultWritableBag"], width: halfWidth },
@@ -780,7 +782,7 @@ export interface TemplateAdminRecord {
   requiredPluginsEnabled: boolean;
   externalStore: boolean;
   externalPlugins: boolean;
-  twVersion: string;
+  twVersion: string | null;
   customHtmlEnabled: boolean;
   htmlContent: string;
   injectionFunction: string;

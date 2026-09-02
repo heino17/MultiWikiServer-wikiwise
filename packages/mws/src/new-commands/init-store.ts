@@ -5,7 +5,6 @@ import { LoadWikiFolderCommand } from "./load-wiki-folder";
 import { RoleImportWriter, TemplateImportWriter, UserImportWriter } from "../new-managers";
 import { IdString } from "@mws/admin-vanilla/src/definition/tabs";
 import { serverEvents } from "@tiddlywiki/events";
-import { getTW5Paths } from "../plugin-cache";
 
 serverEvents.on("cli.register", (commands) => {
 	commands[info.name] = { info, Command: InitStoreCommand };
@@ -54,7 +53,7 @@ export class InitStoreCommand extends BaseCommand {
 					customHtmlEnabled: false,
 					externalPlugins: true,
 					externalStore: false,
-					twVersion: "",
+					twVersion: null,
 					htmlContent: "",
 					injectionFunction: "",
 					injectionLocation: "",
@@ -87,7 +86,6 @@ export class InitStoreCommand extends BaseCommand {
 				"overwrite": false,
 				"owner-roles": ["ADMIN"]
 			});
-			command.$tw = this.$tw;
 			command.config = this.config;
 			await command.execute();
 		};

@@ -21,8 +21,8 @@ import { ClientBuildDefinition, registerStatsRoute, SendAdmin, setupClientBuild 
 
 declare module "@tiddlywiki/events" {
   interface ServerEventsMap {
-    "mws.config.init.before": [config: ServerState, $tw: TW];
-    "mws.config.init.after": [config: ServerState, $tw: TW];
+    "mws.config.init.before": [config: ServerState];
+    "mws.config.init.after": [config: ServerState];
     "mws.adapter.init.before": [adapter: SqliteAdapter];
     "mws.adapter.init.after": [adapter: SqliteAdapter];
     "mws.cache.init.before": [{ cacheArrayStrings: string[] }];
@@ -34,7 +34,6 @@ declare module "@tiddlywiki/events" {
 declare module "@tiddlywiki/commander" {
   interface BaseCommand {
     config: ServerState;
-    $tw: TW;
   }
 }
 // this is the primary startup path
@@ -78,14 +77,12 @@ serverEvents.on("cli.execute.before", async (name, params, options, instance) =>
     adapter: adapter.adapter
   });
 
-  const $tw = await bootDefaultTiddlyWiki(wikiPath);
-  const config = new ServerState({ wikiPath, cachePath, storePath }, $tw, engine, passwordService, cache);
-  await serverEvents.emitAsync("mws.config.init.before", config, $tw);
+  const config = new ServerState({ wikiPath, cachePath, storePath }, engine, passwordService, cache);
+  await serverEvents.emitAsync("mws.config.init.before", config);
   await config.init();
-  await serverEvents.emitAsync("mws.config.init.after", config, $tw);
+  await serverEvents.emitAsync("mws.config.init.after", config);
 
   instance.config = config;
-  instance.$tw = $tw;
 });
 
 function readPasswordMasterKey(wikiPath: string) {
