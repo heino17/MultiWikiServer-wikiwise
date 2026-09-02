@@ -27,12 +27,12 @@ export class ServerState {
   attachmentSizeLimit = 0; // 100 * 1024; // 100 KB
   enableDocsRoute = false;
 
-  fieldModules;
-  contentTypeInfo: Record<string, ContentTypeInfo>;
+  // fieldModules;
+  // contentTypeInfo: Record<string, ContentTypeInfo>;
 
-  getContentType(type?: string): ContentTypeInfo {
-    return type && this.contentTypeInfo[type] || this.contentTypeInfo[DEFAULT_CONTENT_TYPE]!;
-  }
+  // getContentType(type?: string): ContentTypeInfo {
+  //   return type && this.contentTypeInfo[type] || this.contentTypeInfo[DEFAULT_CONTENT_TYPE]!;
+  // }
 
   SessionManager: SessionManagerObject;
 
@@ -44,7 +44,7 @@ export class ServerState {
     },
     // public wikiPath: string,
     /** The $tw instance needs to be disposable once commands are complete. */
-    $tw: TW,
+    // $tw: TW,
     public engine: PrismaEngineClient,
     public PasswordService: PasswordService,
     public pluginCache: PluginCache
@@ -53,24 +53,14 @@ export class ServerState {
     this.cachePath = cachePath;
     this.storePath = storePath;
 
-    this.fieldModules = $tw.Tiddler.fieldModules;
-    this.contentTypeInfo = $tw.config.contentTypeInfo;
+    // this.fieldModules = $tw.Tiddler.fieldModules;
+    // this.contentTypeInfo = $tw.config.contentTypeInfo;
 
     this.SessionManager = SessionManager;
 
     const pkg = JSON.parse(readFileSync(dist_resolve("../package.json"), "utf8"));
 
-    if (!this.contentTypeInfo[DEFAULT_CONTENT_TYPE])
-      throw new Error(
-        "The content type info for "
-        + DEFAULT_CONTENT_TYPE
-        + " cannot be found in TW5"
-      );
-
-
-
-
-    this.versions = { tw5: $tw.packageInfo.version, mws: pkg.version };
+    this.versions = { tw5: pluginCache.versions, mws: pkg.version as string };
 
   }
 

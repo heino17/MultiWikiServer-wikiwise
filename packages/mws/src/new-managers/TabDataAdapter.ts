@@ -386,6 +386,9 @@ export class TemplateDataAdapter extends TabDataAdapter<"templates"> {
     });
 
     return templates.map((template): ITemplateRow => {
+      /* @deprecated - version 0.2 */
+      if (template.definition.twVersion?.startsWith("tw5-"))
+        template.definition.twVersion = template.definition.twVersion.slice(4);
       return {
         ...template.definition,
         id: new IdString(template.id),

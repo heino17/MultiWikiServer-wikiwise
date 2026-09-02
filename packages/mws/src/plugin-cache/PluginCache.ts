@@ -30,11 +30,11 @@ export type PluginHashes = ART<typeof pluginHashesFactory>;
 export class PluginCache {
 
   pluginHashes: PluginHashes;
-  versions: Set<string> = new Set();
 
   constructor(
     public wikiPath: string,
     public cacheArrayStrings: readonly string[],
+    public versions: string[],
   ) {
     this.pluginHashes = pluginHashesFactory(wikiPath);
   }
@@ -42,6 +42,13 @@ export class PluginCache {
   pluginPaths = new DeepMap<[version: string, title: string], [path: string]>();
   pluginPathsInfo = new Map<string, { version: string; title: string; path: string; name: string; desc: string; }>();
   get pluginsList() { return Array.from(this.pluginPathsInfo.values()) }
+  get latestVersion() { return this.versions.slice(-1)[0]; }
+
+  versionFromTemplate(version: string | null | undefined) {
+    /* @deprecated - version 0.2 */
+    if (version?.startsWith("tw5-")) version = version.slice(4);
+    return version || this.latestVersion;
+  }
 
   getHashForTitle(version: string, preloader: string, title: string) {
     const path = this.pluginPaths.get(version, title);

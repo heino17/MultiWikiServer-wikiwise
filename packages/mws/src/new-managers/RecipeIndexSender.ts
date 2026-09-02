@@ -42,10 +42,12 @@ export async function serveWikiIndex(
     case "index": {
       const { recipe, index, etag } = await getData();
       const { injectionFunction, twVersion } = index.template;
+      const version = state.pluginCache.versionFromTemplate(twVersion);
+      if (!version) throw new Error("wut");
       const template = index.template.customHtmlEnabled ? index.template.htmlContent :
-        await readFile(resolve(state.config.cachePath, "tiddlywiki", twVersion, "tiddlywiki5.html"), "utf8");
-      const plugins = index.getPluginList(state.pluginCache);
-      await initPlugins(state.pluginCache, injectionFunction, twVersion, plugins);
+        await readFile(resolve(state.config.cachePath, "tiddlywiki", version, "tiddlywiki5.html"), "utf8");
+      const plugins = index.getPluginList();
+      await initPlugins(state.pluginCache, injectionFunction, version, plugins);
       return await new WikiIndexSender(
         state,
         recipe,
@@ -69,9 +71,11 @@ export async function serveWikiIndex(
       })();
       const { injectionFunction, twVersion } = index.template;
 
-      const plugins = index.getPluginList(state.pluginCache);
-      await initPlugins(state.pluginCache, injectionFunction, twVersion, plugins);
-      const store = new WikiStoreWriter(state, recipe, index, type, plugins, twVersion);
+      const version = state.pluginCache.versionFromTemplate(twVersion);
+
+      const plugins = index.getPluginList();
+      await initPlugins(state.pluginCache, injectionFunction, version, plugins);
+      const store = new WikiStoreWriter(state, recipe, index, type, plugins, version);
 
       const match = state.headers.ifNoneMatch.has(newEtag);
 
@@ -154,7 +158,6 @@ abstract class IndexSender {
     // const { pluginFiles, pluginHashes } = this.state.pluginCache;
     const preloadFunction = this.injectionFunction;
     return plugins.map(e => {
-      console.log(plugins);
       const plugin = this.cache.pluginPaths.get(this.twVersion, e)!;
       ok(plugin);
       const h = this.state.pluginCache.pluginHashes(preloadFunction).get(plugin)!;
@@ -350,7 +353,7 @@ class WikiIndexSender extends IndexSender {
     this.recipeSlug = encodeURIComponent(recipe.slug);
     this.wikiSlug = recipe.slug;
     this.pluginCache = state.pluginCache;
-    this.twVersion = index.template.twVersion;
+    this.twVersion = state.pluginCache.versionFromTemplate(index.template.twVersion);
 
     this.makeStoreWriter = () => {
       return new WikiStoreWriter(

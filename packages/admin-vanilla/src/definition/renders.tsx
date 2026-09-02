@@ -67,8 +67,11 @@ function getLookupOptions(fieldKey: string, itemsByTab: AdminRecordStore): strin
   if (fieldKey === "plugins") {
     return Array.from(itemsByTab.availablePluginNames);
   }
-  if (fieldKey === "userRoles" 
-    || fieldKey === "bagPermissions" 
+  if(fieldKey === "twVersion"){
+    return embeddedServerResponse.tw5Versions;
+  }
+  if (fieldKey === "userRoles"
+    || fieldKey === "bagPermissions"
     || fieldKey === "recipeAdmins"
     || fieldKey === "recipeUsers"
     || fieldKey === "templateAdmins"
@@ -296,6 +299,25 @@ function renderSearchMultiselectFieldSidebar(ctx: ReadonlyFieldContext<any>): JS
   </ul>;
 }
 
+function renderSearchFieldSidebar(ctx: ReadonlyFieldContext<string | null>): JSX.Node {
+  return <div class="field-callout"><p>{formatFieldValue(ctx.value ?? "")}</p></div>;
+}
+
+function renderSearchFieldEditor(ctx: FieldEditorContext<string | null> | ReadonlyFieldContext<string | null>) {
+  if (ctx.field.mode === "server" || ctx.field.mode === "" || !("onDraftChange" in ctx)) {
+    return renderSearchFieldSidebar(ctx);
+  }
+  const { field, value, disabled, itemsByTab, inputId, onDraftChange } = ctx;
+  return renderSearchableInput({
+    id: inputId,
+    currentValue: value ?? "",
+    placeholder: field.label,
+    options: getLookupOptions(field.key, itemsByTab),
+    disabled,
+    onInput: (nextValue) => onDraftChange(field.key, nextValue || null),
+  });
+}
+
 function renderSearchMultiselectFieldEditor(ctx: FieldEditorContext<any>) {
   const { field, value, disabled, fieldState, itemsByTab, inputId, onDraftChange, onPendingRowsChange } = ctx;
   if (typeof value === "string") {
@@ -309,9 +331,9 @@ function renderSearchMultiselectFieldEditor(ctx: FieldEditorContext<any>) {
   const pendingRowCount = fieldState.pendingRows[field.key] ?? 0;
   const lookupOptions = getLookupOptions(field.key, itemsByTab);
   const itemLabel = field.label;
-    // field.key === "plugins" ? "plugin" :
-    //   field.key === "userRoles" ? "role id" :
-    //     "bag";
+  // field.key === "plugins" ? "plugin" :
+  //   field.key === "userRoles" ? "role id" :
+  //     "bag";
   const templateRecord = is<WikiAdminRecord>(fieldState.draft, fieldState.tabId === "wikis")
     ? findTemplateRecordForWikiRecord(fieldState.draft, itemsByTab) : undefined;
   const templateReadonlyBagLines = field.key === "readonlyBags" && templateRecord ? templateRecord.readonlyBags : [];
@@ -674,6 +696,7 @@ export const fieldTypeRenderEditors = {
   "enter-password": (ctx) => renderTextInputField(ctx, "password"),
   "confirm-password": renderConfirmPasswordFieldEditor,
   "search-multiselect": renderSearchMultiselectFieldEditor,
+  "search-optional": renderSearchFieldEditor,
   "permission-table": renderPermissionTableFieldEditor,
   "prefix-table": renderPrefixTableFieldEditor,
   "select": renderSelectField,
@@ -699,6 +722,7 @@ export const fieldTypeRenderSidebars = {
   "enter-password": () => null,
   "confirm-password": () => null,
   "search-multiselect": renderSearchMultiselectFieldSidebar,
+  "search-optional": renderSearchFieldSidebar,
   "permission-table": renderPermissionTableFieldViewer,
   "prefix-table": renderPrefixTableFieldSidebar,
   "select": () => null,
