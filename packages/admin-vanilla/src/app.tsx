@@ -1327,13 +1327,20 @@ export class App extends JSXElement {
   private readonly loadUserFileCount = async () => {
     if (!embeddedServerResponse.userState.isLoggedIn) return;
     try {
-      const response = await fetch(pathPrefix + "/api/user-files/list", {
-        headers: { "X-Requested-With": "TiddlyWiki" },
-      });
-      const text = await response.text();
-      if (response.status !== 200) throw new Error(text);
-      const parsed = JSON.parse(text) as { files?: unknown[] } | null;
-      if (parsed?.files) this.userFileCount = parsed.files.length;
+      const [ownResponse, sharedResponse] = await Promise.all([
+        fetch(pathPrefix + "/api/user-files/list", {
+          headers: { "X-Requested-With": "TiddlyWiki" },
+        }),
+        fetch(pathPrefix + "/api/user-files/shared", {
+          headers: { "X-Requested-With": "TiddlyWiki" },
+        }),
+      ]);
+      const ownText = await ownResponse.text();
+      const sharedText = await sharedResponse.text();
+      if (ownResponse.status !== 200 || sharedResponse.status !== 200) return;
+      const own = JSON.parse(ownText) as { files?: unknown[] } | null;
+      const shared = JSON.parse(sharedText) as { files?: unknown[] } | null;
+      if (own?.files != null) this.userFileCount = own.files.length + (shared?.files?.length ?? 0);
     } catch {
       // Keep the previous badge if the request fails (e.g. a racing logout).
     }

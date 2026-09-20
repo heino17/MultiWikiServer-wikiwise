@@ -128,3 +128,12 @@ export type PinboardNotePosition = Prisma.PinboardNotePositionModel
  * 
  */
 export type UserFile = Prisma.UserFileModel
+/**
+ * Model UserFileShare
+ * Who a file is shared with. Copying the pinboard's scope model: "GLOBAL"
+ * (everyone), "ROLE" (scope_id = role_id) or "USER" (scope_id = user_id).
+ * Kept as a string, not an enum, so new scopes can be added without a
+ * migration. Which scopes a user may actually pick is enforced at the API
+ * level (see UserFileRoutes.shareTargetsFor), not here.
+ */
+export type UserFileShare = Prisma.UserFileShareModel

@@ -1,6 +1,8 @@
 // "My files" panel: per-account file uploads, stored on disk and listed here.
 // Each upload is streamed to the server (PUT multipart). Downloads stream
-// back with a Content-Disposition so the browser saves the file.
+// back with a Content-Disposition so the browser saves the file. Files can be
+// shared with other accounts; shared files appear in the "Shared with me"
+// section (download only).
 
 import { customElement, JSXElement, state } from "@tiddlywiki/jsx-lit";
 import deleteIcon from "@material-symbols/svg-400/outlined/delete.svg";
@@ -9,6 +11,9 @@ import uploadIcon from "@material-symbols/svg-400/outlined/upload.svg";
 import refreshIcon from "@material-symbols/svg-400/outlined/refresh.svg";
 import folderIcon from "@material-symbols/svg-400/outlined/folder.svg";
 import closeIcon from "@material-symbols/svg-400/outlined/close.svg";
+import shareIcon from "@material-symbols/svg-400/outlined/share.svg";
+import checkIcon from "@material-symbols/svg-400/outlined/check.svg";
+import personIcon from "@material-symbols/svg-400/outlined/person.svg";
 import { MaterialSymbol } from "./material-symbol";
 import { t } from "./i18n";
 
@@ -25,6 +30,13 @@ export interface UserFileRow {
   sizeBytes: number;
   createdAt: string;
   owner?: string | null;
+  shared?: { type: string; id: string | null }[];
+}
+
+export interface ShareTargets {
+  global: boolean;
+  roles: { id: string; name: string }[];
+  users: { id: string; name: string }[];
 }
 
 function formatUserFileError(error: unknown, fallback: string): string {
@@ -61,11 +73,16 @@ export class UserFilesPanel extends JSXElement {
 
   @state() accessor props!: UserFilesPanelProps;
   @state() accessor files: UserFileRow[] = [];
+  @state() accessor sharedFiles: UserFileRow[] = [];
+  @state() accessor targets: ShareTargets = { global: false, roles: [], users: [] };
   @state() accessor loading = false;
   @state() accessor uploading = false;
   @state() accessor error = "";
   @state() accessor message = "";
   @state() accessor dragOver = false;
+  @state() accessor sharingId = "";
+  @state() accessor sharingDraft = "";
+  @state() accessor sharingRect: { left: number; top: number; width: number; height: number } | null = null;
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -73,16 +90,26 @@ export class UserFilesPanel extends JSXElement {
   }
 
   private readonly pushCount = () => {
-    this.props?.onCountChange?.(this.files.length);
+    const own = this.files.length;
+    const shared = this.props?.admin ? 0 : this.sharedFiles.length;
+    this.props?.onCountChange?.(own + shared);
   };
 
   private readonly fetchFiles = async () => {
     if (this.loading) return;
     this.loading = true;
     this.error = "";
+    this.sharingId = "";
     try {
-      const result = await userFilesApiJson("/api/user-files/list") as { files?: UserFileRow[] } | null;
-      this.files = result?.files ?? [];
+      const [listResult, sharedResult, targetsResult] = await Promise.all([
+        userFilesApiJson("/api/user-files/list") as Promise<{ files?: UserFileRow[] }>,
+        userFilesApiJson("/api/user-files/shared") as Promise<{ files?: UserFileRow[] }>,
+        userFilesApiJson("/api/user-files/share-targets") as Promise<{ targets?: ShareTargets }>,
+      ]);
+      this.files = listResult?.files ?? [];
+      this.sharedFiles = sharedResult?.files ?? [];
+      const targets = targetsResult?.targets;
+      if (targets) this.targets = targets;
       this.pushCount();
     } catch (error) {
       this.error = formatUserFileError(error, t("Failed to load your files."));
@@ -159,7 +186,156 @@ export class UserFilesPanel extends JSXElement {
     }
   };
 
+  private readonly openSharing = (file: UserFileRow, rect: DOMRect) => {
+    const current = new Set((file.shared ?? []).map(scope => scope.type + ":" + scope.id));
+    this.sharingId = file.id;
+    this.sharingDraft = (file.shared ?? [])
+      .filter(scope => this.isScopeAvailable(scope))
+      .map(scope => scope.type + ":" + scope.id)
+      .join("|");
+    this.sharingRect = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+  };
+
+  private readonly closeSharing = () => {
+    this.sharingId = "";
+    this.sharingDraft = "";
+    this.sharingRect = null;
+  };
+
+  /** True when the given scope is still available as a share target. */
+  private readonly isScopeAvailable = (scope: { type: string; id: string | null }): boolean => {
+    if (scope.type === "GLOBAL") return this.targets.global;
+    if (scope.type === "ROLE") return this.targets.roles.some(role => role.id === scope.id);
+    if (scope.type === "USER") return this.targets.users.some(user => user.id === scope.id);
+    return false;
+  };
+
+  private readonly toggleShareScope = (scopeType: string, scopeId: string | null, on: boolean) => {
+    const key = scopeType + ":" + scopeId;
+    const parts = new Set(this.sharingDraft.split("|").filter(Boolean));
+    if (on) parts.add(key);
+    else parts.delete(key);
+    this.sharingDraft = [...parts].join("|");
+  };
+
+  private readonly saveSharing = async () => {
+    const file = this.files.find(item => item.id === this.sharingId);
+    if (!file) return;
+    const scopes = this.sharingDraft
+      .split("|")
+      .filter(Boolean)
+      .map(part => {
+        const colon = part.indexOf(":");
+        const type = part.slice(0, colon);
+        const id = part.slice(colon + 1) || null;
+        return { scope_type: type, scope_id: id };
+      });
+    this.uploading = true;
+    this.error = "";
+    this.message = "";
+    try {
+      await userFilesApiJson("/api/user-files/share", {
+        method: "PUT",
+        body: JSON.stringify({ id: file.id, scopes }),
+      });
+      const had = file.shared?.length ?? 0;
+      const now = scopes.length;
+      file.shared = scopes.map(scope => ({ type: scope.scope_type, id: scope.scope_id }));
+      this.closeSharing();
+      if (now && now >= had) this.message = t("Shared {name}.", { name: file.filename });
+      else this.message = t("Stopped sharing {name}.", { name: file.filename });
+      await this.fetchFiles();
+    } catch (error) {
+      this.error = formatUserFileError(error, t("Failed to share {name}.", { name: file.filename }));
+    } finally {
+      this.uploading = false;
+    }
+  };
+
+  private readonly isShared = (file: UserFileRow): boolean => (file.shared?.length ?? 0) > 0;
+
+  /** Fixed-position styles that keep the popover on screen next to the
+   *  trigger button, flipped above it when it would overflow the viewport. */
+  private readonly sharingStyle = (): Record<string, string> => {
+    const rect = this.sharingRect ?? { left: 0, top: 0, width: 0, height: 0 };
+    const popWidth = 280;
+    const rows = this.targets.roles.length + this.targets.users.length + (this.targets.global ? 1 : 0);
+    const estHeight = 110 + rows * 30;
+    let left = rect.left + rect.width - popWidth;
+    left = Math.max(8, Math.min(left, window.innerWidth - popWidth - 8));
+    let top = rect.top + rect.height + 8;
+    if (top + estHeight > window.innerHeight) top = Math.max(8, rect.top - estHeight - 8);
+    return { position: "fixed", left: `${left}px`, top: `${top}px`, maxWidth: "calc(100vw - 16px)" };
+  };
+
+  private readonly renderSharePopover = () => {
+    if (!this.sharingId) return null;
+    const file = this.files.find(item => item.id === this.sharingId);
+    if (!file) return null;
+    const draft = new Set(this.sharingDraft.split("|").filter(Boolean));
+    const has = (type: string, id: string | null) => draft.has(type + ":" + id);
+    return (
+      <div class="user-files-share-backdrop" onclick={() => this.closeSharing()}>
+        <div
+          class="user-files-share-popover"
+          role="dialog"
+          aria-label={t("Share")}
+          style={this.sharingStyle()}
+          onclick={(event) => { event.stopPropagation(); }}
+        >
+          <p class="user-files-share-title">{t("Share")}: <strong>{file.filename}</strong></p>
+        {this.targets.global ? (
+          <label class="user-files-share-option">
+            <input
+              type="checkbox"
+              checked={has("GLOBAL", null)}
+              onchange={(event) => {
+                this.toggleShareScope("GLOBAL", null, (event.target as HTMLInputElement).checked);
+              }}
+            />
+            <MaterialSymbol icon={shareIcon} />
+            <span>{t("Share with everyone")}</span>
+          </label>
+        ) : null}
+        {this.targets.roles.map(role => (
+          <label class="user-files-share-option">
+            <input
+              type="checkbox"
+              checked={has("ROLE", role.id)}
+              onchange={(event) => {
+                this.toggleShareScope("ROLE", role.id, (event.target as HTMLInputElement).checked);
+              }}
+            />
+            <MaterialSymbol icon={checkIcon} />
+            <span>{role.name}</span>
+          </label>
+        ))}
+        {this.targets.users.map(userItem => (
+          <label class="user-files-share-option">
+            <input
+              type="checkbox"
+              checked={has("USER", userItem.id)}
+              onchange={(event) => {
+                this.toggleShareScope("USER", userItem.id, (event.target as HTMLInputElement).checked);
+              }}
+            />
+            <MaterialSymbol icon={personIcon} />
+            <span>{userItem.name}</span>
+          </label>
+        ))}
+        <div class="user-files-share-actions">
+          <button class="ghost-button" type="button" onclick={() => this.closeSharing()}>{t("Cancel")}</button>
+          <button class="primary-button" type="button" onclick={() => void this.saveSharing()} disabled={this.uploading}>
+            {t("Save")}
+          </button>
+        </div>
+        </div>
+      </div>
+    );
+  };
+
   protected render() {
+    const showShared = !this.props?.admin && this.sharedFiles.length > 0;
     return (
       <section class="user-files-panel">
         <div class="user-files-toolbar">
@@ -219,12 +395,25 @@ export class UserFilesPanel extends JSXElement {
               <tbody>
                 {this.files.map((file) => (
                   <tr key={file.id}>
-                    <td><strong class="user-files-name">{file.filename}</strong></td>
+                    <td>
+                      <strong class="user-files-name">{file.filename}</strong>
+                      {this.isShared(file) ? <span class="user-files-shared-badge">{t("Shared")}</span> : null}
+                    </td>
                     {this.props?.admin ? <td>{file.owner || "—"}</td> : null}
                     <td>{file.type}</td>
                     <td>{this.prettifyBytes(file.sizeBytes)}</td>
                     <td>{new Date(file.createdAt).toLocaleString()}</td>
                     <td class="user-files-actions">
+                      <button
+                        class="ghost-button"
+                        type="button"
+                        title={t("Share")}
+                        aria-label={t("Share")}
+                        onclick={(event) => { this.sharingId === file.id ? this.closeSharing() : this.openSharing(file, (event.currentTarget as HTMLElement).getBoundingClientRect()); }}
+                        disabled={this.uploading}
+                      >
+                        <MaterialSymbol icon={shareIcon} />
+                      </button>
                       <a
                         class="ghost-button"
                         href={pathPrefix + "/api/user-files/download?id=" + encodeURIComponent(file.id)}
@@ -256,6 +445,53 @@ export class UserFilesPanel extends JSXElement {
             <p>{t("No files yet. Upload something to get started.")}</p>
           </div>
         )}
+
+        {showShared ? (
+          <div class="user-files-shared-section">
+            <h3 class="user-files-section-title">
+              <MaterialSymbol icon={shareIcon} />
+              {t("Shared with me")}
+            </h3>
+            <div class="storage-table-scroll">
+              <table class="storage-table user-files-table">
+                <thead>
+                  <tr>
+                    <th>{t("File name")}</th>
+                    <th>{t("Owner")}</th>
+                    <th>{t("Type")}</th>
+                    <th>{t("Size")}</th>
+                    <th>{t("Uploaded")}</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {this.sharedFiles.map((file) => (
+                    <tr key={file.id}>
+                      <td><strong class="user-files-name">{file.filename}</strong></td>
+                      <td>{file.owner || "—"}</td>
+                      <td>{file.type}</td>
+                      <td>{this.prettifyBytes(file.sizeBytes)}</td>
+                      <td>{new Date(file.createdAt).toLocaleString()}</td>
+                      <td class="user-files-actions">
+                        <a
+                          class="ghost-button"
+                          href={pathPrefix + "/api/user-files/download?id=" + encodeURIComponent(file.id)}
+                          download={file.filename}
+                          title={t("Download")}
+                          aria-label={t("Download")}
+                        >
+                          <MaterialSymbol icon={downloadIcon} />
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
+
+        {this.renderSharePopover()}
       </section>
     );
   }

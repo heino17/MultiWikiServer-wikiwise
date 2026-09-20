@@ -400,7 +400,8 @@ export const ModelName = {
   PinboardNote: 'PinboardNote',
   PinboardNoteRead: 'PinboardNoteRead',
   PinboardNotePosition: 'PinboardNotePosition',
-  UserFile: 'UserFile'
+  UserFile: 'UserFile',
+  UserFileShare: 'UserFileShare'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -416,7 +417,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "bag" | "bagPermission" | "tiddler" | "tiddlerEvent" | "template" | "templatePermission" | "recipe" | "recipePermission" | "recipeBag" | "settings" | "roles" | "users" | "sessions" | "pinboardNote" | "pinboardNoteRead" | "pinboardNotePosition" | "userFile"
+    modelProps: "bag" | "bagPermission" | "tiddler" | "tiddlerEvent" | "template" | "templatePermission" | "recipe" | "recipePermission" | "recipeBag" | "settings" | "roles" | "users" | "sessions" | "pinboardNote" | "pinboardNoteRead" | "pinboardNotePosition" | "userFile" | "userFileShare"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1678,6 +1679,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    UserFileShare: {
+      payload: Prisma.$UserFileSharePayload<ExtArgs>
+      fields: Prisma.UserFileShareFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.UserFileShareFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFileSharePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.UserFileShareFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFileSharePayload>
+        }
+        findFirst: {
+          args: Prisma.UserFileShareFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFileSharePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.UserFileShareFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFileSharePayload>
+        }
+        findMany: {
+          args: Prisma.UserFileShareFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFileSharePayload>[]
+        }
+        create: {
+          args: Prisma.UserFileShareCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFileSharePayload>
+        }
+        createMany: {
+          args: Prisma.UserFileShareCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.UserFileShareCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFileSharePayload>[]
+        }
+        delete: {
+          args: Prisma.UserFileShareDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFileSharePayload>
+        }
+        update: {
+          args: Prisma.UserFileShareUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFileSharePayload>
+        }
+        deleteMany: {
+          args: Prisma.UserFileShareDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.UserFileShareUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.UserFileShareUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFileSharePayload>[]
+        }
+        upsert: {
+          args: Prisma.UserFileShareUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFileSharePayload>
+        }
+        aggregate: {
+          args: Prisma.UserFileShareAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateUserFileShare>
+        }
+        groupBy: {
+          args: Prisma.UserFileShareGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UserFileShareGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.UserFileShareCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UserFileShareCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -1911,6 +1986,17 @@ export const UserFileScalarFieldEnum = {
 } as const
 
 export type UserFileScalarFieldEnum = (typeof UserFileScalarFieldEnum)[keyof typeof UserFileScalarFieldEnum]
+
+
+export const UserFileShareScalarFieldEnum = {
+  id: 'id',
+  file_id: 'file_id',
+  scope_type: 'scope_type',
+  scope_id: 'scope_id',
+  created_at: 'created_at'
+} as const
+
+export type UserFileShareScalarFieldEnum = (typeof UserFileShareScalarFieldEnum)[keyof typeof UserFileShareScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -2169,6 +2255,7 @@ export type GlobalOmitConfig = {
   pinboardNoteRead?: Prisma.PinboardNoteReadOmit
   pinboardNotePosition?: Prisma.PinboardNotePositionOmit
   userFile?: Prisma.UserFileOmit
+  userFileShare?: Prisma.UserFileShareOmit
 }
 
 /* Types for Logging */

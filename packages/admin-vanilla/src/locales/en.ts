@@ -410,6 +410,14 @@ export const enStrings: Record<string, string> = {
   "File name": "File name",
   "Uploaded": "Uploaded",
   "Download": "Download",
+  "Share": "Share",
+  "Shared": "Shared",
+  "Shared with me": "Shared with me",
+  "Share with everyone": "Share with everyone",
+  "Save": "Save",
+  "Shared {name}.": "Shared {name}.",
+  "Stopped sharing {name}.": "Stopped sharing {name}.",
+  "Failed to share {name}.": "Failed to share {name}.",
   // #endregion user files
 
   "Create user": "Create user",

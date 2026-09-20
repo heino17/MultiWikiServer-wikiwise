@@ -67,7 +67,8 @@ export const ModelName = {
   PinboardNote: 'PinboardNote',
   PinboardNoteRead: 'PinboardNoteRead',
   PinboardNotePosition: 'PinboardNotePosition',
-  UserFile: 'UserFile'
+  UserFile: 'UserFile',
+  UserFileShare: 'UserFileShare'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -280,6 +281,17 @@ export const UserFileScalarFieldEnum = {
 } as const
 
 export type UserFileScalarFieldEnum = (typeof UserFileScalarFieldEnum)[keyof typeof UserFileScalarFieldEnum]
+
+
+export const UserFileShareScalarFieldEnum = {
+  id: 'id',
+  file_id: 'file_id',
+  scope_type: 'scope_type',
+  scope_id: 'scope_id',
+  created_at: 'created_at'
+} as const
+
+export type UserFileShareScalarFieldEnum = (typeof UserFileShareScalarFieldEnum)[keyof typeof UserFileShareScalarFieldEnum]
 
 
 export const SortOrder = {

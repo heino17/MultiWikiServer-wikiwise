@@ -469,5 +469,13 @@ export const deStrings: Record<string, string> = {
   "File name": "Dateiname",
   "Uploaded": "Hochgeladen",
   "Download": "Herunterladen",
+  "Share": "Teilen",
+  "Shared": "Geteilt",
+  "Shared with me": "Mit mir geteilt",
+  "Share with everyone": "Mit allen teilen",
+  "Save": "Speichern",
+  "Shared {name}.": "{name} geteilt.",
+  "Stopped sharing {name}.": "Teilen von {name} beendet.",
+  "Failed to share {name}.": "{name} konnte nicht geteilt werden.",
   // #endregion user files
 };
