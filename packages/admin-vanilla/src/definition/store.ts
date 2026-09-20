@@ -313,6 +313,7 @@ function syncWikiRecord(draft: DataStore["wikis"][number], data: DataStore & Ext
     ...draft,
     templateName: templateRecord?.name ?? draft.templateName ?? "",
     defaultWritableBag,
+    thumbnailUrl: draft.slug ? `${pathPrefix}/wiki/${encodeURIComponent(draft.slug)}/thumbnail` : "",
     readonlyBagCount: String(mergedReadonlyBags.length),
     prefixRuleCount,
     pluginCount: String(mergedPlugins.length),

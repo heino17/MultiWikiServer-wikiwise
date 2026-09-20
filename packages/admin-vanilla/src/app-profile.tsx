@@ -6,23 +6,24 @@ import { FieldDefinition, IdString, FieldZodType, FieldType, Drafter } from "./d
 import css from "./app.inline.css";
 import { changeExistingPasswordWithCode, changeExistingPasswordWithPassword, loginWithOpaque, serverAcceptResetCode } from "./passwords";
 import { FomController } from "./FomController";
+import { t } from "./i18n";
 
 const profileFields = [
   {
     key: "username",
-    label: "Username",
+    label: t("Username"),
     type: "string",
     mode: "server",
   },
   {
     key: "email",
-    label: "Email",
+    label: t("Email"),
     type: "string",
     mode: "server",
   },
   {
     key: "roles",
-    label: "Roles",
+    label: t("Roles"),
     type: "search-multiselect",
     mode: "server"
   }
@@ -32,19 +33,20 @@ const updatePasswordFields = [
 
   {
     key: "password",
-    label: "Current password",
+    label: t("Current password"),
     type: "enter-password",
     mode: "create",
   },
   {
     key: "newPassword",
-    label: "New password",
+    label: t("New password"),
+    passwordGenerator: "confirmNewPassword",
     type: "enter-password",
     mode: "create",
   },
   {
     key: "confirmNewPassword",
-    label: "Confirm new password",
+    label: t("Confirm new password"),
     type: "enter-password",
     mode: "create",
   },
@@ -84,16 +86,17 @@ export class ProfileForm extends JSXElement {
   @state() private accessor mode: "profile" | "updatePassword" = "profile";
   @state() private accessor isSubmitting: boolean = false;
   @state() private accessor submitMessage: string = new URLSearchParams(globalThis.location?.search ?? "").get("state") === "password-changed"
-    ? "Password updated. You can now log in."
+    ? t("Password updated. You can now log in.")
     : "";
 
 
   private createDraft(): ProfileDraft {
+    const userState = embeddedServerResponse.userState;
     return {
-      id: new IdString(""),
-      email: "",
-      username: "",
-      roles: [],
+      id: new IdString(userState.user_id),
+      email: userState.email ?? "",
+      username: userState.username,
+      roles: userState.roles.map((role) => role.role_name),
       password: "",
       newPassword: "",
       confirmNewPassword: "",
@@ -105,13 +108,13 @@ export class ProfileForm extends JSXElement {
       case "profile": {
 
         return this.control.renderCommon({
-          title: "User Profile",
-          copy: "View your profile.",
+          title: t("User Profile"),
+          copy: t("View your profile."),
           submitAction: this.handleProfileSubmit,
           submitDisabled: false,
-          submitLabel: "Update Password",
+          submitLabel: t("Update password"),
           backAction: this.onCancel,
-          backLabel: "Close",
+          backLabel: t("Close"),
         }, <>
           <div class="login-fields">
             {profileFields.map((field) => this.control.renderField(field))}
@@ -129,11 +132,11 @@ export class ProfileForm extends JSXElement {
           || this.draft.newPassword !== this.draft.confirmNewPassword;
 
         return this.control.renderCommon({
-          title: "Update password",
-          copy: "Choose a new password for your account.",
+          title: t("Update password"),
+          copy: t("Choose a new password for your account."),
           submitAction: this.handleUpdatePasswordSubmit,
           submitDisabled: updatePasswordActionDisabled,
-          submitLabel: "Update password",
+          submitLabel: t("Update password"),
           backAction: async () => { this.mode = "profile"; },
         }, <>
           <div class="login-fields">
@@ -148,7 +151,7 @@ export class ProfileForm extends JSXElement {
 
   private readonly handleProfileSubmit = async () => {
     await this.handleAnySubmit(
-      "Update password",
+      t("Update password"),
       "",
       async () => {
         this.mode = "updatePassword";
@@ -162,18 +165,18 @@ export class ProfileForm extends JSXElement {
     const confirmNewPassword = this.draft.confirmNewPassword;
 
     if (!newPassword || !confirmNewPassword) {
-      this.submitMessage = "Enter and confirm your new password.";
+      this.submitMessage = t("Enter and confirm your new password.");
       return;
     }
 
     if (newPassword !== confirmNewPassword) {
-      this.submitMessage = "Passwords do not match.";
+      this.submitMessage = t("Passwords do not match.");
       return;
     }
 
     await this.handleAnySubmit(
-      "Updating password…",
-      "Password update failed.",
+      t("Updating password…"),
+      t("Password update failed."),
       () => this.submitUpdatePassword()
     );
   };

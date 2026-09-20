@@ -553,7 +553,21 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 	}) {
 		const { syncer, tiddlers, onNext, onDone, onError } = options;
 
-		const fields = tiddlers.map(e => e.getFieldStrings());
+		// Tiddlers that are read-only on the server, the server-managed story
+		// list and local state tiddlers are never uploaded; mark them as saved
+		// locally so the syncer stops retrying (and stays quiet for anon users).
+		const isStateTiddlerTitle = (title: string) => title.substr(0, MWC_STATE_TIDDLER_PREFIX.length) === MWC_STATE_TIDDLER_PREFIX;
+		const tiddlersToSave = tiddlers.filter(tiddler => {
+			const title = tiddler.fields.title as string;
+			if (this.isReadOnly || title === "$:/StoryList" || isStateTiddlerTitle(title)) {
+				onNext(title, { bag: "", title, revision: "" }, "");
+				return false;
+			}
+			return true;
+		});
+		if (!tiddlersToSave.length) return onDone();
+
+		const fields = tiddlersToSave.map(e => e.getFieldStrings());
 
 		const results = await this.rpcRequest({
 			key: "rpcSaveRecipeTiddlerList",

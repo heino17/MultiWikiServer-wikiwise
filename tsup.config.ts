@@ -27,6 +27,7 @@ export default defineConfig({
     "@prisma/adapter-libsql",
     "@prisma/adapter-better-sqlite3",
     "@serenity-kit/opaque",
+    "playwright-core",
   ],
   dts: false,
   keepNames: true,

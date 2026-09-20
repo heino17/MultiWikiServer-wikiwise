@@ -4,6 +4,7 @@ import { renderFieldEditor } from "./definition/renders";
 import { getEmptyItems } from "./definition/store";
 import { PermissionRow, FieldDefinition } from "./definition/tabs";
 import { requestUpdate } from "./requestUpdate";
+import { t } from "./i18n";
 
 
 export class FomController<T extends AdminRecord> {
@@ -19,7 +20,7 @@ export class FomController<T extends AdminRecord> {
 
   @requestUpdate private accessor isSubmitting: boolean = false;
   @requestUpdate private accessor submitMessage: string = new URLSearchParams(globalThis.location?.search ?? "").get("state") === "password-changed"
-    ? "Password updated. You can now log in."
+    ? t("Password updated. You can now log in.")
     : "";
   @requestUpdate private accessor operationMessages: Record<string, string> = {};
   @requestUpdate private accessor pendingRows: Record<string, number> = {};
@@ -103,7 +104,7 @@ export class FomController<T extends AdminRecord> {
 
     return (
       <div class="login-field">
-        <label class="login-field-label" for={inputId}>{field.label}</label>
+        <label class="login-field-label" for={inputId}>{t(field.label)}</label>
         {renderFieldEditor({
           field: field as unknown as FieldDefinition,
           value,
@@ -131,7 +132,7 @@ export class FomController<T extends AdminRecord> {
     submitLabel,
     isStart: isStart,
     backAction: handleBackClick,
-    backLabel = "Cancel",
+    backLabel = t("Cancel"),
   }: {
     title: string;
     copy: string;
@@ -144,7 +145,7 @@ export class FomController<T extends AdminRecord> {
   }, content: JSX.Node): JSX.Node {
     return (
       <div class="admin-shell">
-        <section class="modal-card" aria-label="Login form" style="max-width: 30rem; margin: 0 auto; width: 100%;">
+        <section class="modal-card" aria-label={t("Login form")} style="max-width: 30rem; margin: 0 auto; width: 100%;">
           <header class="login-card-header">
             <div class="login-card-title">
               <h3>{title}</h3>

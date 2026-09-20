@@ -31,6 +31,7 @@ export type TemplateMinAggregateOutputType = {
   name: string | null
   created: Date | null
   updated: Date | null
+  owner_user_id: string | null
   type:PrismaJson.Template_type | null
 }
 
@@ -39,6 +40,7 @@ export type TemplateMaxAggregateOutputType = {
   name: string | null
   created: Date | null
   updated: Date | null
+  owner_user_id: string | null
   type:PrismaJson.Template_type | null
 }
 
@@ -47,6 +49,7 @@ export type TemplateCountAggregateOutputType = {
   name: number
   created: number
   updated: number
+  owner_user_id: number
   type:PrismaJson.Template_type
   definition:PrismaJson.Template_definition
   _all: number
@@ -58,6 +61,7 @@ export type TemplateMinAggregateInputType = {
   name?: true
   created?: true
   updated?: true
+  owner_user_id?: true
   type?: true
 }
 
@@ -66,6 +70,7 @@ export type TemplateMaxAggregateInputType = {
   name?: true
   created?: true
   updated?: true
+  owner_user_id?: true
   type?: true
 }
 
@@ -74,6 +79,7 @@ export type TemplateCountAggregateInputType = {
   name?: true
   created?: true
   updated?: true
+  owner_user_id?: true
   type?: true
   definition?: true
   _all?: true
@@ -156,6 +162,7 @@ export type TemplateGroupByOutputType = {
   name: string
   created: Date
   updated: Date
+  owner_user_id: string | null
   type:PrismaJson.Template_type
   definition:PrismaJson.Template_definition
   _count: TemplateCountAggregateOutputType | null
@@ -186,6 +193,7 @@ export type TemplateWhereInput = {
   name?: Prisma.StringFilter<"Template"> | string
   created?: Prisma.DateTimeFilter<"Template"> | Date | string
   updated?: Prisma.DateTimeFilter<"Template"> | Date | string
+  owner_user_id?: Prisma.StringNullableFilter<"Template"> | string | null
   type?:PJTG.TypedStringFilter<PrismaJson.Template_type> | PrismaJson.Template_type
   definition?: Prisma.JsonFilter<"Template">
   recipes?: Prisma.RecipeListRelationFilter
@@ -197,6 +205,7 @@ export type TemplateOrderByWithRelationInput = {
   name?: Prisma.SortOrder
   created?: Prisma.SortOrder
   updated?: Prisma.SortOrder
+  owner_user_id?: Prisma.SortOrderInput | Prisma.SortOrder
   type?: Prisma.SortOrder
   definition?: Prisma.SortOrder
   recipes?: Prisma.RecipeOrderByRelationAggregateInput
@@ -211,6 +220,7 @@ export type TemplateWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.TemplateWhereInput | Prisma.TemplateWhereInput[]
   created?: Prisma.DateTimeFilter<"Template"> | Date | string
   updated?: Prisma.DateTimeFilter<"Template"> | Date | string
+  owner_user_id?: Prisma.StringNullableFilter<"Template"> | string | null
   type?: Prisma.StringFilter<"Template"> | string
   definition?: Prisma.JsonFilter<"Template">
   recipes?: Prisma.RecipeListRelationFilter
@@ -222,6 +232,7 @@ export type TemplateOrderByWithAggregationInput = {
   name?: Prisma.SortOrder
   created?: Prisma.SortOrder
   updated?: Prisma.SortOrder
+  owner_user_id?: Prisma.SortOrderInput | Prisma.SortOrder
   type?: Prisma.SortOrder
   definition?: Prisma.SortOrder
   _count?: Prisma.TemplateCountOrderByAggregateInput
@@ -237,6 +248,7 @@ export type TemplateScalarWhereWithAggregatesInput = {
   name?: Prisma.StringWithAggregatesFilter<"Template"> | string
   created?: Prisma.DateTimeWithAggregatesFilter<"Template"> | Date | string
   updated?: Prisma.DateTimeWithAggregatesFilter<"Template"> | Date | string
+  owner_user_id?: Prisma.StringNullableWithAggregatesFilter<"Template"> | string | null
   type?:PJTG.TypedStringWithAggregatesFilter<PrismaJson.Template_type> | PrismaJson.Template_type
   definition?: Prisma.JsonWithAggregatesFilter<"Template">
 }
@@ -246,6 +258,7 @@ export type TemplateCreateInput = {
   name: string
   created?: Date | string
   updated?: Date | string
+  owner_user_id?: string | null
   type:PrismaJson.Template_type
   definition:PrismaJson.Template_definition
   recipes?: Prisma.RecipeCreateNestedManyWithoutTemplateInput
@@ -257,6 +270,7 @@ export type TemplateUncheckedCreateInput = {
   name: string
   created?: Date | string
   updated?: Date | string
+  owner_user_id?: string | null
   type:PrismaJson.Template_type
   definition:PrismaJson.Template_definition
   recipes?: Prisma.RecipeUncheckedCreateNestedManyWithoutTemplateInput
@@ -268,6 +282,7 @@ export type TemplateUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   created?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?:PJTG.TypedStringFieldUpdateOperationsInput<PrismaJson.Template_type> | PrismaJson.Template_type
   definition?:PrismaJson.Template_definition
   recipes?: Prisma.RecipeUpdateManyWithoutTemplateNestedInput
@@ -279,6 +294,7 @@ export type TemplateUncheckedUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   created?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?:PJTG.TypedStringFieldUpdateOperationsInput<PrismaJson.Template_type> | PrismaJson.Template_type
   definition?:PrismaJson.Template_definition
   recipes?: Prisma.RecipeUncheckedUpdateManyWithoutTemplateNestedInput
@@ -290,6 +306,7 @@ export type TemplateCreateManyInput = {
   name: string
   created?: Date | string
   updated?: Date | string
+  owner_user_id?: string | null
   type:PrismaJson.Template_type
   definition:PrismaJson.Template_definition
 }
@@ -299,6 +316,7 @@ export type TemplateUpdateManyMutationInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   created?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?:PJTG.TypedStringFieldUpdateOperationsInput<PrismaJson.Template_type> | PrismaJson.Template_type
   definition?:PrismaJson.Template_definition
 }
@@ -308,6 +326,7 @@ export type TemplateUncheckedUpdateManyInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   created?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?:PJTG.TypedStringFieldUpdateOperationsInput<PrismaJson.Template_type> | PrismaJson.Template_type
   definition?:PrismaJson.Template_definition
 }
@@ -317,6 +336,7 @@ export type TemplateCountOrderByAggregateInput = {
   name?: Prisma.SortOrder
   created?: Prisma.SortOrder
   updated?: Prisma.SortOrder
+  owner_user_id?: Prisma.SortOrder
   type?: Prisma.SortOrder
   definition?: Prisma.SortOrder
 }
@@ -326,6 +346,7 @@ export type TemplateMaxOrderByAggregateInput = {
   name?: Prisma.SortOrder
   created?: Prisma.SortOrder
   updated?: Prisma.SortOrder
+  owner_user_id?: Prisma.SortOrder
   type?: Prisma.SortOrder
 }
 
@@ -334,6 +355,7 @@ export type TemplateMinOrderByAggregateInput = {
   name?: Prisma.SortOrder
   created?: Prisma.SortOrder
   updated?: Prisma.SortOrder
+  owner_user_id?: Prisma.SortOrder
   type?: Prisma.SortOrder
 }
 
@@ -375,6 +397,7 @@ export type TemplateCreateWithoutPermissionsInput = {
   name: string
   created?: Date | string
   updated?: Date | string
+  owner_user_id?: string | null
   type:PrismaJson.Template_type
   definition:PrismaJson.Template_definition
   recipes?: Prisma.RecipeCreateNestedManyWithoutTemplateInput
@@ -385,6 +408,7 @@ export type TemplateUncheckedCreateWithoutPermissionsInput = {
   name: string
   created?: Date | string
   updated?: Date | string
+  owner_user_id?: string | null
   type:PrismaJson.Template_type
   definition:PrismaJson.Template_definition
   recipes?: Prisma.RecipeUncheckedCreateNestedManyWithoutTemplateInput
@@ -411,6 +435,7 @@ export type TemplateUpdateWithoutPermissionsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   created?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?:PJTG.TypedStringFieldUpdateOperationsInput<PrismaJson.Template_type> | PrismaJson.Template_type
   definition?:PrismaJson.Template_definition
   recipes?: Prisma.RecipeUpdateManyWithoutTemplateNestedInput
@@ -421,6 +446,7 @@ export type TemplateUncheckedUpdateWithoutPermissionsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   created?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?:PJTG.TypedStringFieldUpdateOperationsInput<PrismaJson.Template_type> | PrismaJson.Template_type
   definition?:PrismaJson.Template_definition
   recipes?: Prisma.RecipeUncheckedUpdateManyWithoutTemplateNestedInput
@@ -431,6 +457,7 @@ export type TemplateCreateWithoutRecipesInput = {
   name: string
   created?: Date | string
   updated?: Date | string
+  owner_user_id?: string | null
   type:PrismaJson.Template_type
   definition:PrismaJson.Template_definition
   permissions?: Prisma.TemplatePermissionCreateNestedManyWithoutTemplateInput
@@ -441,6 +468,7 @@ export type TemplateUncheckedCreateWithoutRecipesInput = {
   name: string
   created?: Date | string
   updated?: Date | string
+  owner_user_id?: string | null
   type:PrismaJson.Template_type
   definition:PrismaJson.Template_definition
   permissions?: Prisma.TemplatePermissionUncheckedCreateNestedManyWithoutTemplateInput
@@ -467,6 +495,7 @@ export type TemplateUpdateWithoutRecipesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   created?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?:PJTG.TypedStringFieldUpdateOperationsInput<PrismaJson.Template_type> | PrismaJson.Template_type
   definition?:PrismaJson.Template_definition
   permissions?: Prisma.TemplatePermissionUpdateManyWithoutTemplateNestedInput
@@ -477,6 +506,7 @@ export type TemplateUncheckedUpdateWithoutRecipesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   created?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?:PJTG.TypedStringFieldUpdateOperationsInput<PrismaJson.Template_type> | PrismaJson.Template_type
   definition?:PrismaJson.Template_definition
   permissions?: Prisma.TemplatePermissionUncheckedUpdateManyWithoutTemplateNestedInput
@@ -527,6 +557,7 @@ export type TemplateSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   name?: boolean
   created?: boolean
   updated?: boolean
+  owner_user_id?: boolean
   type?: boolean
   definition?: boolean
   recipes?: boolean | Prisma.Template$recipesArgs<ExtArgs>
@@ -539,6 +570,7 @@ export type TemplateSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   name?: boolean
   created?: boolean
   updated?: boolean
+  owner_user_id?: boolean
   type?: boolean
   definition?: boolean
 }, ExtArgs["result"]["template"]>
@@ -548,6 +580,7 @@ export type TemplateSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   name?: boolean
   created?: boolean
   updated?: boolean
+  owner_user_id?: boolean
   type?: boolean
   definition?: boolean
 }, ExtArgs["result"]["template"]>
@@ -557,11 +590,12 @@ export type TemplateSelectScalar = {
   name?: boolean
   created?: boolean
   updated?: boolean
+  owner_user_id?: boolean
   type?: boolean
   definition?: boolean
 }
 
-export type TemplateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "created" | "updated" | "type" | "definition", ExtArgs["result"]["template"]>
+export type TemplateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "created" | "updated" | "owner_user_id" | "type" | "definition", ExtArgs["result"]["template"]>
 export type TemplateInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   recipes?: boolean | Prisma.Template$recipesArgs<ExtArgs>
   permissions?: boolean | Prisma.Template$permissionsArgs<ExtArgs>
@@ -581,6 +615,11 @@ export type $TemplatePayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     name: string
     created: Date
     updated: Date
+    /**
+     * user_id of the user who created this template; editable only by the
+     * owner or the site admin account ("admin"). No FK (auth module).
+     */
+    owner_user_id: string | null
     /**
      * [Template_type]
      */
@@ -1018,6 +1057,7 @@ export interface TemplateFieldRefs {
   readonly name: Prisma.FieldRef<"Template", 'String'>
   readonly created: Prisma.FieldRef<"Template", 'DateTime'>
   readonly updated: Prisma.FieldRef<"Template", 'DateTime'>
+  readonly owner_user_id: Prisma.FieldRef<"Template", 'String'>
   readonly type: Prisma.FieldRef<"Template", 'String'>
   readonly definition: Prisma.FieldRef<"Template", 'Json'>
 }

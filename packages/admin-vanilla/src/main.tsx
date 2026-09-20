@@ -6,9 +6,11 @@ import { LoginForm } from "./app-login";
 import { AuthUser } from "@tiddlywiki/mws/src/new-managers/sessions";
 import { SendError } from "@tiddlywiki/server";
 import { ProfileForm } from "./app-profile";
+import { initializeTheme } from "./theme";
 
 // disables the "flash of white" styles
 document.documentElement.classList.add("loaded");
+initializeTheme();
 
 window.addEventListener("drop", (e) => {
   e.preventDefault();
@@ -43,7 +45,10 @@ if (isInStandaloneMode()) {
 
 
 function setup() {
-  if (location.pathname === pathPrefix + "/login") {
+  if (location.pathname === pathPrefix + "/login" && embeddedServerResponse.userState.isLoggedIn) {
+    location.replace(pathPrefix + "/");
+  }
+  else if (location.pathname === pathPrefix + "/login") {
     document.body.appendChild(new LoginForm());
   }
   else if (!embeddedServerResponse.userState.isLoggedIn) {

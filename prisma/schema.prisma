@@ -23,6 +23,9 @@ model Bag {
   created        DateTime        @default(now())
   updated        DateTime        @updatedAt
   description    String
+  /// user_id of the user who created this bag; editable only by the
+  /// owner or the site admin account ("admin"). No FK (auth module).
+  owner_user_id  String?
   permissions    BagPermission[]
   tiddlers       Tiddler[]
   recipe_bags    RecipeBag[]
@@ -77,16 +80,19 @@ enum TiddlerEventType {
 }
 
 model Template {
-  id          String               @id @default(uuid(7))
-  name        String               @unique
-  created     DateTime             @default(now())
-  updated     DateTime             @updatedAt
+  id            String               @id @default(uuid(7))
+  name          String               @unique
+  created       DateTime             @default(now())
+  updated       DateTime             @updatedAt
+  /// user_id of the user who created this template; editable only by the
+  /// owner or the site admin account ("admin"). No FK (auth module).
+  owner_user_id String?
   /// [Template_type]
-  type        String
+  type          String
   /// [Template_definition]
-  definition  Json
-  recipes     Recipe[]
-  permissions TemplatePermission[]
+  definition    Json
+  recipes       Recipe[]
+  permissions   TemplatePermission[]
 
   @@map("template")
 }
@@ -102,19 +108,23 @@ model TemplatePermission {
 }
 
 model Recipe {
-  id          String             @id @default(uuid(7))
-  slug        String             @unique
-  created     DateTime           @default(now())
-  updated     DateTime           @updatedAt
-  template_id String
+  id            String             @id @default(uuid(7))
+  slug          String             @unique
+  created       DateTime           @default(now())
+  updated       DateTime           @updatedAt
+  /// user_id of the user who created this wiki; deletable only by the
+  /// owner or the site admin account ("admin"). role_id references the
+  /// auth module, no FK declared here.
+  owner_user_id String?
+  template_id   String
   /// [Recipe_definition]
-  definition  Json
-  template    Template           @relation(fields: [template_id], references: [id], onDelete: Restrict)
-  recipe_bags RecipeBag[]
-  permissions RecipePermission[]
+  definition    Json
+  template      Template           @relation(fields: [template_id], references: [id], onDelete: Restrict)
+  recipe_bags   RecipeBag[]
+  permissions   RecipePermission[]
   /// [Recipe_plugins]
-  plugins     Json
-  compiledAt  DateTime
+  plugins       Json
+  compiledAt    DateTime
 
   @@map("recipe")
 }
@@ -156,19 +166,31 @@ model Settings {
 // ---------------------------------------------------------------------------
 
 model Roles {
-  role_id     String  @id @default(uuid(7))
-  role_name   String  @unique()
-  description String?
-  users       Users[]
+  role_id       String  @id @default(uuid(7))
+  role_name     String  @unique()
+  description   String?
+  /// Grants teacher/team-admin capabilities (manage the users one invites,
+  /// see all wikis/bags, exemption from the own-wiki limit). Named "teacher"
+  /// historically, but the capability rides on this flag: the role may be
+  /// renamed freely.
+  is_teacher    Boolean @default(false)
+  /// user_id of the user who created this role; editable only by the
+  /// owner or the site admin account ("admin"). No FK (auth module).
+  owner_user_id String?
+  users         Users[]
 
   @@map("roles")
 }
 
 model Users {
-  user_id  String @id @default(uuid(7))
-  username String @unique
-  email    String @unique
-  password String
+  user_id       String  @id @default(uuid(7))
+  username      String  @unique
+  email         String? @unique
+  password      String
+  /// owner of the account is the user themself; only the owner or the
+  /// site admin account ("admin") may edit the record. User records are
+  /// always self-owned (see UserDataAdapter.saveRow). No FK.
+  owner_user_id String?
 
   // MySQL: multiple NULLs are allowed in unique columns and there is no way to make a partial index.
   // SQL Server: the `where` clause is required to get the "multiple NULLs allowed" behavior.
@@ -176,6 +198,10 @@ model Users {
   resetCode  String?    @unique(where: { resetCode: { not: null } })
   created_at DateTime   @default(now())
   last_login DateTime?
+  /// How many wikis this user may create. NULL means unlimited, 0 means
+  /// none. Only enforced for non-teacher, non-admin users (students).
+  /// Default 0 so accounts are locked until a teacher grants a limit.
+  wiki_limit Int?       @default(0)
   sessions   Sessions[]
   roles      Roles[]
 
@@ -191,6 +217,63 @@ model Sessions {
   user          Users    @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("sessions")
+}
+
+// ---------------------------------------------------------------------------
+// Pinboard — loose notes ("Zettel") pinned to a wall. Not part of the auth
+// module: author and scope ids are plain strings without FK declarations.
+// ---------------------------------------------------------------------------
+
+model PinboardNote {
+  id             String                 @id @default(uuid(7))
+  /// user_id of the author. No FK (auth module).
+  author_user_id String
+  /// Snapshot of the author's username, so notes stay readable even if the
+  /// account is later renamed or removed.
+  author_name    String
+  /// "GLOBAL" (everyone), "ROLE" (scope_id = role_id) or "USER"
+  /// (scope_id = user_id). Kept as a string, not an enum, so new scopes can
+  /// be added without a migration.
+  scope_type     String
+  /// role_id (ROLE) or user_id (USER); null for GLOBAL.
+  scope_id       String?
+  body           String
+  color          String                 @default("yellow")
+  is_important   Boolean                @default(false)
+  is_active      Boolean                @default(true)
+  created_at     DateTime               @default(now())
+  updated_at     DateTime               @updatedAt
+  expires_at     DateTime?
+  reads          PinboardNoteRead[]
+  positions      PinboardNotePosition[]
+
+  @@index([is_active, scope_type])
+  @@map("pinboard_note")
+}
+
+model PinboardNoteRead {
+  note_id      String
+  user_id      String
+  read_at      DateTime?
+  dismissed_at DateTime?
+  note         PinboardNote @relation(fields: [note_id], references: [id], onDelete: Cascade)
+
+  @@id([note_id, user_id])
+  @@map("pinboard_note_read")
+}
+
+/// Where a single user has placed a note on the wall (the arrangement is
+/// per-user, not shared). x/y are fractions (0..1) of the wall dimensions
+/// describing the note's centre, snapped to the wall raster by the UI.
+model PinboardNotePosition {
+  note_id String
+  user_id String
+  x       Float
+  y       Float
+  note    PinboardNote @relation(fields: [note_id], references: [id], onDelete: Cascade)
+
+  @@id([note_id, user_id])
+  @@map("pinboard_note_position")
 }
 
 // ---------------------------------------------------------------------------

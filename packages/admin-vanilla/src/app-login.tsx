@@ -6,6 +6,7 @@ import { FieldDefinition, IdString } from "./definition/tabs";
 import css from "./app.inline.css";
 import { changeExistingPasswordWithCode, loginWithOpaque, serverAcceptResetCode } from "./passwords";
 import { FomController } from "./FomController";
+import { t } from "./i18n";
 
 // #region Login
 type LoginFormMode = "login" | "forgot-password" | "reset-code" | "update-password";
@@ -48,7 +49,7 @@ export class LoginForm extends JSXElement {
   @state() private accessor rememberMe: boolean = false;
   @state() private accessor serverState: LoginServerState | null = null;
   @state() private accessor submitMessage: string = new URLSearchParams(globalThis.location?.search ?? "").get("state") === "password-changed"
-    ? "Password updated. You can now log in."
+    ? t("Password updated. You can now log in.")
     : "";
 
 
@@ -70,13 +71,13 @@ export class LoginForm extends JSXElement {
   private readonly fields: FieldDefinition[] = [
     {
       key: "username",
-      label: "Username",
+      label: t("Username"),
       type: "string",
       mode: "create",
     },
     {
       key: "password",
-      label: "Password",
+      label: t("Password"),
       type: "enter-password",
       mode: "create",
     },
@@ -85,7 +86,7 @@ export class LoginForm extends JSXElement {
   private readonly forgotPasswordFields: FieldDefinition[] = [
     {
       key: "emailOrUsername",
-      label: "Email / username",
+      label: t("Email / username"),
       type: "string",
       mode: "create",
     },
@@ -94,7 +95,7 @@ export class LoginForm extends JSXElement {
   private readonly resetCodeFields: FieldDefinition[] = [
     {
       key: "resetCode",
-      label: "Reset code",
+      label: t("Reset code"),
       type: "string",
       mode: "create",
     },
@@ -103,13 +104,14 @@ export class LoginForm extends JSXElement {
   private readonly updatePasswordFields: FieldDefinition[] = [
     {
       key: "newPassword",
-      label: "New password",
+      label: t("New password"),
+      passwordGenerator: "confirmNewPassword",
       type: "enter-password",
       mode: "create",
     },
     {
       key: "confirmNewPassword",
-      label: "Confirm new password",
+      label: t("Confirm new password"),
       type: "enter-password",
       mode: "create",
     },
@@ -158,8 +160,8 @@ export class LoginForm extends JSXElement {
 
   private readonly handleLoginSubmit = async () => {
     await this.handleAnySubmit(
-      "Logging in…",
-      "Login failed.",
+      t("Logging in…"),
+      t("Login failed."),
       () => this.submitLogin()
     );
   };
@@ -181,16 +183,16 @@ export class LoginForm extends JSXElement {
       return;
     }
     await this.handleAnySubmit(
-      "Sending reset email…",
-      "Reset email failed.",
+      t("Sending reset email…"),
+      t("Reset email failed."),
       () => this.submitForgotPassword()
     );
   };
 
   private readonly handleResetCodeSubmit = async () => {
     await this.handleAnySubmit(
-      "Verifying reset code…",
-      "Reset code failed.",
+      t("Verifying reset code…"),
+      t("Reset code failed."),
       () => this.submitResetCode()
     );
   };
@@ -200,18 +202,18 @@ export class LoginForm extends JSXElement {
     const confirmNewPassword = this.draft.confirmNewPassword;
 
     if (!newPassword || !confirmNewPassword) {
-      this.submitMessage = "Enter and confirm your new password.";
+      this.submitMessage = t("Enter and confirm your new password.");
       return;
     }
 
     if (newPassword !== confirmNewPassword) {
-      this.submitMessage = "Passwords do not match.";
+      this.submitMessage = t("Passwords do not match.");
       return;
     }
 
     await this.handleAnySubmit(
-      "Updating password…",
-      "Password update failed.",
+      t("Updating password…"),
+      t("Password update failed."),
       () => this.submitUpdatePassword()
     );
   };
@@ -226,16 +228,16 @@ export class LoginForm extends JSXElement {
         const isLoginPageBusy = this.isSubmitting;
 
         return this.control.renderCommon({
-          title: "Log in",
-          copy: "Enter your account credentials to continue.",
+          title: t("Log in"),
+          copy: t("Enter your account credentials to continue."),
           submitAction: this.handleLoginSubmit,
           submitDisabled: isLoginPageBusy,
-          submitLabel: this.isSubmitting ? "Logging in…" : "Log in",
+          submitLabel: this.isSubmitting ? t("Logging in…") : t("Log in"),
           isStart: true,
           backAction: this.handleBackClick,
         }, <>
           <div class="login-fields">{this.fields.map((field) => this.control.renderField(field))}</div>
-          <div class="login-options" aria-label="Login options">
+          <div class="login-options" aria-label={t("Login options")}>
             <label class="login-checkbox" for="login-remember-me">
               <input
                 id="login-remember-me"
@@ -250,7 +252,7 @@ export class LoginForm extends JSXElement {
                 onchange={(event) => {
                   this.rememberMe = event.currentTarget.checked;
                 }} />
-              <span>Remember me</span>
+              <span>{t("Remember me")}</span>
             </label>
 
             <button
@@ -258,7 +260,7 @@ export class LoginForm extends JSXElement {
               type="button"
               disabled={isLoginPageBusy}
               onclick={() => this.handleForgotPasswordClick()}
-            >Forgot password?</button>
+            >{t("Forgot password?")}</button>
           </div>
         </>);
       }
@@ -270,16 +272,16 @@ export class LoginForm extends JSXElement {
           || !this.draft.emailOrUsername
 
         return this.control.renderCommon({
-          title: "Forgot password",
-          copy: "Enter your email and we will send a reset link.",
+          title: t("Forgot password"),
+          copy: t("Enter your email and we will send a reset link."),
           submitAction: this.handleForgotPasswordSubmit,
           submitDisabled: isSubmitDisabled,
-          submitLabel: isForgotPasswordEmailEnabled ? "Send Email" : "Enter Code",
+          submitLabel: isForgotPasswordEmailEnabled ? t("Send Email") : t("Enter Code"),
           backAction: this.handleBackClick,
         }, this.isResolvingServerState ? (
           <div class="modal-loading-shell">
             <div class="modal-loading-bar" aria-hidden="true"><span></span></div>
-            <p class="modal-loading-copy">Please wait, loading server state...</p>
+            <p class="modal-loading-copy">{t("Please wait, loading server state...")}</p>
           </div>
         ) : (
           <div class="login-fields">
@@ -296,11 +298,11 @@ export class LoginForm extends JSXElement {
           || !this.draft.resetCode;
 
         return this.control.renderCommon({
-          title: "Enter reset code",
-          copy: "Enter your password reset code.",
+          title: t("Enter reset code"),
+          copy: t("Enter your password reset code."),
           submitAction: this.handleResetCodeSubmit,
           submitDisabled: resetCodeActionDisabled,
-          submitLabel: "Verify code",
+          submitLabel: t("Verify code"),
           backAction: this.handleBackClick,
         }, <>
           <div class="login-fields">
@@ -309,7 +311,7 @@ export class LoginForm extends JSXElement {
             }
             {this.resetCodeFields.map((field) => this.control.renderField(field))}
           </div>
-          {adminCode && renderCallout("Email services are not setup. Ask an admin for a reset code.")}
+          {adminCode && renderCallout(t("Email services are not setup. Ask an admin for a reset code."))}
         </>);
       }
       // #region update
@@ -321,15 +323,15 @@ export class LoginForm extends JSXElement {
           || this.draft.newPassword !== this.draft.confirmNewPassword;
 
         return this.control.renderCommon({
-          title: "Update password",
-          copy: "Choose a new password for your account.",
+          title: t("Update password"),
+          copy: t("Choose a new password for your account."),
           submitAction: this.handleUpdatePasswordSubmit,
           submitDisabled: updatePasswordActionDisabled,
-          submitLabel: "Update password",
+          submitLabel: t("Update password"),
           backAction: this.handleBackClick,
         }, <>
           <div class="login-fields">
-            {renderCallout("Username: " + this.draft.username)}
+            {renderCallout(t("Username: {username}", { username: this.draft.username }))}
             {this.updatePasswordFields.map((field) => this.control.renderField(field))}
           </div>
         </>);

@@ -3,7 +3,9 @@ import { CSSResult, PropertyValues, ReactiveElement } from '@lit/reactive-elemen
 import { is, render } from '@tiddlywiki/jsx-runtime';
 import { Subscription } from 'rxjs';
 import { observeResize, unobserveResize } from './resizeObserver';
-import type { Dispatch, SetStateAction } from 'react';
+
+type Dispatch<T> = (value: T) => void;
+type SetStateAction<T> = T | ((prev: T) => T);
 
 ReactiveElement.enableWarning?.('async-perform-update');
 

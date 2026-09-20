@@ -6,16 +6,17 @@
   },
   "dependencies": {
     "@fontsource/roboto": "^5.2.6",
-    "@material/web": "^2.4.0",
     "@material-symbols/svg-400": "^0.45.3",
+    "@material/web": "^2.4.0",
     "@mdui/icons": "^1.0.3",
     "@types/luxon": "^3.6.2",
     "esbuild-plugin-copy": "^2.1.1",
     "events": "^3.3.0",
+    "js-sha256": "^1.0.0",
     "luxon": "^3.7.1",
     "normalize.css": "^8.0.1",
     "replicache": "^15.3.0",
-    "uuid": "^13.0.0",
-    "rxjs": "7"
+    "rxjs": "7",
+    "uuid": "^13.0.0"
   }
 }

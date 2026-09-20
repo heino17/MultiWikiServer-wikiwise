@@ -46,12 +46,13 @@ function arrayBufferToBase64_viaBlob(buffer: ArrayBuffer) {
   });
 }
 
+import { sha256 } from "js-sha256";
+
 async function generateSessionSignature(sessionKey: string, session_id: string) {
   const encoder = new TextEncoder();
   const data = encoder.encode(sessionKey + session_id);
-  const hash = await window.crypto.subtle.digest("SHA-256", data);
-  const signature = await arrayBufferToBase64_viaBlob(hash);
-  return signature;
+  const hash = sha256.arrayBuffer(data);
+  return await arrayBufferToBase64_viaBlob(hash);
 }
 
 export async function createNewPassword({ user_id, password }: { user_id: string, password: string }) {

@@ -32,6 +32,7 @@ export type BagMinAggregateOutputType = {
   created: Date | null
   updated: Date | null
   description: string | null
+  owner_user_id: string | null
 }
 
 export type BagMaxAggregateOutputType = {
@@ -40,6 +41,7 @@ export type BagMaxAggregateOutputType = {
   created: Date | null
   updated: Date | null
   description: string | null
+  owner_user_id: string | null
 }
 
 export type BagCountAggregateOutputType = {
@@ -48,6 +50,7 @@ export type BagCountAggregateOutputType = {
   created: number
   updated: number
   description: number
+  owner_user_id: number
   _all: number
 }
 
@@ -58,6 +61,7 @@ export type BagMinAggregateInputType = {
   created?: true
   updated?: true
   description?: true
+  owner_user_id?: true
 }
 
 export type BagMaxAggregateInputType = {
@@ -66,6 +70,7 @@ export type BagMaxAggregateInputType = {
   created?: true
   updated?: true
   description?: true
+  owner_user_id?: true
 }
 
 export type BagCountAggregateInputType = {
@@ -74,6 +79,7 @@ export type BagCountAggregateInputType = {
   created?: true
   updated?: true
   description?: true
+  owner_user_id?: true
   _all?: true
 }
 
@@ -155,6 +161,7 @@ export type BagGroupByOutputType = {
   created: Date
   updated: Date
   description: string
+  owner_user_id: string | null
   _count: BagCountAggregateOutputType | null
   _min: BagMinAggregateOutputType | null
   _max: BagMaxAggregateOutputType | null
@@ -184,6 +191,7 @@ export type BagWhereInput = {
   created?: Prisma.DateTimeFilter<"Bag"> | Date | string
   updated?: Prisma.DateTimeFilter<"Bag"> | Date | string
   description?: Prisma.StringFilter<"Bag"> | string
+  owner_user_id?: Prisma.StringNullableFilter<"Bag"> | string | null
   permissions?: Prisma.BagPermissionListRelationFilter
   tiddlers?: Prisma.TiddlerListRelationFilter
   recipe_bags?: Prisma.RecipeBagListRelationFilter
@@ -196,6 +204,7 @@ export type BagOrderByWithRelationInput = {
   created?: Prisma.SortOrder
   updated?: Prisma.SortOrder
   description?: Prisma.SortOrder
+  owner_user_id?: Prisma.SortOrderInput | Prisma.SortOrder
   permissions?: Prisma.BagPermissionOrderByRelationAggregateInput
   tiddlers?: Prisma.TiddlerOrderByRelationAggregateInput
   recipe_bags?: Prisma.RecipeBagOrderByRelationAggregateInput
@@ -211,6 +220,7 @@ export type BagWhereUniqueInput = Prisma.AtLeast<{
   created?: Prisma.DateTimeFilter<"Bag"> | Date | string
   updated?: Prisma.DateTimeFilter<"Bag"> | Date | string
   description?: Prisma.StringFilter<"Bag"> | string
+  owner_user_id?: Prisma.StringNullableFilter<"Bag"> | string | null
   permissions?: Prisma.BagPermissionListRelationFilter
   tiddlers?: Prisma.TiddlerListRelationFilter
   recipe_bags?: Prisma.RecipeBagListRelationFilter
@@ -223,6 +233,7 @@ export type BagOrderByWithAggregationInput = {
   created?: Prisma.SortOrder
   updated?: Prisma.SortOrder
   description?: Prisma.SortOrder
+  owner_user_id?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.BagCountOrderByAggregateInput
   _max?: Prisma.BagMaxOrderByAggregateInput
   _min?: Prisma.BagMinOrderByAggregateInput
@@ -237,6 +248,7 @@ export type BagScalarWhereWithAggregatesInput = {
   created?: Prisma.DateTimeWithAggregatesFilter<"Bag"> | Date | string
   updated?: Prisma.DateTimeWithAggregatesFilter<"Bag"> | Date | string
   description?: Prisma.StringWithAggregatesFilter<"Bag"> | string
+  owner_user_id?: Prisma.StringNullableWithAggregatesFilter<"Bag"> | string | null
 }
 
 export type BagCreateInput = {
@@ -245,6 +257,7 @@ export type BagCreateInput = {
   created?: Date | string
   updated?: Date | string
   description: string
+  owner_user_id?: string | null
   permissions?: Prisma.BagPermissionCreateNestedManyWithoutBagInput
   tiddlers?: Prisma.TiddlerCreateNestedManyWithoutBagInput
   recipe_bags?: Prisma.RecipeBagCreateNestedManyWithoutBagInput
@@ -257,6 +270,7 @@ export type BagUncheckedCreateInput = {
   created?: Date | string
   updated?: Date | string
   description: string
+  owner_user_id?: string | null
   permissions?: Prisma.BagPermissionUncheckedCreateNestedManyWithoutBagInput
   tiddlers?: Prisma.TiddlerUncheckedCreateNestedManyWithoutBagInput
   recipe_bags?: Prisma.RecipeBagUncheckedCreateNestedManyWithoutBagInput
@@ -269,6 +283,7 @@ export type BagUpdateInput = {
   created?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   description?: Prisma.StringFieldUpdateOperationsInput | string
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   permissions?: Prisma.BagPermissionUpdateManyWithoutBagNestedInput
   tiddlers?: Prisma.TiddlerUpdateManyWithoutBagNestedInput
   recipe_bags?: Prisma.RecipeBagUpdateManyWithoutBagNestedInput
@@ -281,6 +296,7 @@ export type BagUncheckedUpdateInput = {
   created?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   description?: Prisma.StringFieldUpdateOperationsInput | string
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   permissions?: Prisma.BagPermissionUncheckedUpdateManyWithoutBagNestedInput
   tiddlers?: Prisma.TiddlerUncheckedUpdateManyWithoutBagNestedInput
   recipe_bags?: Prisma.RecipeBagUncheckedUpdateManyWithoutBagNestedInput
@@ -293,6 +309,7 @@ export type BagCreateManyInput = {
   created?: Date | string
   updated?: Date | string
   description: string
+  owner_user_id?: string | null
 }
 
 export type BagUpdateManyMutationInput = {
@@ -301,6 +318,7 @@ export type BagUpdateManyMutationInput = {
   created?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   description?: Prisma.StringFieldUpdateOperationsInput | string
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type BagUncheckedUpdateManyInput = {
@@ -309,6 +327,7 @@ export type BagUncheckedUpdateManyInput = {
   created?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   description?: Prisma.StringFieldUpdateOperationsInput | string
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type BagCountOrderByAggregateInput = {
@@ -317,6 +336,7 @@ export type BagCountOrderByAggregateInput = {
   created?: Prisma.SortOrder
   updated?: Prisma.SortOrder
   description?: Prisma.SortOrder
+  owner_user_id?: Prisma.SortOrder
 }
 
 export type BagMaxOrderByAggregateInput = {
@@ -325,6 +345,7 @@ export type BagMaxOrderByAggregateInput = {
   created?: Prisma.SortOrder
   updated?: Prisma.SortOrder
   description?: Prisma.SortOrder
+  owner_user_id?: Prisma.SortOrder
 }
 
 export type BagMinOrderByAggregateInput = {
@@ -333,6 +354,7 @@ export type BagMinOrderByAggregateInput = {
   created?: Prisma.SortOrder
   updated?: Prisma.SortOrder
   description?: Prisma.SortOrder
+  owner_user_id?: Prisma.SortOrder
 }
 
 export type BagScalarRelationFilter = {
@@ -346,6 +368,10 @@ export type StringFieldUpdateOperationsInput = {
 
 export type DateTimeFieldUpdateOperationsInput = {
   set?: Date | string
+}
+
+export type NullableStringFieldUpdateOperationsInput = {
+  set?: string | null
 }
 
 export type BagCreateNestedOneWithoutPermissionsInput = {
@@ -410,6 +436,7 @@ export type BagCreateWithoutPermissionsInput = {
   created?: Date | string
   updated?: Date | string
   description: string
+  owner_user_id?: string | null
   tiddlers?: Prisma.TiddlerCreateNestedManyWithoutBagInput
   recipe_bags?: Prisma.RecipeBagCreateNestedManyWithoutBagInput
   tiddler_events?: Prisma.TiddlerEventCreateNestedManyWithoutBagInput
@@ -421,6 +448,7 @@ export type BagUncheckedCreateWithoutPermissionsInput = {
   created?: Date | string
   updated?: Date | string
   description: string
+  owner_user_id?: string | null
   tiddlers?: Prisma.TiddlerUncheckedCreateNestedManyWithoutBagInput
   recipe_bags?: Prisma.RecipeBagUncheckedCreateNestedManyWithoutBagInput
   tiddler_events?: Prisma.TiddlerEventUncheckedCreateNestedManyWithoutBagInput
@@ -448,6 +476,7 @@ export type BagUpdateWithoutPermissionsInput = {
   created?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   description?: Prisma.StringFieldUpdateOperationsInput | string
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tiddlers?: Prisma.TiddlerUpdateManyWithoutBagNestedInput
   recipe_bags?: Prisma.RecipeBagUpdateManyWithoutBagNestedInput
   tiddler_events?: Prisma.TiddlerEventUpdateManyWithoutBagNestedInput
@@ -459,6 +488,7 @@ export type BagUncheckedUpdateWithoutPermissionsInput = {
   created?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   description?: Prisma.StringFieldUpdateOperationsInput | string
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tiddlers?: Prisma.TiddlerUncheckedUpdateManyWithoutBagNestedInput
   recipe_bags?: Prisma.RecipeBagUncheckedUpdateManyWithoutBagNestedInput
   tiddler_events?: Prisma.TiddlerEventUncheckedUpdateManyWithoutBagNestedInput
@@ -470,6 +500,7 @@ export type BagCreateWithoutTiddlersInput = {
   created?: Date | string
   updated?: Date | string
   description: string
+  owner_user_id?: string | null
   permissions?: Prisma.BagPermissionCreateNestedManyWithoutBagInput
   recipe_bags?: Prisma.RecipeBagCreateNestedManyWithoutBagInput
   tiddler_events?: Prisma.TiddlerEventCreateNestedManyWithoutBagInput
@@ -481,6 +512,7 @@ export type BagUncheckedCreateWithoutTiddlersInput = {
   created?: Date | string
   updated?: Date | string
   description: string
+  owner_user_id?: string | null
   permissions?: Prisma.BagPermissionUncheckedCreateNestedManyWithoutBagInput
   recipe_bags?: Prisma.RecipeBagUncheckedCreateNestedManyWithoutBagInput
   tiddler_events?: Prisma.TiddlerEventUncheckedCreateNestedManyWithoutBagInput
@@ -508,6 +540,7 @@ export type BagUpdateWithoutTiddlersInput = {
   created?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   description?: Prisma.StringFieldUpdateOperationsInput | string
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   permissions?: Prisma.BagPermissionUpdateManyWithoutBagNestedInput
   recipe_bags?: Prisma.RecipeBagUpdateManyWithoutBagNestedInput
   tiddler_events?: Prisma.TiddlerEventUpdateManyWithoutBagNestedInput
@@ -519,6 +552,7 @@ export type BagUncheckedUpdateWithoutTiddlersInput = {
   created?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   description?: Prisma.StringFieldUpdateOperationsInput | string
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   permissions?: Prisma.BagPermissionUncheckedUpdateManyWithoutBagNestedInput
   recipe_bags?: Prisma.RecipeBagUncheckedUpdateManyWithoutBagNestedInput
   tiddler_events?: Prisma.TiddlerEventUncheckedUpdateManyWithoutBagNestedInput
@@ -530,6 +564,7 @@ export type BagCreateWithoutTiddler_eventsInput = {
   created?: Date | string
   updated?: Date | string
   description: string
+  owner_user_id?: string | null
   permissions?: Prisma.BagPermissionCreateNestedManyWithoutBagInput
   tiddlers?: Prisma.TiddlerCreateNestedManyWithoutBagInput
   recipe_bags?: Prisma.RecipeBagCreateNestedManyWithoutBagInput
@@ -541,6 +576,7 @@ export type BagUncheckedCreateWithoutTiddler_eventsInput = {
   created?: Date | string
   updated?: Date | string
   description: string
+  owner_user_id?: string | null
   permissions?: Prisma.BagPermissionUncheckedCreateNestedManyWithoutBagInput
   tiddlers?: Prisma.TiddlerUncheckedCreateNestedManyWithoutBagInput
   recipe_bags?: Prisma.RecipeBagUncheckedCreateNestedManyWithoutBagInput
@@ -568,6 +604,7 @@ export type BagUpdateWithoutTiddler_eventsInput = {
   created?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   description?: Prisma.StringFieldUpdateOperationsInput | string
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   permissions?: Prisma.BagPermissionUpdateManyWithoutBagNestedInput
   tiddlers?: Prisma.TiddlerUpdateManyWithoutBagNestedInput
   recipe_bags?: Prisma.RecipeBagUpdateManyWithoutBagNestedInput
@@ -579,6 +616,7 @@ export type BagUncheckedUpdateWithoutTiddler_eventsInput = {
   created?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   description?: Prisma.StringFieldUpdateOperationsInput | string
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   permissions?: Prisma.BagPermissionUncheckedUpdateManyWithoutBagNestedInput
   tiddlers?: Prisma.TiddlerUncheckedUpdateManyWithoutBagNestedInput
   recipe_bags?: Prisma.RecipeBagUncheckedUpdateManyWithoutBagNestedInput
@@ -590,6 +628,7 @@ export type BagCreateWithoutRecipe_bagsInput = {
   created?: Date | string
   updated?: Date | string
   description: string
+  owner_user_id?: string | null
   permissions?: Prisma.BagPermissionCreateNestedManyWithoutBagInput
   tiddlers?: Prisma.TiddlerCreateNestedManyWithoutBagInput
   tiddler_events?: Prisma.TiddlerEventCreateNestedManyWithoutBagInput
@@ -601,6 +640,7 @@ export type BagUncheckedCreateWithoutRecipe_bagsInput = {
   created?: Date | string
   updated?: Date | string
   description: string
+  owner_user_id?: string | null
   permissions?: Prisma.BagPermissionUncheckedCreateNestedManyWithoutBagInput
   tiddlers?: Prisma.TiddlerUncheckedCreateNestedManyWithoutBagInput
   tiddler_events?: Prisma.TiddlerEventUncheckedCreateNestedManyWithoutBagInput
@@ -628,6 +668,7 @@ export type BagUpdateWithoutRecipe_bagsInput = {
   created?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   description?: Prisma.StringFieldUpdateOperationsInput | string
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   permissions?: Prisma.BagPermissionUpdateManyWithoutBagNestedInput
   tiddlers?: Prisma.TiddlerUpdateManyWithoutBagNestedInput
   tiddler_events?: Prisma.TiddlerEventUpdateManyWithoutBagNestedInput
@@ -639,6 +680,7 @@ export type BagUncheckedUpdateWithoutRecipe_bagsInput = {
   created?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   description?: Prisma.StringFieldUpdateOperationsInput | string
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   permissions?: Prisma.BagPermissionUncheckedUpdateManyWithoutBagNestedInput
   tiddlers?: Prisma.TiddlerUncheckedUpdateManyWithoutBagNestedInput
   tiddler_events?: Prisma.TiddlerEventUncheckedUpdateManyWithoutBagNestedInput
@@ -708,6 +750,7 @@ export type BagSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = ru
   created?: boolean
   updated?: boolean
   description?: boolean
+  owner_user_id?: boolean
   permissions?: boolean | Prisma.Bag$permissionsArgs<ExtArgs>
   tiddlers?: boolean | Prisma.Bag$tiddlersArgs<ExtArgs>
   recipe_bags?: boolean | Prisma.Bag$recipe_bagsArgs<ExtArgs>
@@ -721,6 +764,7 @@ export type BagSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extension
   created?: boolean
   updated?: boolean
   description?: boolean
+  owner_user_id?: boolean
 }, ExtArgs["result"]["bag"]>
 
 export type BagSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -729,6 +773,7 @@ export type BagSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extension
   created?: boolean
   updated?: boolean
   description?: boolean
+  owner_user_id?: boolean
 }, ExtArgs["result"]["bag"]>
 
 export type BagSelectScalar = {
@@ -737,9 +782,10 @@ export type BagSelectScalar = {
   created?: boolean
   updated?: boolean
   description?: boolean
+  owner_user_id?: boolean
 }
 
-export type BagOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "created" | "updated" | "description", ExtArgs["result"]["bag"]>
+export type BagOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "created" | "updated" | "description" | "owner_user_id", ExtArgs["result"]["bag"]>
 export type BagInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   permissions?: boolean | Prisma.Bag$permissionsArgs<ExtArgs>
   tiddlers?: boolean | Prisma.Bag$tiddlersArgs<ExtArgs>
@@ -764,6 +810,11 @@ export type $BagPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
     created: Date
     updated: Date
     description: string
+    /**
+     * user_id of the user who created this bag; editable only by the
+     * owner or the site admin account ("admin"). No FK (auth module).
+     */
+    owner_user_id: string | null
   }, ExtArgs["result"]["bag"]>
   composites: {}
 }
@@ -1196,6 +1247,7 @@ export interface BagFieldRefs {
   readonly created: Prisma.FieldRef<"Bag", 'DateTime'>
   readonly updated: Prisma.FieldRef<"Bag", 'DateTime'>
   readonly description: Prisma.FieldRef<"Bag", 'String'>
+  readonly owner_user_id: Prisma.FieldRef<"Bag", 'String'>
 }
     
 

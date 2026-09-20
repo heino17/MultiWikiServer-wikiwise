@@ -27,6 +27,7 @@ import type { Syncer, Tiddler, TiddlerFields, Wiki } from 'tiddlywiki';
 // import {} from "@tiddlywiki/mws-prisma";
 declare global { const fflate: typeof import("./fflate"); }
 declare const self: never;
+declare const require: (id: string) => any;
 
 declare class Logger {
 	constructor(componentName: any, options: any);
@@ -206,6 +207,16 @@ interface MWSAdaptorInfo {
 	title: string;
 }
 
+// OPAQUE (PAKE) client surface provided by the bundled library tiddler
+interface OpaqueClient {
+	ready: Promise<unknown>;
+	client: {
+		startLogin(args: { password: string }): { clientLoginState: unknown; startLoginRequest: string };
+		finishLogin(args: { clientLoginState: unknown; loginResponse: string; password: string }):
+			{ finishLoginRequest: string; sessionKey: string } | null;
+	};
+}
+
 // Status response from GET /recipe/:id/status
 interface RecipeStatus {
 	isAdmin: boolean;
@@ -350,6 +361,57 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 	}
 
 	// -------------------------------------------------------------------------
+	// Login / Logout
+	// -------------------------------------------------------------------------
+	// Performs an OPAQUE (PAKE) password login against the MWS session
+	// endpoints. On success the server sets a session cookie (path "/") which
+	// automatically authorises all subsequent same-origin requests, so the
+	// wiki becomes writable without visiting the /login page.
+
+	async login(username: string, password: string, cb: (err: any) => void) {
+		const opaque = require("$:/plugins/mws/client/library/opaque") as OpaqueClient;
+		try {
+			if (!username || !password) throw new Error("Username and password are required");
+			await opaque.ready;
+			const { clientLoginState, startLoginRequest } = opaque.client.startLogin({ password });
+			const r1 = await httpRequest({
+				method: "POST",
+				url: this.host + "login/1",
+				responseType: "text",
+				requestBodyString: JSON.stringify({ username, startLoginRequest }),
+			});
+			if (r1.status !== 200) throw new Error("Login failed: " + r1.statusText);
+			const { loginResponse, loginSession } = JSON.parse(r1.response as string);
+			const loginResult = opaque.client.finishLogin({ clientLoginState, loginResponse, password });
+			if (!loginResult) throw new Error("Login failed");
+			const r2 = await httpRequest({
+				method: "POST",
+				url: this.host + "login/2",
+				responseType: "text",
+				requestBodyString: JSON.stringify({ finishLoginRequest: loginResult.finishLoginRequest, loginSession }),
+			});
+			if (r2.status !== 200) throw new Error("Login failed: " + r2.statusText);
+			cb(null);
+		} catch (e: any) {
+			cb(e);
+		}
+	}
+
+	logout(cb: (err: any) => void) {
+		httpRequest({
+			method: "POST",
+			url: this.host + "logout",
+			responseType: "text",
+		}).then(result => {
+			if (result.status === 200 || result.status === 204) {
+				cb(null);
+			} else {
+				cb(new Error("Logout failed: " + result.statusText));
+			}
+		}, e => cb(e));
+	}
+
+	// -------------------------------------------------------------------------
 	// Update polling
 	// -------------------------------------------------------------------------
 
@@ -419,9 +481,26 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		onError: (err: Error) => void;
 	}) {
 		const { tiddlers, onNext, onDone, onError } = options;
+		// Tiddlers that are read-only on the server, the server-managed story
+		// list and local state tiddlers are never uploaded; mark them as saved
+		// locally so the syncer stops retrying (and stays quiet for anon users).
+		const markSavedLocally = (tiddler: Tiddler) => {
+			const title = tiddler.fields.title as string;
+			this.setTiddlerInfo(title, null, "");
+			onNext(title, { bag: "", revision: "", title }, "");
+		};
+		const tiddlersToSave = tiddlers.filter(tiddler => {
+			const title = tiddler.fields.title as string;
+			if (this.isReadOnly || title === "$:/StoryList" || this.isStateTiddler(title)) {
+				markSavedLocally(tiddler);
+				return false;
+			}
+			return true;
+		});
+		if (!tiddlersToSave.length) return onDone();
 		try {
 			const results = await this.batchOp<BatchMutationResult[]>("save", {
-				tiddlers: tiddlers.map(t => t.getFieldStrings()),
+				tiddlers: tiddlersToSave.map(t => t.getFieldStrings()),
 			});
 			for (const item of results) {
 				const bag = item.info.writeTo ?? item.info.readFrom ?? "";

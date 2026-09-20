@@ -91,7 +91,7 @@ export const fieldTypeZodShapes = {
   "parameter-list": z.string().array(),
   "relationship-table": z.string().array(),
   "summary-list": z.string().array(),
-  "number": z.string(),
+  "number": z.string().regex(/^\d*$/, "must be a whole number of 0 or more, or empty for unlimited"),
   "activity-feed": z.string().array(),
   "version": z.string(),
   "select": z.string(),
@@ -135,6 +135,14 @@ export type Mode = "create" | "create edit" | "edit" | "edit temp" | "create tem
 export interface FieldDefinition {
   key: string;
   label: string;
+  /** Mode-specific label overrides, e.g. { create: "Set password", edit: "Reset password" }. */
+  modeLabels?: Partial<Record<"create" | "edit", string>>;
+  /**
+   * Show a random-password generator on this enter-password field.
+   * A string value names the confirm-field key that should be filled
+   * with the same generated password.
+   */
+  passwordGenerator?: string | true;
   type: FieldType;
   mode: Mode;
   section?: FieldSection;
@@ -177,12 +185,11 @@ const tabs = {
     description: "Final wiki instances built from a template plus per-wiki customizations.",
     columns: [
       { key: "slug", label: "Slug", width: 2 },
+      { key: "thumbnailUrl", label: "", width: 3 },
       { key: "displayName", label: "Display name", width: 2 },
       { key: "templateName", label: "Template" },
-      { key: "defaultWritableBag", label: "Default bag" },
-      { key: "prefixRuleCount", label: "Prefix rules" },
-      { key: "readonlyBagCount", label: "Readonly bags" },
-      { key: "pluginCount", label: "Plugins" },
+      { key: "ownerUsername", label: "Created by" },
+      { key: "myRights", label: "My rights" },
       // { key: "edit", label: "" }
       // { key: "lastCompiledAt", label: "Compiled" },
       // { key: "statusFlags", label: "Status" },
@@ -196,6 +203,8 @@ const tabs = {
       { key: "readonlyBags", label: "Bag name", type: "search-multiselect", section: "authored", mode: "create edit" },
       { key: "plugins", label: "Plugin name", type: "search-multiselect", section: "authored", mode: "create edit" },
       { key: "lastCompiledAt", label: "Compiled", type: "string", section: "runtime", mode: "server" },
+      { key: "ownerUsername", label: "Created by", type: "string", section: "runtime", mode: "server" },
+      { key: "myRights", label: "My rights", type: "string", section: "runtime", mode: "server" },
       {
         key: "writablePrefixBags",
         label: "Writable prefix bags",
@@ -276,8 +285,8 @@ const tabs = {
           keys: ["readonlyBags"], width: halfWidth
         },
         { title: "Plugins", description: "Add wiki-specific plugins on top of the template plugin set.", keys: ["plugins"], width: halfWidth },
-        { title: "Recipe Users", description: "Users able to open this wiki, assuming they have read permission on every bag as well.", keys: ["recipeUsers"], width: halfWidth },
-        { title: "Recipe Admins", description: "Users able to make changes on this page.", keys: ["recipeAdmins"], width: halfWidth },
+        { title: "Readers", description: "Who can open this wiki (read access).", keys: ["recipeUsers"], width: halfWidth },
+        { title: "Editors", description: "Who can make changes to this wiki.", keys: ["recipeAdmins"], width: halfWidth },
         { title: "Access", description: "Controls who can edit the wiki settings.", keys: ["recipePermissions"], width: fullWidth },
       ],
       runtime: [
@@ -313,6 +322,7 @@ const tabs = {
     columns: [
       { key: "name", label: "Name", width: 2 },
       { key: "description", label: "Description", width: 3 },
+      { key: "ownerUsername", label: "Created by" },
       { key: "readonlyBagsSummary", label: "Readonly bags" },
       // { key: "writablePrefixSummary", label: "Writable prefixes" },
       { key: "dependentWikiCount", label: "Dependent wikis" },
@@ -324,6 +334,7 @@ const tabs = {
       { key: "name", label: "Name", type: "string", section: "authored", mode: "create edit" },
       { key: "description", label: "Description", type: "text", section: "authored", mode: "create edit" },
       { key: "lastUpdatedAt", label: "Updated", type: "string", section: "runtime", mode: "server" },
+      { key: "ownerUsername", label: "Created by", type: "string", section: "runtime", mode: "server" },
       {
         key: "writablePrefixBags",
         label: "Writable prefix bags",
@@ -470,6 +481,7 @@ const tabs = {
     columns: [
       { key: "name", label: "Name", width: 2 },
       { key: "description", label: "Description", width: 2 },
+      { key: "ownerUsername", label: "Created by" },
       { key: "usedByCount", label: "Used by" },
       { key: "readonlyUsageCount", label: "Readonly" },
       { key: "writableUsageCount", label: "Writable" },
@@ -489,6 +501,7 @@ const tabs = {
         mode: "create edit",
         architecture: "Edits bag permission rows. These rows are consulted directly by the resolver when deciding who can read from or write to the storage container.",
       },
+      { key: "ownerUsername", label: "Created by", type: "string", section: "runtime", mode: "server" },
       {
         key: "referencedByTemplates",
         label: "Referenced by templates",
@@ -582,15 +595,41 @@ const tabs = {
     description: "Named access profiles that can be assigned to user accounts.",
     columns: [
       { key: "name", label: "Role name", width: 2 },
-      { key: "description", label: "Role description", width: 7 },
+      { key: "description", label: "Role description", width: 6 },
+      { key: "ownerUsername", label: "Created by" },
     ],
     fields: [
       { key: "name", label: "Role name", type: "string", section: "authored", mode: "create edit" },
       { key: "description", label: "Role description", type: "text", section: "authored", mode: "create edit" },
+      {
+        key: "isTeacher",
+        label: "Teacher role",
+        type: "switch",
+        section: "authored",
+        mode: "create edit",
+        description: "Grants this role the teacher capabilities: managing the users it invites, seeing all wikis and bags, and creating own wikis without a limit. Survives renames; only the site admin may change it.",
+      },
+      { key: "ownerUsername", label: "Created by", type: "string", section: "runtime", mode: "server" },
+      {
+        key: "foreignTeacherRole",
+        label: "Foreign teacher role",
+        type: "switch",
+        section: "runtime",
+        mode: "server",
+        architecture: "Server-computed: true when this role is a personal role owned by a different teacher. Hidden because the roles tab has no runtime field groups.",
+      },
+      {
+        key: "ownerSharesGroupWithMe",
+        label: "Shares a group with me",
+        type: "switch",
+        section: "runtime",
+        mode: "server",
+        architecture: "Server-computed: true for a role whose owner shares at least one group role (e.g. a class) with the current user. Lets students address their classmates and their own teacher without exposing unrelated people.",
+      },
     ],
     fieldGroups: {
       authored: [
-        { title: "Role basics", keys: ["name", "description"], width: fullWidth, layout: stackLayout },
+        { title: "Role basics", keys: ["name", "description", "isTeacher"], width: fullWidth, layout: stackLayout },
       ],
     },
     sidebarDisplay: ["name", "description"],
@@ -601,26 +640,31 @@ const tabs = {
     label: "Users",
     createLabel: "Create user",
     eyebrow: "Account logins",
-    description: "User accounts with assigned roles.",
+    description: "User accounts with assigned roles. Here admins create accounts and set login passwords. To change your own password, use your profile page.",
     columns: [
       { key: "username", label: "Username", width: 2 },
-      { key: "email", label: "Email", width: 7 },
+      { key: "email", label: "Email", width: 6 },
+      { key: "ownWikiUsage", label: "Own wikis", width: 2 },
+      { key: "ownerUsername", label: "Created by" },
     ],
     fields: [
       { key: "username", label: "Username", type: "string", section: "authored", mode: "create edit" },
       { key: "email", label: "Email", type: "string", section: "authored", mode: "create edit" },
+      { key: "ownerUsername", label: "Created by", type: "string", section: "runtime", mode: "server" },
+      { key: "ownWikiUsage", label: "Own wikis", type: "string", section: "runtime", mode: "server" },
       { key: "userRoles", label: "Roles", type: "search-multiselect", section: "authored", mode: "create edit" },
+      { key: "wikiLimit", label: "Own wiki limit", type: "number", section: "authored", mode: "create edit", description: "How many wikis this user may create on their own. Leave empty for unlimited, 0 to disallow." },
       { key: "resetCode", label: "Reset Code", type: "string", section: "authored", mode: "create edit" },
-
-      // { key: "password", label: "Password", type: "string", section: "authored", mode: "create edit" },
-      // { key: "confirmPassword", label: "Confirm password", type: "string", section: "authored", mode: "create edit temp" },
+      { key: "password", label: "Set password", modeLabels: { create: "Set password", edit: "Reset password" }, passwordGenerator: "confirmPassword", description: "Leave empty to keep the current password. The user signs in with this password.", type: "enter-password", section: "authored", mode: "create edit" },
+      { key: "confirmPassword", label: "Repeat password", type: "confirm-password", section: "authored", mode: "create edit temp" },
     ],
     fieldGroups: {
       authored: [
         { title: "User identity", keys: ["username", "email"], width: fullWidth, layout: stackLayout },
         { title: "Roles", description: "Assign one or more role ids to this user account.", keys: ["userRoles"], width: halfWidth },
+        { title: "Own wiki limit", description: "How many wikis this user may create on their own. Leave empty for unlimited, 0 to disallow.", keys: ["wikiLimit"], width: halfWidth },
         { title: "Reset Code", description: "Allow the user to reset their password with this code.", keys: ["resetCode"], width: halfWidth },
-        { title: "Credentials", keys: ["password", "confirmPassword"], width: halfWidth, layout: stackLayout },
+        { title: "Credentials", description: "Set a login password for this user account. Leave the password field empty to keep the current one. The user signs in with this password instead of a reset code.", keys: ["password", "confirmPassword"], width: halfWidth, layout: stackLayout },
       ],
     },
     sidebarDisplay: [
@@ -642,6 +686,9 @@ export const KeyFields = {
 
 export function getTab(tabId: TabId): TabDefinition {
   return tabs[tabId];
+}
+export function getFieldLabel(field: FieldDefinition, mode: "create" | "edit"): string {
+  return field.modeLabels?.[mode] ?? field.label;
 }
 export function getAllTabs(): TabDefinition[] {
   return Object.values(tabs);
@@ -749,8 +796,13 @@ export interface WikiAdminRecord {
   // recipePermissions: readonly PermissionRow<RecipePermissionLevel>[];
   recipeUsers: readonly string[],
   recipeAdmins: readonly string[],
+  // creator of the wiki (username); deletable only by owner or site admin
+  ownerUsername: string,
+  // summary of the current user's rights on this wiki ("admin"/"owner"/"write"/"read"/"")
+  myRights: string,
   // client field
   defaultWritableBag: string;
+  thumbnailUrl: string;
   readonlyBagCount: string;
   prefixRuleCount: string;
   pluginCount: string;
@@ -779,6 +831,8 @@ export interface TemplateAdminRecord {
   // templatePermissions: readonly PermissionRow<TemplatePermissionLevel>[];
   templateUsers: readonly string[],
   templateAdmins: readonly string[],
+  // creator of the template (username); editable only by owner or site admin
+  ownerUsername: string,
   requiredPluginsEnabled: boolean;
   externalStore: boolean;
   externalPlugins: boolean;
@@ -801,6 +855,7 @@ export interface BagAdminRecord {
   id: IdString;
   name: string;
   description: string;
+  ownerUsername: string;
   bagPermissions: readonly PermissionRow<BagPermissionLevel>[];
   usedByCount: string;
   readonlyUsageCount: string;
@@ -828,6 +883,10 @@ export interface RoleAdminRecord {
   id: IdString;
   name: string;
   description: string;
+  isTeacher: boolean;
+  ownerUsername: string;
+  foreignTeacherRole: boolean;
+  ownerSharesGroupWithMe: boolean;
 }
 // #region User
 export interface UserAdminRecord {
@@ -835,7 +894,12 @@ export interface UserAdminRecord {
   username: string;
   email: string;
   resetCode: string;
+  password: string;
+  confirmPassword: string;
+  ownerUsername: string;
   userRoles: readonly string[];
+  wikiLimit: string;
+  ownWikiUsage: string;
 }
 
 export interface WritablePrefixRow {
