@@ -10,7 +10,7 @@ import { serverEvents } from '@tiddlywiki/events';
 import { truthy } from './utils';
 import { BodyFormat, HonoEnv, ParsedHonoRequest, ParsedRequest, RouteMatch, ROUTER_PROMISE, ServerRequest } from './router';
 import { zod } from './Z2';
-import { MultipartPart, parseNodeMultipartStream } from '@mjackson/multipart-parser';
+import { MultipartPart, MultipartParser } from '@mjackson/multipart-parser';
 import { SendError, SendErrorReason, SendErrorReasonData } from './SendError';
 import SuperHeaders, { SetCookie, SuperHeadersInit, SuperHeadersPropertyInit } from '@remix-run/headers';
 import { URLSearchParamsTyped } from './URLSearchParamsTyped';
@@ -300,18 +300,30 @@ export class Streamer extends StreamerRequest {
     if (!contentType.boundary)
       throw new SendError("MULTIPART_MISSING_BOUNDARY", 400, null);
 
-    for await (let part of parseNodeMultipartStream(this.readStream()!, {
-      boundary: contentType.boundary,
+    // We drive @mjackson/multipart-parser's MultipartParser directly instead of
+    // going through parseNodeMultipartStream: the package's higher-level
+    // parse* helpers only forward maxHeaderSize/maxFileSize and silently drop
+    // onCreatePart/useContentPart, so the streaming callbacks below would never
+    // run. The default maxFileSize (2 MB) is raised to Infinity because we
+    // stream to disk and enforce our own size limits in the route handlers.
+    const parser = new MultipartParser(contentType.boundary, {
       useContentPart: false,
+      maxFileSize: Number.POSITIVE_INFINITY,
       onCreatePart: async (part) => {
         part.append = async (chunk: Uint8Array) => {
           await options.cbPartChunk(part, Buffer.from(chunk));
         };
         await options.cbPartStart(part);
+      },
+    });
+
+    for await (const chunk of this.readStream()!) {
+      if (chunk.length === 0) continue;
+      for await (const part of parser.write(chunk)) {
+        await options.cbPartEnd(part);
       }
-    })) {
-      await options.cbPartEnd(part);
     }
+    parser.finish();
   }
 
   protected res;

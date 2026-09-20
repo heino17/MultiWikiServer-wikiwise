@@ -103,6 +103,7 @@ export const deStrings: Record<string, string> = {
   "Delete user": "Benutzer löschen",
   "Delete role": "Rolle löschen",
   "Delete bag": "Bag löschen",
+  "Delete": "Löschen",
   "Deleting…": "Wird gelöscht …",
   "Saving...": "Speichern …",
   "Save {tab}": "{tab} speichern",
@@ -452,4 +453,21 @@ export const deStrings: Record<string, string> = {
   "Nothing new to read.": "Nichts Neues zu lesen.",
   "No notes for you yet.": "Noch keine Zettel für dich.",
   // #endregion pinboard
+
+  // #region user files
+  "My files": "Meine Dateien",
+  "Files stored in your account.": "Dateien, die in deinem Konto gespeichert sind.",
+  "Choose a file or drop it here": "Datei auswählen oder hier ablegen",
+  "Loading your files…": "Lade deine Dateien…",
+  "No files yet. Upload something to get started.": "Noch keine Dateien. Lade etwas hoch, um zu starten.",
+  "Failed to load your files.": "Deine Dateien konnten nicht geladen werden.",
+  "Uploaded {name}.": "{name} hochgeladen.",
+  "Failed to upload {name}.": "{name} konnte nicht hochgeladen werden.",
+  "Deleted {name}.": "{name} gelöscht.",
+  "Failed to delete {name}.": "{name} konnte nicht gelöscht werden.",
+  "Really delete \"{name}\" for good?": "„{name}“ wirklich endgültig löschen?",
+  "File name": "Dateiname",
+  "Uploaded": "Hochgeladen",
+  "Download": "Herunterladen",
+  // #endregion user files
 };

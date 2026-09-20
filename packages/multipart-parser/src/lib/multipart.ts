@@ -1,19 +1,70 @@
 import { readStream } from './read-stream.ts'
 import type { SearchFunction, PartialTailSearchFunction } from './buffer-search.ts'
 import { createSearch, createPartialTailSearch } from './buffer-search.ts'
-import SuperHeaders, { parse as parseRawHeaders } from '@remix-run/headers'
+import { ContentDisposition, ContentType } from '@remix-run/headers'
 
 
-// function parseRawHeaders(raw: string): [string, string][] {
-//   let headers: [string, string][] = []
-//   for (let line of raw.split('\r\n')) {
-//     let match = line.match(/^([^:]+):(.*)/)
-//     if (match) {
-//       headers.push([match[1].trim(), match[2].trim()])
-//     }
-//   }
-//   return headers
-// }
+/**
+ * Parse a raw HTTP header string into `[name, value]` pairs.
+ *
+ * Unlike `Headers` from the platform, this does not require header values
+ * to be ByteStrings, so non-ASCII (e.g. UTF-8) values such as unencoded
+ * multipart `filename` parameters are preserved.
+ */
+function parseRawHeaders(raw: string): [string, string][] {
+  let headers: [string, string][] = []
+  for (let line of raw.split('\r\n')) {
+    const colon = line.indexOf(':')
+    if (colon === -1) continue
+    headers.push([line.slice(0, colon).trim(), line.slice(colon + 1).trim()])
+  }
+  return headers
+}
+
+/**
+ * A minimal header bag for a parsed multipart part.
+ *
+ * `SuperHeaders`/`Headers` re-encode header values as ByteStrings, which
+ * throws on non-ASCII filename parameters, so we keep the decoded strings
+ * instead and expose only the accessors that the parser needs.
+ */
+class PartHeaders implements Iterable<[string, string]> {
+  #pairs: [string, string][]
+  #contentDisposition?: ContentDisposition
+  #contentType?: ContentType
+
+  constructor(raw: string) {
+    this.#pairs = parseRawHeaders(raw)
+  }
+
+  get(name: string): string | undefined {
+    let lower = name.toLowerCase()
+    for (let [n, v] of this.#pairs) {
+      if (n.toLowerCase() === lower) return v
+    }
+    return undefined
+  }
+
+  get contentDisposition(): ContentDisposition | undefined {
+    if (this.#contentDisposition === undefined) {
+      const value = this.get('Content-Disposition')
+      this.#contentDisposition = value === undefined ? undefined : ContentDisposition.from(value)
+    }
+    return this.#contentDisposition
+  }
+
+  get contentType(): ContentType | undefined {
+    if (this.#contentType === undefined) {
+      const value = this.get('Content-Type')
+      this.#contentType = value === undefined ? undefined : ContentType.from(value)
+    }
+    return this.#contentType
+  }
+
+  *[Symbol.iterator]() {
+    yield* this.#pairs
+  }
+}
 
 
 /**
@@ -358,7 +409,7 @@ const decoder = new TextDecoder('utf-8', { fatal: true })
 export class MultipartPart {
 
   #header: Uint8Array
-  #headers?: SuperHeaders
+  #headers?: PartHeaders
 
   constructor(header: Uint8Array) {
     this.#header = header
@@ -372,9 +423,9 @@ export class MultipartPart {
   /**
    * The headers associated with this part.
    */
-  get headers(): SuperHeaders {
+  get headers(): PartHeaders {
     if (!this.#headers) {
-      this.#headers = new SuperHeaders(parseRawHeaders(decoder.decode(this.#header)))
+      this.#headers = new PartHeaders(decoder.decode(this.#header))
     }
 
     return this.#headers
@@ -398,21 +449,21 @@ export class MultipartPart {
    * The filename of the part, if it is a file upload.
    */
   get filename(): string | undefined {
-    return this.headers.contentDisposition.preferredFilename
+    return this.headers.contentDisposition?.preferredFilename
   }
 
   /**
    * The media type of the part.
    */
   get mediaType(): string | undefined {
-    return this.headers.contentType.mediaType
+    return this.headers.contentType?.mediaType
   }
 
   /**
    * The name of the part, usually the `name` of the field in the `<form>` that submitted the request.
    */
   get name(): string | undefined {
-    return this.headers.contentDisposition.name
+    return this.headers.contentDisposition?.name
   }
 
 }

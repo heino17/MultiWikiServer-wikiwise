@@ -43,6 +43,7 @@ import { tw5logo } from "./logos";
 import { getCurrentLocale, setCurrentLocale, supportedLocales, t, type LocaleCode } from "./i18n";
 import { getEffectiveTheme, toggleTheme, type ThemeMode } from "./theme";
 import "./pinboard";
+import "./user-files";
 
 
 declare global {
@@ -51,6 +52,7 @@ declare global {
       "mws-pinboard": {
         onCountsChange?: (counts: { noteCount: number; unreadCount: number }) => void;
       };
+      "mws-user-files": import("./user-files").UserFilesPanelProps;
     }
   }
 }
@@ -114,7 +116,7 @@ interface PerTabStore {
 }
 
 interface AppStoreState {
-  activeTab: TabId | "storage" | "pinboard";
+  activeTab: TabId | "storage" | "pinboard" | "files";
   itemsByTab: AdminRecordStore;
   isLoadingData: boolean;
 }
@@ -128,7 +130,7 @@ interface PerTabStoreState {
 interface PerTabStoreDependencies {
   getItemsByTab(): AdminRecordStore;
   replaceItemsByTab(itemsByTab: AdminRecordStore): void;
-  setActiveTab(tabId: TabId | "storage" | "pinboard"): void;
+  setActiveTab(tabId: TabId | "storage" | "pinboard" | "files"): void;
   reloadItems(): Promise<void>;
   requestUpdate(): void;
 }
@@ -640,6 +642,19 @@ const pinboardTabDefinition: TabDefinition = {
   fields: [],
 } as unknown as TabDefinition;
 
+// "My files" is a non-CRUD panel too: per-account file uploads. The synthetic
+// definition only drives the section header.
+const userFilesTabDefinition: TabDefinition = {
+  id: "files",
+  label: "My files",
+  createLabel: "",
+  eyebrow: "My files",
+  description: "Files stored in your account.",
+  columns: [],
+  sidebarDisplay: [],
+  fields: [],
+} as unknown as TabDefinition;
+
 class AppStore {
   public readonly state: AppStoreState = {
     activeTab: "wikis",
@@ -670,11 +685,13 @@ class AppStore {
       ? storageTabDefinition
       : this.state.activeTab === "pinboard"
         ? pinboardTabDefinition
-        : getTab(this.state.activeTab);
+        : this.state.activeTab === "files"
+          ? userFilesTabDefinition
+          : getTab(this.state.activeTab);
   }
 
   public get activeTabItems(): AdminRecordStore[TabId] {
-    if (this.state.activeTab === "storage" || this.state.activeTab === "pinboard") return [];
+    if (this.state.activeTab === "storage" || this.state.activeTab === "pinboard" || this.state.activeTab === "files") return [];
     return this.state.itemsByTab[this.state.activeTab];
   }
 
@@ -697,7 +714,7 @@ class AppStore {
     return this.ensureLoaded();
   }
 
-  public readonly setActiveTab = (tabId: TabId | "storage" | "pinboard") => {
+  public readonly setActiveTab = (tabId: TabId | "storage" | "pinboard" | "files") => {
     if (tabId === this.state.activeTab) return;
     this.patchState({ activeTab: tabId });
   };
@@ -1292,15 +1309,34 @@ export class App extends JSXElement {
   @state() accessor pinboardUnread = 0;
   @state() accessor pinboardCount = 0;
   private pinboardTimer: number | null = null;
+  @state() accessor userFileCount = 0;
 
   private readonly store = new AppStore(this, adminStorage);
   private readonly handlePageShow = () => {
     void this.loadAdminRecords(true);
     void this.loadPinboardUnread();
+    void this.loadUserFileCount();
   };
   private readonly handlePinboardCounts = (counts: { noteCount: number; unreadCount: number }) => {
     this.pinboardCount = counts.noteCount;
     this.pinboardUnread = counts.unreadCount;
+  };
+  private readonly handleUserFileCount = (count: number) => {
+    this.userFileCount = count;
+  };
+  private readonly loadUserFileCount = async () => {
+    if (!embeddedServerResponse.userState.isLoggedIn) return;
+    try {
+      const response = await fetch(pathPrefix + "/api/user-files/list", {
+        headers: { "X-Requested-With": "TiddlyWiki" },
+      });
+      const text = await response.text();
+      if (response.status !== 200) throw new Error(text);
+      const parsed = JSON.parse(text) as { files?: unknown[] } | null;
+      if (parsed?.files) this.userFileCount = parsed.files.length;
+    } catch {
+      // Keep the previous badge if the request fails (e.g. a racing logout).
+    }
   };
   private readonly loadPinboardUnread = async () => {
     if (!embeddedServerResponse.userState.isLoggedIn) return;
@@ -1691,6 +1727,14 @@ export class App extends JSXElement {
               <span>{t("{count} new notes", { count: this.pinboardUnread })}</span>
             </small>
           </button>
+          <button
+            class={activeTab === "files" ? "tab-button is-active" : "tab-button"}
+            onclick={() => store.setActiveTab("files")}
+            type="button"
+          >
+            <span>{t("My files")}</span>
+            <small>{t("{count} files", { count: this.userFileCount })}</small>
+          </button>
         </nav>
 
         <section class="section-header">
@@ -1967,6 +2011,10 @@ export class App extends JSXElement {
         ) : activeTab === "pinboard" ? (
           <section class="list-panel">
             <mws-pinboard onCountsChange={this.handlePinboardCounts} />
+          </section>
+        ) : activeTab === "files" ? (
+          <section class="list-panel">
+            <mws-user-files onCountChange={this.handleUserFileCount} admin={embeddedServerResponse.userState.isAdmin} />
           </section>
         ) : (
           <section class="list-panel">

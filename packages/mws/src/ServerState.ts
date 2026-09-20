@@ -25,6 +25,10 @@ export class ServerState {
 
   attachmentsEnabled = false;
   attachmentSizeLimit = 0; // 100 * 1024; // 100 KB
+  /** Maximum size in bytes for a single user file upload ("Meine Dateien").
+   * Enforced while streaming, so no buffer needs to be held in memory.
+   * Configurable via MWS_USERFILE_SIZE_LIMIT (defaults to 100 MB). */
+  userFileSizeLimit = 100 * 1024 * 1024;
   enableDocsRoute = false;
 
   // fieldModules;
@@ -101,6 +105,11 @@ export class ServerState {
 
     this.attachmentsEnabled = false;
     this.attachmentSizeLimit = 100 * 1024;
+
+    const sizeLimit = Number.parseInt(process.env.MWS_USERFILE_SIZE_LIMIT ?? "", 10);
+    if (Number.isFinite(sizeLimit) && sizeLimit > 0) {
+      this.userFileSizeLimit = sizeLimit;
+    }
 
     this.enableDocsRoute = !!process.env.ENABLE_DOCS_ROUTE;
 

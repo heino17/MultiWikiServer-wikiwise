@@ -99,3 +99,8 @@ export type PinboardNoteRead = Prisma.PinboardNoteReadModel
  * describing the note's centre, snapped to the wall raster by the UI.
  */
 export type PinboardNotePosition = Prisma.PinboardNotePositionModel
+/**
+ * Model UserFile
+ * 
+ */
+export type UserFile = Prisma.UserFileModel
