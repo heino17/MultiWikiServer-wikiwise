@@ -3485,4 +3485,121 @@ html[data-theme="dark"] .pinboard-note-actions {
 .user-files-table td:last-child {
   width: 1%;
 }
+
+.user-files-actions {
+  position: relative;
+}
+
+.user-files-shared-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: 0.5rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-on-primary, #fff);
+  background: var(--color-primary, #1b6fb6);
+  vertical-align: middle;
+}
+
+.user-files-share-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: transparent;
+}
+
+.user-files-share-popover {
+  position: fixed;
+  z-index: 60;
+  min-width: 280px;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+  padding: 0.9rem;
+  border: 1px solid var(--color-border, #ddd);
+  border-radius: 0.75rem;
+  background: var(--color-surface, #fff);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  text-align: left;
+}
+
+.user-files-share-title {
+  margin: 0 0 0.6rem;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary, #555);
+  overflow-wrap: anywhere;
+}
+
+.user-files-share-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.user-files-share-option input[type="checkbox"] {
+  accent-color: var(--color-primary, #1b6fb6);
+}
+
+.user-files-share-option material-symbol {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  opacity: 0.7;
+}
+
+.user-files-share-option material-symbol svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
+.user-files-share-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+.user-files-share-actions .primary-button {
+  padding: 0.4rem 1rem;
+  border: none;
+  border-radius: 999px;
+  color: var(--color-on-primary, #fff);
+  background: var(--color-primary, #1b6fb6);
+  cursor: pointer;
+}
+
+.user-files-share-actions .primary-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.user-files-shared-section {
+  margin-top: 2rem;
+}
+
+.user-files-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+}
+
+.user-files-section-title material-symbol {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+}
+
+.user-files-section-title material-symbol svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
 /* #endregion user files */

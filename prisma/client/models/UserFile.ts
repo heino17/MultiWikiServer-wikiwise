@@ -250,6 +250,7 @@ export type UserFileWhereInput = {
   sizeBytes?: Prisma.IntFilter<"UserFile"> | number
   created_at?: Prisma.DateTimeFilter<"UserFile"> | Date | string
   updated_at?: Prisma.DateTimeFilter<"UserFile"> | Date | string
+  shares?: Prisma.UserFileShareListRelationFilter
 }
 
 export type UserFileOrderByWithRelationInput = {
@@ -262,6 +263,7 @@ export type UserFileOrderByWithRelationInput = {
   sizeBytes?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
   updated_at?: Prisma.SortOrder
+  shares?: Prisma.UserFileShareOrderByRelationAggregateInput
 }
 
 export type UserFileWhereUniqueInput = Prisma.AtLeast<{
@@ -277,6 +279,7 @@ export type UserFileWhereUniqueInput = Prisma.AtLeast<{
   sizeBytes?: Prisma.IntFilter<"UserFile"> | number
   created_at?: Prisma.DateTimeFilter<"UserFile"> | Date | string
   updated_at?: Prisma.DateTimeFilter<"UserFile"> | Date | string
+  shares?: Prisma.UserFileShareListRelationFilter
 }, "id">
 
 export type UserFileOrderByWithAggregationInput = {
@@ -321,6 +324,7 @@ export type UserFileCreateInput = {
   sizeBytes: number
   created_at?: Date | string
   updated_at?: Date | string
+  shares?: Prisma.UserFileShareCreateNestedManyWithoutFileInput
 }
 
 export type UserFileUncheckedCreateInput = {
@@ -333,6 +337,7 @@ export type UserFileUncheckedCreateInput = {
   sizeBytes: number
   created_at?: Date | string
   updated_at?: Date | string
+  shares?: Prisma.UserFileShareUncheckedCreateNestedManyWithoutFileInput
 }
 
 export type UserFileUpdateInput = {
@@ -345,6 +350,7 @@ export type UserFileUpdateInput = {
   sizeBytes?: Prisma.IntFieldUpdateOperationsInput | number
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  shares?: Prisma.UserFileShareUpdateManyWithoutFileNestedInput
 }
 
 export type UserFileUncheckedUpdateInput = {
@@ -357,6 +363,7 @@ export type UserFileUncheckedUpdateInput = {
   sizeBytes?: Prisma.IntFieldUpdateOperationsInput | number
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  shares?: Prisma.UserFileShareUncheckedUpdateManyWithoutFileNestedInput
 }
 
 export type UserFileCreateManyInput = {
@@ -439,6 +446,118 @@ export type UserFileSumOrderByAggregateInput = {
   sizeBytes?: Prisma.SortOrder
 }
 
+export type UserFileScalarRelationFilter = {
+  is?: Prisma.UserFileWhereInput
+  isNot?: Prisma.UserFileWhereInput
+}
+
+export type UserFileCreateNestedOneWithoutSharesInput = {
+  create?: Prisma.XOR<Prisma.UserFileCreateWithoutSharesInput, Prisma.UserFileUncheckedCreateWithoutSharesInput>
+  connectOrCreate?: Prisma.UserFileCreateOrConnectWithoutSharesInput
+  connect?: Prisma.UserFileWhereUniqueInput
+}
+
+export type UserFileUpdateOneRequiredWithoutSharesNestedInput = {
+  create?: Prisma.XOR<Prisma.UserFileCreateWithoutSharesInput, Prisma.UserFileUncheckedCreateWithoutSharesInput>
+  connectOrCreate?: Prisma.UserFileCreateOrConnectWithoutSharesInput
+  upsert?: Prisma.UserFileUpsertWithoutSharesInput
+  connect?: Prisma.UserFileWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserFileUpdateToOneWithWhereWithoutSharesInput, Prisma.UserFileUpdateWithoutSharesInput>, Prisma.UserFileUncheckedUpdateWithoutSharesInput>
+}
+
+export type UserFileCreateWithoutSharesInput = {
+  id?: string
+  user_id: string
+  filename: string
+  type: string
+  extension: string
+  sha256: string
+  sizeBytes: number
+  created_at?: Date | string
+  updated_at?: Date | string
+}
+
+export type UserFileUncheckedCreateWithoutSharesInput = {
+  id?: string
+  user_id: string
+  filename: string
+  type: string
+  extension: string
+  sha256: string
+  sizeBytes: number
+  created_at?: Date | string
+  updated_at?: Date | string
+}
+
+export type UserFileCreateOrConnectWithoutSharesInput = {
+  where: Prisma.UserFileWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserFileCreateWithoutSharesInput, Prisma.UserFileUncheckedCreateWithoutSharesInput>
+}
+
+export type UserFileUpsertWithoutSharesInput = {
+  update: Prisma.XOR<Prisma.UserFileUpdateWithoutSharesInput, Prisma.UserFileUncheckedUpdateWithoutSharesInput>
+  create: Prisma.XOR<Prisma.UserFileCreateWithoutSharesInput, Prisma.UserFileUncheckedCreateWithoutSharesInput>
+  where?: Prisma.UserFileWhereInput
+}
+
+export type UserFileUpdateToOneWithWhereWithoutSharesInput = {
+  where?: Prisma.UserFileWhereInput
+  data: Prisma.XOR<Prisma.UserFileUpdateWithoutSharesInput, Prisma.UserFileUncheckedUpdateWithoutSharesInput>
+}
+
+export type UserFileUpdateWithoutSharesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  user_id?: Prisma.StringFieldUpdateOperationsInput | string
+  filename?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  extension?: Prisma.StringFieldUpdateOperationsInput | string
+  sha256?: Prisma.StringFieldUpdateOperationsInput | string
+  sizeBytes?: Prisma.IntFieldUpdateOperationsInput | number
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type UserFileUncheckedUpdateWithoutSharesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  user_id?: Prisma.StringFieldUpdateOperationsInput | string
+  filename?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  extension?: Prisma.StringFieldUpdateOperationsInput | string
+  sha256?: Prisma.StringFieldUpdateOperationsInput | string
+  sizeBytes?: Prisma.IntFieldUpdateOperationsInput | number
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updated_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+
+/**
+ * Count Type UserFileCountOutputType
+ */
+
+export type UserFileCountOutputType = {
+  shares: number
+}
+
+export type UserFileCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  shares?: boolean | UserFileCountOutputTypeCountSharesArgs
+}
+
+/**
+ * UserFileCountOutputType without action
+ */
+export type UserFileCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the UserFileCountOutputType
+   */
+  select?: Prisma.UserFileCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * UserFileCountOutputType without action
+ */
+export type UserFileCountOutputTypeCountSharesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.UserFileShareWhereInput
+}
 
 
 export type UserFileSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -451,6 +570,8 @@ export type UserFileSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   sizeBytes?: boolean
   created_at?: boolean
   updated_at?: boolean
+  shares?: boolean | Prisma.UserFile$sharesArgs<ExtArgs>
+  _count?: boolean | Prisma.UserFileCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["userFile"]>
 
 export type UserFileSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -490,10 +611,18 @@ export type UserFileSelectScalar = {
 }
 
 export type UserFileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "user_id" | "filename" | "type" | "extension" | "sha256" | "sizeBytes" | "created_at" | "updated_at", ExtArgs["result"]["userFile"]>
+export type UserFileInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  shares?: boolean | Prisma.UserFile$sharesArgs<ExtArgs>
+  _count?: boolean | Prisma.UserFileCountOutputTypeDefaultArgs<ExtArgs>
+}
+export type UserFileIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
+export type UserFileIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
 
 export type $UserFilePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "UserFile"
-  objects: {}
+  objects: {
+    shares: Prisma.$UserFileSharePayload<ExtArgs>[]
+  }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     /**
@@ -916,6 +1045,7 @@ readonly fields: UserFileFieldRefs;
  */
 export interface Prisma__UserFileClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  shares<T extends Prisma.UserFile$sharesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserFile$sharesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$UserFileSharePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -971,6 +1101,10 @@ export type UserFileFindUniqueArgs<ExtArgs extends runtime.Types.Extensions.Inte
    */
   omit?: Prisma.UserFileOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserFileInclude<ExtArgs> | null
+  /**
    * Filter, which UserFile to fetch.
    */
   where: Prisma.UserFileWhereUniqueInput
@@ -989,6 +1123,10 @@ export type UserFileFindUniqueOrThrowArgs<ExtArgs extends runtime.Types.Extensio
    */
   omit?: Prisma.UserFileOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserFileInclude<ExtArgs> | null
+  /**
    * Filter, which UserFile to fetch.
    */
   where: Prisma.UserFileWhereUniqueInput
@@ -1006,6 +1144,10 @@ export type UserFileFindFirstArgs<ExtArgs extends runtime.Types.Extensions.Inter
    * Omit specific fields from the UserFile
    */
   omit?: Prisma.UserFileOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserFileInclude<ExtArgs> | null
   /**
    * Filter, which UserFile to fetch.
    */
@@ -1055,6 +1197,10 @@ export type UserFileFindFirstOrThrowArgs<ExtArgs extends runtime.Types.Extension
    */
   omit?: Prisma.UserFileOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserFileInclude<ExtArgs> | null
+  /**
    * Filter, which UserFile to fetch.
    */
   where?: Prisma.UserFileWhereInput
@@ -1102,6 +1248,10 @@ export type UserFileFindManyArgs<ExtArgs extends runtime.Types.Extensions.Intern
    * Omit specific fields from the UserFile
    */
   omit?: Prisma.UserFileOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserFileInclude<ExtArgs> | null
   /**
    * Filter, which UserFiles to fetch.
    */
@@ -1151,6 +1301,10 @@ export type UserFileCreateArgs<ExtArgs extends runtime.Types.Extensions.Internal
    */
   omit?: Prisma.UserFileOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserFileInclude<ExtArgs> | null
+  /**
    * The data needed to create a UserFile.
    */
   data: Prisma.XOR<Prisma.UserFileCreateInput, Prisma.UserFileUncheckedCreateInput>
@@ -1196,6 +1350,10 @@ export type UserFileUpdateArgs<ExtArgs extends runtime.Types.Extensions.Internal
    * Omit specific fields from the UserFile
    */
   omit?: Prisma.UserFileOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserFileInclude<ExtArgs> | null
   /**
    * The data needed to update a UserFile.
    */
@@ -1263,6 +1421,10 @@ export type UserFileUpsertArgs<ExtArgs extends runtime.Types.Extensions.Internal
    */
   omit?: Prisma.UserFileOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserFileInclude<ExtArgs> | null
+  /**
    * The filter to search for the UserFile to update in case it exists.
    */
   where: Prisma.UserFileWhereUniqueInput
@@ -1289,6 +1451,10 @@ export type UserFileDeleteArgs<ExtArgs extends runtime.Types.Extensions.Internal
    */
   omit?: Prisma.UserFileOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserFileInclude<ExtArgs> | null
+  /**
    * Filter which UserFile to delete.
    */
   where: Prisma.UserFileWhereUniqueInput
@@ -1309,6 +1475,30 @@ export type UserFileDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Inte
 }
 
 /**
+ * UserFile.shares
+ */
+export type UserFile$sharesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the UserFileShare
+   */
+  select?: Prisma.UserFileShareSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the UserFileShare
+   */
+  omit?: Prisma.UserFileShareOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserFileShareInclude<ExtArgs> | null
+  where?: Prisma.UserFileShareWhereInput
+  orderBy?: Prisma.UserFileShareOrderByWithRelationInput | Prisma.UserFileShareOrderByWithRelationInput[]
+  cursor?: Prisma.UserFileShareWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.UserFileShareScalarFieldEnum | Prisma.UserFileShareScalarFieldEnum[]
+}
+
+/**
  * UserFile without action
  */
 export type UserFileDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1320,4 +1510,8 @@ export type UserFileDefaultArgs<ExtArgs extends runtime.Types.Extensions.Interna
    * Omit specific fields from the UserFile
    */
   omit?: Prisma.UserFileOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserFileInclude<ExtArgs> | null
 }
