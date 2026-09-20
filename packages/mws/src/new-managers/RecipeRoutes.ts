@@ -1,6 +1,7 @@
 import { zodRoute, SendError } from "@tiddlywiki/server";
 import { RecipeResolver } from "./RecipeResolver";
 import { serveWikiIndex } from "./RecipeIndexSender";
+import { invalidateThumbnail } from "./WikiThumbnailRoutes";
 // ---------------------------------------------------------------------------
 // Recipe-scoped endpoints (RSD, batch, list, status) — addressed by title.
 // ---------------------------------------------------------------------------
@@ -190,7 +191,7 @@ export const TiddlerBatch = zodRoute({
       return e;
     });
 
-    return await state.$transaction(async (prisma) => {
+    const result = await state.$transaction(async (prisma) => {
 
       const r = new RecipeResolver(recipe, prisma, state.user);
 
@@ -222,6 +223,12 @@ export const TiddlerBatch = zodRoute({
 
       throw new Error("Invalid op should have been caught by zod");
     });
+
+    if (op === "save" || op === "delete") {
+      await invalidateThumbnail(state.config.storePath, recipe_slug);
+    }
+
+    return result;
   },
 });
 

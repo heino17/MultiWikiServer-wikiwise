@@ -150,7 +150,18 @@ abstract class IndexSender {
   protected abstract plugins: string[];
   protected abstract twVersion: string;
 
+  protected abstract getTitle(): string;
 
+  private applyTitle(template: string) {
+    const title = this.getTitle();
+    if (!title) return template;
+    const escaped = title
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+    return template.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escaped}</title>`);
+  }
 
   private get cache() { return this.state.pluginCache; }
 
@@ -190,6 +201,7 @@ abstract class IndexSender {
   }
 
   async serveIndexFile(template: string) {
+    template = this.applyTitle(template);
 
     if (this.enableExternalPlugins) {
       this.state.writeEarlyHints({
@@ -337,7 +349,7 @@ class WikiIndexSender extends IndexSender {
   constructor(
     protected state: ServerRequest<any, any>,
     recipe: RecipeInfo,
-    index: IndexData,
+    protected index: IndexData,
     protected etag: string,
     public plugins: string[],
   ) {
@@ -365,6 +377,20 @@ class WikiIndexSender extends IndexSender {
         this.twVersion,
       );
     }
+  }
+
+  protected getTitle(): string {
+    const tiddlers = this.index.bagTiddlers.flatMap(bag => bag.tiddlers);
+    const getText = (title: string) => {
+      const tiddler = tiddlers.find(e => e.title === title);
+      const text = tiddler?.fields["text"];
+      if (typeof text !== "string") return "";
+      return text.trim().replace(/(^|\s)~/g, "$1");
+    };
+    const siteTitle = getText("$:/SiteTitle");
+    if (!siteTitle) return "";
+    const siteSubtitle = getText("$:/SiteSubtitle");
+    return siteSubtitle ? `${siteTitle} — ${siteSubtitle}` : siteTitle;
   }
 
 
@@ -408,6 +434,10 @@ class DocsIndexSender extends IndexSender {
     this.makeStoreWriter = () => new DocsStoreWriter(state, tiddlers, "store.json", plugins, twVersion);
     this.twVersion = twVersion;
 
+  }
+
+  protected getTitle(): string {
+    return "";
   }
 }
 // #region StoreWriter

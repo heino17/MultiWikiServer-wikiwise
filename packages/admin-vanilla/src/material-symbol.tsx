@@ -12,7 +12,11 @@ export class MaterialSymbol extends JSXElement {
   }
 
   protected render() {
-    this.innerHTML = this.props.icon;
+    // Strip width/height from SVG so it scales via CSS
+    const svg = this.props.icon
+      .replace(/\swidth="[^"]*"/, "")
+      .replace(/\sheight="[^"]*"/, "");
+    this.innerHTML = svg;
     return JSXElement.DO_NOT_RENDER;
   }
 }

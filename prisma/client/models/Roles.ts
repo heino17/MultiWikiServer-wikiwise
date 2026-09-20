@@ -30,18 +30,24 @@ export type RolesMinAggregateOutputType = {
   role_id: string | null
   role_name: string | null
   description: string | null
+  is_teacher: boolean | null
+  owner_user_id: string | null
 }
 
 export type RolesMaxAggregateOutputType = {
   role_id: string | null
   role_name: string | null
   description: string | null
+  is_teacher: boolean | null
+  owner_user_id: string | null
 }
 
 export type RolesCountAggregateOutputType = {
   role_id: number
   role_name: number
   description: number
+  is_teacher: number
+  owner_user_id: number
   _all: number
 }
 
@@ -50,18 +56,24 @@ export type RolesMinAggregateInputType = {
   role_id?: true
   role_name?: true
   description?: true
+  is_teacher?: true
+  owner_user_id?: true
 }
 
 export type RolesMaxAggregateInputType = {
   role_id?: true
   role_name?: true
   description?: true
+  is_teacher?: true
+  owner_user_id?: true
 }
 
 export type RolesCountAggregateInputType = {
   role_id?: true
   role_name?: true
   description?: true
+  is_teacher?: true
+  owner_user_id?: true
   _all?: true
 }
 
@@ -141,6 +153,8 @@ export type RolesGroupByOutputType = {
   role_id: string
   role_name: string
   description: string | null
+  is_teacher: boolean
+  owner_user_id: string | null
   _count: RolesCountAggregateOutputType | null
   _min: RolesMinAggregateOutputType | null
   _max: RolesMaxAggregateOutputType | null
@@ -168,6 +182,8 @@ export type RolesWhereInput = {
   role_id?: Prisma.StringFilter<"Roles"> | string
   role_name?: Prisma.StringFilter<"Roles"> | string
   description?: Prisma.StringNullableFilter<"Roles"> | string | null
+  is_teacher?: Prisma.BoolFilter<"Roles"> | boolean
+  owner_user_id?: Prisma.StringNullableFilter<"Roles"> | string | null
   users?: Prisma.UsersListRelationFilter
 }
 
@@ -175,6 +191,8 @@ export type RolesOrderByWithRelationInput = {
   role_id?: Prisma.SortOrder
   role_name?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
+  is_teacher?: Prisma.SortOrder
+  owner_user_id?: Prisma.SortOrderInput | Prisma.SortOrder
   users?: Prisma.UsersOrderByRelationAggregateInput
 }
 
@@ -185,6 +203,8 @@ export type RolesWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.RolesWhereInput[]
   NOT?: Prisma.RolesWhereInput | Prisma.RolesWhereInput[]
   description?: Prisma.StringNullableFilter<"Roles"> | string | null
+  is_teacher?: Prisma.BoolFilter<"Roles"> | boolean
+  owner_user_id?: Prisma.StringNullableFilter<"Roles"> | string | null
   users?: Prisma.UsersListRelationFilter
 }, "role_id" | "role_name">
 
@@ -192,6 +212,8 @@ export type RolesOrderByWithAggregationInput = {
   role_id?: Prisma.SortOrder
   role_name?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
+  is_teacher?: Prisma.SortOrder
+  owner_user_id?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.RolesCountOrderByAggregateInput
   _max?: Prisma.RolesMaxOrderByAggregateInput
   _min?: Prisma.RolesMinOrderByAggregateInput
@@ -204,12 +226,16 @@ export type RolesScalarWhereWithAggregatesInput = {
   role_id?: Prisma.StringWithAggregatesFilter<"Roles"> | string
   role_name?: Prisma.StringWithAggregatesFilter<"Roles"> | string
   description?: Prisma.StringNullableWithAggregatesFilter<"Roles"> | string | null
+  is_teacher?: Prisma.BoolWithAggregatesFilter<"Roles"> | boolean
+  owner_user_id?: Prisma.StringNullableWithAggregatesFilter<"Roles"> | string | null
 }
 
 export type RolesCreateInput = {
   role_id?: string
   role_name: string
   description?: string | null
+  is_teacher?: boolean
+  owner_user_id?: string | null
   users?: Prisma.UsersCreateNestedManyWithoutRolesInput
 }
 
@@ -217,6 +243,8 @@ export type RolesUncheckedCreateInput = {
   role_id?: string
   role_name: string
   description?: string | null
+  is_teacher?: boolean
+  owner_user_id?: string | null
   users?: Prisma.UsersUncheckedCreateNestedManyWithoutRolesInput
 }
 
@@ -224,6 +252,8 @@ export type RolesUpdateInput = {
   role_id?: Prisma.StringFieldUpdateOperationsInput | string
   role_name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  is_teacher?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   users?: Prisma.UsersUpdateManyWithoutRolesNestedInput
 }
 
@@ -231,6 +261,8 @@ export type RolesUncheckedUpdateInput = {
   role_id?: Prisma.StringFieldUpdateOperationsInput | string
   role_name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  is_teacher?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   users?: Prisma.UsersUncheckedUpdateManyWithoutRolesNestedInput
 }
 
@@ -238,36 +270,48 @@ export type RolesCreateManyInput = {
   role_id?: string
   role_name: string
   description?: string | null
+  is_teacher?: boolean
+  owner_user_id?: string | null
 }
 
 export type RolesUpdateManyMutationInput = {
   role_id?: Prisma.StringFieldUpdateOperationsInput | string
   role_name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  is_teacher?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type RolesUncheckedUpdateManyInput = {
   role_id?: Prisma.StringFieldUpdateOperationsInput | string
   role_name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  is_teacher?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type RolesCountOrderByAggregateInput = {
   role_id?: Prisma.SortOrder
   role_name?: Prisma.SortOrder
   description?: Prisma.SortOrder
+  is_teacher?: Prisma.SortOrder
+  owner_user_id?: Prisma.SortOrder
 }
 
 export type RolesMaxOrderByAggregateInput = {
   role_id?: Prisma.SortOrder
   role_name?: Prisma.SortOrder
   description?: Prisma.SortOrder
+  is_teacher?: Prisma.SortOrder
+  owner_user_id?: Prisma.SortOrder
 }
 
 export type RolesMinOrderByAggregateInput = {
   role_id?: Prisma.SortOrder
   role_name?: Prisma.SortOrder
   description?: Prisma.SortOrder
+  is_teacher?: Prisma.SortOrder
+  owner_user_id?: Prisma.SortOrder
 }
 
 export type RolesListRelationFilter = {
@@ -278,10 +322,6 @@ export type RolesListRelationFilter = {
 
 export type RolesOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
-}
-
-export type NullableStringFieldUpdateOperationsInput = {
-  set?: string | null
 }
 
 export type RolesCreateNestedManyWithoutUsersInput = {
@@ -326,12 +366,16 @@ export type RolesCreateWithoutUsersInput = {
   role_id?: string
   role_name: string
   description?: string | null
+  is_teacher?: boolean
+  owner_user_id?: string | null
 }
 
 export type RolesUncheckedCreateWithoutUsersInput = {
   role_id?: string
   role_name: string
   description?: string | null
+  is_teacher?: boolean
+  owner_user_id?: string | null
 }
 
 export type RolesCreateOrConnectWithoutUsersInput = {
@@ -362,24 +406,32 @@ export type RolesScalarWhereInput = {
   role_id?: Prisma.StringFilter<"Roles"> | string
   role_name?: Prisma.StringFilter<"Roles"> | string
   description?: Prisma.StringNullableFilter<"Roles"> | string | null
+  is_teacher?: Prisma.BoolFilter<"Roles"> | boolean
+  owner_user_id?: Prisma.StringNullableFilter<"Roles"> | string | null
 }
 
 export type RolesUpdateWithoutUsersInput = {
   role_id?: Prisma.StringFieldUpdateOperationsInput | string
   role_name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  is_teacher?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type RolesUncheckedUpdateWithoutUsersInput = {
   role_id?: Prisma.StringFieldUpdateOperationsInput | string
   role_name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  is_teacher?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type RolesUncheckedUpdateManyWithoutUsersInput = {
   role_id?: Prisma.StringFieldUpdateOperationsInput | string
   role_name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  is_teacher?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 
@@ -417,6 +469,8 @@ export type RolesSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   role_id?: boolean
   role_name?: boolean
   description?: boolean
+  is_teacher?: boolean
+  owner_user_id?: boolean
   users?: boolean | Prisma.Roles$usersArgs<ExtArgs>
   _count?: boolean | Prisma.RolesCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["roles"]>
@@ -425,21 +479,27 @@ export type RolesSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   role_id?: boolean
   role_name?: boolean
   description?: boolean
+  is_teacher?: boolean
+  owner_user_id?: boolean
 }, ExtArgs["result"]["roles"]>
 
 export type RolesSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   role_id?: boolean
   role_name?: boolean
   description?: boolean
+  is_teacher?: boolean
+  owner_user_id?: boolean
 }, ExtArgs["result"]["roles"]>
 
 export type RolesSelectScalar = {
   role_id?: boolean
   role_name?: boolean
   description?: boolean
+  is_teacher?: boolean
+  owner_user_id?: boolean
 }
 
-export type RolesOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"role_id" | "role_name" | "description", ExtArgs["result"]["roles"]>
+export type RolesOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"role_id" | "role_name" | "description" | "is_teacher" | "owner_user_id", ExtArgs["result"]["roles"]>
 export type RolesInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   users?: boolean | Prisma.Roles$usersArgs<ExtArgs>
   _count?: boolean | Prisma.RolesCountOutputTypeDefaultArgs<ExtArgs>
@@ -456,6 +516,18 @@ export type $RolesPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     role_id: string
     role_name: string
     description: string | null
+    /**
+     * Grants teacher/team-admin capabilities (manage the users one invites,
+     * see all wikis/bags, exemption from the own-wiki limit). Named "teacher"
+     * historically, but the capability rides on this flag: the role may be
+     * renamed freely.
+     */
+    is_teacher: boolean
+    /**
+     * user_id of the user who created this role; editable only by the
+     * owner or the site admin account ("admin"). No FK (auth module).
+     */
+    owner_user_id: string | null
   }, ExtArgs["result"]["roles"]>
   composites: {}
 }
@@ -883,6 +955,8 @@ export interface RolesFieldRefs {
   readonly role_id: Prisma.FieldRef<"Roles", 'String'>
   readonly role_name: Prisma.FieldRef<"Roles", 'String'>
   readonly description: Prisma.FieldRef<"Roles", 'String'>
+  readonly is_teacher: Prisma.FieldRef<"Roles", 'Boolean'>
+  readonly owner_user_id: Prisma.FieldRef<"Roles", 'String'>
 }
     
 

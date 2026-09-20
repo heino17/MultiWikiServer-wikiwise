@@ -106,3 +106,20 @@ export type Users = Prisma.UsersModel
  * 
  */
 export type Sessions = Prisma.SessionsModel
+/**
+ * Model PinboardNote
+ * 
+ */
+export type PinboardNote = Prisma.PinboardNoteModel
+/**
+ * Model PinboardNoteRead
+ * 
+ */
+export type PinboardNoteRead = Prisma.PinboardNoteReadModel
+/**
+ * Model PinboardNotePosition
+ * Where a single user has placed a note on the wall (the arrangement is
+ * per-user, not shared). x/y are fractions (0..1) of the wall dimensions
+ * describing the note's centre, snapped to the wall raster by the UI.
+ */
+export type PinboardNotePosition = Prisma.PinboardNotePositionModel

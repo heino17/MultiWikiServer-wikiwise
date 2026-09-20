@@ -18,15 +18,26 @@ export interface AuthUser {
   roles: {
     role_id: PrismaField<"Roles", "role_id">;
     role_name: PrismaField<"Roles", "role_name">;
+    is_teacher: boolean;
   }[];
   /** Username passed to the client */
   username: PrismaField<"Users", "username">;
+  /** Email of the logged-in user ("" for anonymous). */
+  email?: PrismaField<"Users", "email">;
   /** A session_id isn't guarenteed. There may be a session even if the user isn't logged in, and may not be even if they are, depending on the the situation. */
   sessionId: PrismaField<"Sessions", "session_id"> | undefined;
   /** Is this user considered a site-admin. This is determined by the auth service, not MWS. */
   isAdmin: boolean;
+  /** Is this user a teacher/team manager. Teachers manage their own students
+   * (users they invited), but do NOT bypass content-level permissions the way
+   * admins do. Determined by the is_teacher flag on one of the user's roles,
+   * not by a role name, so the role may be renamed freely. */
+  isTeacher: boolean;
   /** Is the user logged in? This also means that user_id should be 0. role_ids may still be specified. */
   isLoggedIn: boolean;
+  /** How many wikis this user may create on their own. NULL = unlimited,
+   * 0 = none. Only enforced for non-teacher, non-admin users (students). */
+  wikiLimit: number | null;
   /** Web URL for the user's avatar. */
   avatarUrl?: string;
   /** Default admin role name. Users with this role bypass most permissions. */
@@ -143,29 +154,39 @@ export class SessionManager {
 
   static AdminRoleName = "ADMIN";
   static UserRoleName = "USER";
+  /** Role automatically granted to users who are not logged in. */
+  static AnonRoleName = "ANON";
+  /** Well-known teacher role name seeded by init-store. Teacher capabilities
+   * are detected via the `is_teacher` flag on the role, NOT this name, so the
+   * role may be renamed freely. Kept for seeding and documentation. */
+  static TeacherRoleName = "TEACHER";
 
   private static roleLookup: Record<string, string> = undefined as any;
 
   static async parseIncomingRequest(cookies: BetterCookie, config: ServerState): Promise<AuthUser> {
 
     this.roleLookup ??= Object.fromEntries((await config.engine.roles.findMany({
-      where: { role_name: { in: [this.AdminRoleName, this.UserRoleName] } },
+      where: { role_name: { in: [this.AdminRoleName, this.UserRoleName, this.AnonRoleName] } },
       select: { role_id: true, role_name: true },
     })).map(e => [e.role_name, e.role_id]));
 
     const sessionId = cookies.getAll("session") as PrismaField<"Sessions", "session_id">[];
     const session = sessionId && await config.engine.sessions.findFirst({
       where: { session_id: { in: sessionId } },
-      select: { session_id: true, user: { select: { user_id: true, username: true, roles: { select: { role_id: true, role_name: true } } } } }
+      select: { session_id: true, user: { select: { user_id: true, username: true, email: true, wiki_limit: true, roles: { select: { role_id: true, role_name: true, is_teacher: true } } } } }
     });
 
     if (sessionId && session) return {
       user_id: session.user.user_id,
       username: session.user.username,
+      email: session.user.email,
       isAdmin: session.user.roles.some(e => e.role_name === "ADMIN"),
+      isTeacher: session.user.roles.some(e => e.is_teacher),
+      wikiLimit: session.user.wiki_limit,
       roles: session.user.roles.map(e => ({
         role_id: e.role_id,
-        role_name: e.role_name
+        role_name: e.role_name,
+        is_teacher: e.is_teacher,
       })),
       sessionId: session.session_id,
       isLoggedIn: true,
@@ -177,8 +198,13 @@ export class SessionManager {
     else return {
       user_id: "" as PrismaField<"Users", "user_id">,
       username: "(anon)" as PrismaField<"Users", "username">,
+      email: "",
       isAdmin: false,
-      roles: [],
+      isTeacher: false,
+      wikiLimit: 0,
+      roles: this.roleLookup[this.AnonRoleName]
+        ? [{ role_id: this.roleLookup[this.AnonRoleName], role_name: this.AnonRoleName, is_teacher: false }]
+        : [],
       sessionId: undefined,
       isLoggedIn: false,
       AdminRoleName: SessionManager.AdminRoleName,
@@ -191,7 +217,7 @@ export class SessionManager {
   login1 = zodSession("/login/1", z => z.object({
     username: z.prismaField("Users", "username", "string"),
     startLoginRequest: z.string(),
-  }), async (state) => { state.assertReferer(["/login"]); }, async (state, prisma) => {
+  }), async (state) => { state.assertReferer(["/login", "/profile", "/wiki"]); }, async (state, prisma) => {
     const { username, startLoginRequest } = state.data;
 
     const user = await prisma.users.findUnique({
@@ -223,7 +249,7 @@ export class SessionManager {
     finishLoginRequest: z.string(),
     loginSession: z.string(),
     skipCookie: z.boolean().optional().default(false),
-  }), async (state) => { state.assertReferer(["/login"]); }, async (state, prisma) => {
+  }), async (state) => { state.assertReferer(["/login", "/profile", "/wiki"]); }, async (state, prisma) => {
     const { finishLoginRequest, skipCookie, loginSession } = state.data;
 
     if (!loginSession) throw "Login session not found.";

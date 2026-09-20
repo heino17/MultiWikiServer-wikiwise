@@ -12,7 +12,11 @@
 import { checkPath, checkQueryKeys, defineZodRoute, zod, ZodRoute } from "@tiddlywiki/server";
 import { serverEvents } from "@tiddlywiki/events";
 import { serveDocsIndex, serveWikiIndex, } from "./RecipeIndexSender";
-import { AdminLoad, AdminSave } from "./TabDataAdapter";
+import { AdminLoad, AdminCreateWiki, AdminDeleteWiki, AdminDeleteRole, AdminDeleteBag, AdminDeleteUser, AdminSave } from "./TabDataAdapter";
+import { AdminBackup, AdminBackupList, AdminBackupDownload, AdminBackupDelete } from "./BackupRoutes";
+import { AdminStorage } from "./StorageRoutes";
+import { PinboardDeleteNote, PinboardList, PinboardMarkRead, PinboardSaveNote, PinboardSavePosition, PinboardUnreadCount } from "./PinboardRoutes";
+import { serveWikiThumbnail } from "./WikiThumbnailRoutes";
 import { RecipeStatus, RecipeStoreJS, RecipeStoreJSON, RecipeUpdates, TiddlerBatch, TiddlerList } from "./RecipeRoutes";
 
 export * from "./RecipeResolver";
@@ -77,11 +81,36 @@ serverEvents.on("mws.routes", (root) => {
     bodyFormat: "ignore",
   }, async (state) => {
 
-    if (state.method === "OPTIONS") return state.sendEmpty(405);
+    if (state.method === "OPTIONS") return state.sendEmpty(200);
 
     checkPath(state, z => ({ version: z.string() }), new Error());
 
     return await serveDocsIndex(state, state.pathParams.version);
+
+  });
+
+  parent.defineRoute<"ignore">({
+    method: ["GET", "HEAD", "OPTIONS"],
+    path: new RegExp(`^/wiki/favicon\\.ico$`),
+    bodyFormat: "ignore",
+  }, async (state) => {
+    return state.redirect("/favicon.ico");
+  });
+
+  parent.defineRoute<"ignore">({
+    method: ["GET", "OPTIONS"],
+    path: new RegExp(`^/wiki/(?<recipe_slug>[^/]+)/thumbnail$`),
+    bodyFormat: "ignore",
+  }, async (state) => {
+
+    if (state.method === "OPTIONS")
+      return state.sendEmpty(200);
+
+    checkPath(state, z => ({
+      recipe_slug: z.prismaField("Recipe", "slug", "string"),
+    }), new Error());
+
+    return await serveWikiThumbnail(state);
 
   });
 
@@ -92,7 +121,7 @@ serverEvents.on("mws.routes", (root) => {
   }, async (state) => {
 
     if (state.method === "OPTIONS")
-      return state.sendEmpty(405);
+      return state.sendEmpty(200);
 
     checkPath(state, z => ({
       recipe_slug: z.prismaField("Recipe", "slug", "string"),
@@ -129,11 +158,43 @@ const ApiRoutes = {
   TiddlerBatch,
   TiddlerList,
   AdminLoad,
+  AdminCreateWiki,
+  AdminDeleteWiki,
+  AdminDeleteRole,
+  AdminDeleteBag,
+  AdminDeleteUser,
+  AdminBackup,
+  AdminBackupList,
+  AdminBackupDownload,
+  AdminBackupDelete,
+  AdminStorage,
+  PinboardList,
+  PinboardUnreadCount,
+  PinboardSaveNote,
+  PinboardSavePosition,
+  PinboardDeleteNote,
+  PinboardMarkRead,
   AdminSave,
 };
 interface ClientRoutes {
   AdminLoad: ClientRoute<typeof AdminLoad>;
+  AdminCreateWiki: ClientRoute<typeof AdminCreateWiki>;
+  AdminDeleteWiki: ClientRoute<typeof AdminDeleteWiki>;
+  AdminDeleteRole: ClientRoute<typeof AdminDeleteRole>;
+  AdminDeleteBag: ClientRoute<typeof AdminDeleteBag>;
+  AdminDeleteUser: ClientRoute<typeof AdminDeleteUser>;
   AdminSave: ClientRoute<typeof AdminSave>;
+  AdminBackup: ClientRoute<typeof AdminBackup>;
+  AdminBackupList: ClientRoute<typeof AdminBackupList>;
+  AdminBackupDownload: ClientRoute<typeof AdminBackupDownload>;
+  AdminBackupDelete: ClientRoute<typeof AdminBackupDelete>;
+  AdminStorage: ClientRoute<typeof AdminStorage>;
+  PinboardList: ClientRoute<typeof PinboardList>;
+  PinboardUnreadCount: ClientRoute<typeof PinboardUnreadCount>;
+  PinboardSaveNote: ClientRoute<typeof PinboardSaveNote>;
+  PinboardSavePosition: ClientRoute<typeof PinboardSavePosition>;
+  PinboardDeleteNote: ClientRoute<typeof PinboardDeleteNote>;
+  PinboardMarkRead: ClientRoute<typeof PinboardMarkRead>;
   TiddlerBatch: ClientRoute<typeof TiddlerBatch>;
   TiddlerList: ClientRoute<typeof TiddlerList>;
   RecipeStatus: ClientRoute<typeof RecipeStatus>;

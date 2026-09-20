@@ -28,16 +28,15 @@ export class InitStoreCommand extends BaseCommand {
 
 	async setupStore() {
 		await this.config.engine.$transaction(async prisma => {
-			const userCount = await prisma.users.count();
-			if (userCount) return;
-
-
 			const roles = await new RoleImportWriter(prisma, true).upsert([
-				{ name: "ADMIN", description: "System Administrator" },
-				{ name: "USER", description: "Basic User" },
+				{ name: "ADMIN", description: "System Administrator", isTeacher: false },
+				{ name: "USER", description: "Basic User", isTeacher: false },
+				{ name: "TEACHER", description: "Teacher: manages their own students (users they invite)", isTeacher: true },
+				{ name: "ANON", description: "Anonymous users (not logged in)", isTeacher: false },
 			]);
 
-			if (!roles[0])
+			const adminRole = roles.find((role) => role.role_name === "ADMIN");
+			if (!adminRole)
 				throw new Error("Failed to create ADMIN role during store initialization.");
 
 
@@ -58,12 +57,14 @@ export class InitStoreCommand extends BaseCommand {
 					injectionFunction: "",
 					injectionLocation: "",
 				},
-				permissions: [{ level: "B_write", role_id: new IdString(roles[0].role_id) }]
+				permissions: [{ level: "B_write", role_id: new IdString(adminRole.role_id) }]
 			}]);
 
+			const userCount = await prisma.users.count();
+			if (userCount) return;
 
 			const [admin] = await new UserImportWriter(prisma, true).upsert([
-				{ username: "admin", email: "", resetCode: null, roleIds: [new IdString(roles[0].role_id)] },
+				{ username: "admin", email: "", resetCode: null, roleIds: [new IdString(adminRole.role_id)], wikiLimit: null },
 			]);
 
 			const password = await this.config.PasswordService.PasswordCreation(admin.user_id, "1234");

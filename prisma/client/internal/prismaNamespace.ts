@@ -396,7 +396,10 @@ export const ModelName = {
   Settings: 'Settings',
   Roles: 'Roles',
   Users: 'Users',
-  Sessions: 'Sessions'
+  Sessions: 'Sessions',
+  PinboardNote: 'PinboardNote',
+  PinboardNoteRead: 'PinboardNoteRead',
+  PinboardNotePosition: 'PinboardNotePosition'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -412,7 +415,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "bag" | "bagPermission" | "tiddler" | "tiddlerEvent" | "template" | "templatePermission" | "recipe" | "recipePermission" | "recipeBag" | "settings" | "roles" | "users" | "sessions"
+    modelProps: "bag" | "bagPermission" | "tiddler" | "tiddlerEvent" | "template" | "templatePermission" | "recipe" | "recipePermission" | "recipeBag" | "settings" | "roles" | "users" | "sessions" | "pinboardNote" | "pinboardNoteRead" | "pinboardNotePosition"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1378,6 +1381,228 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    PinboardNote: {
+      payload: Prisma.$PinboardNotePayload<ExtArgs>
+      fields: Prisma.PinboardNoteFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PinboardNoteFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNotePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PinboardNoteFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNotePayload>
+        }
+        findFirst: {
+          args: Prisma.PinboardNoteFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNotePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PinboardNoteFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNotePayload>
+        }
+        findMany: {
+          args: Prisma.PinboardNoteFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNotePayload>[]
+        }
+        create: {
+          args: Prisma.PinboardNoteCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNotePayload>
+        }
+        createMany: {
+          args: Prisma.PinboardNoteCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PinboardNoteCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNotePayload>[]
+        }
+        delete: {
+          args: Prisma.PinboardNoteDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNotePayload>
+        }
+        update: {
+          args: Prisma.PinboardNoteUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNotePayload>
+        }
+        deleteMany: {
+          args: Prisma.PinboardNoteDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PinboardNoteUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PinboardNoteUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNotePayload>[]
+        }
+        upsert: {
+          args: Prisma.PinboardNoteUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNotePayload>
+        }
+        aggregate: {
+          args: Prisma.PinboardNoteAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePinboardNote>
+        }
+        groupBy: {
+          args: Prisma.PinboardNoteGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PinboardNoteGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PinboardNoteCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PinboardNoteCountAggregateOutputType> | number
+        }
+      }
+    }
+    PinboardNoteRead: {
+      payload: Prisma.$PinboardNoteReadPayload<ExtArgs>
+      fields: Prisma.PinboardNoteReadFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PinboardNoteReadFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNoteReadPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PinboardNoteReadFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNoteReadPayload>
+        }
+        findFirst: {
+          args: Prisma.PinboardNoteReadFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNoteReadPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PinboardNoteReadFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNoteReadPayload>
+        }
+        findMany: {
+          args: Prisma.PinboardNoteReadFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNoteReadPayload>[]
+        }
+        create: {
+          args: Prisma.PinboardNoteReadCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNoteReadPayload>
+        }
+        createMany: {
+          args: Prisma.PinboardNoteReadCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PinboardNoteReadCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNoteReadPayload>[]
+        }
+        delete: {
+          args: Prisma.PinboardNoteReadDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNoteReadPayload>
+        }
+        update: {
+          args: Prisma.PinboardNoteReadUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNoteReadPayload>
+        }
+        deleteMany: {
+          args: Prisma.PinboardNoteReadDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PinboardNoteReadUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PinboardNoteReadUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNoteReadPayload>[]
+        }
+        upsert: {
+          args: Prisma.PinboardNoteReadUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNoteReadPayload>
+        }
+        aggregate: {
+          args: Prisma.PinboardNoteReadAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePinboardNoteRead>
+        }
+        groupBy: {
+          args: Prisma.PinboardNoteReadGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PinboardNoteReadGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PinboardNoteReadCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PinboardNoteReadCountAggregateOutputType> | number
+        }
+      }
+    }
+    PinboardNotePosition: {
+      payload: Prisma.$PinboardNotePositionPayload<ExtArgs>
+      fields: Prisma.PinboardNotePositionFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PinboardNotePositionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNotePositionPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PinboardNotePositionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNotePositionPayload>
+        }
+        findFirst: {
+          args: Prisma.PinboardNotePositionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNotePositionPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PinboardNotePositionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNotePositionPayload>
+        }
+        findMany: {
+          args: Prisma.PinboardNotePositionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNotePositionPayload>[]
+        }
+        create: {
+          args: Prisma.PinboardNotePositionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNotePositionPayload>
+        }
+        createMany: {
+          args: Prisma.PinboardNotePositionCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PinboardNotePositionCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNotePositionPayload>[]
+        }
+        delete: {
+          args: Prisma.PinboardNotePositionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNotePositionPayload>
+        }
+        update: {
+          args: Prisma.PinboardNotePositionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNotePositionPayload>
+        }
+        deleteMany: {
+          args: Prisma.PinboardNotePositionDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PinboardNotePositionUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PinboardNotePositionUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNotePositionPayload>[]
+        }
+        upsert: {
+          args: Prisma.PinboardNotePositionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PinboardNotePositionPayload>
+        }
+        aggregate: {
+          args: Prisma.PinboardNotePositionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePinboardNotePosition>
+        }
+        groupBy: {
+          args: Prisma.PinboardNotePositionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PinboardNotePositionGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PinboardNotePositionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PinboardNotePositionCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -1419,7 +1644,8 @@ export const BagScalarFieldEnum = {
   name: 'name',
   created: 'created',
   updated: 'updated',
-  description: 'description'
+  description: 'description',
+  owner_user_id: 'owner_user_id'
 } as const
 
 export type BagScalarFieldEnum = (typeof BagScalarFieldEnum)[keyof typeof BagScalarFieldEnum]
@@ -1461,6 +1687,7 @@ export const TemplateScalarFieldEnum = {
   name: 'name',
   created: 'created',
   updated: 'updated',
+  owner_user_id: 'owner_user_id',
   type: 'type',
   definition: 'definition'
 } as const
@@ -1482,6 +1709,7 @@ export const RecipeScalarFieldEnum = {
   slug: 'slug',
   created: 'created',
   updated: 'updated',
+  owner_user_id: 'owner_user_id',
   template_id: 'template_id',
   definition: 'definition',
   plugins: 'plugins',
@@ -1523,7 +1751,9 @@ export type SettingsScalarFieldEnum = (typeof SettingsScalarFieldEnum)[keyof typ
 export const RolesScalarFieldEnum = {
   role_id: 'role_id',
   role_name: 'role_name',
-  description: 'description'
+  description: 'description',
+  is_teacher: 'is_teacher',
+  owner_user_id: 'owner_user_id'
 } as const
 
 export type RolesScalarFieldEnum = (typeof RolesScalarFieldEnum)[keyof typeof RolesScalarFieldEnum]
@@ -1534,9 +1764,11 @@ export const UsersScalarFieldEnum = {
   username: 'username',
   email: 'email',
   password: 'password',
+  owner_user_id: 'owner_user_id',
   resetCode: 'resetCode',
   created_at: 'created_at',
-  last_login: 'last_login'
+  last_login: 'last_login',
+  wiki_limit: 'wiki_limit'
 } as const
 
 export type UsersScalarFieldEnum = (typeof UsersScalarFieldEnum)[keyof typeof UsersScalarFieldEnum]
@@ -1551,6 +1783,44 @@ export const SessionsScalarFieldEnum = {
 } as const
 
 export type SessionsScalarFieldEnum = (typeof SessionsScalarFieldEnum)[keyof typeof SessionsScalarFieldEnum]
+
+
+export const PinboardNoteScalarFieldEnum = {
+  id: 'id',
+  author_user_id: 'author_user_id',
+  author_name: 'author_name',
+  scope_type: 'scope_type',
+  scope_id: 'scope_id',
+  body: 'body',
+  color: 'color',
+  is_important: 'is_important',
+  is_active: 'is_active',
+  created_at: 'created_at',
+  updated_at: 'updated_at',
+  expires_at: 'expires_at'
+} as const
+
+export type PinboardNoteScalarFieldEnum = (typeof PinboardNoteScalarFieldEnum)[keyof typeof PinboardNoteScalarFieldEnum]
+
+
+export const PinboardNoteReadScalarFieldEnum = {
+  note_id: 'note_id',
+  user_id: 'user_id',
+  read_at: 'read_at',
+  dismissed_at: 'dismissed_at'
+} as const
+
+export type PinboardNoteReadScalarFieldEnum = (typeof PinboardNoteReadScalarFieldEnum)[keyof typeof PinboardNoteReadScalarFieldEnum]
+
+
+export const PinboardNotePositionScalarFieldEnum = {
+  note_id: 'note_id',
+  user_id: 'user_id',
+  x: 'x',
+  y: 'y'
+} as const
+
+export type PinboardNotePositionScalarFieldEnum = (typeof PinboardNotePositionScalarFieldEnum)[keyof typeof PinboardNotePositionScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -1568,6 +1838,14 @@ export const JsonNullValueInput = {
 export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
+export const NullsOrder = {
+  first: 'first',
+  last: 'last'
+} as const
+
+export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
 export const JsonNullValueFilter = {
   DbNull: DbNull,
   JsonNull: JsonNull,
@@ -1583,14 +1861,6 @@ export const QueryMode = {
 } as const
 
 export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
-
-
-export const NullsOrder = {
-  first: 'first',
-  last: 'last'
-} as const
-
-export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 
 
 
@@ -1805,6 +2075,9 @@ export type GlobalOmitConfig = {
   roles?: Prisma.RolesOmit
   users?: Prisma.UsersOmit
   sessions?: Prisma.SessionsOmit
+  pinboardNote?: Prisma.PinboardNoteOmit
+  pinboardNoteRead?: Prisma.PinboardNoteReadOmit
+  pinboardNotePosition?: Prisma.PinboardNotePositionOmit
 }
 
 /* Types for Logging */

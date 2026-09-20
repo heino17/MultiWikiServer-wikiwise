@@ -4,6 +4,8 @@ import { AdminRecordStore, FieldDefinition, FieldType, IdString, PermissionRow, 
 import { definitely, is } from "./utils";
 import warningIcon from "@material-symbols/svg-400/outlined/warning.svg";
 import { findTemplateRecordForWikiRecord, jsonReviver } from "./store";
+import { t } from "../i18n";
+import { PasswordGenerator } from "../password-generator";
 
 
 
@@ -77,7 +79,32 @@ function getLookupOptions(fieldKey: string, itemsByTab: AdminRecordStore): strin
     || fieldKey === "templateAdmins"
     || fieldKey === "templateUsers"
   ) {
-    return Array.from(new Set(itemsByTab.roles.map((item) => item.name).filter(Boolean)));
+    const roleNames = Array.from(new Set(itemsByTab.roles.map((item) => item.name).filter(Boolean)));
+    if (embeddedServerResponse.userState.isAdmin) return roleNames;
+    // Everyone except the admin sees only the roles they may actually address:
+    // the groups they are a member of (including their own personal role and the
+    // shared USER role), the ANON system role (public sharing) and the personal
+    // roles of everyone who shares a group role with them (server flag
+    // ownerSharesGroupWithMe) — classmates and their own class teacher. Privileged
+    // roles (ADMIN and every is_teacher role) are off limits for assignment.
+    // Other classes, clubs, unrelated teachers/students stay out of the pickers.
+    const foreignTeacherRoleNames = new Set(
+      itemsByTab.roles.filter((item) => item.foreignTeacherRole).map((item) => item.name)
+    );
+    const privilegedRoleNames = new Set(
+      itemsByTab.roles.filter((item) => item.name === "ADMIN" || item.isTeacher).map((item) => item.name)
+    );
+    const myRoleNames = new Set(embeddedServerResponse.userState.roles.map((role) => role.role_name));
+    const groupCompanionNames = new Set(itemsByTab.roles.filter((item) => item.ownerSharesGroupWithMe).map((item) => item.name));
+    const base = roleNames.filter((name) =>
+      !privilegedRoleNames.has(name) && (myRoleNames.has(name) || name === "ANON" || groupCompanionNames.has(name))
+    );
+    // The user-role picker (assigning roles to a user account) additionally hides
+    // foreign teachers' personal roles: role assignments stay within one's own
+    // class. Permission editors keep them when the teacher shares a group.
+    if (fieldKey === "userRoles")
+      return base.filter((name) => !foreignTeacherRoleNames.has(name));
+    return base;
   }
   return [];
 }
@@ -136,15 +163,92 @@ function renderSearchableInput({ id, currentValue, placeholder, options, onInput
   );
 }
 
+/**
+ * Keeps the derived default bag (the empty-prefix write target "editions/<slug>")
+ * in sync while the wiki slug is being edited: any authored writablePrefixBags row
+ * that still points at "editions/<old-slug>" follows the new slug value.
+ */
+function syncDefaultBagOnSlugChange(ctx: FieldEditorContext, nextSlug: string) {
+  const { field, value, fieldState, onDraftChange } = ctx;
+  if (field.key !== "slug" || fieldState.tabId !== "wikis") return;
+  const oldSlug = String(value ?? "");
+  if (!oldSlug || oldSlug === nextSlug) return;
+  const draft = fieldState.draft as Partial<WikiAdminRecord>;
+  const rows = draft.writablePrefixBags;
+  if (!Array.isArray(rows)) return;
+  const oldBag = `editions/${oldSlug}`;
+  const newBag = `editions/${nextSlug}`;
+  const nextRows = rows.map((row) => (row.bagName === oldBag ? { ...row, bagName: newBag } : row));
+  if (nextRows.some((row, index) => row.bagName !== rows[index].bagName)) {
+    onDraftChange("writablePrefixBags", nextRows);
+  }
+}
+
+const SLUG_FORMAT_HINT_KEY = "Use lowercase letters, numbers and hyphens, e.g. mein-wiki.";
+const SLUG_FORMAT_REGEX = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+function renderSlugLiveValidation(ctx: FieldEditorContext) {
+  const { field, value, fieldState, itemsByTab } = ctx;
+  if (field.key !== "slug" || fieldState.tabId !== "wikis") return null;
+  const slug = String(value ?? "");
+  if (!slug) {
+    return (
+      <p class="field-helper" role="status" aria-live="polite">
+        {t(SLUG_FORMAT_HINT_KEY)}
+      </p>
+    );
+  }
+  const savedSlug = (fieldState.saved as Partial<WikiAdminRecord>)?.slug;
+  const takenSlugs = itemsByTab.wikis.map((wiki) => wiki.slug).filter((item) => item !== savedSlug);
+  const isValidFormat = SLUG_FORMAT_REGEX.test(slug);
+  const isTaken = takenSlugs.includes(slug);
+  if (!isValidFormat) {
+    return (
+      <p class="field-helper" role="alert" aria-live="polite" style={{ color: "var(--color-danger)" }}>
+        {t(SLUG_FORMAT_HINT_KEY)}
+      </p>
+    );
+  }
+  if (isTaken) {
+    return (
+      <p class="field-helper" role="alert" aria-live="polite" style={{ color: "var(--color-danger)" }}>
+        {t("This name is already taken.")}
+      </p>
+    );
+  }
+  return (
+    <p class="field-helper" role="status" aria-live="polite" style={{ color: "var(--color-success)" }}>
+      {t("This name is available.")}
+    </p>
+  );
+}
+
 function renderTextInputField(ctx: FieldEditorContext, type: "text" | "number" | "password") {
   const { field, value, disabled, inputId, onDraftChange, } = ctx;
   definitely<string>(value);
   if (field.mode === "server" || field.mode === "") {
     return renderCalloutField(ctx);
   }
-  return <input id={inputId} class="field-input" type={type} value={value} ref={(element) => {
-    if (element.value !== value) element.value = value;
-  }} disabled={disabled} oninput={(event) => onDraftChange(field.key, (event.currentTarget as HTMLInputElement).value)} />;
+  const passwordGenerator = type === "password" && field.passwordGenerator
+    ? <PasswordGenerator
+      fieldKey={field.key}
+      confirmKey={field.passwordGenerator === true ? undefined : field.passwordGenerator}
+      disabled={disabled}
+      onDraftChange={(key, value) => onDraftChange(key, value)}
+      onTriggerOperation={ctx.onTriggerOperation}
+    />
+    : null;
+  return <>
+    <input id={inputId} class="field-input" type={type} value={value} ref={(element) => {
+      if (element.value !== value) element.value = value;
+    }} disabled={disabled} oninput={(event) => {
+      const nextValue = (event.currentTarget as HTMLInputElement).value;
+      syncDefaultBagOnSlugChange(ctx, nextValue);
+      onDraftChange(field.key, nextValue);
+    }} />
+    {renderSlugLiveValidation(ctx)}
+    {passwordGenerator}
+  </>;
 }
 
 function renderTextareaField(ctx: FieldEditorContext, rows: number, extraClass = "") {
@@ -161,8 +265,8 @@ function renderSelectField(ctx: FieldEditorContext<boolean>) {
   definitely<boolean>(value);
   return (
     <select id={inputId} class="field-select" disabled={disabled} onchange={(event) => onDraftChange(field.key, (event.currentTarget as HTMLSelectElement).value === "true")}>
-      <option value="true" selected={value}>Enabled</option>
-      <option value="false" selected={!value}>Disabled</option>
+      <option value="true" selected={value}>{t("Enabled")}</option>
+      <option value="false" selected={!value}>{t("Disabled")}</option>
     </select>
   );
 }
@@ -269,7 +373,7 @@ function renderConfirmPasswordFieldEditor(ctx: FieldEditorContext<any>) {
         type="password"
         value={value}
         disabled={disabled}
-        placeholder="Enter password"
+        placeholder={t("Repeat password")}
         ref={(element) => {
           if (element.value !== value) element.value = value;
         }}
@@ -281,13 +385,13 @@ function renderConfirmPasswordFieldEditor(ctx: FieldEditorContext<any>) {
         type="password"
         value={confirmationValue}
         disabled={disabled}
-        placeholder="Confirm password"
+        placeholder={t("Confirm password")}
         ref={(element) => {
           if (element.value !== confirmationValue) element.value = confirmationValue;
         }}
         oninput={(event) => onTriggerOperation(field.key, (event.currentTarget as HTMLInputElement).value)}
       />
-      {hasConfirmation ? <p class="field-helper">{hasMismatch ? "Passwords do not match yet." : "Passwords match."}</p> : null}
+      {hasConfirmation ? <p class="field-helper">{hasMismatch ? t("Passwords do not match yet.") : t("Passwords match.")}</p> : null}
     </div>
   );
 }
@@ -311,7 +415,7 @@ function renderSearchFieldEditor(ctx: FieldEditorContext<string | null> | Readon
   return renderSearchableInput({
     id: inputId,
     currentValue: value ?? "",
-    placeholder: field.label,
+    placeholder: t(field.label),
     options: getLookupOptions(field.key, itemsByTab),
     disabled,
     onInput: (nextValue) => onDraftChange(field.key, nextValue || null),
@@ -330,7 +434,7 @@ function renderSearchMultiselectFieldEditor(ctx: FieldEditorContext<any>) {
   const editableLines = value;
   const pendingRowCount = fieldState.pendingRows[field.key] ?? 0;
   const lookupOptions = getLookupOptions(field.key, itemsByTab);
-  const itemLabel = field.label;
+  const itemLabel = t(field.label);
   // field.key === "plugins" ? "plugin" :
   //   field.key === "userRoles" ? "role id" :
   //     "bag";
@@ -374,24 +478,24 @@ function renderSearchMultiselectFieldEditor(ctx: FieldEditorContext<any>) {
             onInput: (nextValue) => updateLineValueAt(index, nextValue),
             disabled: ctx.disabled
           })}
-          <button type="button" class="row-action-button" disabled={disabled} onclick={() => removeLineValueAt(index)}>Remove</button>
+          <button type="button" class="row-action-button" disabled={disabled} onclick={() => removeLineValueAt(index)}>{t("Remove")}</button>
         </div>
       ))}
-      <button type="button" class="ghost-button" disabled={disabled} onclick={() => onPendingRowsChange(field.key, (count) => count + 1)}>{`Add ${itemLabel}`}</button>
+      <button type="button" class="ghost-button" disabled={disabled} onclick={() => onPendingRowsChange(field.key, (count) => count + 1)}>{t("Add {item}", { item: itemLabel })}</button>
       {field.key === "readonlyBags" && fieldState.tabId === "wikis" && templateRecord ? (
         <div class="field-callout">
-          <p>Readonly bags from template</p>
+          <p>{t("Readonly bags from template")}</p>
           <ul class="value-list">
-            {templateReadonlyBagLines.length ? templateReadonlyBagLines.map((bag) => <li>{bag}</li>) : <li>No template readonly bags</li>}
+            {templateReadonlyBagLines.length ? templateReadonlyBagLines.map((bag) => <li>{bag}</li>) : <li>{t("No template readonly bags")}</li>}
           </ul>
         </div>
       ) : null}
       {field.key === "plugins" && fieldState.tabId === "wikis" && templateRecord ? (
         <div class="field-callout">
-          <p>Plugins from template</p>
+          <p>{t("Plugins from template")}</p>
           <ul class="value-list">
             {templatePluginLines.map((plugin) => <li>{plugin}</li>)}
-            {templateCorePluginsEnabled ? <li>core plugins</li> : <li>core plugins disabled</li>}
+            {templateCorePluginsEnabled ? <li>{t("core plugins")}</li> : <li>{t("core plugins disabled")}</li>}
           </ul>
         </div>
       ) : null}
@@ -402,7 +506,7 @@ function renderSearchMultiselectFieldEditor(ctx: FieldEditorContext<any>) {
 function renderPermissionTableFieldViewer(ctx: ReadonlyFieldContext<readonly PermissionRow[]>) {
   const permissionRows = ctx.value;
   if (!permissionRows.length) {
-    return <div class="field-callout"><p>No permissions assigned.</p></div>;
+    return <div class="field-callout"><p>{t("No permissions assigned.")}</p></div>;
   }
   return <table class="value-table">
     {permissionRows.map((row) => (
@@ -441,7 +545,7 @@ function renderPermissionTableFieldEditor(ctx: FieldEditorContext<readonly Permi
           {renderSearchableInput({
             id: `${inputId}-${index}-role`,
             currentValue: row.role,
-            placeholder: "Role",
+            placeholder: t("Role"),
             options: lookupOptions,
             disabled: ctx.disabled,
             onInput: (nextValue) => {
@@ -462,18 +566,18 @@ function renderPermissionTableFieldEditor(ctx: FieldEditorContext<readonly Permi
             const nextRows = [...displayedPermissionRows];
             nextRows.splice(index, 1);
             persistPermissionRows(nextRows);
-          }}>Remove</button>
+          }}>{t("Remove")}</button>
         </div>
       ))}
       <button type="button" class="ghost-button" disabled={disabled} onclick={() =>
         onTransientPermissionRowsChange(field.key, [...transientPermissionRows, {
           role: "", level: availableLevels[0] as PermissionLevel
-        }])}>Add permission</button>
+        }])}>{t("Add permission")}</button>
     </div>
   );
 }
 
-const defaultPrefixPill = <div class="prefix-bag-sidebar-pill">default</div>;
+const defaultPrefixPill = <div class="prefix-bag-sidebar-pill">{t("default")}</div>;
 
 function hasPrefixTrimMismatch(value: string): boolean {
   return value.trim() !== value;
@@ -525,9 +629,9 @@ function renderPrefixTableFieldEditor(ctx: FieldEditorContext<any>) {
             <input class={hasPrefixTrimMismatch(row.prefix) ? "field-input is-invalid" : "field-input"}
               type="text"
               value={row.prefix}
-              placeholder="Prefix, leave blank for default"
+              placeholder={t("Prefix, leave blank for default")}
               aria-invalid={hasPrefixTrimMismatch(row.prefix) ? "true" : undefined}
-              title={hasPrefixTrimMismatch(row.prefix) ? "Prefix has leading or trailing whitespace. Is this intentional?" : undefined}
+              title={hasPrefixTrimMismatch(row.prefix) ? t("Prefix has leading or trailing whitespace. Is this intentional?") : undefined}
               disabled={disabled}
               oninput={(event) => {
                 const element = event.currentTarget as HTMLInputElement;
@@ -541,14 +645,14 @@ function renderPrefixTableFieldEditor(ctx: FieldEditorContext<any>) {
               }} />
             {hasPrefixTrimMismatch(row.prefix) ? <span
               class="prefix-input-alert missing-marker"
-              aria-label="Prefix has leading or trailing whitespace"
-              title="Prefix has leading or trailing whitespace. Is this intentional?"
+              aria-label={t("Prefix has leading or trailing whitespace")}
+              title={t("Prefix has leading or trailing whitespace. Is this intentional?")}
             ><MaterialSymbol icon={warningIcon} /></span> : null}
           </div>
           {renderSearchableInput({
             id: `${inputId}-${index}-target`,
             currentValue: row.bagName,
-            placeholder: "Target bag",
+            placeholder: t("Target bag"),
             options: lookupOptions,
             disabled: ctx.disabled,
             onInput: (nextValue) => {
@@ -567,13 +671,13 @@ function renderPrefixTableFieldEditor(ctx: FieldEditorContext<any>) {
             const nextRows = mappingRows.length ? [...mappingRows] : [];
             nextRows.splice(index, 1);
             onDraftChange(field.key, nextRows);
-          }}>Remove</button>}
+          }}>{t("Remove")}</button>}
         </div>
       ))}
-      {<button type="button" class="ghost-button" disabled={disabled} onclick={() => onPendingRowsChange(field.key, (count) => count + 1)}>Add prefix rule</button>}
+      {<button type="button" class="ghost-button" disabled={disabled} onclick={() => onPendingRowsChange(field.key, (count) => count + 1)}>{t("Add prefix rule")}</button>}
       {inheritedRoutingRows.length ? (
         <div class="field-callout">
-          <p>Writable bags inherited from template:</p>
+          <p>{t("Writable bags inherited from template:")}</p>
           {renderPrefixMappingRows(buildEffectivePrefixObject([mappingRows, inheritedRoutingRows]))}
         </div>
       ) : null}
@@ -629,22 +733,22 @@ function renderResolverPreviewFieldEditor(ctx: FieldEditorContext<any>) {
   const preview = computeResolverPreview(fieldState.draft, fieldState.resolverTitle);
   return (
     <div class="tool-panel resolver-tool">
-      <label class="field-label" for={inputId}>Title to test</label>
+      <label class="field-label" for={inputId}>{t("Title to test")}</label>
       <input id={inputId} class="field-input" type="text" value={fieldState.resolverTitle} ref={(element) => {
         if (element.value !== fieldState.resolverTitle) element.value = fieldState.resolverTitle;
       }} oninput={(event) => onResolverTitleChange((event.currentTarget as HTMLInputElement).value)} />
       <div class="resolver-grid">
         <div class="resolver-stat">
-          <span>Matched prefix</span>
+          <span>{t("Matched prefix")}</span>
           <strong>{preview.matchedPrefix}</strong>
         </div>
         <div class="resolver-stat">
-          <span>Write target</span>
+          <span>{t("Write target")}</span>
           <strong>{preview.writeTo}</strong>
         </div>
       </div>
       <div class="field-callout">
-        <p>{preview.title ? `Resolver would test the title against the longest matching prefix rule, then fall back to the default target if no explicit prefix matches. Final reads and write permission depend on live server state and are not shown here.` : `Enter a title to preview how this wiki would route it.`}</p>
+        <p>{preview.title ? t("Resolver would test the title against the longest matching prefix rule, then fall back to the default target if no explicit prefix matches. Final reads and write permission depend on live server state and are not shown here.") : t("Enter a title to preview how this wiki would route it.")}</p>
       </div>
     </div>
   );

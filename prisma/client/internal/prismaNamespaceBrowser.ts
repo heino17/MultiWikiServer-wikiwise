@@ -63,7 +63,10 @@ export const ModelName = {
   Settings: 'Settings',
   Roles: 'Roles',
   Users: 'Users',
-  Sessions: 'Sessions'
+  Sessions: 'Sessions',
+  PinboardNote: 'PinboardNote',
+  PinboardNoteRead: 'PinboardNoteRead',
+  PinboardNotePosition: 'PinboardNotePosition'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -84,7 +87,8 @@ export const BagScalarFieldEnum = {
   name: 'name',
   created: 'created',
   updated: 'updated',
-  description: 'description'
+  description: 'description',
+  owner_user_id: 'owner_user_id'
 } as const
 
 export type BagScalarFieldEnum = (typeof BagScalarFieldEnum)[keyof typeof BagScalarFieldEnum]
@@ -126,6 +130,7 @@ export const TemplateScalarFieldEnum = {
   name: 'name',
   created: 'created',
   updated: 'updated',
+  owner_user_id: 'owner_user_id',
   type: 'type',
   definition: 'definition'
 } as const
@@ -147,6 +152,7 @@ export const RecipeScalarFieldEnum = {
   slug: 'slug',
   created: 'created',
   updated: 'updated',
+  owner_user_id: 'owner_user_id',
   template_id: 'template_id',
   definition: 'definition',
   plugins: 'plugins',
@@ -188,7 +194,9 @@ export type SettingsScalarFieldEnum = (typeof SettingsScalarFieldEnum)[keyof typ
 export const RolesScalarFieldEnum = {
   role_id: 'role_id',
   role_name: 'role_name',
-  description: 'description'
+  description: 'description',
+  is_teacher: 'is_teacher',
+  owner_user_id: 'owner_user_id'
 } as const
 
 export type RolesScalarFieldEnum = (typeof RolesScalarFieldEnum)[keyof typeof RolesScalarFieldEnum]
@@ -199,9 +207,11 @@ export const UsersScalarFieldEnum = {
   username: 'username',
   email: 'email',
   password: 'password',
+  owner_user_id: 'owner_user_id',
   resetCode: 'resetCode',
   created_at: 'created_at',
-  last_login: 'last_login'
+  last_login: 'last_login',
+  wiki_limit: 'wiki_limit'
 } as const
 
 export type UsersScalarFieldEnum = (typeof UsersScalarFieldEnum)[keyof typeof UsersScalarFieldEnum]
@@ -216,6 +226,44 @@ export const SessionsScalarFieldEnum = {
 } as const
 
 export type SessionsScalarFieldEnum = (typeof SessionsScalarFieldEnum)[keyof typeof SessionsScalarFieldEnum]
+
+
+export const PinboardNoteScalarFieldEnum = {
+  id: 'id',
+  author_user_id: 'author_user_id',
+  author_name: 'author_name',
+  scope_type: 'scope_type',
+  scope_id: 'scope_id',
+  body: 'body',
+  color: 'color',
+  is_important: 'is_important',
+  is_active: 'is_active',
+  created_at: 'created_at',
+  updated_at: 'updated_at',
+  expires_at: 'expires_at'
+} as const
+
+export type PinboardNoteScalarFieldEnum = (typeof PinboardNoteScalarFieldEnum)[keyof typeof PinboardNoteScalarFieldEnum]
+
+
+export const PinboardNoteReadScalarFieldEnum = {
+  note_id: 'note_id',
+  user_id: 'user_id',
+  read_at: 'read_at',
+  dismissed_at: 'dismissed_at'
+} as const
+
+export type PinboardNoteReadScalarFieldEnum = (typeof PinboardNoteReadScalarFieldEnum)[keyof typeof PinboardNoteReadScalarFieldEnum]
+
+
+export const PinboardNotePositionScalarFieldEnum = {
+  note_id: 'note_id',
+  user_id: 'user_id',
+  x: 'x',
+  y: 'y'
+} as const
+
+export type PinboardNotePositionScalarFieldEnum = (typeof PinboardNotePositionScalarFieldEnum)[keyof typeof PinboardNotePositionScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -233,6 +281,14 @@ export const JsonNullValueInput = {
 export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
+export const NullsOrder = {
+  first: 'first',
+  last: 'last'
+} as const
+
+export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
 export const JsonNullValueFilter = {
   DbNull: DbNull,
   JsonNull: JsonNull,
@@ -248,12 +304,4 @@ export const QueryMode = {
 } as const
 
 export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
-
-
-export const NullsOrder = {
-  first: 'first',
-  last: 'last'
-} as const
-
-export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 

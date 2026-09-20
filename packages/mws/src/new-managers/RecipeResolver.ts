@@ -111,6 +111,7 @@ export class RecipeResolver {
         slug: true,
         plugins: true,
         template_id: true,
+        owner_user_id: true,
         // template: {
         //   select: { name: true, definition: true, type: true },
         // },
@@ -128,6 +129,7 @@ export class RecipeResolver {
             bag: {
               select: {
                 name: true,
+                owner_user_id: true,
                 permissions: {
                   where: { role_id: { in: role_ids } },
                   orderBy: { level: "desc" },
@@ -143,7 +145,12 @@ export class RecipeResolver {
     if (!recipe)
       throw state.sendEmpty(404, { "x-reason": "recipe not found" });
 
-    if (!state.user.isAdmin) {
+    // The creator/owner of the wiki may always read it, even when their roles
+    // were changed after creation (mirrors the admin-panel owner visibility).
+    const isOwner = recipe.owner_user_id === state.user.user_id
+      || recipe.recipe_bags.some(rb => rb.bag.owner_user_id === state.user.user_id);
+
+    if (!state.user.isAdmin && !isOwner) {
       if (!recipe.permissions.length)
         throw state.sendEmpty(403, { "x-reason": "no read access to the recipe definition" });
       if (recipe.recipe_bags.some(rb => !rb.bag.permissions.length))
@@ -155,12 +162,12 @@ export class RecipeResolver {
     if (!recipe)
       throw new SendError("RECIPE_NOT_FOUND", 404, { recipeName: recipe_slug })
 
-    if (!isAdmin && !recipe.permissions.length)
+    if (!isAdmin && !isOwner && !recipe.permissions.length)
       throw new SendError("RECIPE_NO_READ_PERMISSION", 403, { recipeName: recipe_slug })
 
     const hasBagDeniedAccess = recipe.recipe_bags.find(recipeBag => !recipeBag.bag.permissions.length);
 
-    if (!isAdmin && hasBagDeniedAccess)
+    if (!isAdmin && !isOwner && hasBagDeniedAccess)
       throw new SendError("BAG_NO_READ_PERMISSION", 403, { bagName: hasBagDeniedAccess.bag_id })
 
     return recipe;
@@ -195,6 +202,9 @@ export class RecipeResolver {
 
   /** Whether the requesting user may write to the given bag (uses already-fetched permissions). */
   canWriteBag(rb: RecipeBagRow): boolean {
+    // The creator/owner of the bag may always write to it, even when their
+    // roles were changed after the wiki was created.
+    if (rb.bag.owner_user_id === this.user.user_id) return true;
     // the second condition lets bags be readonly for admins
     if (this.user.isAdmin && !rb.bag.permissions.find(e => e.role_id === this.user.AdminRoleID)) return true;
     // permissions are sorted in descending level order

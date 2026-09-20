@@ -89,7 +89,11 @@ export abstract class PerClassImportWriter<Modal extends PrismaModalKeys> {
       throw new Error("Permissions must be asserted first.")
   }
 
-  async checkExisting(id: IdString, name: string, user: ServerRequest["user"]) {
+  async checkExisting(id: IdString, name: string, user: ServerRequest["user"], opts?: {
+    /** Allow any logged-in user to create a new record (used by the
+     * one-click wiki route, which does its own authorization/limit). */
+    allowCreate?: boolean;
+  }) {
     if (user.isAdmin) { this.debug("isAdmin: true"); this.asserted = true; }
     if (this.initStore && typeof user.isLoggedIn === "boolean")
       throw new Error("This shouldn't happen.");
@@ -98,31 +102,49 @@ export abstract class PerClassImportWriter<Modal extends PrismaModalKeys> {
 
     if (!user.isAdmin && this.adminLevel) {
 
-      if (!id.toString())
-        throw new SendError("ACCESS_DENIED", 403, { reason: "You don't have permission to create " + this.tabid + "." });
+      // Teachers may create new wikis/bags, and may manage the ones they own.
+      const teacherWritable = user.isTeacher && (this.tabid === "wikis" || this.tabid === "bags");
 
-      const hasPermission: number = await (this.tx[this.modal] as any).count({
-        where: {
-          id: id.toString(),
-          permissions: {
-            some: {
-              level: this.adminLevel,
-              role_id: { in: user.roles.map(e => e.role_id) }
+      if (!id.toString()) {
+        if (!teacherWritable && !(opts?.allowCreate && user.isLoggedIn))
+          throw new SendError("ACCESS_DENIED", 403, { reason: "You don't have permission to create " + this.tabid + "." });
+        this.asserted = true;
+        this.debug("teacher create allowed");
+      } else {
+        const ownerMatch: number = teacherWritable
+          ? await (this.tx[this.modal] as any).count({
+              where: { id: id.toString(), owner_user_id: user.user_id }
+            })
+          : 0;
+
+        const hasPermission: number = await (this.tx[this.modal] as any).count({
+          where: {
+            id: id.toString(),
+            permissions: {
+              some: {
+                level: this.adminLevel,
+                role_id: { in: user.roles.map(e => e.role_id) }
+              }
             }
           }
-        }
-      });
+        });
 
-      if (!hasPermission)
-        throw new SendError("ACCESS_DENIED", 403, { reason: "You don't have permission to modify " + this.tabid + "." });
-      else
-        this.asserted = true;
+        if (ownerMatch || hasPermission)
+          this.asserted = true;
+        else
+          throw new SendError("ACCESS_DENIED", 403, { reason: "You don't have permission to modify " + this.tabid + "." });
+      }
     }
     if (!user.isAdmin && this.tabid === "users") {
-      if (user.user_id !== id.toString())
-        throw new SendError("ACCESS_DENIED", 403, { reason: "You must be an admin to edit other users" });
-      else
+      if (user.isTeacher) {
+        // Teachers manage the users they invited; ownership is enforced
+        // by assertCanEdit in UserDataAdapter.saveRow.
         this.asserted = true;
+      } else if (user.user_id !== id.toString()) {
+        throw new SendError("ACCESS_DENIED", 403, { reason: "You must be an admin to edit other users" });
+      } else {
+        this.asserted = true;
+      }
     }
     if (!user.isAdmin && this.tabid === "roles") {
       throw new SendError("ACCESS_DENIED", 403, { reason: "You must be an admin to edit roles" });
@@ -196,8 +218,13 @@ export class RoleImportWriter extends PerClassImportWriter<"roles"> {
     this.validateProtectedRoles(roles);
     return Promise.all(roles.map((role) => this.tx.roles.upsert({
       where: { role_name: role.name },
-      update: { description: role.description },
-      create: { role_name: role.name, description: role.description },
+      update: { description: role.description, is_teacher: role.isTeacher },
+      create: {
+        role_name: role.name,
+        description: role.description,
+        is_teacher: role.isTeacher,
+        owner_user_id: role.ownerUserId ? IdString.cast(role.ownerUserId) : undefined,
+      },
     })));
   }
 
@@ -208,6 +235,8 @@ export class RoleImportWriter extends PerClassImportWriter<"roles"> {
         throw new SendError("CANNOT_WRITE_STATIC_ROWS", 400, { table: "roles", name: "ADMIN" })
       if (roles.some((entry) => entry.name === "USER"))
         throw new SendError("CANNOT_WRITE_STATIC_ROWS", 400, { table: "roles", name: "USER" })
+      if (roles.some((entry) => entry.name === "ANON"))
+        throw new SendError("CANNOT_WRITE_STATIC_ROWS", 400, { table: "roles", name: "ANON" })
 
     }
   }
@@ -224,19 +253,23 @@ export class UserImportWriter extends PerClassImportWriter<"users"> {
     this.assertPermissions();
     return Promise.all(users.map((user) => {
       const roleLinks = user.roleIds.map((roleId) => ({ role_id: IdString.cast(roleId) }));
+      const email = user.email.trim() || null;
       return this.tx.users.upsert({
         where: { username: user.username },
         update: {
-          email: user.email,
+          email,
           roles: { set: roleLinks },
           resetCode: user.resetCode,
+          wiki_limit: user.wikiLimit,
         },
         create: {
           username: user.username,
-          email: user.email,
+          email,
           password: "",
+          owner_user_id: user.ownerUserId ? IdString.cast(user.ownerUserId) : undefined,
           roles: { connect: roleLinks },
           resetCode: user.resetCode,
+          wiki_limit: user.wikiLimit,
         },
       });
     }));
@@ -329,6 +362,7 @@ export class BagImportWriter extends PerClassImportWriter<"bag"> {
       create: {
         name: bag.name,
         description: bag.description,
+        owner_user_id: bag.ownerUserId ? IdString.cast(bag.ownerUserId) : undefined,
         permissions: {
           create: bag.permissions.map(e => ({ level: e.level, role_id: IdString.cast(e.role_id) })),
         }
@@ -371,6 +405,7 @@ export class TemplateImportWriter extends PerClassImportWriter<"template"> {
           name,
           type,
           definition,
+          owner_user_id: template.ownerUserId ? IdString.cast(template.ownerUserId) : undefined,
           permissions: {
             create: template.permissions.map(e => ({ level: e.level, role_id: IdString.cast(e.role_id) })),
           }
@@ -435,6 +470,7 @@ export class RecipeImportWriter extends PerClassImportWriter<"recipe"> {
           template_id: IdString.cast(recipe.templateId),
           plugins: recipe.plugins,
           compiledAt,
+          owner_user_id: recipe.ownerUserId ? IdString.cast(recipe.ownerUserId) : undefined,
           recipe_bags: {
             create: recipe.compiledBags.map(e => ({
               bag: { connect: { name: e.bagName } },

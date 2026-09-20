@@ -5,6 +5,12 @@ import { DataStore, IdString, PermissionRow, TemplateTypes, WritablePrefixRow } 
 export interface UpsertRoleInput {
   name: string;
   description: string;
+  /** Grants teacher/team-admin capabilities (manage one's invited users,
+   * see all wikis/bags, exemption from the own-wiki limit). Only site
+   * admins may set this; survives any role rename. */
+  isTeacher: boolean;
+  /** set only when creating the role; the owner may edit it. */
+  ownerUserId?: IdString;
 }
 
 export interface UpsertUserInput {
@@ -13,6 +19,10 @@ export interface UpsertUserInput {
   /** these are the role ids, not the role names */
   roleIds: IdString[];
   resetCode: string | null;
+  /** How many wikis this user may create. NULL = unlimited, 0 = none. */
+  wikiLimit: number | null;
+  /** set only when creating the user record (the account owner). */
+  ownerUserId?: IdString;
 }
 
 export interface ImportBagPermissionInput {
@@ -24,6 +34,9 @@ export interface UpsertBagInput {
   name: string;
   description: string;
   permissions: PermissionInput<BagPermissionLevel>[];
+  /** set only when creating the bag; the owner may edit the bag.
+   *  Existing bags keep their owner on edits. */
+  ownerUserId?: IdString;
 }
 
 export interface PermissionInput<Level> {
@@ -47,6 +60,9 @@ export interface UpsertRecipeInput {
   plugins: string[];
   compiledBags: CompiledRecipeBagInput[];
   permissions: PermissionInput<RecipePermissionLevel>[];
+  /** set only when creating the recipe; the owner may delete the wiki.
+   *  Existing recipes keep their owner on edits. */
+  ownerUserId?: IdString;
 }
 
 
@@ -54,6 +70,9 @@ export interface UpsertTemplateInput {
   name: string;
   definition: TemplateDefinition;
   permissions: PermissionInput<TemplatePermissionLevel>[];
+  /** set only when creating the template; the owner may edit it.
+   *  Existing templates keep their owner on edits. */
+  ownerUserId?: IdString;
 }
 
 
