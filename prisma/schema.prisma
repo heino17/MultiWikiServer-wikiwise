@@ -277,6 +277,35 @@ model PinboardNotePosition {
 }
 
 // ---------------------------------------------------------------------------
+// User files — per-account file uploads ("Meine Dateien"). Only metadata is
+// stored in the database: the bytes live on disk in
+// `store/files/<sha256>/data.<ext> + meta.json` (content-addressed, dedup by
+// content hash). user_id is a plain string without an FK (auth module).
+// Sharing permissions will be a separate UserFileShare table in a later step.
+// ---------------------------------------------------------------------------
+
+model UserFile {
+  id         String   @id @default(uuid(7))
+  /// user_id of the owner. No FK (auth module).
+  user_id    String
+  /// Original file name as shown to the owner.
+  filename   String
+  /// MIME type of the file.
+  type       String
+  /// File extension derived from the MIME type ("data.<extension>" on disk).
+  extension  String
+  /// sha256 of the file content; also the directory name in store/files/.
+  sha256     String
+  /// Size of the file in bytes.
+  sizeBytes  Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([user_id])
+  @@map("user_file")
+}
+
+// ---------------------------------------------------------------------------
 // Enums
 // ---------------------------------------------------------------------------
 

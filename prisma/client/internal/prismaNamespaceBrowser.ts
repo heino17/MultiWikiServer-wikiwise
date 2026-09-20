@@ -66,7 +66,8 @@ export const ModelName = {
   Sessions: 'Sessions',
   PinboardNote: 'PinboardNote',
   PinboardNoteRead: 'PinboardNoteRead',
-  PinboardNotePosition: 'PinboardNotePosition'
+  PinboardNotePosition: 'PinboardNotePosition',
+  UserFile: 'UserFile'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -264,6 +265,21 @@ export const PinboardNotePositionScalarFieldEnum = {
 } as const
 
 export type PinboardNotePositionScalarFieldEnum = (typeof PinboardNotePositionScalarFieldEnum)[keyof typeof PinboardNotePositionScalarFieldEnum]
+
+
+export const UserFileScalarFieldEnum = {
+  id: 'id',
+  user_id: 'user_id',
+  filename: 'filename',
+  type: 'type',
+  extension: 'extension',
+  sha256: 'sha256',
+  sizeBytes: 'sizeBytes',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+} as const
+
+export type UserFileScalarFieldEnum = (typeof UserFileScalarFieldEnum)[keyof typeof UserFileScalarFieldEnum]
 
 
 export const SortOrder = {

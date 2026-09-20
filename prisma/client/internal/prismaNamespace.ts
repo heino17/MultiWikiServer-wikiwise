@@ -399,7 +399,8 @@ export const ModelName = {
   Sessions: 'Sessions',
   PinboardNote: 'PinboardNote',
   PinboardNoteRead: 'PinboardNoteRead',
-  PinboardNotePosition: 'PinboardNotePosition'
+  PinboardNotePosition: 'PinboardNotePosition',
+  UserFile: 'UserFile'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -415,7 +416,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "bag" | "bagPermission" | "tiddler" | "tiddlerEvent" | "template" | "templatePermission" | "recipe" | "recipePermission" | "recipeBag" | "settings" | "roles" | "users" | "sessions" | "pinboardNote" | "pinboardNoteRead" | "pinboardNotePosition"
+    modelProps: "bag" | "bagPermission" | "tiddler" | "tiddlerEvent" | "template" | "templatePermission" | "recipe" | "recipePermission" | "recipeBag" | "settings" | "roles" | "users" | "sessions" | "pinboardNote" | "pinboardNoteRead" | "pinboardNotePosition" | "userFile"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1603,6 +1604,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    UserFile: {
+      payload: Prisma.$UserFilePayload<ExtArgs>
+      fields: Prisma.UserFileFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.UserFileFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFilePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.UserFileFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFilePayload>
+        }
+        findFirst: {
+          args: Prisma.UserFileFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFilePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.UserFileFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFilePayload>
+        }
+        findMany: {
+          args: Prisma.UserFileFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFilePayload>[]
+        }
+        create: {
+          args: Prisma.UserFileCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFilePayload>
+        }
+        createMany: {
+          args: Prisma.UserFileCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.UserFileCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFilePayload>[]
+        }
+        delete: {
+          args: Prisma.UserFileDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFilePayload>
+        }
+        update: {
+          args: Prisma.UserFileUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFilePayload>
+        }
+        deleteMany: {
+          args: Prisma.UserFileDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.UserFileUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.UserFileUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFilePayload>[]
+        }
+        upsert: {
+          args: Prisma.UserFileUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFilePayload>
+        }
+        aggregate: {
+          args: Prisma.UserFileAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateUserFile>
+        }
+        groupBy: {
+          args: Prisma.UserFileGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UserFileGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.UserFileCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UserFileCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -1821,6 +1896,21 @@ export const PinboardNotePositionScalarFieldEnum = {
 } as const
 
 export type PinboardNotePositionScalarFieldEnum = (typeof PinboardNotePositionScalarFieldEnum)[keyof typeof PinboardNotePositionScalarFieldEnum]
+
+
+export const UserFileScalarFieldEnum = {
+  id: 'id',
+  user_id: 'user_id',
+  filename: 'filename',
+  type: 'type',
+  extension: 'extension',
+  sha256: 'sha256',
+  sizeBytes: 'sizeBytes',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+} as const
+
+export type UserFileScalarFieldEnum = (typeof UserFileScalarFieldEnum)[keyof typeof UserFileScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -2078,6 +2168,7 @@ export type GlobalOmitConfig = {
   pinboardNote?: Prisma.PinboardNoteOmit
   pinboardNoteRead?: Prisma.PinboardNoteReadOmit
   pinboardNotePosition?: Prisma.PinboardNotePositionOmit
+  userFile?: Prisma.UserFileOmit
 }
 
 /* Types for Logging */

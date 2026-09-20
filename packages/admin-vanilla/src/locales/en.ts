@@ -104,6 +104,7 @@ export const enStrings: Record<string, string> = {
   "Delete user": "Delete user",
   "Delete role": "Delete role",
   "Delete bag": "Delete bag",
+  "Delete": "Delete",
   "Deleting…": "Deleting…",
   "Saving...": "Saving...",
   "Save {tab}": "Save {tab}",
@@ -393,6 +394,23 @@ export const enStrings: Record<string, string> = {
   "Nothing new to read.": "Nothing new to read.",
   "No notes for you yet.": "No notes for you yet.",
   // #endregion pinboard
+
+  // #region user files
+  "My files": "My files",
+  "Files stored in your account.": "Files stored in your account.",
+  "Choose a file or drop it here": "Choose a file or drop it here",
+  "Loading your files…": "Loading your files…",
+  "No files yet. Upload something to get started.": "No files yet. Upload something to get started.",
+  "Failed to load your files.": "Failed to load your files.",
+  "Uploaded {name}.": "Uploaded {name}.",
+  "Failed to upload {name}.": "Failed to upload {name}.",
+  "Deleted {name}.": "Deleted {name}.",
+  "Failed to delete {name}.": "Failed to delete {name}.",
+  "Really delete \"{name}\" for good?": "Really delete \"{name}\" for good?",
+  "File name": "File name",
+  "Uploaded": "Uploaded",
+  "Download": "Download",
+  // #endregion user files
 
   "Create user": "Create user",
   "Account logins": "Account logins",
