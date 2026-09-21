@@ -1606,7 +1606,7 @@ export class App extends JSXElement {
           <div class="hero-panel-content">
             <p class="eyebrow">{t("Multi-wiki server administration")}</p>
             <h1 style="display:flex; gap: 1rem; align-items:center;">
-              <span>MWS</span>
+              <span>MWS<sup class="hero-wordmark-suffix">-wikiwise</sup></span>
             </h1>
             <p class="hero-copy">{t("All your thoughts, in as many places as you need them.")}</p>
           </div>
