@@ -53,6 +53,11 @@ konkret gewählte Empfänger. Die Bytes liegen content-addressed
 (`store/files/<sha256>/`) auf der Festplatte, in einer SQLite-Tabelle
 stehen nur Metadaten (`user_file` + `user_file_share`).
 
+Dazu kommt in jeder Wiki-Werkzeugleiste ein **„Upload file"-Button**
+(§45): Er lädt Dateien direkt aus dem geöffneten Wiki hoch — bei
+Schreibzugriff in den Dateispeicher des **Wiki-Besitzers**, nicht des
+Hochladenden.
+
 ---
 
 ## 1. Fehlende Dependency: `escape-string-regexp`
@@ -1989,6 +1994,66 @@ Abbruch aufgeräumt. GET/HEAD-Pfade prüfen dieselbe Sichtbarkeit
     404; Lehrer sehen Lehrer-Freigaben anderer Lehrer nicht ✓
   - Löschen entfernt die Zeile und, sobald kein Verweis mehr existiert,
     auch die Bytes ✓
+
+---
+
+## 45. Feature: Datei-Upload direkt im Wiki (landet beim Wiki-Besitzer)
+
+**Ziel:** Jedes Wiki bekommt in seiner Werkzeugleiste einen Button
+**„Upload file"**. Ein Klick lädt eine Datei in den **Dateispeicher des
+Wiki-Besitzers** (`recipe.owner_user_id`), nicht in den des
+Hochladenden: Öffnet z. B. ein Lehrer ein Wiki, das einem Schüler/einer
+Kollegin gehört, und hat dort **Schreibzugriff**, landet die Datei in
+„Meine Dateien" des Besitzers. Ohne Wiki-Kontext (kein `recipe`-Parameter)
+bleibt der Upload wie bisher beim eigenen Konto (§44).
+
+### Frontend
+
+**Dateien (neu):** `plugins/client/tiddlers/upload-file.js`
+(Startup-Modul), `plugins/client/tiddlers/status/upload-file-button.tid`
+(Button in `$:/tags/PageControls`), `plugins/client/tiddlers/status/icon-upload.tid`;
+Texte in `plugins/client/tiddlers/en-US.multids`.
+
+- Der Button dispatcht `tm-upload-file`; das Startup-Modul lauscht am
+  Root-Widget. Nicht eingeloggt (`$:/status/IsLoggedIn ≠ yes`) → Hinweis
+  „You must be logged in to upload files".
+- Eingeloggt: verstecktes `<input type=file multiple>`; jede gewählte
+  Datei wird **sequenziell** per Multipart-`PUT` an
+  `api/user-files/upload?recipe=<slug>` gesendet (`X-Requested-With:
+  fetch`). Der Slug stammt aus `$:/config/multiwikiclient/recipe`.
+- Notifier: eigener Upload → „Uploaded "X" to your files"; fremdes Wiki →
+  „Uploaded "X" to <Besitzer>'s wiki"; fehlendes Schreibrecht → „You do
+  not have write access to this wiki"; über Limit → 413-Meldung; sonst
+  generischer Fehler.
+
+### Backend
+
+**Datei:** `packages/mws/src/new-managers/UserFileRoutes.ts`
+(Route `/api/user-files/upload`, jetzt mit `zodQueryKeys: ["recipe"]`).
+
+- Optionaler Query-Parameter `recipe`: `RecipeResolver.assertRecipe`
+  löst das Wiki auf; Schreibrecht gilt bei **Admin**, **Wiki-Besitzer**,
+  `B_write` auf der Recipe **oder** Schreibrecht auf einem writable Bag
+  (`RecipeResolver.canWriteBag`). Sonst **403** mit
+  `x-reason: no write access to this wiki`.
+- Ziel-Owner = `recipe.owner_user_id` (Fallback: Hochladender). Dieser
+  Wert landet in `user_file.user_id` **und** im `meta.json` der Bytes.
+- Antwort: `{ file, owner: { user_id, username } }` — der Client nutzt
+  `owner.username` für die Notifier-Formulierung.
+- Ohne `recipe`-Parameter unverändertes Verhalten (Datei beim
+  Hochladenden).
+
+### Verifikation
+
+- `npm run tsc2` → 0 Fehler; Server-Bundle via `tsup` neu gebaut.
+- E2E (zweite Instanz auf `:5001`, Admin öffnet `wiki-schuler-2` von
+  „Schüler 2"): Klick auf „Upload file" → `PUT …/upload?recipe=wiki-schuler-2`
+  → **200**, Antwort `owner.username = "Schüler 2"`; Notifier „Uploaded
+  "klassenfoto.txt" to Schüler 2's wiki"; `user_file.user_id` = Schüler 2,
+  Bytes unter `store/files/<sha256>/`. Testdatei danach über
+  `/api/user-files/delete` entfernt (Zeile + Bytes weg) ✓
+- Der laufende Dev-Server auf `:5000` muss nach dem Build neu gestartet
+  werden (Node hält das alte Bundle im Speicher).
 
 ---
 
