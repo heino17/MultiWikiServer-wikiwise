@@ -2,7 +2,7 @@
 
 Dokumentation der Änderungen am MultiWikiServer-Fork von heino17.
 
-Stand: 2026-09-17 · Basis: `TiddlyWiki/MultiWikiServer` @ `3627482`
+Stand: 2026-09-21 · Basis: `TiddlyWiki/MultiWikiServer` @ `3627482`
 
 ## Zusammenfassung
 
@@ -42,6 +42,16 @@ MultiWikiServer**, weist die **Binärinhalte (Blobs & Dateien)** aus
 **Speicherverbrauch pro User (Top 10)** inkl. Wiki-Inhalten und
 Dateispeicher. Damit wird sichtbar, dass MWS Binärinhalte inline als
 base64 in der SQLite-Datenbank hält (kein separater Blob-Store).
+
+Neu ist außerdem ein Tab **„Meine Dateien"** (§44): Jeder eingeloggte
+Nutzer lädt eigene Dateien hoch (Standardlimit 100 MB pro Datei,
+übersteuerbar via `MWS_USERFILE_SIZE_LIMIT`), hält sie im Browser zum
+Download und zur Inline-Vorschau ab (Bild, Audio, Video, PDF, Text und
+Markdown) und kann sie gezielt teilen — Admin-Freigaben erreichen alle,
+Lehrer-Freigaben ihre Klassen(mitglieder) und Admins, Schüler-Freigaben
+konkret gewählte Empfänger. Die Bytes liegen content-addressed
+(`store/files/<sha256>/`) auf der Festplatte, in einer SQLite-Tabelle
+stehen nur Metadaten (`user_file` + `user_file_share`).
 
 ---
 
@@ -1882,6 +1892,103 @@ Vorschau-Modal), `packages/admin-vanilla/src/app.inline.css`,
 > `MWS_CHROMIUM_PATH`). Ist kein Browser erreichbar, schlägt **nur das
 > Generieren** fehl — die Wiki-Daten selbst sind nicht betroffen, und ein
 > fehlgeschlagener Render wird nicht gecacht.
+
+---
+
+## 44. Feature: „Meine Dateien" (per-Konto Datei-Upload)
+
+**Ziel:** Jeder eingeloggte Nutzer (Admin, Lehrer, Schüler) verwaltet in
+einem eigenen Tab **eigene Dateien**: hochladen, herunterladen, inline
+ansehen (Bild, Audio, Video, PDF, Text, Markdown) und gezielt teilen.
+Die Bytes liegen content-addressed auf der Festplatte unter
+`store/files/<sha256>/` — exakt das Layout, das der Admin-Tab „Speicher"
+(§40) auswertet —, die SQLite-Tabellen `user_file`/`user_file_share`
+halten nur Metadaten und Empfänger. Das Feature ist rein UI + API + DB,
+keine Änderungen am TW-Core, an Sync oder an ACLs.
+
+### Backend
+
+**Dateien:** `packages/mws/src/new-managers/UserFileRoutes.ts` (neu),
+Routen registriert in `packages/mws/src/new-managers/index.ts`;
+Limit-Vorgabe in `packages/mws/src/ServerState.ts` (Default **100 MB**
+pro Datei, übersteuerbar via `MWS_USERFILE_SIZE_LIMIT`).
+
+| Route | Methode | Beschreibung |
+|-------|---------|--------------|
+| `/api/user-files/upload` | PUT | Multipart in die Inbox **streamen**, `sha256` während des Streamens, danach Adoption nach `store/files/<sha256>/`; über Limit → 413, Body wird verworfen |
+| `/api/user-files/list` | GET | Eigene Dateien (Metadata); Admins sehen alle, mit Owner-Spalte |
+| `/api/user-files/shared` | GET | „Mit mir geteilt": fremde sichtbare Dateien (mit Owner); für Admins leer |
+| `/api/user-files/share-targets` | GET | Zulässige Empfänger-Optionen („Alle", Rollen, User) je Kontotyp |
+| `/api/user-files/share` | PUT | Freigabe-Scopes ersetzen (`GLOBAL`/`ROLE`/`USER`), serverseitig auf erlaubte Optionen normiert; leere Liste beendet das Teilen |
+| `/api/user-files/download` | GET/HEAD | Stream als `attachment` mit korrektem Dateinamen |
+| `/api/user-files/preview` | GET/HEAD | Stream `inline` mit `Accept-Ranges: bytes`, Range-Unterstützung (206 + `Content-Range`, sonst 416 `bytes */<größe>`) — für Seek bei Audio/Video |
+| `/api/user-files/delete` | PUT | Löschen einer eigenen Datei (Admin: alle); Bytes entfallen erst, wenn keine `user_file`-Zeile mehr auf den Hash zeigt |
+
+**Rechte-Matrix** (`shareGrantsVisibility`): Besitzer sehen ihre Dateien
+immer, Admins sehen alles. Sonst entscheidet der Kontotyp des
+**Teilenden**: Admin-Freigaben erreichen alle; Lehrer-Freigaben erreichen
+Admins und Mitglieder der gewählten Rollen — **andere Lehrer nie**;
+Schüler-Freigaben erreichen nur konkret gewählte Empfänger
+(Klassenkameraden/Lehrer). Empfänger-Optionen (`collectShareTargets`) und
+eingereichte Scopes (`normalizeShareScopes`) werden je Benutzer gefiltert,
+unzulässige Einträge serverseitig verworfen.
+
+**Speicherung:** `store/files/<sha256>/data.<ext>` (eine Daten-Datei pro
+Content-Hash; Extension aus einer MIME-Tabellen) + `meta.json`
+(contentHash, Dateiname, Typ, Originalname, `user_id`, Zeitstempel). Der
+Upload streamt ohne Speicherpuffer über die Inbox; Reste werden bei
+Abbruch aufgeräumt. GET/HEAD-Pfade prüfen dieselbe Sichtbarkeit
+(`fetchAuthorizedFile`) — eine nicht geteilte Datei ergibt 404.
+
+### Frontend
+
+**Datei:** `packages/admin-vanilla/src/user-files.tsx` (Custom Element
+`<mws-user-files>`), Styles in `app.inline.css`, i18n in
+`locales/en.ts`/`de.ts`.
+
+- **Tab „Meine Dateien"** in der Admin-Leiste; Tabelle mit Name, Typ,
+  Größe und Zeitstempel; Admins sehen zusätzlich den Besitzer.
+- **Upload** per Ghost-Button (Upload-Icon) → Multipart-PUT; danach
+  automatische Aktualisierung der Liste.
+- **Vorschau-Modal:** Bild (eigenes `<img>`), Audio/Video mit Controls
+  (`autoplay`, Seek über Range-Requests), PDF/Office in einem iframe;
+  Textdateien als `<pre>`; **Markdown** (`text/markdown`, `.md`) rendert
+  ein schlanker Client-Renderer (`renderMarkdownToJSX`: Überschriften
+  h1–h5, Listen, Code, Blockzitat, `hr`, inline `**fett**` / `__fett__` /
+  `*kursiv*` / `_kursiv_` / `~~durch~~` / `` `code` `` / Links). Inhalt
+  wird ausschließlich als **Textknoten** gerendert (nie als HTML geparst)
+  → kein XSS; Links nur `http(s)`/`mailto`.
+- **Download** über `/api/user-files/download` (Browser speichert die
+  Datei) — auch für „Mit mir geteilte" Dateien.
+- **Teilen** (Share-Icon): Auswahl aus `/api/user-files/share-targets`
+  (Alle/Klasse-Personen), Speichern via `/api/user-files/share`.
+- **Löschen** (Papierkorb-Icon): nur eigene Dateien (Admin: alle).
+- Vollständig **i18n** (DE/EN), Hell-/Dunkel-Modus (Vorschau-Flächen
+  nutzen `--color-surface-modal`/`--color-surface-field`), Icons im
+  Vorschau-Header 16×16.
+
+### Migration & Daten
+
+- `prisma/migrations/20260920120000_user_file` (Tabelle `user_file`:
+  `id`, `user_id` (Owner, ohne FK), `filename`, `type`, `extension`,
+  `sha256`, `sizeBytes`, `created_at`/`updated_at`, Index auf `user_id`)
+- `prisma/migrations/20260920150000_user_file_share` (Tabelle
+  `user_file_share`: `file_id` → `user_file` (Cascade), `scope_type`,
+  `scope_id`; Indizes auf `file_id` und `(scope_type, scope_id)`)
+
+### Verifikation
+
+- `npm run tsc2` → 0 Fehler; `npm run build` → ESM Server + Client-Bundle.
+- Live-Tests gegen localhost:5000 (Admin/Lehrer/Schüler-Sessions):
+  - Upload (PUT, Multipart) → Datei in Liste + `store/files/` ✓
+  - Download: `attachment`-Header, Browser speichert korrekt ✓
+  - Preview: Bild/Audio/Video/PDF/Text/Markdown; Markdown-Datei rendert
+    (z. B. `TiddlyWiki-Setup.md`) strukturell korrekt, kein HTML-Injekt ✓
+  - Range: `Range: bytes=…` → 206 + `Content-Range`, ungültig → 416 ✓
+  - Teilen: berechtigte Empfänger sehen die Datei, nicht geteilte →
+    404; Lehrer sehen Lehrer-Freigaben anderer Lehrer nicht ✓
+  - Löschen entfernt die Zeile und, sobald kein Verweis mehr existiert,
+    auch die Bytes ✓
 
 ---
 

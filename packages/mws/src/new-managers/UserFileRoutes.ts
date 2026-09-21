@@ -9,7 +9,7 @@
 
 import { SendError, tryParseJSON, zodRoute } from "@tiddlywiki/server";
 import { createHash } from "crypto";
-import { createReadStream, createWriteStream, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "fs";
+import { createReadStream, createWriteStream, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "fs";
 import { basename, join, resolve } from "path";
 
 const HASH_RE = /^[a-f0-9]{64}$/;
@@ -246,6 +246,34 @@ function viewerInfo(user: {
     isTeacher: user.isTeacher,
     roleIds: new Set(user.roles.map(role => role.role_id)),
   };
+}
+
+/** Look up a file entry, check that the current user may see it, and resolve
+ *  its on-disk location. Returns null when the file is unknown, not shared with
+ *  the viewer, or missing on disk. Shared by the download and preview routes. */
+async function fetchAuthorizedFile(
+  state: { user: any; $transaction: any; config: any },
+  id: string,
+): Promise<{ row: any; stored: { dataPath: string } } | null> {
+  const me = viewerInfo(state.user);
+  const { row, owners } = await state.$transaction(async (prisma: any) => {
+    const row = await prisma.userFile.findFirst({
+      where: { id },
+      include: { shares: { select: { scope_type: true, scope_id: true } } },
+    });
+    const owners = row ? await fetchOwnerInfos(prisma, [row.user_id]) : new Map<string, OwnerInfo>();
+    return { row, owners };
+  });
+  if (!row || !HASH_RE.test(row.sha256)) return null;
+
+  if (!me.isAdmin && row.user_id !== me.userId) {
+    const owner = owners.get(row.user_id);
+    if (!owner || !shareGrantsVisibility(owner, me, row.shares)) return null;
+  }
+
+  const stored = storedFile(state.config.storePath as string, row.sha256);
+  if (!stored) return null;
+  return { row, stored };
 }
 
 /** Best extension for a MIME type, with a leading dot ("" when unknown). */
@@ -619,7 +647,7 @@ export const UserFileShareUpdate = zodRoute({
 
 /** Stream the current user's file down to the client. */
 export const UserFileDownload = zodRoute({
-  method: ["GET"],
+  method: ["GET", "HEAD"],
   path: "/api/user-files/download",
   bodyFormat: "ignore",
   securityChecks: { requestedWithHeader: true },
@@ -631,28 +659,12 @@ export const UserFileDownload = zodRoute({
 
     const id = state.query.get("id") ?? "";
     state.asserted = true;
-    const me = viewerInfo(state.user);
-    const { row, owners } = await state.$transaction(async (prisma) => {
-      const row = await prisma.userFile.findFirst({
-        where: { id },
-        include: { shares: { select: { scope_type: true, scope_id: true } } },
-      });
-      const owners = row ? await fetchOwnerInfos(prisma, [row.user_id]) : new Map<string, OwnerInfo>();
-      return { row, owners };
-    });
-    if (!row || !HASH_RE.test(row.sha256))
+
+    const file = await fetchAuthorizedFile(state, id);
+    if (!file)
       throw state.sendEmpty(404, { "x-reason": "Unknown file" });
 
-    if (!me.isAdmin && row.user_id !== me.userId) {
-      const owner = owners.get(row.user_id);
-      if (!owner || !shareGrantsVisibility(owner, me, row.shares))
-        throw state.sendEmpty(404, { "x-reason": "Unknown file" });
-    }
-
-    const stored = storedFile(state.config.storePath as string, row.sha256);
-    if (!stored)
-      throw state.sendEmpty(404, { "x-reason": "File not found on disk" });
-
+    const { row, stored } = file;
     const contentDisposition =
       `attachment; filename*="UTF-8''${encodeURIComponent(row.filename)}"; filename="${encodeURIComponent(row.filename).replace(/"/g, "%22")}"`;
 
@@ -660,6 +672,66 @@ export const UserFileDownload = zodRoute({
       contentType: { mediaType: row.type },
       contentDisposition,
       cacheControl: "private, max-age=60",
+    }, createReadStream(stored.dataPath));
+  }
+});
+
+/** Stream a file so it is displayed inline (images, audio, video, PDFs, plain
+ *  text). Supports byte ranges so media controls can seek and scrubbing works. */
+export const UserFilePreview = zodRoute({
+  method: ["GET", "HEAD"],
+  path: "/api/user-files/preview",
+  bodyFormat: "ignore",
+  securityChecks: { requestedWithHeader: true },
+  zodPathParams: z => ({}),
+  zodQueryKeys: ["id"],
+  inner: async (state) => {
+    state.okUser();
+    state.assertReferer(["/", "/wiki"]);
+
+    const id = state.query.get("id") ?? "";
+    state.asserted = true;
+
+    const file = await fetchAuthorizedFile(state, id);
+    if (!file)
+      throw state.sendEmpty(404, { "x-reason": "Unknown file" });
+
+    const { row, stored } = file;
+    const size = statSync(stored.dataPath).size;
+    const contentDisposition =
+      `inline; filename*="UTF-8''${encodeURIComponent(row.filename)}"; filename="${encodeURIComponent(row.filename).replace(/"/g, "%22")}"`;
+    const base = {
+      contentType: { mediaType: row.type },
+      contentDisposition,
+      acceptRanges: "bytes",
+      cacheControl: "private, max-age=60",
+    };
+
+    const rangeHeader = String(state.headers.get("range") ?? "");
+    const rangeMatch = /^bytes=(\d+)-(\d*)$/.exec(rangeHeader)
+      ?? (/^bytes=(\d+)-$/.exec(rangeHeader))
+      ?? (/^bytes=-(\d+)$/.exec(rangeHeader));
+    if (rangeMatch) {
+      const full = rangeHeader.startsWith("bytes=-");
+      const start = full ? Math.max(0, size - parseInt(rangeMatch[1], 10)) : parseInt(rangeMatch[1], 10);
+      const end = full || rangeMatch[2] === "" ? size - 1 : Math.min(parseInt(rangeMatch[2], 10), size - 1);
+      if (rangeMatch[1] === "" || start < size) {
+        const from = Math.min(start, size - 1);
+        if (from <= end) {
+          return state.sendStream(206, {
+            ...base,
+            contentLength: end - from + 1,
+            contentRange: `bytes ${from}-${end}/${size}`,
+          }, createReadStream(stored.dataPath, { start: from, end }));
+        }
+      }
+    }
+    if (rangeHeader !== "" && rangeHeader !== "bytes=*")
+      return state.sendEmpty(416, { contentRange: `bytes */${size}` });
+
+    return state.sendStream(200, {
+      ...base,
+      contentLength: size,
     }, createReadStream(stored.dataPath));
   }
 });

@@ -16,7 +16,7 @@ import { AdminLoad, AdminCreateWiki, AdminDeleteWiki, AdminDeleteRole, AdminDele
 import { AdminBackup, AdminBackupList, AdminBackupDownload, AdminBackupDelete } from "./BackupRoutes";
 import { AdminStorage } from "./StorageRoutes";
 import { PinboardDeleteNote, PinboardList, PinboardMarkRead, PinboardSaveNote, PinboardSavePosition, PinboardUnreadCount } from "./PinboardRoutes";
-import { UserFileDelete, UserFileDownload, UserFileList, UserFileShareTargets, UserFileShareUpdate, UserFileSharedList, UserFileUpload } from "./UserFileRoutes";
+import { UserFileDelete, UserFileDownload, UserFileList, UserFilePreview, UserFileShareTargets, UserFileShareUpdate, UserFileSharedList, UserFileUpload } from "./UserFileRoutes";
 import { serveWikiThumbnail } from "./WikiThumbnailRoutes";
 import { RecipeStatus, RecipeStoreJS, RecipeStoreJSON, RecipeUpdates, TiddlerBatch, TiddlerList } from "./RecipeRoutes";
 
@@ -179,6 +179,7 @@ const ApiRoutes = {
   UserFileUpload,
   UserFileList,
   UserFileDownload,
+  UserFilePreview,
   UserFileDelete,
   UserFileShareTargets,
   UserFileSharedList,
@@ -206,6 +207,7 @@ interface ClientRoutes {
   UserFileUpload: ClientRoute<typeof UserFileUpload>;
   UserFileList: ClientRoute<typeof UserFileList>;
   UserFileDownload: ClientRoute<typeof UserFileDownload>;
+  UserFilePreview: ClientRoute<typeof UserFilePreview>;
   UserFileDelete: ClientRoute<typeof UserFileDelete>;
   UserFileShareTargets: ClientRoute<typeof UserFileShareTargets>;
   UserFileSharedList: ClientRoute<typeof UserFileSharedList>;

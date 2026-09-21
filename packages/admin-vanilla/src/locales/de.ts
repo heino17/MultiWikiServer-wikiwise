@@ -477,5 +477,9 @@ export const deStrings: Record<string, string> = {
   "Shared {name}.": "{name} geteilt.",
   "Stopped sharing {name}.": "Teilen von {name} beendet.",
   "Failed to share {name}.": "{name} konnte nicht geteilt werden.",
+  "Preview": "Vorschau",
+  "Close preview": "Vorschau schließen",
+  "Loading preview…": "Lade Vorschau…",
+  "Preview not available for this file type.": "Für diesen Dateityp ist keine Vorschau verfügbar.",
   // #endregion user files
 };
