@@ -3,7 +3,7 @@ tags: $:/tags/SyncerDropdown
 
 <$reveal state="$:/status/IsLoggedIn" type="match" text="yes">
 <div class="tc-drop-down-info">
-You are logged in<$reveal state="$:/status/UserName" type="nomatch" text="" default=""> as <strong><$text text={{$:/status/UserName}}/></strong></$reveal><$reveal state="$:/status/IsReadOnly" type="match" text="yes" default="no"> (read-only)</$reveal>
+<$reveal state="$:/status/UserName" type="nomatch" text="" default=""><$text text={{$:/language/MWS/Syncer/LoggedInAs}}/> <strong><$text text={{$:/status/UserName}}/></strong></$reveal><$reveal state="$:/status/UserName" type="match" text="" default=""><$text text={{$:/language/MWS/Syncer/LoggedIn}}/></$reveal><$reveal state="$:/status/IsReadOnly" type="match" text="yes" default="no"> <$text text={{$:/language/MWS/Syncer/ReadOnly}}/></$reveal>
 </div>
 <hr/>
 </$reveal>

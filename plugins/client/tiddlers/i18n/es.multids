@@ -1,0 +1,25 @@
+title: $:/plugins/mws/client/i18n/es/
+
+BagInfo/Heading: Información del bag
+Login/ServiceName: Iniciar sesión en este wiki
+SaveWiki/ButtonCaption: Estado del servidor
+SaveWiki/ButtonTooltip: Estado de la sincronización con el servidor
+Sidebar/ConnectionStatus: Estado de conexión de MWS
+Syncer/CopyLogs: Copiar el registro de sincronización al portapapeles
+Syncer/LoggedIn: Has iniciado sesión
+Syncer/LoggedInAs: Has iniciado sesión como
+Syncer/Login: Iniciar sesión
+Syncer/Logout: Cerrar sesión
+Syncer/ReadOnly: (solo lectura)
+Syncer/Refresh: Actualizar desde el servidor
+Syncer/RefreshTooltip: Obtener los últimos cambios del servidor
+Syncer/SaveSnapshot: Guardar una copia para uso sin conexión
+UploadFile/ButtonCaption: Subir un archivo para <<owner>>
+UploadFile/ButtonTooltip: Subir un archivo para <<owner>>
+UploadFile/Description: Subir un archivo para <<owner>>
+UploadFile/ResultSuccess: Se subió “<<filename>>” a tus archivos
+UploadFile/ResultSuccessToWiki: Se subió “<<filename>>” al wiki de <<owner>>
+UploadFile/ResultError: Error al subir “<<filename>>”
+UploadFile/ResultNotLoggedIn: Debes iniciar sesión para subir archivos
+UploadFile/ResultNoWikiWriteAccess: No tienes permiso de escritura en este wiki
+UploadFile/ResultTooLarge: “<<filename>>” es demasiado grande (máximo <<max>> MB)

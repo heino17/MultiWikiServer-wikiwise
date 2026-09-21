@@ -1,0 +1,25 @@
+title: $:/plugins/mws/client/i18n/ru/
+
+BagInfo/Heading: Хранилище
+Login/ServiceName: Войти в это вики
+SaveWiki/ButtonCaption: Состояние сервера
+SaveWiki/ButtonTooltip: Состояние синхронизации с сервером
+Sidebar/ConnectionStatus: Состояние подключения MWS
+Syncer/CopyLogs: Скопировать журнал синхронизации в буфер обмена
+Syncer/LoggedIn: Вы вошли в систему
+Syncer/LoggedInAs: Вы вошли как
+Syncer/Login: Войти
+Syncer/Logout: Выйти
+Syncer/ReadOnly: (только чтение)
+Syncer/Refresh: Обновить с сервера
+Syncer/RefreshTooltip: Получить последние изменения с сервера
+Syncer/SaveSnapshot: Сохранить снимок для автономного использования
+UploadFile/ButtonCaption: Загрузить файл для <<owner>>
+UploadFile/ButtonTooltip: Загрузить файл для <<owner>>
+UploadFile/Description: Загрузить файл для <<owner>>
+UploadFile/ResultSuccess: «<<filename>>» загружен в ваши файлы
+UploadFile/ResultSuccessToWiki: «<<filename>>» загружен в вики <<owner>>
+UploadFile/ResultError: Не удалось загрузить «<<filename>>»
+UploadFile/ResultNotLoggedIn: Чтобы загружать файлы, нужно войти в систему
+UploadFile/ResultNoWikiWriteAccess: У вас нет прав на запись в это вики
+UploadFile/ResultTooLarge: «<<filename>>» слишком большой (максимум <<max>> МБ)

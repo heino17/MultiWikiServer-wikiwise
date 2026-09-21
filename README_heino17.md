@@ -2057,32 +2057,88 @@ Texte in `plugins/client/tiddlers/en-US.multids`.
 
 ---
 
-## 46. Übersetzung: MWS-Client-Texte auf Deutsch (Override-Tiddler)
+## 46. Übersetzung: MWS-Client-Texte folgen automatisch der Wiki-Sprache
 
 ### Befund
 
 - Alle MWS-Client-Strings sind übersetzbare Tiddler mit dem Titel
   `$:/language/MWS/...`. Sie werden als **Shadow-Tiddler** vom Plugin
-  `$:/plugins/mws/client` mitgeliefert und sind nur in
-  `plugins/client/tiddlers/en-US.multids` definiert (englisch).
-- Das Wiki läuft auf `$:/languages/de-DE` (Core-Plugin-Priority 100). Das
-  Core-`de-DE`-Plugin übersetzt aber ausschließlich Core-Strings, **nicht**
-  die `MWS/...`-Keys. Ein Automatik-Fallback auf `de-DE` existiert daher
-  nicht; `$tw.language.getString(title)` schlägt nur `$:/language/<title>`
-  nach.
+  `$:/plugins/mws/client` mitgeliefert und sind in
+  `plugins/client/tiddlers/en-US.multids` nur auf Englisch definiert.
+- Das Core-Sprachplugin (`$:/languages/de-DE`) übersetzt ausschließlich
+  Core-Strings, **nicht** die `MWS/...`-Keys. Ein Automatik-Fallback auf
+  `de-DE` existiert daher nicht; `$tw.language.getString(title)` schlägt nur
+  `$:/language/<title>` nach.
 - Ein normaler Wiki-Tiddler mit gleichem Titel (`$:/language/MWS/...`)
   **überschreibt** den Shadow; `$tw.wiki.isShadowTiddler(title)` bleibt dabei
   `true`. Damit ist die Übersetzung rein datenseitig möglich — ohne Code.
 
-### Override-Set
+### Automatik (umgesetzt)
 
-`plugins/client/translations/de-DE.multids` enthält die deutschen Fassungen.
-Der Ordner `translations/` steht bewusst neben `tiddlers/` und wird von
-`plugins/client/tiddlywiki.files` **nicht** geladen, damit die Strings nicht
-fest ins Client-Plugin gebündelt (und damit allen Wikis aufgezwungen) werden.
-Vorhandene Keys: `BagInfo/Heading` sowie `UploadFile/{ButtonCaption,
-ButtonTooltip, Description, ResultSuccess, ResultSuccessToWiki, ResultError,
-ResultNotLoggedIn, ResultNoWikiWriteAccess, ResultTooLarge}`.
+`plugins/client/tiddlers/language.js` ist ein `module-type: startup`-Modul. Es
+sammelt beim Start alle übersetzten Strings über
+`[all[shadows+tiddlers]prefix[$:/plugins/mws/client/i18n/]]` (Shadows sind im
+Standard-`prefix[]`-Quellfilter nicht enthalten — deshalb der explizite
+Quellant). Jede Übersetzungsdatei `tiddlers/i18n/<code>.multids` erzeugt so
+Shadow-Tiddler `$:/plugins/mws/client/i18n/<code>/<key>`; der Code wird aus
+dem letzten `$:/language`-Pfadsegment abgeleitet (kleingeschrieben, `_`→`-`).
+Auflösung: erst exakter Code (`de-DE` → `de-de`), dann Primärsprache
+(`de-DE` → `de`, `zh-Hans`/`zh-CN`/`zh_CN` → `zh`). Bei Treffer schreibt das
+Modul echte Tiddler `$:/language/MWS/<key>` mit dem übersetzten Text; ein
+`change`-Listener auf `$tw.wiki` wendet die Sprache erneut an, sobald
+`$:/language` eintrifft oder umgestellt wird.
+
+Wichtig: Beim Umschalten auf eine nicht unterstützte Sprache (bzw. Englisch)
+wird **nicht** gelöscht (`deleteTiddler` hinterlässt eine leere Hülle
+`{title, type}` statt den Shadow sichtbar zu machen), sondern der englische
+Text wird aus einem Start-Snapshot der Shadows explizit geschrieben. Reale
+Tiddler `$:/language/MWS/...`, die beim Start bereits existieren, gelten als
+pro-Wiki-Override und werden nie angefasst.
+
+Bereits geliefert: `de`, `ru`, `es`, `fr`, `ja`, `ko`, `zh` (Englisch liefert
+die `en-US.multids`-Shadows als Quelldatei). Eine weitere Sprache ergänzt man
+durch eine neue Datei `tiddlers/i18n/<code>.multids` mit den gleichen Keys.
+Das Client-Plugin liefert keine feste Sprache mit — jedes Wiki entscheidet
+selbst über sein `$:/language` (ohne `$:/language` bleibt es Englisch).
+
+Damit die injizierten Overrides nicht über den Syncer zurück zum Server
+geschrieben werden, schließt der Sync-Filter `$:/language/MWS/` aus:
+`$:/config/SyncFilter` endet auf `-[prefix[$:/language/MWS/]]`
+(`plugins/client/tiddlers/syncer/config-sync-filter.tid`).
+
+### String-Set (23 Keys)
+
+`BagInfo/Heading`, `Login/ServiceName`, `SaveWiki/{ButtonCaption,
+ButtonTooltip}`, `Sidebar/ConnectionStatus`, `Syncer/{CopyLogs, LoggedIn,
+LoggedInAs, Login, Logout, ReadOnly, Refresh, RefreshTooltip, SaveSnapshot}`
+sowie `UploadFile/{ButtonCaption, ButtonTooltip, Description, ResultSuccess,
+ResultSuccessToWiki, ResultError, ResultNotLoggedIn, ResultNoWikiWriteAccess,
+ResultTooLarge}`. Alle acht Sprachdateien verwenden dieselbe Key-Menge
+(Verifikation per Skript in der Testphase). Die Buttons „Serverstatus",
+„Server anmelden/abmelden", „Aktualisieren", „Momentaufnahme", „Protokolle
+kopieren", der Anmelde-Status und der Logindialog lesen ihre Strings über
+`{{$:/language/MWS/...}}` bzw. `syncer.getLoginServiceName()` aus
+`$:/language/MWS/Login/ServiceName` (`syncer.js`); nur noch
+`GettingStarted.tid` bleibt bewusst Inhalt und wird nicht übersetzt.
+
+### Wiki-Eigentümer im Button-Text (`<<owner>>`)
+
+Der Upload-Button heißt nicht mehr neutral „Datei hochladen", sondern nennt den
+Eigentümer: „Eine Datei für Schüler 2 hochladen". Dazu liefert der Server beim
+Kompilieren einen realen Konfig-Tiddler `$:/config/multiwikiclient/owner` mit
+dem `username` des Recipe-Eigentümers aus (`RecipeIndexSender.ts`,
+`writeFinalTiddlers`; gelesen in `serveWikiIndex`). Die MWS-Client-Übersetzungen
+`UploadFile/{ButtonCaption, ButtonTooltip, Description}` enthalten den
+Platzhalter `<<owner>>`.
+
+Ersetzt wird der Platzhalter in `language.js`: Beim Schreiben der realen
+`$:/language/MWS/...`-Tiddler wird `<<owner>>` durch den Owner-Namen ersetzt
+(und Doppel-Leerzeichen entfernt, wenn kein Owner bekannt ist, z. B. im
+Docs-Wiki `mws-docs`). Das ist nötig, weil TiddlyWiki in Attributwerten
+(`tooltip=`, `aria-label=`) Transklusionen nicht als Wikitext auflöst —
+`<<owner>>` als Makro in einer Shadow-Transklusion bliebe dort literal stehen.
+Da `$:/config/multiwikiclient/owner` erst mit dem Server-Sync eintrifft, lauscht
+`language.js` zusätzlich auf dessen Änderung und schreibt die Strings nach.
 
 ### Warum nicht über das Template?
 
@@ -2100,24 +2156,13 @@ alle Wikis erben — ist hier **nicht** möglich:
 - Alle 17 Wikis nutzen dieses Default-Template; `AdminCreateWiki` verwendet es
   fest (`TabDataAdapter.ts:1419`).
 
-### Umgesetzter Weg 1: Start-Tiddler für neue Wikis
+### Verworfen: forcierte deutsche Overrides
 
-`getDefaultLanguageTiddlers()` (`wiki-language-defaults.ts`) liest genau diese
-`.multids`-Datei und `AdminCreateWiki` hängt die Tiddler an die
-`startingTiddlers` (`TabDataAdapter.ts:1450`). Jedes **neu** angelegte Wiki
-erhält die Übersetzung damit automatisch, ohne dass die Strings ins
-Client-Plugin gebündelt und allen Wikis aufgezwungen werden.
-
-### Umgesetzter Weg 2: Bestand (einmalig)
-
-Für die bereits vorhandenen Wikis wurden die zehn Tiddler einmalig über die
-Wiki-API in den jeweils eigenen (schreibbaren) Bag geschrieben:
-`PUT /recipe/<slug>/batch/save` mit Header `X-Requested-With: fetch` und
-`{ tiddlers: [ {title, text, type: "text/vnd.tiddlywiki"} ] }` (Admin-Session;
-ohne `Referer` greift die Referer-Prüfung nicht,
-`RequestState.ts:87`). Weil der eigene Wiki-Bag Vorrang vor dem Plugin-Shadow
-hat, liest das Wiki danach Deutsch. Ein Wiki kann die Strings weiterhin lokal
-übersteuern.
+Ein früherer Ansatz bündelte Deutsch fest (Start-Tiddler für neue Wikis via
+`wiki-language-defaults.ts` + `.multids`, plus einmaliges Einspielen in den
+Bestand). Das zwang allen Wikis Deutsch auf und ist ersetzt durch die
+Automatik oben; `wiki-language-defaults.ts` und `translations/de-DE.multids`
+sind entfernt, ebenso die zuvor in den Bestand geschriebenen Tiddler.
 
 ---
 

@@ -1,6 +1,6 @@
 title: $:/plugins/mws/client/upload-file-button
 tags: $:/tags/PageControls
-caption: {{$:/plugins/mws/client/icon/upload}} Upload file
+caption: {{$:/plugins/mws/client/icon/upload}} {{$:/language/MWS/UploadFile/ButtonCaption}}
 description: {{$:/language/MWS/UploadFile/Description}}
 tooltip: {{$:/language/MWS/UploadFile/ButtonTooltip}}
 
