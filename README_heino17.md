@@ -2057,6 +2057,70 @@ Texte in `plugins/client/tiddlers/en-US.multids`.
 
 ---
 
+## 46. Übersetzung: MWS-Client-Texte auf Deutsch (Override-Tiddler)
+
+### Befund
+
+- Alle MWS-Client-Strings sind übersetzbare Tiddler mit dem Titel
+  `$:/language/MWS/...`. Sie werden als **Shadow-Tiddler** vom Plugin
+  `$:/plugins/mws/client` mitgeliefert und sind nur in
+  `plugins/client/tiddlers/en-US.multids` definiert (englisch).
+- Das Wiki läuft auf `$:/languages/de-DE` (Core-Plugin-Priority 100). Das
+  Core-`de-DE`-Plugin übersetzt aber ausschließlich Core-Strings, **nicht**
+  die `MWS/...`-Keys. Ein Automatik-Fallback auf `de-DE` existiert daher
+  nicht; `$tw.language.getString(title)` schlägt nur `$:/language/<title>`
+  nach.
+- Ein normaler Wiki-Tiddler mit gleichem Titel (`$:/language/MWS/...`)
+  **überschreibt** den Shadow; `$tw.wiki.isShadowTiddler(title)` bleibt dabei
+  `true`. Damit ist die Übersetzung rein datenseitig möglich — ohne Code.
+
+### Override-Set
+
+`plugins/client/translations/de-DE.multids` enthält die deutschen Fassungen.
+Der Ordner `translations/` steht bewusst neben `tiddlers/` und wird von
+`plugins/client/tiddlywiki.files` **nicht** geladen, damit die Strings nicht
+fest ins Client-Plugin gebündelt (und damit allen Wikis aufgezwungen) werden.
+Vorhandene Keys: `BagInfo/Heading` sowie `UploadFile/{ButtonCaption,
+ButtonTooltip, Description, ResultSuccess, ResultSuccessToWiki, ResultError,
+ResultNotLoggedIn, ResultNoWikiWriteAccess, ResultTooLarge}`.
+
+### Warum nicht über das Template?
+
+Der naheliegende Weg — ein gemeinsamer `readonlyBags`-Bag im Template, damit
+alle Wikis erben — ist hier **nicht** möglich:
+
+- `compileRecipeSimpleV1` würde die `readonlyBags` zwar in jedes Recipe
+  übernehmen (`TabUpserts.ts:519`), aber das `Blank Template` ist absichtlich
+  unveränderlich: Beim Speichern über die Admin-API wird bei `isDefault` die
+  bestehende `definition` beibehalten und `readonlyBags` ignoriert
+  (`TabDataAdapter.ts:546`), abhängige Recipes werden nicht neu kompiliert.
+- In einen Readonly-Bag lässt sich über die Wiki-API nicht schreiben
+  (`RecipeResolver.saveTiddlers` zielt nur auf den schreibbaren Bag,
+  `RecipeResolver.ts:330`).
+- Alle 17 Wikis nutzen dieses Default-Template; `AdminCreateWiki` verwendet es
+  fest (`TabDataAdapter.ts:1419`).
+
+### Umgesetzter Weg 1: Start-Tiddler für neue Wikis
+
+`getDefaultLanguageTiddlers()` (`wiki-language-defaults.ts`) liest genau diese
+`.multids`-Datei und `AdminCreateWiki` hängt die Tiddler an die
+`startingTiddlers` (`TabDataAdapter.ts:1450`). Jedes **neu** angelegte Wiki
+erhält die Übersetzung damit automatisch, ohne dass die Strings ins
+Client-Plugin gebündelt und allen Wikis aufgezwungen werden.
+
+### Umgesetzter Weg 2: Bestand (einmalig)
+
+Für die bereits vorhandenen Wikis wurden die zehn Tiddler einmalig über die
+Wiki-API in den jeweils eigenen (schreibbaren) Bag geschrieben:
+`PUT /recipe/<slug>/batch/save` mit Header `X-Requested-With: fetch` und
+`{ tiddlers: [ {title, text, type: "text/vnd.tiddlywiki"} ] }` (Admin-Session;
+ohne `Referer` greift die Referer-Prüfung nicht,
+`RequestState.ts:87`). Weil der eigene Wiki-Bag Vorrang vor dem Plugin-Shadow
+hat, liest das Wiki danach Deutsch. Ein Wiki kann die Strings weiterhin lokal
+übersteuern.
+
+---
+
 ## Nicht eingecheckte Start-Konfiguration (lokal, gitignored)
 
 ```json
