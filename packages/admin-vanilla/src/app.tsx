@@ -2180,7 +2180,7 @@ export class App extends JSXElement {
             </div>
           ) : null}
 
-          <div class="list-grid list-grid-header" style={{ gridTemplateColumns: "repeat(" + currentTab.columns.reduce((total, column) => total + (column.width ?? 1), 0) + ", minmax(120px, 1fr))" }}>
+          <div class="list-grid list-grid-header" style={{ gridTemplateColumns: "repeat(" + currentTab.columns.reduce((total, column) => total + (column.width ?? 1), 0) + ", minmax(max-content, 1fr))" }}>
             {currentTab.columns.map((column) => (
               <div class="list-cell list-head" style={
                 column.width && column.width > 1
@@ -2202,7 +2202,7 @@ export class App extends JSXElement {
                 role="button"
                 tabindex={isListInteractionDisabled ? -1 : 0}
                 aria-disabled={isListInteractionDisabled ? "true" : undefined}
-                style={{ gridTemplateColumns: "repeat(" + currentTab.columns.reduce((total, column) => total + (column.width ?? 1), 0) + ", minmax(120px, 1fr))" }}
+                style={{ gridTemplateColumns: "repeat(" + currentTab.columns.reduce((total, column) => total + (column.width ?? 1), 0) + ", minmax(max-content, 1fr))" }}
                 onclick={() => {
                   if (!isListInteractionDisabled)
                     void store.openItem(currentTab.id, item.id);
@@ -2350,6 +2350,16 @@ export class App extends JSXElement {
 
 function renderListCellValue(columnKey: string, value: string | undefined, onThumbnailClick?: (src: string) => void) {
   const formattedValue = formatFieldValue(value);
+
+  if (columnKey === "recipeUsers" || columnKey === "recipeAdmins") {
+    const names = Array.isArray(value) ? value.filter((name): name is string => typeof name === "string" && Boolean(name)) : [];
+    if (!names.length) return <span class="list-access-names is-empty">—</span>;
+    return (
+      <span class="list-access-names">
+        {names.map((name) => <span class="list-access-name" key={name}>{name}</span>)}
+      </span>
+    );
+  }
 
   if (columnKey === "myRights") {
     const labels: Record<string, string> = {

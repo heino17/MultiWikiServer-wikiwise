@@ -641,7 +641,7 @@ h6 {
 .list-panel {
 	border-radius: 26px;
 	background: var(--color-surface-panel-strong);
-	overflow: hidden;
+	overflow-x: auto;
 }
 
 .list-toolbar {
@@ -701,6 +701,31 @@ h6 {
 	padding: 14px 16px;
 	overflow: hidden;
 	text-overflow: ellipsis;
+}
+
+.list-access-names {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 6px;
+	align-items: center;
+	max-width: 36ch;
+}
+
+.list-access-name {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 9px;
+	border-radius: 999px;
+	background: var(--color-surface-pill);
+	border: 1px solid var(--color-border-soft);
+	color: var(--color-text-strong);
+	font-size: 0.82rem;
+	line-height: 1.4;
+	white-space: nowrap;
+}
+
+.list-access-names.is-empty {
+	color: var(--color-text-faint);
 }
 
 .list-cell-link {
