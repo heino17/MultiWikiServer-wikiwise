@@ -1,0 +1,25 @@
+title: $:/plugins/mws/client/i18n/ko/
+
+BagInfo/Heading: 백 정보
+Login/ServiceName: 이 위키에 로그인
+SaveWiki/ButtonCaption: 서버 상태
+SaveWiki/ButtonTooltip: 서버와의 동기화 상태
+Sidebar/ConnectionStatus: MWS 연결 상태
+Syncer/CopyLogs: 동기화 로그를 클립보드에 복사
+Syncer/LoggedIn: 로그인되어 있습니다
+Syncer/LoggedInAs: 다음으로 로그인됨:
+Syncer/Login: 로그인
+Syncer/Logout: 로그아웃
+Syncer/ReadOnly: (읽기 전용)
+Syncer/Refresh: 서버에서 새로 고침
+Syncer/RefreshTooltip: 서버에서 최신 변경 사항 가져오기
+Syncer/SaveSnapshot: 오프라인용 스냅샷 저장
+UploadFile/ButtonCaption: <<owner>>님을 위한 파일 업로드
+UploadFile/ButtonTooltip: <<owner>>님을 위한 파일 업로드
+UploadFile/Description: <<owner>>님을 위한 파일 업로드
+UploadFile/ResultSuccess: ‘<<filename>>’ 파일을 내 파일에 업로드했습니다
+UploadFile/ResultSuccessToWiki: ‘<<filename>>’ 파일을 <<owner>>의 위키에 업로드했습니다
+UploadFile/ResultError: ‘<<filename>>’ 업로드에 실패했습니다
+UploadFile/ResultNotLoggedIn: 파일을 업로드하려면 로그인해야 합니다
+UploadFile/ResultNoWikiWriteAccess: 이 위키에 대한 쓰기 권한이 없습니다
+UploadFile/ResultTooLarge: ‘<<filename>>’ 파일이 너무 큽니다 (최대 <<max>>MB)

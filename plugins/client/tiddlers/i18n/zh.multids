@@ -1,0 +1,25 @@
+title: $:/plugins/mws/client/i18n/zh/
+
+BagInfo/Heading: Bag 信息
+Login/ServiceName: 登录此 Wiki
+SaveWiki/ButtonCaption: 服务器状态
+SaveWiki/ButtonTooltip: 与服务器的同步状态
+Sidebar/ConnectionStatus: MWS 连接状态
+Syncer/CopyLogs: 将同步日志复制到剪贴板
+Syncer/LoggedIn: 你已登录
+Syncer/LoggedInAs: 你已登录为
+Syncer/Login: 登录
+Syncer/Logout: 注销
+Syncer/ReadOnly: （只读）
+Syncer/Refresh: 从服务器刷新
+Syncer/RefreshTooltip: 获取服务器上的最新更改
+Syncer/SaveSnapshot: 保存快照以供离线使用
+UploadFile/ButtonCaption: 为 <<owner>> 上传文件
+UploadFile/ButtonTooltip: 为 <<owner>> 上传文件
+UploadFile/Description: 为 <<owner>> 上传文件
+UploadFile/ResultSuccess: 已上传“<<filename>>”到你的文件
+UploadFile/ResultSuccessToWiki: 已上传“<<filename>>”到 <<owner>> 的 Wiki
+UploadFile/ResultError: “<<filename>>”上传失败
+UploadFile/ResultNotLoggedIn: 你必须登录才能上传文件
+UploadFile/ResultNoWikiWriteAccess: 你对此 Wiki 没有写入权限
+UploadFile/ResultTooLarge: “<<filename>>”太大（最大 <<max>> MB）

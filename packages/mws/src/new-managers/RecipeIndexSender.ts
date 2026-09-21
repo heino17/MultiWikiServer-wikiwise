@@ -34,13 +34,21 @@ export async function serveWikiIndex(
       return await new RecipeResolver(recipe, prisma, state.user)
         .getIndexData(!skipBagTiddlers);
     });
+    const ownerUsername = recipe.owner_user_id
+      ? await state.$transaction(async (prisma) =>
+          (await prisma.users.findUnique({
+            where: { user_id: recipe.owner_user_id! },
+            select: { username: true },
+          }))?.username ?? ""
+        )
+      : "";
     const etag = index.getIndexEtag("", state.pluginCache);
-    return { recipe, index, etag };
+    return { recipe, index, etag, ownerUsername };
   };
 
   switch (type) {
     case "index": {
-      const { recipe, index, etag } = await getData();
+      const { recipe, index, etag, ownerUsername } = await getData();
       const { injectionFunction, twVersion } = index.template;
       const version = state.pluginCache.versionFromTemplate(twVersion);
       if (!version) throw new Error("wut");
@@ -54,12 +62,13 @@ export async function serveWikiIndex(
         index,
         etag,
         plugins,
+        ownerUsername,
       ).serveIndexFile(template);
     }
     case "store.json":
     case "store.js": {
 
-      const { recipe, index, etag: newEtag } = await (async () => {
+      const { recipe, index, etag: newEtag, ownerUsername } = await (async () => {
         if (process.env.BUILD_FLAG_EXTERNAL_STORE) {
           const key = state.headers.cookie.get("mws_index_cache")!;
           const cached = IndexSender.storeCache.get(key) ?? await getData();
@@ -75,7 +84,7 @@ export async function serveWikiIndex(
 
       const plugins = index.getPluginList();
       await initPlugins(state.pluginCache, injectionFunction, version, plugins);
-      const store = new WikiStoreWriter(state, recipe, index, type, plugins, version);
+      const store = new WikiStoreWriter(state, recipe, index, type, plugins, version, ownerUsername);
 
       const match = state.headers.ifNoneMatch.has(newEtag);
 
@@ -132,7 +141,7 @@ async function initPlugins(pluginCache: PluginCache, injectionFunction: string, 
 const emptyArray = Object.seal([])
 // #region - IndexSender
 abstract class IndexSender {
-  static storeCache = new Map<string, { recipe: RecipeInfo, index: IndexData, etag: string; }>();
+  static storeCache = new Map<string, { recipe: RecipeInfo, index: IndexData, etag: string; ownerUsername: string; }>();
 
   protected abstract makeStoreWriter: () => StoreWriter;
   protected abstract state: ServerRequest;
@@ -352,6 +361,7 @@ class WikiIndexSender extends IndexSender {
     protected index: IndexData,
     protected etag: string,
     public plugins: string[],
+    protected ownerUsername: string,
   ) {
     super();
     this.lastEventId = index.lastEventId;
@@ -375,6 +385,7 @@ class WikiIndexSender extends IndexSender {
         this.injectStore ? "store.js" : "store.json",
         this.plugins,
         this.twVersion,
+        this.ownerUsername,
       );
     }
   }
@@ -453,6 +464,7 @@ abstract class StoreWriter {
   abstract externalPlugins: boolean;
   abstract plugins: string[];
   abstract twVersion: string;
+  protected ownerUsername = "";
 
   // private get cachePath() { return this.state.pluginCache.cachePath; }
   // private get pluginFiles() { return this.state.pluginCache.pluginFiles; }
@@ -495,6 +507,12 @@ abstract class StoreWriter {
       title: "$:/config/multiwikiclient/recipe",
       text: this.recipeSlug,
     });
+    if (this.ownerUsername) {
+      await this.writeTiddler({
+        title: "$:/config/multiwikiclient/owner",
+        text: this.ownerUsername,
+      });
+    }
     if (process.env.DEVSERVER) {
       await this.writeTiddler({
         title: "$:/state/multiwikiclient/dev-mode",
@@ -527,8 +545,10 @@ class WikiStoreWriter extends StoreWriter {
     format: "store.js" | "store.json",
     public plugins: string[],
     public twVersion: string,
+    ownerUsername: string = "",
   ) {
     super();
+    this.ownerUsername = ownerUsername;
     this.bagTiddlers = index.bagTiddlers;
     this.injectionFunction = index.template.injectionFunction;
     this.externalPlugins = index.template.externalPlugins;

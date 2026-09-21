@@ -358,29 +358,13 @@ Syncer.prototype.handleLoginEvent = function() {
 /*
 Displays the service name for the password prompt, preferring (in order):
 1. An explicit wiki override tiddler `$:/config/mws/LoginServiceName`
-2. A translation map (full language code first, then primary code)
+2. The translated `$:/language/MWS/Login/ServiceName` tiddler (injected by the
+   `mws-language` startup module according to `$:/language`)
 3. English fallback
-
-To add a language: decrease the code as used in the `$:/language` tiddler
-(underscores are normalized to hyphens), e.g. `de-DE`, `zh-CN` or `zh_CN` gets
-matched against the full key `zh-cn` first and the primary key `zh` second.
 */
 Syncer.prototype.getLoginServiceName = function() {
-	var languageMap = {
-		"de": "In dieses Wiki einloggen",
-		"en": "Log in to this wiki",
-		"fr": "Se connecter à ce wiki",
-		"es": "Iniciar sesión en este wiki",
-		"ru": "Войти в эту вики",
-		"ja": "このWikiにログイン",
-		"ko": "이 위키에 로그인",
-		"zh-cn": "登录此 Wiki"
-	};
-	var language = $tw.wiki.getTiddlerText("$:/language") || "$:/languages/en-GB",
-		normalized = language.replace(/^\$:\/languages\//i, "").toLowerCase().replace(/_/g, "-"),
-		serviceName = languageMap[normalized] || languageMap[normalized.split("-")[0]];
 	return $tw.wiki.getTiddlerText("$:/config/mws/LoginServiceName") ||
-		serviceName ||
+		$tw.wiki.getTiddlerText("$:/language/MWS/Login/ServiceName") ||
 		"Log in to this wiki";
 };
 

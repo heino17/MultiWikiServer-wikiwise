@@ -1,0 +1,25 @@
+title: $:/plugins/mws/client/i18n/fr/
+
+BagInfo/Heading: Infos du bag
+Login/ServiceName: Se connecter à ce wiki
+SaveWiki/ButtonCaption: État du serveur
+SaveWiki/ButtonTooltip: État de la synchronisation avec le serveur
+Sidebar/ConnectionStatus: État de connexion MWS
+Syncer/CopyLogs: Copier le journal de synchronisation dans le presse-papiers
+Syncer/LoggedIn: Vous êtes connecté
+Syncer/LoggedInAs: Vous êtes connecté en tant que
+Syncer/Login: Connexion
+Syncer/Logout: Déconnexion
+Syncer/ReadOnly: (lecture seule)
+Syncer/Refresh: Actualiser depuis le serveur
+Syncer/RefreshTooltip: Obtenir les dernières modifications du serveur
+Syncer/SaveSnapshot: Enregistrer un instantané pour un usage hors ligne
+UploadFile/ButtonCaption: Téléverser un fichier pour <<owner>>
+UploadFile/ButtonTooltip: Téléverser un fichier pour <<owner>>
+UploadFile/Description: Téléverser un fichier pour <<owner>>
+UploadFile/ResultSuccess: « <<filename>> » a été téléversé dans vos fichiers
+UploadFile/ResultSuccessToWiki: « <<filename>> » a été téléversé dans le wiki de <<owner>>
+UploadFile/ResultError: Échec du téléversement de « <<filename>> »
+UploadFile/ResultNotLoggedIn: Vous devez être connecté pour téléverser des fichiers
+UploadFile/ResultNoWikiWriteAccess: Vous n’avez pas les droits d’écriture sur ce wiki
+UploadFile/ResultTooLarge: « <<filename>> » est trop volumineux (maximum <<max>> Mo)

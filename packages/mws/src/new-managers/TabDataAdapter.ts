@@ -39,7 +39,6 @@ import { createHash } from "crypto";
 import { debuglog } from "util";
 import { Debug } from "@prisma/client/runtime/client";
 import { WikiStore } from "./RecipeResolver";
-import { getDefaultLanguageTiddlers } from "./wiki-language-defaults";
 import { SessionManager } from "./sessions";
 import type { PasswordService } from "../services/PasswordService";
 
@@ -1452,7 +1451,6 @@ export const AdminCreateWiki = zodRoute({
         { title: "$:/SiteTitle", text: displayName },
         { title: "$:/DefaultTiddlers", text: welcomeTitle },
         { title: welcomeTitle, text: welcomeText(displayName) },
-        ...getDefaultLanguageTiddlers(),
       ];
       for (const { title, text } of startingTiddlers) {
         await store.saveTiddler({

@@ -1,9 +1,22 @@
 title: $:/language/MWS/
 
 BagInfo/Heading: Bag Info
-UploadFile/ButtonCaption: Upload file
-UploadFile/ButtonTooltip: Upload a file to this wiki
-UploadFile/Description: Upload a file to this wiki
+Login/ServiceName: Log in to this wiki
+SaveWiki/ButtonCaption: Server status
+SaveWiki/ButtonTooltip: Status of synchronisation with server
+Sidebar/ConnectionStatus: MWS Connection Status
+Syncer/CopyLogs: Copy syncer logs to clipboard
+Syncer/LoggedIn: You are logged in
+Syncer/LoggedInAs: You are logged in as
+Syncer/Login: Login
+Syncer/Logout: Logout
+Syncer/ReadOnly: (read-only)
+Syncer/Refresh: Refresh from server
+Syncer/RefreshTooltip: Get latest changes from the server
+Syncer/SaveSnapshot: Save snapshot for offline use
+UploadFile/ButtonCaption: Upload a file for <<owner>>
+UploadFile/ButtonTooltip: Upload a file for <<owner>>
+UploadFile/Description: Upload a file for <<owner>>
 UploadFile/ResultSuccess: Uploaded “<<filename>>” to your files
 UploadFile/ResultSuccessToWiki: Uploaded “<<filename>>” to <<owner>>’s wiki
 UploadFile/ResultError: Upload of “<<filename>>” failed

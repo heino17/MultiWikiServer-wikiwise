@@ -3,6 +3,6 @@ tags: $:/tags/SyncerDropdown
 
 <$reveal state="$:/status/IsLoggedIn" type="match" text="yes">
 <$button message="tm-logout" class="tc-btn-invisible">
-{{$:/core/images/cancel-button}} Logout
+{{$:/core/images/cancel-button}} <$text text={{$:/language/MWS/Syncer/Logout}}/>
 </$button>
 </$reveal>

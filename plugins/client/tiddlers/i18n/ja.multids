@@ -1,0 +1,25 @@
+title: $:/plugins/mws/client/i18n/ja/
+
+BagInfo/Heading: バッグ情報
+Login/ServiceName: このWikiにログイン
+SaveWiki/ButtonCaption: サーバーの状態
+SaveWiki/ButtonTooltip: サーバーとの同期状態
+Sidebar/ConnectionStatus: MWS接続状態
+Syncer/CopyLogs: 同期ログをクリップボードにコピー
+Syncer/LoggedIn: ログインしています
+Syncer/LoggedInAs: 次としてログインしています:
+Syncer/Login: ログイン
+Syncer/Logout: ログアウト
+Syncer/ReadOnly: （読み取り専用）
+Syncer/Refresh: サーバーから更新
+Syncer/RefreshTooltip: サーバーから最新の変更を取得
+Syncer/SaveSnapshot: オフライン用にスナップショットを保存
+UploadFile/ButtonCaption: <<owner>>のためにファイルをアップロード
+UploadFile/ButtonTooltip: <<owner>>のためにファイルをアップロード
+UploadFile/Description: <<owner>>のためにファイルをアップロード
+UploadFile/ResultSuccess: 「<<filename>>」をあなたのファイルにアップロードしました
+UploadFile/ResultSuccessToWiki: 「<<filename>>」を<<owner>>のWikiにアップロードしました
+UploadFile/ResultError: 「<<filename>>」のアップロードに失敗しました
+UploadFile/ResultNotLoggedIn: ファイルをアップロードするにはログインが必要です
+UploadFile/ResultNoWikiWriteAccess: このWikiへの書き込み権限がありません
+UploadFile/ResultTooLarge: 「<<filename>>」は大きすぎます（最大<<max>>MB）
