@@ -1,3 +1,12 @@
 title: $:/language/MWS/
 
 BagInfo/Heading: Bag Info
+UploadFile/ButtonCaption: Upload file
+UploadFile/ButtonTooltip: Upload a file to this wiki
+UploadFile/Description: Upload a file to this wiki
+UploadFile/ResultSuccess: Uploaded “<<filename>>” to your files
+UploadFile/ResultSuccessToWiki: Uploaded “<<filename>>” to <<owner>>’s wiki
+UploadFile/ResultError: Upload of “<<filename>>” failed
+UploadFile/ResultNotLoggedIn: You must be logged in to upload files
+UploadFile/ResultNoWikiWriteAccess: You do not have write access to this wiki
+UploadFile/ResultTooLarge: “<<filename>>” is too large (maximum <<max>> MB)

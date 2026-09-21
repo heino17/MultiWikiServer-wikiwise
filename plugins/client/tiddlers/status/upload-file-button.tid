@@ -1,0 +1,16 @@
+title: $:/plugins/mws/client/upload-file-button
+tags: $:/tags/PageControls
+caption: {{$:/plugins/mws/client/icon/upload}} Upload file
+description: {{$:/language/MWS/UploadFile/Description}}
+tooltip: {{$:/language/MWS/UploadFile/ButtonTooltip}}
+
+\whitespace trim
+<$button class=<<tv-config-toolbar-class>> tooltip={{$:/language/MWS/UploadFile/ButtonTooltip}} aria-label={{$:/language/MWS/UploadFile/ButtonCaption}}>
+<$action-sendmessage $message="tm-upload-file"/>
+<%if [<tv-config-toolbar-icons>match[yes]] %>
+{{$:/plugins/mws/client/icon/upload}}
+<%endif%>
+<%if [<tv-config-toolbar-text>match[yes]] %>
+<span class="tc-btn-text"><$text text={{$:/language/MWS/UploadFile/ButtonCaption}}/></span>
+<%endif%>
+</$button>

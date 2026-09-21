@@ -11,6 +11,7 @@ import { SendError, tryParseJSON, zodRoute } from "@tiddlywiki/server";
 import { createHash } from "crypto";
 import { createReadStream, createWriteStream, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "fs";
 import { basename, join, resolve } from "path";
+import { RecipeResolver } from "./RecipeResolver";
 
 const HASH_RE = /^[a-f0-9]{64}$/;
 
@@ -370,9 +371,32 @@ export const UserFileUpload = zodRoute({
   bodyFormat: "stream",
   securityChecks: { requestedWithHeader: true },
   zodPathParams: z => ({}),
+  zodQueryKeys: ["recipe"],
   inner: async (state) => {
     state.okUser();
     state.assertReferer(["/"]);
+
+    // A file uploaded from inside a wiki belongs to the wiki's owner, not to
+    // the uploader: a user who was granted write access to someone else's wiki
+    // adds the file to that wiki's store. Without a `recipe` query parameter
+    // (uploads from the account's own area) the file stays with the uploader.
+    const recipeSlug = state.query.get("recipe");
+    let owner = { user_id: state.user.user_id, username: state.user.username };
+    if (recipeSlug) {
+      const recipe = await RecipeResolver.assertRecipe({ state, recipe_slug: recipeSlug });
+      const resolver = new RecipeResolver(recipe, null, state.user);
+      const canWrite = state.user.isAdmin
+        || recipe.owner_user_id === state.user.user_id
+        || recipe.permissions.some(p => p.level === "B_write")
+        || recipe.recipe_bags.some(rb => rb.is_writable && resolver.canWriteBag(rb));
+      if (!canWrite)
+        throw state.sendEmpty(403, { "x-reason": "no write access to this wiki" });
+      const targetId = recipe.owner_user_id ?? state.user.user_id;
+      const targetUser = targetId === state.user.user_id
+        ? { username: state.user.username }
+        : await state.engine.users.findUnique({ where: { user_id: targetId }, select: { username: true } });
+      owner = { user_id: targetId, username: targetUser?.username ?? state.user.username };
+    }
 
     const storePath = state.config.storePath as string;
     const maxBytes = state.config.userFileSizeLimit;
@@ -467,7 +491,7 @@ export const UserFileUpload = zodRoute({
       filename: "data" + extension,
       type,
       originalFilename: filename,
-      user_id: state.user.user_id,
+      user_id: owner.user_id,
       created: new Date().toISOString(),
       modified: new Date().toISOString(),
     }, null, 4));
@@ -478,7 +502,7 @@ export const UserFileUpload = zodRoute({
     const row = await state.$transaction(async (prisma) => {
       return await prisma.userFile.create({
         data: {
-          user_id: state.user.user_id,
+          user_id: owner.user_id,
           filename,
           type,
           extension: extension.replace(/^\./, ""),
@@ -488,7 +512,7 @@ export const UserFileUpload = zodRoute({
       });
     });
 
-    return { file: mapFile(row) };
+    return { file: mapFile(row), owner };
   }
 });
 
