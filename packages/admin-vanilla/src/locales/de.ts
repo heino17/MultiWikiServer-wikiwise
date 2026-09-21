@@ -46,6 +46,8 @@ export const deStrings: Record<string, string> = {
   "Wiki preview": "Wiki-Vorschau",
   "Thumbnail": "Vorschaubild",
   "My rights": "Meine Rechte",
+  "Readable by": "Lesbar von",
+  "Writable by": "Beschreibbar von",
   "Too big: expected string to have <=1700 characters": "Zu lang: höchstens 1700 Zeichen erlaubt.",
   "Admin": "Admin",
   "Owner": "Eigentümer",

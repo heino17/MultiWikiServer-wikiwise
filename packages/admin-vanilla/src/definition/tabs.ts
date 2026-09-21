@@ -185,10 +185,12 @@ const tabs = {
     description: "Final wiki instances built from a template plus per-wiki customizations.",
     columns: [
       { key: "slug", label: "Slug", width: 2 },
-      { key: "thumbnailUrl", label: "", width: 3 },
+      { key: "thumbnailUrl", label: "", width: 2 },
       { key: "displayName", label: "Display name", width: 2 },
       { key: "templateName", label: "Template" },
       { key: "ownerUsername", label: "Created by" },
+      { key: "recipeUsers", label: "Readable by" },
+      { key: "recipeAdmins", label: "Writable by" },
       { key: "myRights", label: "My rights" },
       // { key: "edit", label: "" }
       // { key: "lastCompiledAt", label: "Compiled" },
