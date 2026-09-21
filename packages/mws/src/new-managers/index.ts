@@ -15,6 +15,7 @@ import { serveDocsIndex, serveWikiIndex, } from "./RecipeIndexSender";
 import { AdminLoad, AdminCreateWiki, AdminDeleteWiki, AdminDeleteRole, AdminDeleteBag, AdminDeleteUser, AdminSave } from "./TabDataAdapter";
 import { AdminBackup, AdminBackupList, AdminBackupDownload, AdminBackupDelete } from "./BackupRoutes";
 import { AdminStorage } from "./StorageRoutes";
+import { AdminStorageCleanup } from "./StorageCleanupRoutes";
 import { PinboardDeleteNote, PinboardList, PinboardMarkRead, PinboardSaveNote, PinboardSavePosition, PinboardUnreadCount } from "./PinboardRoutes";
 import { UserFileDelete, UserFileDownload, UserFileList, UserFilePreview, UserFileShareTargets, UserFileShareUpdate, UserFileSharedList, UserFileUpload } from "./UserFileRoutes";
 import { serveWikiThumbnail } from "./WikiThumbnailRoutes";
@@ -169,6 +170,7 @@ const ApiRoutes = {
   AdminBackupDownload,
   AdminBackupDelete,
   AdminStorage,
+  AdminStorageCleanup,
   PinboardList,
   PinboardUnreadCount,
   PinboardSaveNote,
@@ -198,6 +200,7 @@ interface ClientRoutes {
   AdminBackupDownload: ClientRoute<typeof AdminBackupDownload>;
   AdminBackupDelete: ClientRoute<typeof AdminBackupDelete>;
   AdminStorage: ClientRoute<typeof AdminStorage>;
+  AdminStorageCleanup: ClientRoute<typeof AdminStorageCleanup>;
   PinboardList: ClientRoute<typeof PinboardList>;
   PinboardUnreadCount: ClientRoute<typeof PinboardUnreadCount>;
   PinboardSaveNote: ClientRoute<typeof PinboardSaveNote>;
