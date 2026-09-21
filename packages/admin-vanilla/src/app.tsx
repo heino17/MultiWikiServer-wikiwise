@@ -1280,6 +1280,27 @@ export type StorageInfo = {
   topUsers: StorageUserUsage[];
 };
 
+export type StorageCleanupCategory = {
+  count: number;
+  bytes: number;
+  samples: string[];
+};
+
+export type StorageCleanupPreview = {
+  generatedAt: string;
+  dryRun: boolean;
+  staleAfterMs: number;
+  categories: {
+    inbox: StorageCleanupCategory;
+    orphaned: StorageCleanupCategory;
+    unreferenced: StorageCleanupCategory;
+  };
+  total: {
+    count: number;
+    bytes: number;
+  };
+};
+
 @addstyles(css)
 @customElement("mws-app")
 export class App extends JSXElement {
@@ -1305,6 +1326,10 @@ export class App extends JSXElement {
   @state() accessor storageInfo: StorageInfo | null = null;
   @state() accessor storageLoading = false;
   @state() accessor storageError = "";
+  @state() accessor cleanupPreview: StorageCleanupPreview | null = null;
+  @state() accessor cleanupLoading = false;
+  @state() accessor cleanupError = "";
+  @state() accessor cleanupBusy = false;
 
   @state() accessor pinboardUnread = 0;
   @state() accessor pinboardCount = 0;
@@ -1500,6 +1525,47 @@ export class App extends JSXElement {
       this.storageError = getErrorMessage(error, t("Failed to load storage overview."));
     } finally {
       this.storageLoading = false;
+    }
+  };
+
+  private readonly previewCleanup = async () => {
+    if (this.cleanupLoading) return;
+    this.cleanupLoading = true;
+    this.cleanupError = "";
+    this.cleanupPreview = null;
+    try {
+      const response = await fetch(pathPrefix + "/admin/storage/cleanup", {
+        headers: { "X-Requested-With": "TiddlyWiki" },
+      });
+      const text = await response.text();
+      if (response.status !== 200) throw new Error(text);
+      this.cleanupPreview = JSON.parse(text);
+    } catch (error) {
+      console.error(error);
+      this.cleanupError = getErrorMessage(error, t("Failed to scan storage."));
+    } finally {
+      this.cleanupLoading = false;
+    }
+  };
+
+  private readonly executeCleanup = async () => {
+    if (this.cleanupBusy) return;
+    this.cleanupBusy = true;
+    this.cleanupError = "";
+    try {
+      const response = await fetch(pathPrefix + "/admin/storage/cleanup", {
+        method: "POST",
+        headers: { "X-Requested-With": "TiddlyWiki" },
+      });
+      const text = await response.text();
+      if (response.status !== 200) throw new Error(text);
+      this.cleanupPreview = JSON.parse(text);
+      await this.loadStorage();
+    } catch (error) {
+      console.error(error);
+      this.cleanupError = getErrorMessage(error, t("Failed to clean storage."));
+    } finally {
+      this.cleanupBusy = false;
     }
   };
 
@@ -1940,6 +2006,60 @@ export class App extends JSXElement {
                       </div>
                     );
                   })()}
+                </section>
+
+                <section class="storage-cleanup-section">
+                  <div class="storage-cleanup-header">
+                    <h3>{t("Clean up storage")}</h3>
+                    <button class="ghost-button" type="button" onclick={() => void this.previewCleanup()} disabled={this.cleanupLoading}>
+                      {this.cleanupLoading ? t("Scanning…") : t("Scan for cleanup")}
+                    </button>
+                  </div>
+                  {this.cleanupError ? <p class="backup-status is-error">{this.cleanupError}</p> : null}
+                  {!this.cleanupPreview ? (
+                    <p class="storage-cleanup-hint">
+                      {t("Removes aborted uploads and unreferenced files from store/inbox/ and store/files/. Nothing is deleted until you confirm the preview.")}
+                    </p>
+                  ) : (
+                    (() => {
+                      const preview = this.cleanupPreview;
+                      const category = (label: string, data: StorageCleanupCategory) => (
+                        <div class="storage-cleanup-cat">
+                          <span class="storage-cleanup-cat-label">{label}</span>
+                          <span class="storage-cleanup-cat-count">{data.count.toLocaleString()}</span>
+                          <span class="storage-cleanup-cat-bytes">{this.prettifyBytes(data.bytes)}</span>
+                        </div>
+                      );
+                      return (
+                        <div class="storage-cleanup-result">
+                          <p class="storage-cleanup-summary">
+                            {preview.total.count === 0
+                              ? t("Nothing to clean up.")
+                              : preview.dryRun
+                                ? t("Found {count} candidates with {bytes} in total.", { count: preview.total.count.toLocaleString(), bytes: this.prettifyBytes(preview.total.bytes) })
+                                : t("Removed {count} candidates with {bytes} in total.", { count: preview.total.count.toLocaleString(), bytes: this.prettifyBytes(preview.total.bytes) })}
+                          </p>
+                          <div class="storage-cleanup-cats">
+                            {category(t("Stale inbox"), preview.categories.inbox)}
+                            {category(t("Orphaned store files"), preview.categories.orphaned)}
+                            {category(t("Unreferenced blobs"), preview.categories.unreferenced)}
+                          </div>
+                          <div class="storage-cleanup-action">
+                            {preview.dryRun && preview.total.count > 0 ? (
+                              <>
+                                <button class="primary-button" type="button" onclick={() => void this.executeCleanup()} disabled={this.cleanupBusy}>
+                                  {this.cleanupBusy ? t("Cleaning up…") : t("Clean up now")}
+                                </button>
+                                <button class="ghost-button" type="button" onclick={() => { this.cleanupPreview = null; }}>{t("Cancel")}</button>
+                              </>
+                            ) : (
+                              <button class="ghost-button" type="button" onclick={() => { this.cleanupPreview = null; }}>{t("Close")}</button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()
+                  )}
                 </section>
 
                 <section class="storage-data-section">

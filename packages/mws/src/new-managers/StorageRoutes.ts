@@ -83,7 +83,7 @@ function binaryTypeCondition(tableAlias?: "t") {
   );
 }
 
-async function getDirStats(dirPath: string): Promise<{ files: number; directories: number; totalSizeBytes: number; lastModified: string }> {
+export async function getDirStats(dirPath: string): Promise<{ files: number; directories: number; totalSizeBytes: number; lastModified: string }> {
   let files = 0;
   let directories = 0;
   let totalSizeBytes = 0;
@@ -119,7 +119,7 @@ async function getDirStats(dirPath: string): Promise<{ files: number; directorie
   return { files, directories, totalSizeBytes, lastModified };
 }
 
-async function getFileSize(filePath: string): Promise<number> {
+export async function getFileSize(filePath: string): Promise<number> {
   try {
     const stat = await fs.stat(filePath);
     return stat.size;
