@@ -234,6 +234,23 @@ h6 {
 	max-width: 10ch;
 }
 
+.hero-panel h1 span {
+	position: relative;
+}
+
+.hero-wordmark-suffix {
+	position: absolute;
+	left: 100%;
+	top: 0.57em;
+	font-size: 0.22em;
+	font-weight: 600;
+	color: #E7BF63;
+	letter-spacing: 0.2em;
+	line-height: 1;
+	white-space: nowrap;
+	margin-left: 0.08em;
+}
+
 .hero-copy,
 .section-copy,
 .modal-header p,
