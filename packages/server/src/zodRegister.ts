@@ -88,6 +88,8 @@ export function defineZodRoute(
       }
       if (res === undefined) {
         return state.sendEmpty(204, { contentType: "application/json" });
+      } else if (res === STREAM_ENDED) {
+        return res;
       } else {
         return state.sendJSON(200, res);
       }

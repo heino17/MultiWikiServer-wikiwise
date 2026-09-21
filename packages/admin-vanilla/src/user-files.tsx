@@ -14,6 +14,7 @@ import closeIcon from "@material-symbols/svg-400/outlined/close.svg";
 import shareIcon from "@material-symbols/svg-400/outlined/share.svg";
 import checkIcon from "@material-symbols/svg-400/outlined/check.svg";
 import personIcon from "@material-symbols/svg-400/outlined/person.svg";
+import visibilityIcon from "@material-symbols/svg-400/outlined/visibility.svg";
 import { MaterialSymbol } from "./material-symbol";
 import { t } from "./i18n";
 
@@ -67,6 +68,128 @@ async function userFilesApiJson(path: string, init?: RequestInit): Promise<any> 
   return text ? JSON.parse(text) : null;
 }
 
+const MARKDOWN_TOKEN = /(\*\*[^*]+\*\*|__[^_]+__|~~[^~]+~~|\*[^*]+\*|_[^_]+_|`[^`]+`|\[[^\]]+\]\([^)\s]+\))/;
+
+/** Format one line's inline markdown into JSX text and elements. The source is
+ *  rendered as text nodes (never parsed as HTML), so file content cannot
+ *  inject markup. Links are restricted to http(s)/mailto. */
+function parseInline(src: string): (JSX.Element | string)[] {
+  const nodes: (JSX.Element | string)[] = [];
+  let rest = src;
+  for (;;) {
+    const match = MARKDOWN_TOKEN.exec(rest);
+    if (!match) {
+      if (rest) nodes.push(rest);
+      break;
+    }
+    const index = match.index;
+    if (index > 0) nodes.push(rest.slice(0, index));
+    const token = match[1];
+    rest = rest.slice(index + token.length);
+
+    let strong = token.match(/^\*\*([^*]+)\*\*$/);
+    if (strong) { nodes.push(<strong>{strong[1]}</strong>); continue; }
+    strong = token.match(/^__([^_]+)__$/);
+    if (strong) { nodes.push(<strong>{strong[1]}</strong>); continue; }
+    let strike = token.match(/^~~([^~]+)~~$/);
+    if (strike) { nodes.push(<del>{strike[1]}</del>); continue; }
+    let em = token.match(/^\*([^*]+)\*$/);
+    if (em) { nodes.push(<em>{em[1]}</em>); continue; }
+    em = token.match(/^_([^_]+)_$/);
+    if (em) { nodes.push(<em>{em[1]}</em>); continue; }
+    let code = token.match(/^`([^`]+)`$/);
+    if (code) { nodes.push(<code>{code[1]}</code>); continue; }
+    const link = token.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/);
+    if (link && /^(https?:|mailto:)/.test(link[2])) {
+      nodes.push(<a href={link[2]} target="_blank" rel="noreferrer">{link[1]}</a>);
+      continue;
+    }
+    nodes.push(token);
+  }
+  return nodes;
+}
+
+/** Render a markdown heading level as the matching h1..h6 element. */
+function markdownHeading(level: number, children: ReturnType<typeof parseInline>): JSX.Element {
+  switch (level) {
+    case 1: return <h1>{children}</h1>;
+    case 2: return <h2>{children}</h2>;
+    case 3: return <h3>{children}</h3>;
+    case 4: return <h4>{children}</h4>;
+    case 5: return <h5>{children}</h5>;
+    default: return <h5>{children}</h5>;
+  }
+}
+
+/** Convert the user's Markdown into JSX elements for the file preview. */
+export function renderMarkdownToJSX(src: string): (JSX.Element | string)[][] {
+  const lines = src.replace(/\r\n/g, "\n").split("\n");
+  const blocks: (JSX.Element | string)[][] = [];
+  const paragraphs: string[] = [];
+  const flushParagraph = () => {
+    if (paragraphs.length) {
+      blocks.push([<p>{parseInline(paragraphs.join(" "))}</p>]);
+      paragraphs.length = 0;
+    }
+  };
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const fence = line.match(/^```([\w-]*)\s*$/);
+    if (fence) {
+      flushParagraph();
+      const code: string[] = [];
+      for (i++; i < lines.length && !/^```\s*$/.test(lines[i]); i++) code.push(lines[i]);
+      blocks.push([<pre><code>{code.join("\n")}</code></pre>]);
+      continue;
+    }
+    const heading = line.match(/^(#{1,6})\s+(.*)$/);
+    if (heading) {
+      flushParagraph();
+      const level = heading[1].length;
+      blocks.push([markdownHeading(level, parseInline(heading[2]))]);
+      continue;
+    }
+    if (/^\s*(?:[-*_])\s*$/.test(line)) {
+      flushParagraph();
+      blocks.push([<hr/>]);
+      continue;
+    }
+    if (/^\s*>\s?/.test(line)) {
+      flushParagraph();
+      const quote: string[] = [];
+      while (i < lines.length && /^\s*>\s?/.test(lines[i])) {
+        quote.push(lines[i].replace(/^\s*>\s?/, ""));
+        i++;
+      }
+      i--;
+      blocks.push([<blockquote>{parseInline(quote.join(" "))}</blockquote>]);
+      continue;
+    }
+    if (/^\s*[\*-]\s+/.test(line) || /^\s*\d+\.\s+/.test(line)) {
+      flushParagraph();
+      const ordered = /^\s*\d+\.\s+/.test(line);
+      const re = ordered ? /^\s*\d+\.\s+(.*)$/ : /^\s*[\*-]\s+(.*)$/;
+      const items: JSX.Element[] = [];
+      while (i < lines.length) {
+        const match = lines[i].match(re);
+        if (!match) break;
+        items.push(<li>{parseInline(match[1])}</li>);
+        i++;
+      }
+      i--;
+      blocks.push(ordered ? [<ol>{items}</ol>] : [<ul>{items}</ul>]);
+      continue;
+    }
+    if (line.trim() === "") {
+      flushParagraph();
+      continue;
+    }
+    paragraphs.push(line.trim());
+  }
+  flushParagraph();
+  return blocks;
+}
+
 @customElement("mws-user-files")
 export class UserFilesPanel extends JSXElement {
   useLightDOM = true;
@@ -83,6 +206,10 @@ export class UserFilesPanel extends JSXElement {
   @state() accessor sharingId = "";
   @state() accessor sharingDraft = "";
   @state() accessor sharingRect: { left: number; top: number; width: number; height: number } | null = null;
+  @state() accessor previewId = "";
+  @state() accessor previewLoading = false;
+  @state() accessor previewText = "";
+  @state() accessor previewError = "";
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -254,6 +381,153 @@ export class UserFilesPanel extends JSXElement {
 
   private readonly isShared = (file: UserFileRow): boolean => (file.shared?.length ?? 0) > 0;
 
+  private static readonly TEXT_EXTENSIONS = new Set([
+    "md", "markdown", "txt", "csv", "json", "js", "ts", "css", "html",
+    "xml", "yml", "yaml", "ini", "log", "sh", "toml", "tex",
+  ]);
+  private static readonly IMAGE_EXTENSIONS = new Set([
+    "png", "jpg", "jpeg", "gif", "webp", "svg", "avif", "bmp", "tiff",
+  ]);
+  private static readonly AUDIO_EXTENSIONS = new Set([
+    "mp3", "ogg", "oga", "wav", "m4a", "flac", "aac", "opus", "webm",
+  ]);
+  private static readonly VIDEO_EXTENSIONS = new Set([
+    "mp4", "webm", "ogv", "mov", "m4v",
+  ]);
+
+  private static readonly fileExtension = (filename: string): string =>
+    filename.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1] ?? "";
+
+  private readonly previewKindOf = (file: UserFileRow): "text" | "image" | "audio" | "video" | "pdf" | "none" => {
+    const ext = UserFilesPanel.fileExtension(file.filename);
+    const type = (file.type || "").toLowerCase();
+    if (type.startsWith("text/") || UserFilesPanel.TEXT_EXTENSIONS.has(ext) || type.includes("markdown")) return "text";
+    if (type === "application/pdf" || ext === "pdf") return "pdf";
+    if (type.startsWith("image/") || UserFilesPanel.IMAGE_EXTENSIONS.has(ext)) return "image";
+    if (type.startsWith("audio/") || UserFilesPanel.AUDIO_EXTENSIONS.has(ext)) return "audio";
+    if (type.startsWith("video/") || UserFilesPanel.VIDEO_EXTENSIONS.has(ext)) return "video";
+    return "none";
+  };
+
+  private static readonly isMarkdownName = (filename: string): boolean =>
+    ["md", "markdown", "mdown", "mkd"].includes(UserFilesPanel.fileExtension(filename));
+
+  private readonly previewUrlOf = (id: string): string =>
+    pathPrefix + "/api/user-files/preview?id=" + encodeURIComponent(id);
+
+  private readonly openPreview = (file: UserFileRow) => {
+    this.closeSharing();
+    this.previewId = file.id;
+    this.previewText = "";
+    this.previewError = "";
+    if (this.previewKindOf(file) !== "text") return;
+    this.previewLoading = true;
+    void (async () => {
+      try {
+        const response = await fetch(this.previewUrlOf(file.id));
+        if (!response.ok) throw new Error(String(response.status));
+        this.previewText = await response.text();
+      } catch {
+        this.previewError = t("Failed to load your files.");
+      } finally {
+        this.previewLoading = false;
+      }
+    })();
+  };
+
+  private readonly closePreview = () => {
+    this.previewId = "";
+    this.previewText = "";
+    this.previewError = "";
+    this.previewLoading = false;
+  };
+
+  private readonly previewFile = (): UserFileRow | null => {
+    return this.files.find(item => item.id === this.previewId)
+      ?? this.sharedFiles.find(item => item.id === this.previewId)
+      ?? null;
+  };
+
+  /** Render the preview overlay body for the currently open file. */
+  private readonly renderPreviewBody = (file: UserFileRow) => {
+    const url = this.previewUrlOf(file.id);
+    const kind = this.previewKindOf(file);
+    if (kind === "image") return <img class="user-files-preview-media" src={url} alt={file.filename} />;
+    if (kind === "audio") return <audio class="user-files-preview-media" src={url} controls autoplay />;
+    if (kind === "video") return <video class="user-files-preview-media" src={url} controls autoplay />;
+    if (kind === "pdf") {
+      return (
+        <iframe
+          class="user-files-preview-iframe"
+          src={url}
+          title={file.filename}
+        />
+      );
+    }
+    if (kind === "text") {
+      if (this.previewLoading) return <div class="field-callout"><p>{t("Loading preview…")}</p></div>;
+      if (this.previewError) return <div class="error-banner"><p class="error-banner-message">{this.previewError}</p></div>;
+      const isMarkdown = UserFilesPanel.isMarkdownName(file.filename) || (file.type || "").toLowerCase().includes("markdown");
+      if (isMarkdown) {
+        return <div class="user-files-preview-markdown">{renderMarkdownToJSX(this.previewText)}</div>;
+      }
+      return <pre class="user-files-preview-text">{this.previewText}</pre>;
+    }
+    return (
+      <div class="pinboard-empty">
+        <MaterialSymbol icon={folderIcon} />
+        <p>{t("Preview not available for this file type.")}</p>
+        <a
+          class="primary-button"
+          href={pathPrefix + "/api/user-files/download?id=" + encodeURIComponent(file.id)}
+          download={file.filename}
+        >
+          <MaterialSymbol icon={downloadIcon} /> {t("Download")}
+        </a>
+      </div>
+    );
+  };
+
+  private readonly renderPreview = () => {
+    const file = this.previewFile();
+    if (!file) return null;
+    return (
+      <div class="user-files-preview-backdrop" onclick={() => this.closePreview()}>
+        <div
+          class="user-files-preview-panel"
+          role="dialog"
+          aria-label={file.filename}
+          onclick={(event) => { event.stopPropagation(); }}
+        >
+          <div class="user-files-preview-header">
+            <strong class="user-files-preview-title">{file.filename}</strong>
+            <a
+              class="ghost-button"
+              href={pathPrefix + "/api/user-files/download?id=" + encodeURIComponent(file.id)}
+              download={file.filename}
+              title={t("Download")}
+              aria-label={t("Download")}
+            >
+              <MaterialSymbol icon={downloadIcon} />
+            </a>
+            <button
+              class="ghost-button"
+              type="button"
+              title={t("Close preview")}
+              aria-label={t("Close preview")}
+              onclick={() => this.closePreview()}
+            >
+              <MaterialSymbol icon={closeIcon} />
+            </button>
+          </div>
+          <div class="user-files-preview-body">
+            {this.renderPreviewBody(file)}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   /** Fixed-position styles that keep the popover on screen next to the
    *  trigger button, flipped above it when it would overflow the viewport. */
   private readonly sharingStyle = (): Record<string, string> => {
@@ -414,6 +688,16 @@ export class UserFilesPanel extends JSXElement {
                       >
                         <MaterialSymbol icon={shareIcon} />
                       </button>
+                      <button
+                        class="ghost-button"
+                        type="button"
+                        title={t("Preview")}
+                        aria-label={t("Preview")}
+                        onclick={() => this.previewId === file.id ? this.closePreview() : this.openPreview(file)}
+                        disabled={this.previewLoading || this.uploading}
+                      >
+                        <MaterialSymbol icon={visibilityIcon} />
+                      </button>
                       <a
                         class="ghost-button"
                         href={pathPrefix + "/api/user-files/download?id=" + encodeURIComponent(file.id)}
@@ -473,6 +757,16 @@ export class UserFilesPanel extends JSXElement {
                       <td>{this.prettifyBytes(file.sizeBytes)}</td>
                       <td>{new Date(file.createdAt).toLocaleString()}</td>
                       <td class="user-files-actions">
+                        <button
+                          class="ghost-button"
+                          type="button"
+                          title={t("Preview")}
+                          aria-label={t("Preview")}
+                          onclick={() => this.previewId === file.id ? this.closePreview() : this.openPreview(file)}
+                          disabled={this.previewLoading}
+                        >
+                          <MaterialSymbol icon={visibilityIcon} />
+                        </button>
                         <a
                           class="ghost-button"
                           href={pathPrefix + "/api/user-files/download?id=" + encodeURIComponent(file.id)}
@@ -492,6 +786,7 @@ export class UserFilesPanel extends JSXElement {
         ) : null}
 
         {this.renderSharePopover()}
+        {this.renderPreview()}
       </section>
     );
   }

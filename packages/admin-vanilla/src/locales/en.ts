@@ -418,6 +418,10 @@ export const enStrings: Record<string, string> = {
   "Shared {name}.": "Shared {name}.",
   "Stopped sharing {name}.": "Stopped sharing {name}.",
   "Failed to share {name}.": "Failed to share {name}.",
+  "Preview": "Preview",
+  "Close preview": "Close preview",
+  "Loading preview…": "Loading preview…",
+  "Preview not available for this file type.": "Preview not available for this file type.",
   // #endregion user files
 
   "Create user": "Create user",
