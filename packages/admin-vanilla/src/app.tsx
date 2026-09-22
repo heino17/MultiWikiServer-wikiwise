@@ -1346,8 +1346,11 @@ export class App extends JSXElement {
     this.pinboardCount = counts.noteCount;
     this.pinboardUnread = counts.unreadCount;
   };
-  private readonly handleUserFileCount = (count: number) => {
-    this.userFileCount = count;
+  private readonly handleUserFileCount = (eventOrCount: number | Event) => {
+    const count = typeof eventOrCount === "number"
+      ? eventOrCount
+      : (eventOrCount as CustomEvent<number>).detail;
+    if (typeof count === "number") this.userFileCount = count;
   };
   private readonly loadUserFileCount = async () => {
     if (!embeddedServerResponse.userState.isLoggedIn) return;
