@@ -15,7 +15,10 @@ import shareIcon from "@material-symbols/svg-400/outlined/share.svg";
 import checkIcon from "@material-symbols/svg-400/outlined/check.svg";
 import personIcon from "@material-symbols/svg-400/outlined/person.svg";
 import visibilityIcon from "@material-symbols/svg-400/outlined/visibility.svg";
+import { odtToHtml } from "odf-kit/reader";
 import { MaterialSymbol } from "./material-symbol";
+import { OdtPreviewDocument } from "./odt-preview";
+import { getEffectiveTheme } from "./theme";
 import { t } from "./i18n";
 
 export interface UserFilesPanelProps {
@@ -209,6 +212,7 @@ export class UserFilesPanel extends JSXElement {
   @state() accessor previewId = "";
   @state() accessor previewLoading = false;
   @state() accessor previewText = "";
+  @state() accessor previewDocumentHtml = "";
   @state() accessor previewError = "";
 
   connectedCallback(): void {
@@ -216,9 +220,16 @@ export class UserFilesPanel extends JSXElement {
     void this.fetchFiles();
   }
 
+  /** Site-admin mode comes in two flavours depending on how the panel is
+   *  mounted: the app uses the string tag `<mws-user-files admin>` which lands
+   *  as an attribute, while a component-style mount sets the `props` object.
+   *  Accept both so the admin list reliably shows the "Owner" column. */
+  private readonly isAdminView = (): boolean =>
+    this.hasAttribute("admin") || this.props?.admin === true;
+
   private readonly pushCount = () => {
     const own = this.files.length;
-    const shared = this.props?.admin ? 0 : this.sharedFiles.length;
+    const shared = this.isAdminView() ? 0 : this.sharedFiles.length;
     this.props?.onCountChange?.(own + shared);
   };
 
@@ -398,7 +409,7 @@ export class UserFilesPanel extends JSXElement {
   private static readonly fileExtension = (filename: string): string =>
     filename.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1] ?? "";
 
-  private readonly previewKindOf = (file: UserFileRow): "text" | "image" | "audio" | "video" | "pdf" | "none" => {
+  private readonly previewKindOf = (file: UserFileRow): "text" | "image" | "audio" | "video" | "pdf" | "odt" | "none" => {
     const ext = UserFilesPanel.fileExtension(file.filename);
     const type = (file.type || "").toLowerCase();
     if (type.startsWith("text/") || UserFilesPanel.TEXT_EXTENSIONS.has(ext) || type.includes("markdown")) return "text";
@@ -406,6 +417,7 @@ export class UserFilesPanel extends JSXElement {
     if (type.startsWith("image/") || UserFilesPanel.IMAGE_EXTENSIONS.has(ext)) return "image";
     if (type.startsWith("audio/") || UserFilesPanel.AUDIO_EXTENSIONS.has(ext)) return "audio";
     if (type.startsWith("video/") || UserFilesPanel.VIDEO_EXTENSIONS.has(ext)) return "video";
+    if (ext === "odt" || type === "application/vnd.oasis.opendocument.text") return "odt";
     return "none";
   };
 
@@ -419,14 +431,21 @@ export class UserFilesPanel extends JSXElement {
     this.closeSharing();
     this.previewId = file.id;
     this.previewText = "";
+    this.previewDocumentHtml = "";
     this.previewError = "";
-    if (this.previewKindOf(file) !== "text") return;
+    const kind = this.previewKindOf(file);
+    if (kind !== "text" && kind !== "odt") return;
     this.previewLoading = true;
     void (async () => {
       try {
         const response = await fetch(this.previewUrlOf(file.id));
         if (!response.ok) throw new Error(String(response.status));
-        this.previewText = await response.text();
+        if (kind === "odt") {
+          const bytes = new Uint8Array(await response.arrayBuffer());
+          this.previewDocumentHtml = odtToHtml(bytes, { fragment: true });
+        } else {
+          this.previewText = await response.text();
+        }
       } catch {
         this.previewError = t("Failed to load your files.");
       } finally {
@@ -438,6 +457,7 @@ export class UserFilesPanel extends JSXElement {
   private readonly closePreview = () => {
     this.previewId = "";
     this.previewText = "";
+    this.previewDocumentHtml = "";
     this.previewError = "";
     this.previewLoading = false;
   };
@@ -472,6 +492,11 @@ export class UserFilesPanel extends JSXElement {
         return <div class="user-files-preview-markdown">{renderMarkdownToJSX(this.previewText)}</div>;
       }
       return <pre class="user-files-preview-text">{this.previewText}</pre>;
+    }
+    if (kind === "odt") {
+      if (this.previewLoading) return <div class="field-callout"><p>{t("Loading preview…")}</p></div>;
+      if (this.previewError) return <div class="error-banner"><p class="error-banner-message">{this.previewError}</p></div>;
+      return <OdtPreviewDocument html={this.previewDocumentHtml} dark={getEffectiveTheme() === "dark"} />;
     }
     return (
       <div class="pinboard-empty">
@@ -609,7 +634,7 @@ export class UserFilesPanel extends JSXElement {
   };
 
   protected render() {
-    const showShared = !this.props?.admin && this.sharedFiles.length > 0;
+    const showShared = !this.isAdminView() && this.sharedFiles.length > 0;
     return (
       <section class="user-files-panel">
         <div class="user-files-toolbar">
@@ -659,7 +684,7 @@ export class UserFilesPanel extends JSXElement {
               <thead>
                 <tr>
                   <th>{t("File name")}</th>
-                  {this.props?.admin ? <th>{t("Owner")}</th> : null}
+                  {this.isAdminView() ? <th>{t("Owner")}</th> : null}
                   <th>{t("Type")}</th>
                   <th>{t("Size")}</th>
                   <th>{t("Uploaded")}</th>
@@ -673,7 +698,7 @@ export class UserFilesPanel extends JSXElement {
                       <strong class="user-files-name">{file.filename}</strong>
                       {this.isShared(file) ? <span class="user-files-shared-badge">{t("Shared")}</span> : null}
                     </td>
-                    {this.props?.admin ? <td>{file.owner || "—"}</td> : null}
+                    {this.isAdminView() ? <td>{file.owner || "—"}</td> : null}
                     <td>{file.type}</td>
                     <td>{this.prettifyBytes(file.sizeBytes)}</td>
                     <td>{new Date(file.createdAt).toLocaleString()}</td>

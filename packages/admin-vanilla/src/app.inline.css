@@ -3861,6 +3861,11 @@ html[data-theme="dark"] .pinboard-note-actions {
   background: var(--color-surface-field, #fafafa);
 }
 
+odt-preview-document {
+  display: block;
+  width: 100%;
+}
+
 .user-files-preview-text {
   width: 100%;
   max-height: calc(100vh - 180px);
