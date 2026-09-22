@@ -2,7 +2,7 @@
 
 Dokumentation der Änderungen am MultiWikiServer-Fork von heino17.
 
-Stand: 2026-09-21 · Basis: `TiddlyWiki/MultiWikiServer` @ `3627482`
+Stand: 2026-09-22 · Basis: `TiddlyWiki/MultiWikiServer` @ `3627482`
 
 ## Zusammenfassung
 
@@ -46,10 +46,11 @@ base64 in der SQLite-Datenbank hält (kein separater Blob-Store).
 Neu ist außerdem ein Tab **„Meine Dateien"** (§44): Jeder eingeloggte
 Nutzer lädt eigene Dateien hoch (Standardlimit 100 MB pro Datei,
 übersteuerbar via `MWS_USERFILE_SIZE_LIMIT`), hält sie im Browser zum
-Download und zur Inline-Vorschau ab (Bild, Audio, Video, PDF, Text und
-Markdown) und kann sie gezielt teilen — Admin-Freigaben erreichen alle,
-Lehrer-Freigaben ihre Klassen(mitglieder) und Admins, Schüler-Freigaben
-konkret gewählte Empfänger. Die Bytes liegen content-addressed
+Download und zur Inline-Vorschau ab (Bild, Audio, Video, PDF, Text,
+Markdown und ODT-Textdokumente) und kann sie gezielt teilen —
+Admin-Freigaben erreichen alle, Lehrer-Freigaben ihre Klassen(mitglieder)
+und Admins, Schüler-Freigaben konkret gewählte Empfänger. Die Bytes
+liegen content-addressed
 (`store/files/<sha256>/`) auf der Festplatte, in einer SQLite-Tabelle
 stehen nur Metadaten (`user_file` + `user_file_share`).
 
@@ -1904,7 +1905,8 @@ Vorschau-Modal), `packages/admin-vanilla/src/app.inline.css`,
 
 **Ziel:** Jeder eingeloggte Nutzer (Admin, Lehrer, Schüler) verwaltet in
 einem eigenen Tab **eigene Dateien**: hochladen, herunterladen, inline
-ansehen (Bild, Audio, Video, PDF, Text, Markdown) und gezielt teilen.
+ansehen (Bild, Audio, Video, PDF, Text, Markdown und ODT) und gezielt
+teilen.
 Die Bytes liegen content-addressed auf der Festplatte unter
 `store/files/<sha256>/` — exakt das Layout, das der Admin-Tab „Speicher"
 (§40) auswertet —, die SQLite-Tabellen `user_file`/`user_file_share`
@@ -1952,11 +1954,21 @@ Abbruch aufgeräumt. GET/HEAD-Pfade prüfen dieselbe Sichtbarkeit
 `locales/en.ts`/`de.ts`.
 
 - **Tab „Meine Dateien"** in der Admin-Leiste; Tabelle mit Name, Typ,
-  Größe und Zeitstempel; Admins sehen zusätzlich den Besitzer.
+  Größe und Zeitstempel; Admins sehen zusätzlich den Besitzer
+  (Owner-Spalte). Die Admin-Erkennung (`isAdminView`) prüft **beide**
+  Mount-Arten — `hasAttribute("admin")` (String-Tag
+  `<mws-user-files admin>`) **oder** `props.admin === true` —, da der
+  JSX-String-Tag-Mount keine `props` befüllt.
 - **Upload** per Ghost-Button (Upload-Icon) → Multipart-PUT; danach
   automatische Aktualisierung der Liste.
 - **Vorschau-Modal:** Bild (eigenes `<img>`), Audio/Video mit Controls
-  (`autoplay`, Seek über Range-Requests), PDF/Office in einem iframe;
+  (`autoplay`, Seek über Range-Requests), PDF in einem iframe;
+  **ODT** (`application/vnd.oasis.opendocument.text`, `.odt`) wird
+  **clientseitig** mit `odf-kit/reader` zu HTML konvertiert
+  (`odtToHtml(bytes, { fragment: true })`) und in einer sandboxed
+  iframe (Custom Element `OdtPreviewDocument`, `srcdoc` als Property)
+  mit hell-/dunkler Optik (`mws-light`/`mws-dark`) dargestellt —
+  `.doc`-Dateien bewusst **ohne** Vorschau (Download angeboten);
   Textdateien als `<pre>`; **Markdown** (`text/markdown`, `.md`) rendert
   ein schlanker Client-Renderer (`renderMarkdownToJSX`: Überschriften
   h1–h5, Listen, Code, Blockzitat, `hr`, inline `**fett**` / `__fett__` /
@@ -1987,8 +1999,15 @@ Abbruch aufgeräumt. GET/HEAD-Pfade prüfen dieselbe Sichtbarkeit
 - Live-Tests gegen localhost:5000 (Admin/Lehrer/Schüler-Sessions):
   - Upload (PUT, Multipart) → Datei in Liste + `store/files/` ✓
   - Download: `attachment`-Header, Browser speichert korrekt ✓
-  - Preview: Bild/Audio/Video/PDF/Text/Markdown; Markdown-Datei rendert
+  - Preview: Bild/Audio/Video/PDF/Text/Markdown/ODT; Markdown-Datei rendert
     (z. B. `TiddlyWiki-Setup.md`) strukturell korrekt, kein HTML-Injekt ✓
+  - ODT-Vorschau: hochgeladene `.odt` (Dateiname mit Leerzeichen) rendert
+    in der sandboxed iframe — Überschrift + Tabelle erscheinen im
+    `srcdoc`, die iframe-Breite folgt der Detailfläche
+    (`odt-preview-document { width: 100% }`) ✓
+  - Admin-Besitzer-Spalte: Admin-Session zeigt in „Meine Dateien" alle
+    Dateien mit Owner-Username (z. B. „Schüler 2"); über den
+    String-Tag-Mount `<mws-user-files admin>` verifiziert ✓
   - Range: `Range: bytes=…` → 206 + `Content-Range`, ungültig → 416 ✓
   - Teilen: berechtigte Empfänger sehen die Datei, nicht geteilte →
     404; Lehrer sehen Lehrer-Freigaben anderer Lehrer nicht ✓
