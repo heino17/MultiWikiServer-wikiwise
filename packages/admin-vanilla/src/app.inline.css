@@ -683,11 +683,13 @@ h6 {
 
 .list-grid {
 	display: grid;
-	grid-template-columns: repeat(9, minmax(120px, 1fr));
+	grid-template-columns: var(--grid-columns, repeat(9, minmax(120px, 1fr)));
+	--truncate-min: max-content;
 }
 
-.list-grid-header {
-	background: var(--color-surface-list-header);
+.list-head-row,
+.list-body {
+	display: contents;
 }
 
 .list-head {
@@ -695,6 +697,7 @@ h6 {
 	text-transform: uppercase;
 	letter-spacing: 0.12em;
 	color: var(--color-accent-heading);
+	background: var(--color-surface-list-header);
 }
 
 .list-cell {
@@ -705,10 +708,25 @@ h6 {
 
 .list-access-names {
 	display: flex;
-	flex-wrap: wrap;
-	gap: 4px 6px;
-	align-items: center;
-	max-width: 36ch;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 4px;
+}
+
+.span-2 {
+	grid-column: span 2;
+}
+
+.span-3 {
+	grid-column: span 3;
+}
+
+.span-6 {
+	grid-column: span 6;
+}
+
+.full-row {
+	grid-column: 1 / -1;
 }
 
 .list-access-name {
@@ -744,23 +762,22 @@ h6 {
 	text-decoration-thickness: 0.14em;
 }
 
-.list-body {
-	display: grid;
+.list-row {
+	display: contents;
 }
 
-.list-row {
-	padding: 0;
-	border: 0;
-	background: transparent;
-	text-align: left;
+.list-row > .list-cell,
+.list-row > .list-cell-link {
 	cursor: pointer;
 }
 
-.list-row:nth-child(even) {
+.list-row:nth-child(even) > .list-cell,
+.list-row:nth-child(even) > .list-cell-link {
 	background: var(--color-surface-list-even);
 }
 
-.list-row:hover {
+.list-row:hover > .list-cell,
+.list-row:hover > .list-cell-link {
 	background: var(--color-surface-list-hover);
 }
 
@@ -2060,12 +2077,15 @@ table.value-table td {
 		overflow: auto;
 	}
 
-	.list-grid {
-		min-width: 1080px;
-	}
-
 	.modal-shell {
 		padding: 14px;
+	}
+}
+
+@media (max-width: 800px) {
+	.list-grid,
+	.list-row {
+		--truncate-min: min-content;
 	}
 }
 

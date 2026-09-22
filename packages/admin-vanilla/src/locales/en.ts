@@ -49,6 +49,7 @@ export const enStrings: Record<string, string> = {
   "My rights": "My rights",
   "Readable by": "Readable by",
   "Writable by": "Writable by",
+  "Role in the group": "Role in the group",
   "Too big: expected string to have <=1700 characters": "Too long: at most 1700 characters are allowed.",
   "Admin": "Admin",
   "Owner": "Owner",
