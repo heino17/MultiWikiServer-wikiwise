@@ -22,7 +22,12 @@ import { getEffectiveTheme } from "./theme";
 import { t } from "./i18n";
 
 export interface UserFilesPanelProps {
-  onCountChange?: (count: number) => void;
+  /** Fired with the total number of shown files whenever the list changes.
+   *  String-tag mounts (`<mws-user-files onCountChange=…>`) deliver the value as
+   *  the `countchange` DOM event instead of a direct props call — the JSX
+   *  string-tag path wires `on*` props to `addEventListener` and never sets
+   *  `props` (see `pushCount`). Component-style mounts receive the plain number. */
+  onCountChange?: (count: number | Event) => void;
   /** Site admin: the list shows every account's files with their owner. */
   admin?: boolean;
 }
@@ -230,7 +235,9 @@ export class UserFilesPanel extends JSXElement {
   private readonly pushCount = () => {
     const own = this.files.length;
     const shared = this.isAdminView() ? 0 : this.sharedFiles.length;
-    this.props?.onCountChange?.(own + shared);
+    const count = own + shared;
+    this.props?.onCountChange?.(count);
+    this.dispatchEvent(new CustomEvent<number>("countchange", { detail: count, bubbles: true, composed: true }));
   };
 
   private readonly fetchFiles = async () => {
