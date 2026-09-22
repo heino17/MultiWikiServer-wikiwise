@@ -923,6 +923,23 @@ function formatOwnWikiUsage(count: number, limit: number | null): string {
   return `${count} / ${limit == null ? "∞" : limit}`;
 }
 
+/**
+ * The "role in the group" of a user, shown in the users tab: for a user who
+ * holds a teacher-function role, only that function role name is reported;
+ * otherwise the group/class role name(s) the user belongs to (excluding their
+ * own personal role and the system roles, which have no owner).
+ */
+function roleGroupNamesForUser(
+  username: string,
+  roles: readonly { role_name: string; is_teacher: boolean; owner_user_id: string | null }[],
+): string[] {
+  const teacherFunctions = roles.filter((role) => role.is_teacher).map((role) => role.role_name);
+  if (teacherFunctions.length) return teacherFunctions;
+  return roles
+    .filter((role) => !role.is_teacher && Boolean(role.owner_user_id) && role.role_name !== username)
+    .map((role) => role.role_name);
+}
+
 export class UserDataAdapter extends TabDataAdapter<"users"> {
   constructor(
     user: ServerRequest["user"],
@@ -1031,6 +1048,13 @@ export class UserDataAdapter extends TabDataAdapter<"users"> {
     const limitExempt = normalizedUserRoles.includes("ADMIN")
       || (await prisma.roles.count({ where: { role_name: { in: normalizedUserRoles }, is_teacher: true } })) > 0;
 
+    const roleInfos = normalizedUserRoles.length
+      ? await prisma.roles.findMany({
+          where: { role_name: { in: normalizedUserRoles } },
+          select: { role_name: true, is_teacher: true, owner_user_id: true },
+        })
+      : [];
+
     return {
       id: new IdString(user.user_id),
       username: user.username,
@@ -1039,6 +1063,7 @@ export class UserDataAdapter extends TabDataAdapter<"users"> {
       password: "",
       ownerUsername,
       userRoles: normalizedUserRoles,
+      groupRoles: roleGroupNamesForUser(user.username, roleInfos),
       wikiLimit: user.wiki_limit == null ? "" : String(user.wiki_limit),
       ownWikiUsage: formatOwnWikiUsage(ownWikiCount, limitExempt ? null : user.wiki_limit),
     }
@@ -1065,6 +1090,7 @@ export class UserDataAdapter extends TabDataAdapter<"users"> {
           select: {
             role_name: true,
             is_teacher: true,
+            owner_user_id: true,
           },
           orderBy: { role_name: "asc" },
         },
@@ -1091,6 +1117,7 @@ export class UserDataAdapter extends TabDataAdapter<"users"> {
       username: user.username,
       email: user.email ?? "",
       userRoles: user.roles.map((role) => role.role_name),
+      groupRoles: roleGroupNamesForUser(user.username, user.roles),
       ownerUsername: user.owner_user_id ? ownerNames.get(user.owner_user_id) ?? "" : "",
       resetCode: user.resetCode || "",
       password: "",

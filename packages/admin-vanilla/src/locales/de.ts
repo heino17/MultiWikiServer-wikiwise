@@ -48,6 +48,7 @@ export const deStrings: Record<string, string> = {
   "My rights": "Meine Rechte",
   "Readable by": "Lesbar von",
   "Writable by": "Beschreibbar von",
+  "Role in the group": "Rolle in der Gruppe",
   "Too big: expected string to have <=1700 characters": "Zu lang: höchstens 1700 Zeichen erlaubt.",
   "Admin": "Admin",
   "Owner": "Eigentümer",

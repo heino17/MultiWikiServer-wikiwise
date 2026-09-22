@@ -2180,29 +2180,24 @@ export class App extends JSXElement {
             </div>
           ) : null}
 
-          <div class="list-grid list-grid-header" style={{ gridTemplateColumns: "repeat(" + currentTab.columns.reduce((total, column) => total + (column.width ?? 1), 0) + ", minmax(max-content, 1fr))" }}>
-            {currentTab.columns.map((column) => (
-              <div class="list-cell list-head" style={
-                column.width && column.width > 1
-                  ? { gridColumn: "span " + column.width }
-                  : {}
-              }>{t(column.label)}</div>
-            ))}
+          <div class="list-grid" style={{ ["--grid-columns"]: buildListGridTemplate(currentTab.columns) }}>
+            <div class="list-head-row">
+              {currentTab.columns.map((column) => (
+                <div class={"list-cell list-head" + (column.width && column.width > 1 ? " span-" + column.width : "")}>{t(column.label)}</div>
+              ))}
+            </div>
 
-          </div>
-
-          <div class="list-body">
+            <div class="list-body">
             {isLoadingData ? (
-              <div class="field-callout">
+              <div class="field-callout full-row">
                 <p>{t("Loading {tab}…", { tab: currentTab.label.toLowerCase() })}</p>
               </div>
             ) : activeTabItems.length ? activeTabItems.map((item) => (
               <div
-                class="list-grid list-row"
+                class="list-row"
                 role="button"
                 tabindex={isListInteractionDisabled ? -1 : 0}
                 aria-disabled={isListInteractionDisabled ? "true" : undefined}
-                style={{ gridTemplateColumns: "repeat(" + currentTab.columns.reduce((total, column) => total + (column.width ?? 1), 0) + ", minmax(max-content, 1fr))" }}
                 onclick={() => {
                   if (!isListInteractionDisabled)
                     void store.openItem(currentTab.id, item.id);
@@ -2220,25 +2215,17 @@ export class App extends JSXElement {
                   const linkUrl = isFirstColumn ? getListColumnLink(currentTab.id, column.key, item) : null;
                   if (typeof linkUrl === "string") {
                     return <a
-                      class="list-cell list-cell-link"
+                      class={"list-cell list-cell-link" + (column.width && column.width > 1 ? " span-" + column.width : "")}
                       href={linkUrl}
                       target="_blank"
                       rel="noreferrer"
                       onclick={(event) => event.stopPropagation()}
                       onkeydown={(event) => event.stopPropagation()}
-                      style={column.width && column.width > 1
-                        ? { gridColumn: "span " + column.width }
-                        : {}
-                      }
-                    >{renderListCellValue(column.key, value, (src) => { this.thumbnailSrc = src; })}</a>;
+                    >{renderListCellValue(column.key, value, (src) => { this.thumbnailSrc = src; }, column.truncate)}</a>;
                   }
                   return (
-                    <div class="list-cell" style={
-                      column.width && column.width > 1
-                        ? { gridColumn: "span " + column.width }
-                        : {}
-                    }>
-                      {renderListCellValue(column.key, value, (src) => { this.thumbnailSrc = src; })}
+                    <div class={"list-cell" + (column.width && column.width > 1 ? " span-" + column.width : "")}>
+                      {renderListCellValue(column.key, value, (src) => { this.thumbnailSrc = src; }, column.truncate)}
                       {/* {(() => {
 
 
@@ -2255,7 +2242,7 @@ export class App extends JSXElement {
                 })}
               </div>
             )) : (
-              <div class="field-callout">
+              <div class="field-callout full-row">
                 {currentTab.id === "wikis" && isStudent && !canCreateOwnWiki
                   ? <p>{userState.wikiLimit === 0
                     ? t("Your administrator has not allowed you to create your own wikis yet.")
@@ -2263,6 +2250,7 @@ export class App extends JSXElement {
                   : <p>{t("Create a {tab} to get started.", { tab: currentTab.label.toLowerCase() })}</p>}
               </div>
             )}
+            </div>
           </div>
           </section>
         )}
@@ -2348,10 +2336,27 @@ export class App extends JSXElement {
 
 // #region table stuff
 
-function renderListCellValue(columnKey: string, value: string | undefined, onThumbnailClick?: (src: string) => void) {
-  const formattedValue = formatFieldValue(value);
+function buildListGridTemplate(columns: readonly ColumnDefinition[]): string {
+  return columns.map((column) => {
+    // Truncated/tall-text columns are allowed to compress down to their longest
+    // word on narrow screens (responsive), while the others keep their full
+    // content width; both grow to fill the available width via the 1fr max.
+    // Description-style columns snuggly fit their full text on wide screens
+    // (--truncate-min = max-content); on narrow screens (below 800px) a CSS
+    // media rule switches the minimum to min-content so the column can shrink
+    // and the text wraps instead of overflowing.
+    const track = column.truncate
+      ? "minmax(var(--truncate-min, max-content), 1fr)"
+      : "minmax(max-content, 1fr)";
+    return Array.from({ length: column.width ?? 1 }, () => track).join(" ");
+  }).join(" ");
+}
 
-  if (columnKey === "recipeUsers" || columnKey === "recipeAdmins") {
+function renderListCellValue(columnKey: string, value: string | undefined, onThumbnailClick?: (src: string) => void, truncate?: number) {
+  let formattedValue = formatFieldValue(value);
+  if (truncate && formattedValue.length > truncate) formattedValue = formattedValue.slice(0, truncate) + "…";
+
+  if (columnKey === "recipeUsers" || columnKey === "recipeAdmins" || columnKey === "groupRoles") {
     const names = Array.isArray(value) ? value.filter((name): name is string => typeof name === "string" && Boolean(name)) : [];
     if (!names.length) return <span class="list-access-names is-empty">—</span>;
     return (

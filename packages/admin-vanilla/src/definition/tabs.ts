@@ -154,6 +154,8 @@ export interface ColumnDefinition {
   key: string;
   label: string;
   width?: number;
+  /** Caps the displayed cell text at this many characters (grid view only). */
+  truncate?: number;
 }
 
 export interface TabDefinition {
@@ -597,7 +599,7 @@ const tabs = {
     description: "Named access profiles that can be assigned to user accounts.",
     columns: [
       { key: "name", label: "Role name", width: 2 },
-      { key: "description", label: "Role description", width: 6 },
+      { key: "description", label: "Description", width: 6, truncate: 100 },
       { key: "ownerUsername", label: "Created by" },
     ],
     fields: [
@@ -648,11 +650,20 @@ const tabs = {
       { key: "email", label: "Email", width: 6 },
       { key: "ownWikiUsage", label: "Own wikis", width: 2 },
       { key: "ownerUsername", label: "Created by" },
+      { key: "groupRoles", label: "Role in the group", width: 3 },
     ],
     fields: [
       { key: "username", label: "Username", type: "string", section: "authored", mode: "create edit" },
       { key: "email", label: "Email", type: "string", section: "authored", mode: "create edit" },
       { key: "ownerUsername", label: "Created by", type: "string", section: "runtime", mode: "server" },
+      {
+        key: "groupRoles",
+        label: "Role in the group",
+        type: "search-multiselect",
+        section: "runtime",
+        mode: "server",
+        architecture: "Server-computed: for a user with a teacher function this is that function role name; otherwise the group/class role name(s) the user belongs to (the user's own personal role and the system roles are excluded).",
+      },
       { key: "ownWikiUsage", label: "Own wikis", type: "string", section: "runtime", mode: "server" },
       { key: "userRoles", label: "Roles", type: "search-multiselect", section: "authored", mode: "create edit" },
       { key: "wikiLimit", label: "Own wiki limit", type: "number", section: "authored", mode: "create edit", description: "How many wikis this user may create on their own. Leave empty for unlimited, 0 to disallow." },
@@ -900,6 +911,7 @@ export interface UserAdminRecord {
   confirmPassword: string;
   ownerUsername: string;
   userRoles: readonly string[];
+  groupRoles: readonly string[];
   wikiLimit: string;
   ownWikiUsage: string;
 }
