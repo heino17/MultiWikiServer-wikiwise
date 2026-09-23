@@ -110,7 +110,7 @@ function chromiumExecutable(): string {
 
 function thumbnailTtlMs(): number {
   const value = Number.parseInt(process.env.MWS_THUMBNAIL_TTL_HOURS ?? "", 10);
-  return (Number.isFinite(value) && value > 0 ? value : 6) * 60 * 60 * 1000;
+  return (Number.isFinite(value) && value > 0 ? value : 24) * 60 * 60 * 1000;
 }
 
 let browserPromise: ReturnType<typeof chromium.launch> | null = null;
