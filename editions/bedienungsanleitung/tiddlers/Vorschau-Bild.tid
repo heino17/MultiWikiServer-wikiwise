@@ -1,0 +1,12 @@
+title: Vorschau-Bild
+tags: Anleitung
+lang: de
+
+DE: **Vorschau-Bild** · EN: [[Preview image]] · [[Start]]
+
+# Vorschau-Bild
+
+- In der Wiki-Liste zeigt jedes Wiki ein **Vorschaubild** (Screenshot der Startseite).
+- Das Bild wird **lazy** erzeugt: nur bei Bedarf und höchstens einmal pro Tag neu gerendert (sofern sich nichts ändert).
+- Nach einer Bearbeitung wird es nicht sofort neu gezeichnet — es zeigt den Stand nach der letzten Bearbeitungspause.
+- Fehlt das Vorschau-Bild (z. B. direkt nach dem Anlegen), erscheint es nach dem ersten Öffnen des Wikis innerhalb weniger Sekunden.

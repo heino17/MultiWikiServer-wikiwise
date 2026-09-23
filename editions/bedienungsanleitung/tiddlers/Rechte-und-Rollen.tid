@@ -1,0 +1,15 @@
+title: Rechte und Rollen
+tags: Anleitung
+lang: de
+
+DE: **Rechte und Rollen** · EN: [[Roles and permissions]] · [[Start]]
+
+# Rechte und Rollen
+
+Jede Person hat **Rollen**, jede Rolle Rechte an Wikis:
+
+- **Lesen** — das Wiki öffnen und ansehen.
+- **Schreiben** — Inhalte ändern und Dateien hochladen.
+- **Verwalten** — z. B. andere einladen, umbenennen, löschen.
+
+Der Wiki-Besitzer entscheidet, wer sein Wiki sehen und bearbeiten darf (siehe [[Jemanden einladen]]). Liegt ein Wiki in einer Vorlage, gelten deren voreingestellte Rechte.

@@ -1,0 +1,11 @@
+title: Schüler freischalten
+tags: Anleitung
+lang: de
+
+DE: **Schüler freischalten** · EN: [[Enabling students]] · [[Start]]
+
+# Schüler freischalten
+
+- Im Users-Tab legst Du die Schüler-Konten an (Einladung) und weist ihnen eine Klassen-Rolle zu.
+- Mit dieser Rolle kann kein Schüler in fremde Wikis schauen — er sieht nur, was ihm explizit freigegeben wurde ([[Wiki mit einer Klasse teilen]]).
+- Lege danach fest, **wie viele eigene Wikis** ein Schüler anlegen darf ([[Wiki-Limit für Schüler]]).

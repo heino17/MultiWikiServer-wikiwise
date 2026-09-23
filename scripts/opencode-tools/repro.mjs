@@ -1,0 +1,17 @@
+import { createRequire } from "module";
+const require = createRequire("/home/r2d2/Documents/AI_Master/MultiWikiServer-wikiwise/package.json");
+const { chromium } = require("playwright-core");
+const b = await chromium.launch();
+const p = await b.newPage();
+const reqs = [];
+p.on("request", r => { if (r.url().includes("/recipe/")) reqs.push(r.url()); });
+const logs = [];
+p.on("console", m => logs.push(m.type()+": "+m.text()));
+await p.goto("http://localhost:5000/wiki/bedienungsanleitung", { waitUntil: "networkidle" });
+await p.waitForTimeout(1500);
+const rec = await p.evaluate(() => $tw.wiki.getTiddlerText("$:/config/multiwikiclient/recipe", "<MISSING>"));
+console.log("== recipe config in browser:", JSON.stringify(rec));
+console.log("== recipe URLs hit:");
+for (const u of reqs) console.log("   ", u);
+console.log("== console errors/sync:", logs.filter(c=>c.startsWith("error")||c.toLowerCase().includes("sync")).slice(0,5));
+await b.close();

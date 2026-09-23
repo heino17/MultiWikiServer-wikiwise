@@ -1,0 +1,11 @@
+{
+  "description": "MWS Bedienungsanleitung (DE/EN)",
+  "build": {
+    "index": [
+      "--rendertiddler",
+      "$:/core/save/all",
+      "index.html",
+      "text/plain"
+    ]
+  }
+}

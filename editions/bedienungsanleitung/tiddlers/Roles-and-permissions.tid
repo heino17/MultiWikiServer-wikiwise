@@ -1,0 +1,15 @@
+title: Roles and permissions
+tags: Anleitung
+lang: en
+
+EN: **Roles and permissions** · DE: [[Rechte und Rollen]] · [[Start]]
+
+# Roles and permissions
+
+Every person has **roles**, and every role has rights on wikis:
+
+- **Read** — open and view the wiki.
+- **Write** — change content and upload files.
+- **Manage** — e.g. invite others, rename, delete.
+
+The wiki owner decides who may see and edit the wiki (see [[Inviting someone]]). Wikis created from a [[template|Templates]] inherit its default rights.
