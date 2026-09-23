@@ -1849,7 +1849,7 @@ allgemeinen Rezept-Route (`REGEX_WIKI_THUMBNAIL`):
 - **Session-Kontext:** Das Session-Cookie des aufrufenden Users wird dem
   Browser-Kontext mitgegeben → das Bild entspricht exakt dessen Sicht.
 - **Cache:** Ergebnis liegt unter `store/thumbnails/<slug>.png` im
-  Daten-Store (außerhalb der Web-Auslieferung). TTL standardmäßig **6 h**
+  Daten-Store (außerhalb der Web-Auslieferung). TTL standardmäßig **24 h**
   (`MWS_THUMBNAIL_TTL_HOURS` übersteuerbar). Schreiben atomar (`…png.tmp` +
   `rename`), eine In-Flight-Queue verhindert parallele Doppel-Render für
   denselben Pfad. Response: `image/png`, `Cache-Control: private,
