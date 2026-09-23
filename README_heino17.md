@@ -1848,10 +1848,27 @@ allgemeinen Rezept-Route (`REGEX_WIKI_THUMBNAIL`):
   `rename`), eine In-Flight-Queue verhindert parallele Doppel-Render für
   denselben Pfad. Response: `image/png`, `Cache-Control: private,
   max-age=600` (stets per Session privat).
-- **Invalidierung:** Nach `batch/save`/`batch/delete` auf einem Wiki
-  (`RecipeRoutes.ts` → `invalidateThumbnail`) wird das gecachte PNG gelöscht;
-  das nächste Bild wird automatisch neu gerendert. Keine veralteten
-  Vorschauen nach Bearbeitungen.
+- **Invalidierung (debounced):** Nach `batch/save`/`batch/delete` auf einem Wiki
+  (`RecipeRoutes.ts` → `invalidateThumbnail`) wird das gecachte PNG erst
+  **gedrosselt** gelöscht: Jede Änderung setzt einen Timer zurück, und die Datei
+  fällt erst **kurz nach der letzten Änderung** weg (Standard **180 s**,
+  `MWS_THUMBNAIL_DEBOUNCE_SECONDS` übersteuerbar). Damit zerstören die
+  TiddlyWiki-Autosaves (ein `batch/save` je Tiddler-Wechsel) die Vorschau nicht
+  mehr laufend, während ein Wiki bearbeitet wird — das nächste Bild nach dem
+  Timer-Ablauf wird automatisch neu gerendert (kurzes Staleness-Fenster nach
+  der letzten Bearbeitung ist beabsichtigt).
+- **Aufräumen:** Wird ein Wiki gelöscht (`AdminDeleteWiki` — Owner **oder**
+  Site-Admin), fällt seine Vorschau **sofort** weg (`deleteThumbnail`, bricht
+  auch einen evtl. laufenden Debounce-Timer ab, damit ein späteres
+  Neu-Anlegen desselben Slugs die frische PNG nicht verliert). Zusätzlich
+  räumt ein **Sweep beim Serverstart** (`sweepOrphanedThumbnails` auf
+  `mws.config.init.after`) alle Dateien aus `store/thumbnails/`, die zu keinem
+  aktuellen Rezept mehr gehören (gelöschte Wikis, `.png.tmp`-Reste von
+  Abstürzen) — die zuvor liegengebliebenen Waisen werden damit entfernt.
+  Der Dateiname ist die verlustbehaftete Slug-Sanitisierung
+  (`[^a-zA-Z0-9_-] → _`); der Sweep baut die gültige Dateimenge daher aus den
+  **sanitisierten** Slugs aller Rezepte — eine Kollision kann nur eine Datei
+  behalten, nie eine lebende löschen.
 
 ### Frontend
 

@@ -5,11 +5,13 @@
 // and reused; its location can be overridden with MWS_CHROMIUM_PATH.
 
 import { createReadStream } from "node:fs";
-import { mkdir, rename, stat, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readdir, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { SendError, ServerRequest } from "@tiddlywiki/server";
+import { serverEvents } from "@tiddlywiki/events";
 import { chromium } from "playwright-core";
 import { RecipeResolver } from "./RecipeResolver";
+import { ServerState } from "../ServerState";
 
 // Render the wiki at a higher resolution and downscale the screenshot, so the
 // preview image gets a nicer anti-aliased result than a native low-res capture.
@@ -17,8 +19,8 @@ const VIEWPORT = { width: 1280, height: 800 };
 const THUMB_WIDTH = 640;
 const THUMB_HEIGHT = 400;
 
-/** Remove the cached thumbnail for a wiki so the next request re-renders it. */
-export async function invalidateThumbnail(storePath: string, slug: string): Promise<void> {
+/** Remove the cached thumbnail files for a wiki (best effort). */
+async function unlinkThumbnail(storePath: string, slug: string): Promise<void> {
   const fileName = slug.replace(/[^a-zA-Z0-9_-]/g, "_");
   for (const suffix of [".png", ".png.tmp"]) {
     await unlink(join(storePath, "thumbnails", fileName + suffix)).catch((error: unknown) => {
@@ -27,6 +29,80 @@ export async function invalidateThumbnail(storePath: string, slug: string): Prom
     });
   }
 }
+
+/** Debounce window (ms) between the last save and the thumbnail being dropped.
+ *  Keeps the preview intact while a wiki is actively being edited (TiddlyWiki
+ *  autosaves call batch/save on every change), instead of deleting the PNG on
+ *  each save which would re-render on the next list view. */
+function thumbnailDebounceMs(): number {
+  const value = Number.parseInt(process.env.MWS_THUMBNAIL_DEBOUNCE_SECONDS ?? "", 10);
+  return (Number.isFinite(value) && value >= 0 ? value : 180) * 1000;
+}
+
+const invalidationTimers = new Map<string, NodeJS.Timeout>();
+
+/** Debounce invalidation of the cached thumbnail per wiki: subsequent saves
+ *  reset the timer, and the PNG is removed once, shortly after the last save.
+ *  The next thumbnail request then re-renders the wiki. */
+export function invalidateThumbnail(storePath: string, slug: string): void {
+  const key = slug;
+  const existing = invalidationTimers.get(key);
+  if (existing) clearTimeout(existing);
+  invalidationTimers.set(key, setTimeout(() => {
+    invalidationTimers.delete(key);
+    unlinkThumbnail(storePath, slug).catch((error: unknown) => {
+      console.error(`[thumbnail] failed to invalidate "${slug}":`, error);
+    });
+  }, thumbnailDebounceMs()));
+}
+
+/** Immediately drop the cached thumbnail of a wiki (used when the wiki itself
+ *  is deleted) and cancel any pending debounced invalidation for the slug, so
+ *  a leftover timer cannot wipe a re-created wiki's fresh thumbnail later. */
+export async function deleteThumbnail(storePath: string, slug: string): Promise<void> {
+  invalidationTimers.delete(slug);
+  await unlinkThumbnail(storePath, slug);
+}
+
+/** Remove every file in `store/thumbnails/` that does not belong to a current
+ *  recipe (deleted wikis, crashed `.tmp` leftovers). Runs once at startup.
+ *  Slug sanitization stays lossy (non-safe characters → `_`), so the set of
+ *  valid files is built from the *sanitized* slugs of existing recipes — a
+ *  possible collision only ever keeps a file, never deletes a live one. */
+export async function sweepOrphanedThumbnails(config: ServerState): Promise<number> {
+  const dir = join(config.storePath, "thumbnails");
+  let fileNames: string[];
+  try {
+    fileNames = await readdir(dir);
+  } catch {
+    return 0;
+  }
+  if (fileNames.length === 0) return 0;
+
+  const validFiles = new Set<string>();
+  const recipes = await config.engine.recipe.findMany({ select: { slug: true } });
+  for (const { slug } of recipes) {
+    const base = slug.replace(/[^a-zA-Z0-9_-]/g, "_");
+    validFiles.add(base + ".png");
+    validFiles.add(base + ".png.tmp");
+  }
+
+  let removed = 0;
+  for (const name of fileNames) {
+    if (validFiles.has(name)) continue;
+    await unlink(join(dir, name)).catch(() => {});
+    removed++;
+  }
+  return removed;
+}
+
+serverEvents.on("mws.config.init.after", (config) => {
+  void sweepOrphanedThumbnails(config).then((removed) => {
+    if (removed > 0) console.log(`[thumbnail] removed ${removed} orphaned thumbnail file(s)`);
+  }).catch((error: unknown) => {
+    console.error("[thumbnail] orphan sweep failed:", error);
+  });
+});
 
 function chromiumExecutable(): string {
   return process.env.MWS_CHROMIUM_PATH ?? process.env.CHROME_PATH ?? "/snap/bin/chromium";
