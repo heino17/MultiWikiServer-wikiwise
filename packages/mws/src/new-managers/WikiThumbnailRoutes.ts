@@ -175,7 +175,7 @@ async function withRenderSlot<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-async function statSafe(filePath: string): Promise<{ mtimeMs: number } | null> {
+async function statSafe(filePath: string): Promise<{ mtimeMs: number; size: number } | null> {
   try {
     return await stat(filePath);
   } catch (error) {
@@ -241,13 +241,39 @@ export async function serveWikiThumbnail(state: ServerRequest) {
   const outPath = join(dir, fileName + ".png");
 
   const cached = await statSafe(outPath);
-  if (!cached || Date.now() - cached.mtimeMs > thumbnailTtlMs()) {
+  const ttlMs = thumbnailTtlMs();
+  if (!cached || Date.now() - cached.mtimeMs > ttlMs) {
     await queue(outPath, () => withRenderSlot(() => renderThumbnail(state, recipe_slug, outPath)));
+  }
+
+  const current = (await statSafe(outPath)) ?? cached;
+  if (!current) {
+    state.writeHead(404, { contentType: { mediaType: "image/png" } });
+    return state.end();
+  }
+
+  const maxAge = Math.floor(ttlMs / 1000);
+  const modifiedSeconds = Math.floor(current.mtimeMs / 1000) * 1000;
+  const etag = `"${Math.floor(current.mtimeMs)}-${current.size}"`;
+  const lastModified = new Date(modifiedSeconds).toUTCString();
+  const ifNoneMatch = state.headers.get("if-none-match");
+  const ifModifiedSince = state.headers.get("if-modified-since");
+
+  const etagMatches = ifNoneMatch === "*"
+    || (ifNoneMatch?.split(",").map((value: string) => value.trim()).includes(etag) ?? false);
+  const notModifiedSince = ifNoneMatch == null && ifModifiedSince != null
+    && new Date(ifModifiedSince).getTime() >= modifiedSeconds;
+
+  if (etagMatches || notModifiedSince) {
+    state.writeHead(304, { etag, lastModified, cacheControl: `private, max-age=${maxAge}` });
+    return state.end();
   }
 
   state.writeHead(200, {
     contentType: { mediaType: "image/png" },
-    cacheControl: "private, max-age=600",
+    etag,
+    lastModified,
+    cacheControl: `private, max-age=${maxAge}`,
   });
   if (state.method !== "HEAD") {
     await state.pipeFrom(createReadStream(outPath));
