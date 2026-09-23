@@ -1,0 +1,12 @@
+title: Backup
+tags: Anleitung
+lang: en
+
+EN: **Backup** · DE: [[Sicherung]] · [[Start]]
+
+# Backup
+
+- The MultiWiki server offers an **admin backup**: a single file containing database, keys and configuration.
+- Start the download in the **Backup section**.
+- Store backups somewhere safe (they contain operational secrets).
+- Create a backup regularly before making larger changes.

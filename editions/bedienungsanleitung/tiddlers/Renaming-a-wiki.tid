@@ -1,0 +1,12 @@
+title: Renaming a wiki
+tags: Anleitung
+lang: en
+
+EN: **Renaming a wiki** · DE: [[Wiki umbenennen]] · [[Start]]
+
+# Renaming a wiki
+
+- As the owner (or an admin), open the wiki list and click **Edit** next to the wiki.
+- Change the **display name** — that is what the class sees in the list.
+- The slug stays stable for links; only change it if you want to update the old links.
+- After renaming, the preview image is re-rendered on the next open.

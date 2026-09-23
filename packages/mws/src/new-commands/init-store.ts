@@ -78,12 +78,13 @@ export class InitStoreCommand extends BaseCommand {
 
 		console.log("Default user created with username 'admin' and password '1234'. Please change this password after logging in.");
 
-		const runner = async (path: string, bagName: string, bagDesc: string, recName: string, recDesc: string) => {
+		const runner = async (path: string, bagName: string, bagDesc: string, recName: string, recDesc: string, recUsers: string[] = []) => {
 			const command = new LoadWikiFolderCommand([path!], {
 				"bag-relative-root": [dist_resolve("..")],
 				"bag-description": [bagDesc],
 				"recipe-name": [recName],
 				"recipe-description": [recDesc],
+				"recipe-users": recUsers,
 				"overwrite": false,
 				"owner-roles": ["ADMIN"]
 			});
@@ -95,6 +96,13 @@ export class InitStoreCommand extends BaseCommand {
 			dist_resolve("../editions/mws-docs"),
 			"mws-docs", "MWS Documentation from https://mws.tiddlywiki.com",
 			"mws-docs", "MWS Documentation from https://mws.tiddlywiki.com",
+		);
+
+		await runner(
+			dist_resolve("../editions/bedienungsanleitung"),
+			"bedienungsanleitung", "MWS Bedienungsanleitung (DE/EN)",
+			"bedienungsanleitung", "MWS Bedienungsanleitung (DE/EN)",
+			["ANON"]
 		);
 
 		this.config.setupRequired = false;

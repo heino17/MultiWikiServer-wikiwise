@@ -1,0 +1,14 @@
+title: Managing users
+tags: Anleitung
+lang: en
+
+EN: **Managing users** · DE: [[Nutzer verwalten]] · [[Start]]
+
+# Managing users
+
+- The **Users tab** lists all accounts with their roles.
+- **Invite:** create a new account (name, email) — the person sets their own password.
+- **Roles:** assign or remove roles.
+- **Reset password:** if someone is locked out, you can set a new password.
+- **Delete:** remove accounts; note that access to their wikis is lost as well.
+- System roles (e.g. `ADMIN`) are protected and cannot be deleted.

@@ -1,0 +1,11 @@
+title: Enabling students
+tags: Anleitung
+lang: en
+
+EN: **Enabling students** · DE: [[Schüler freischalten]] · [[Start]]
+
+# Enabling students
+
+- In the Users tab, create the student accounts (invitation) and assign them a class role.
+- With that role students cannot look into foreign wikis — they only see what is explicitly shared with them ([[Sharing a wiki with a class]]).
+- Then decide how many **own wikis** a student may create ([[Wiki limits for students]]).

@@ -24,6 +24,7 @@ const info: CommandInfo = {
 		["bag-name-prefix <string>", "A prefix added to bag names after the relative path name is calculated."],
 		["template-name <string>", "Template for this recipe"],
 		["owner-roles <string>", "Roles to set on the recipes and bags."],
+		["recipe-users <string>", "Roles granted read access (A_read) on the recipe and its bags."],
 		["overwrite", "Confirm that you want to overwrite existing content"],
 		["skip-existing", "Confirm that you want to skip existing content"],
 	],
@@ -36,6 +37,7 @@ export class LoadWikiFolderCommand extends BaseCommand<[string], {
 	"recipe-name"?: [string];
 	"recipe-description"?: [string];
 	"owner-roles"?: string[];
+	"recipe-users"?: string[];
 	"template-name"?: [string];
 	"overwrite"?: boolean;
 	"skip-existing"?: boolean;
@@ -70,6 +72,7 @@ export class LoadWikiFolderCommand extends BaseCommand<[string], {
 		const bagDescription = this.options["bag-description"][0];
 
 		const ownerRoles = (this.options["owner-roles"] ?? []).map((role) => role);
+		const recipeUsers = (this.options["recipe-users"] ?? []).map((role) => role);
 
 		const template = await this.config.engine.template.findUnique({
 			where: { name: templateName }
@@ -168,7 +171,7 @@ export class LoadWikiFolderCommand extends BaseCommand<[string], {
 						})),
 						// recipePermissions: ownerRoles.map(role => ({ level: "B_write", role })),4
 						recipeAdmins: ownerRoles,
-						recipeUsers: [],
+						recipeUsers,
 					});
 				}
 			}

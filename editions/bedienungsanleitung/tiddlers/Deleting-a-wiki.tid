@@ -1,0 +1,12 @@
+title: Deleting a wiki
+tags: Anleitung
+lang: en
+
+EN: **Deleting a wiki** · DE: [[Wiki löschen]] · [[Start]]
+
+# Deleting a wiki
+
+- Only the **owner** of the wiki or the **admin** can delete it.
+- Wiki list → **Edit** → **Delete** and confirm.
+- Deleting removes the wiki contents and the preview image **immediately** — there is no undo.
+- Leftover preview files of deleted wikis are cleaned up automatically at the next server start.

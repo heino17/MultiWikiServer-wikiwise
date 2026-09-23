@@ -1,0 +1,11 @@
+title: Autosave
+tags: Anleitung
+lang: en
+
+EN: **Autosave** · DE: [[Autospeicherung]] · [[Start]]
+
+# Autosave
+
+- The MultiWiki server saves every change **automatically** — nothing needs manual backup.
+- While you work in a wiki, each change is stored.
+- Note: the [[Preview image]] is not redrawn on every save — it shows the state after the latest editing pause.
