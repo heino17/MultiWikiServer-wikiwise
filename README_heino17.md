@@ -1853,7 +1853,12 @@ allgemeinen Rezept-Route (`REGEX_WIKI_THUMBNAIL`):
   (`MWS_THUMBNAIL_TTL_HOURS` übersteuerbar). Schreiben atomar (`…png.tmp` +
   `rename`), eine In-Flight-Queue verhindert parallele Doppel-Render für
   denselben Pfad. Response: `image/png`, `Cache-Control: private,
-  max-age=600` (stets per Session privat).
+  max-age=<TTL in s>` (stets per Session privat, Wert folgt der Server-TTL),
+  dazu **`ETag`** (aus mtime+size) und **`Last-Modified`**. Konditionale
+  Requests werden beantwortet: `If-None-Match` (auch in ETag-Listen oder
+  `*`) und `If-Modified-Since` → **304** ohne Body; der Vergleich läuft auf
+  Sekundenauflösung, damit die Last-Modified-Runde nicht durch
+  Sub-Sekunden-mtime verfehlt wird.
 - **Invalidierung (debounced):** Nach `batch/save`/`batch/delete` auf einem Wiki
   (`RecipeRoutes.ts` → `invalidateThumbnail`) wird das gecachte PNG erst
   **gedrosselt** gelöscht: Jede Änderung setzt einen Timer zurück, und die Datei
