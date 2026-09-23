@@ -4,8 +4,9 @@
 // see) and caches the PNG under the store folder. Chromium is launched lazily
 // and reused; its location can be overridden with MWS_CHROMIUM_PATH.
 
-import { createReadStream } from "node:fs";
+import { createReadStream, existsSync, readdirSync } from "node:fs";
 import { mkdir, readdir, rename, stat, unlink, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import { SendError, ServerRequest } from "@tiddlywiki/server";
 import { serverEvents } from "@tiddlywiki/events";
@@ -104,8 +105,76 @@ serverEvents.on("mws.config.init.after", (config) => {
   });
 });
 
+/** Resolve a usable Chromium/Chrome executable once and remember it, so the
+ *  fallback chain only runs on the first thumbnail visit:
+ *  MWS_CHROMIUM_PATH → CHROME_PATH → Playwright's browser cache
+ *  (~/.cache/ms-playwright, e.g. installed via `npx playwright install
+ *  chromium`) → /usr/bin/chromium(-browser) → /snap/bin/chromium. Candidates
+ *  that do not exist are skipped, so only the final error mentions the missing
+ *  browser. */
+let resolvedChromiumExecutable: string | undefined;
+
 function chromiumExecutable(): string {
-  return process.env.MWS_CHROMIUM_PATH ?? process.env.CHROME_PATH ?? "/snap/bin/chromium";
+  if (resolvedChromiumExecutable !== undefined) return resolvedChromiumExecutable;
+  resolvedChromiumExecutable = findChromium();
+  return resolvedChromiumExecutable;
+}
+
+function findChromium(): string {
+  const candidates: Array<string | undefined> = [
+    process.env.MWS_CHROMIUM_PATH,
+    process.env.CHROME_PATH,
+    ...playwrightCacheCandidates(),
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/snap/bin/chromium",
+  ];
+  for (const candidate of candidates) {
+    if (candidate && existsSync(candidate)) return candidate;
+  }
+  return "/snap/bin/chromium";
+}
+
+/** Chromium binaries that Playwright keeps in its cache, newest revision
+ *  first. Both the full browser (`chromium-<rev>/chrome-linux/chrome`) and the
+ *  headless shell (`chromium_headless_shell-<rev>/…/headless_shell` — nested
+ *  as `chrome-linux/` or, in newer Playwright, `chrome-headless-shell-linux64/`)
+ *  are accepted; the full browser wins on equal versions. */
+function playwrightCacheCandidates(): string[] {
+  let cacheRoot: string;
+  try {
+    cacheRoot = join(homedir(), ".cache", "ms-playwright");
+  } catch {
+    return [];
+  }
+  let dirs: string[];
+  try {
+    dirs = readdirSync(cacheRoot);
+  } catch {
+    return [];
+  }
+  const found: Array<{ rev: number; shell: boolean; path: string }> = [];
+  for (const dir of dirs) {
+    const match = /^chromium(?:_headless_shell)?-(\d+)$/.exec(dir);
+    if (!match) continue;
+    const shell = dir.includes("headless_shell");
+    // Binary name/layout changed over Playwright versions: the headless shell
+    // is now "chrome-headless-shell-linux64/chrome-headless-shell", older
+    // installs used "chrome-linux/headless_shell"; the full browser stays
+    // "chrome-linux/chrome".
+    const layouts = shell
+      ? [["chrome-linux", "headless_shell"], ["chrome-headless-shell-linux64", "chrome-headless-shell"]]
+      : [["chrome-linux", "chrome"]];
+    for (const [subDir, binary] of layouts) {
+      const candidate = join(cacheRoot, dir, subDir, binary);
+      if (existsSync(candidate)) {
+        found.push({ rev: Number.parseInt(match[1], 10), shell, path: candidate });
+        break;
+      }
+    }
+  }
+  found.sort((a, b) => b.rev - a.rev || (a.shell ? 1 : 0) - (b.shell ? 1 : 0));
+  return found.map((entry) => entry.path);
 }
 
 function thumbnailTtlMs(): number {

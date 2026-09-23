@@ -1832,8 +1832,14 @@ allgemeinen Rezept-Route (`REGEX_WIKI_THUMBNAIL`):
   `RecipeResolver.assertRecipe` — dieselben Leserechte wie beim Öffnen des
   Wikis selbst (anonym → 403, keine Rechte → 403). Damit ist die Vorschau
   kein Seitenkanal für Inhalte.
-- **Rendering:** `playwright-core` + Chromium (headless, `--no-sandbox`;
-  Pfad via `MWS_CHROMIUM_PATH`/`CHROME_PATH`, Default `/snap/bin/chromium`).
+- **Rendering:** `playwright-core` + Chromium (headless, `--no-sandbox`).
+  Der Browser-Pfad wird **einmal** gesucht (und gecacht) über eine
+  Fallback-Kette: `MWS_CHROMIUM_PATH` → `CHROME_PATH` → Playwright-Browser-
+  Cache (`~/.cache/ms-playwright`, z. B. samt `firefox`/`ffmpeg` nach einmal
+  `npx playwright install chromium`; neue und alte Verzeichnis-Layouts
+  inkl. `chrome-headless-shell`) → `/usr/bin/chromium(-browser)` →
+  `/snap/bin/chromium`. Fehlende Kandidaten werden übersprungen — nur wenn
+  keiner existiert, meldet der Render-Aufruf den fehlenden Browser.
   Der Browser wird lazy gestartet und **wiederverwendet**. Er rendert die
   echte Seite `/wiki/<slug>` mit **Viewport 1280×800** und nimmt nach dem
   Boot des TiddlyWiki-Clients (networkidle + 2500 ms Wartepause) einen
@@ -1930,10 +1936,13 @@ Vorschau-Modal), `packages/admin-vanilla/src/app.inline.css`,
     Hintergrund-Klick) ✓
 
 > **Betriebshinweis:** Für das erste Rendern eines Wikis muss Chromium auf
-> dem Server vorhanden sein (Default `/snap/bin/chromium`, Kürzestes Work-around
-> `MWS_CHROMIUM_PATH`). Ist kein Browser erreichbar, schlägt **nur das
-> Generieren** fehl — die Wiki-Daten selbst sind nicht betroffen, und ein
-> fehlgeschlagener Render wird nicht gecacht.
+> dem Server vorhanden sein. Einfachste Option: einmalig
+> `npx playwright install chromium` (legt alles in `~/.cache/ms-playwright`
+> ab, wird von der Fallback-Kette automatisch gefunden); alternativ ein
+> System-Chromium (`apt install chromium` o. ä.) oder explizit
+> `MWS_CHROMIUM_PATH`/`CHROME_PATH`. Ist kein Browser erreichbar, schlägt
+> **nur das Generieren** fehl — die Wiki-Daten selbst sind nicht betroffen,
+> und ein fehlgeschlagener Render wird nicht gecacht.
 
 ---
 
