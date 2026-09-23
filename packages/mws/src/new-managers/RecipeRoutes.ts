@@ -225,7 +225,7 @@ export const TiddlerBatch = zodRoute({
     });
 
     if (op === "save" || op === "delete") {
-      await invalidateThumbnail(state.config.storePath, recipe_slug);
+      invalidateThumbnail(state.config.storePath, recipe_slug);
     }
 
     return result;

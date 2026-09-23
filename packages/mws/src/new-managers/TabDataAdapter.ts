@@ -40,6 +40,7 @@ import { debuglog } from "util";
 import { Debug } from "@prisma/client/runtime/client";
 import { WikiStore } from "./RecipeResolver";
 import { SessionManager } from "./sessions";
+import { deleteThumbnail } from "./WikiThumbnailRoutes";
 import type { PasswordService } from "../services/PasswordService";
 
 
@@ -1519,7 +1520,7 @@ export const AdminDeleteWiki = zodRoute({
 
     const { slug } = state.data;
 
-    return await state.$transaction(async (prisma) => {
+    const result = await state.$transaction(async (prisma) => {
       const recipe = await prisma.recipe.findUnique({
         where: { slug },
         include: { recipe_bags: true },
@@ -1542,6 +1543,15 @@ export const AdminDeleteWiki = zodRoute({
 
       return { slug, deleted: true };
     });
+
+    // drop the cached preview as soon as the wiki is gone (before any pending
+    // debounced invalidation could re-touch the file); failure must not fail
+    // the delete itself.
+    await deleteThumbnail(state.config.storePath, slug).catch((error: unknown) => {
+      console.error(`[thumbnail] failed to delete "${slug}":`, error);
+    });
+
+    return result;
   }
 });
 
