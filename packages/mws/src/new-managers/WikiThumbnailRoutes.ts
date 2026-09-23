@@ -145,6 +145,36 @@ function queue(key: string, fn: () => Promise<void>): Promise<void> {
   return promise;
 }
 
+/** Maximum number of wiki renders running at once (each owns its own Chromium
+ *  context). After a TTL expiry the whole wiki list re-renders on first view —
+ *  this bounds the CPU/RAM spike instead of opening unlimited contexts.
+ *  Overridable via MWS_THUMBNAIL_RENDER_CONCURRENCY (default 2, clamped 1..8). */
+function renderConcurrency(): number {
+  const value = Number.parseInt(process.env.MWS_THUMBNAIL_RENDER_CONCURRENCY ?? "", 10);
+  const n = Number.isFinite(value) ? value : 2;
+  return Math.max(1, Math.min(8, n));
+}
+
+const maxConcurrentRenders = renderConcurrency();
+let activeRenders = 0;
+const renderWaiters: Array<() => void> = [];
+
+/** Acquire a render slot (bounds parallel Chromium contexts), run `fn`, then
+ *  hand the slot to the next waiter. FIFO so bursts render one after another. */
+async function withRenderSlot<T>(fn: () => Promise<T>): Promise<T> {
+  if (activeRenders >= maxConcurrentRenders) {
+    await new Promise<void>((resolve) => renderWaiters.push(resolve));
+  }
+  activeRenders++;
+  try {
+    return await fn();
+  } finally {
+    activeRenders--;
+    const next = renderWaiters.shift();
+    if (next) next();
+  }
+}
+
 async function statSafe(filePath: string): Promise<{ mtimeMs: number } | null> {
   try {
     return await stat(filePath);
@@ -212,7 +242,7 @@ export async function serveWikiThumbnail(state: ServerRequest) {
 
   const cached = await statSafe(outPath);
   if (!cached || Date.now() - cached.mtimeMs > thumbnailTtlMs()) {
-    await queue(outPath, () => renderThumbnail(state, recipe_slug, outPath));
+    await queue(outPath, () => withRenderSlot(() => renderThumbnail(state, recipe_slug, outPath)));
   }
 
   state.writeHead(200, {

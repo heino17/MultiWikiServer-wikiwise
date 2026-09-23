@@ -1839,7 +1839,13 @@ allgemeinen Rezept-Route (`REGEX_WIKI_THUMBNAIL`):
   Boot des TiddlyWiki-Clients (networkidle + 2500 ms Wartepause) einen
   Screenshot; dieser wird über eine Hilfsseite auf **640×400
   (`object-fit: cover`)** herunterskaliert (besseres Antialiasing als eine
-  native Low-Res-Aufnahme).
+  native Low-Res-Aufnahme). **Parallelität begrenzt:** Es laufen höchstens
+  **2** Renders gleichzeitig (jeder öffnet einen eigenen Browser-Kontext;
+  `MWS_THUMBNAIL_RENDER_CONCURRENCY`, geklemmt 1…8). Nach einem TTL-Ablauf
+  re-rendert die ganze Wiki-Liste beim ersten Öffnen — statt einer unbegrenzten
+  CPU/RAM-Spitze reihen sich die Renders FIFO aneinander (Verifikation mit
+  Limit 1: 12 gleichzeitig angefragte Wikibilder nacheinander in ~51 s, alle
+  200 `image/png`).
 - **Session-Kontext:** Das Session-Cookie des aufrufenden Users wird dem
   Browser-Kontext mitgegeben → das Bild entspricht exakt dessen Sicht.
 - **Cache:** Ergebnis liegt unter `store/thumbnails/<slug>.png` im
