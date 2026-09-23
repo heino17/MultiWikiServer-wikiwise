@@ -1847,7 +1847,15 @@ allgemeinen Rezept-Route (`REGEX_WIKI_THUMBNAIL`):
   Limit 1: 12 gleichzeitig angefragte Wikibilder nacheinander in ~51 s, alle
   200 `image/png`).
 - **Session-Kontext:** Das Session-Cookie des aufrufenden Users wird dem
-  Browser-Kontext mitgegeben → das Bild entspricht exakt dessen Sicht.
+  Browser-Kontext mitgegeben → das Bild entspricht dessen Sicht. Der Cache
+  wird aber bewusst **userübergreifend geteilt** (ein Slot je Slug): Die
+  Zugriffsprüfung läuft serverseitig in `assertRecipe` (ohne Rechte gibt es
+  gar keine PNG), und das Vorschaubild ist für alle erlaubten User inhaltlich
+  identisch — personalisierte Elemente entstehen client-seitig im Browser und
+  tauchen im Screenshot nicht auf. Wer nach TTL-Ablauf zuerst anfragt,
+  definiert also das Bild für alle, bis zur Invalidierung. Ein echter
+  Per-User-Cache (`<slug>.<userId>.png`) wäre N×M Render-Slots und würde die
+  Render-Begrenzung (s. o.) konterkarieren — deshalb bewusst nicht.
 - **Cache:** Ergebnis liegt unter `store/thumbnails/<slug>.png` im
   Daten-Store (außerhalb der Web-Auslieferung). TTL standardmäßig **24 h**
   (`MWS_THUMBNAIL_TTL_HOURS` übersteuerbar). Schreiben atomar (`…png.tmp` +
