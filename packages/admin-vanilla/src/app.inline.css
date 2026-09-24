@@ -781,6 +781,49 @@ h6 {
 	background: var(--color-surface-list-hover);
 }
 
+.list-row.list-group-row > .list-cell {
+	cursor: default;
+}
+
+.list-group-label {
+	font-size: 0.72rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.12em;
+	color: var(--color-text-faint);
+	padding: 20px 16px 6px;
+	border-top: 1px solid var(--color-border-soft);
+	background: var(--color-surface);
+}
+
+.list-group-row:first-child > .list-group-label {
+	border-top: none;
+	padding-top: 8px;
+}
+
+.shared-areas-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 3px 10px;
+	border-radius: 999px;
+	font-size: 0.82rem;
+	line-height: 1.4;
+	white-space: nowrap;
+}
+
+.shared-areas-badge.is-private {
+	color: var(--color-text-faint);
+	border: 1px solid var(--color-border-soft);
+	background: var(--color-surface-pill);
+}
+
+.shared-areas-badge.is-shared {
+	color: var(--color-danger);
+	border: 1px solid color-mix(in srgb, var(--color-danger) 45%, var(--color-border-soft));
+	background: color-mix(in srgb, var(--color-danger) 8%, var(--color-surface-field));
+}
+
 .wiki-thumbnail {
 	display: block;
 	width: 128px;

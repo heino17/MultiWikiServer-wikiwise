@@ -56,6 +56,31 @@ export type ReadInfo = ART<RecipeResolver["getReadInfo"]>;
 const READ_LEVELS = ["A_read", "B_write", "C_admin"] as const;
 const WRITE_LEVELS = ["B_write", "C_admin"] as const;
 
+/**
+ * Progressive Content-Security-Policy for wiki pages. Starts from a strict
+ * same-origin policy and appends the recipe's `cspAllow` entries to the
+ * directives that legitimately need external sources (images, media, frames,
+ * connections). Script sources stay locked to same-origin regardless.
+ */
+function buildCspPolicy(cspAllow: readonly string[]): string {
+  const extra = (cspAllow ?? []).filter(Boolean);
+  const add = (directive: string) => (extra.length ? ` ${extra.join(" ")}` : "");
+  return [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "style-src 'self' 'unsafe-inline'",
+    `img-src 'self' data:${add("img-src")}`,
+    `media-src 'self'${add("media-src")}`,
+    `frame-src 'self'${add("frame-src")}`,
+    `connect-src 'self'${add("connect-src")}`,
+    "font-src 'self' data:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'self'",
+  ].join("; ");
+}
+
 function inArray<T, S extends T>(b: T, a: readonly S[]) {
   return a.includes(b as any);
 }
@@ -112,6 +137,7 @@ export class RecipeResolver {
         plugins: true,
         template_id: true,
         owner_user_id: true,
+        definition: true,
         // template: {
         //   select: { name: true, definition: true, type: true },
         // },
@@ -156,7 +182,16 @@ export class RecipeResolver {
     // referencing a foreign bag in a recipe can no longer expose its tiddlers.
     if (!isAdmin) {
       const isRecipeOwner = recipe.owner_user_id === state.user.user_id;
-      if (!isRecipeOwner && recipe.permissions.length === 0)
+      const hasRecipePerm = isRecipeOwner || recipe.permissions.length > 0;
+      const hasBagAccess = recipe.recipe_bags.some(
+        rb => rb.bag.owner_user_id === state.user.user_id || rb.bag.permissions.length > 0
+      );
+      // A user with no relationship to the wiki at all must not be able to
+      // tell it apart from a nonexistent one: answer the same 404 as an
+      // unknown slug, so recipes cannot be probed as an existence oracle.
+      if (!hasRecipePerm && !hasBagAccess)
+        throw state.sendEmpty(404, { "x-reason": "recipe not found" });
+      if (!hasRecipePerm)
         throw state.sendEmpty(403, { "x-reason": "no read access to the recipe definition" });
       const deniedBag = recipe.recipe_bags.find(
         rb => rb.bag.owner_user_id !== state.user.user_id && rb.bag.permissions.length === 0
@@ -381,6 +416,8 @@ export class RecipeResolver {
 
     const injectDefault = !customHtmlEnabled && (externalPlugins || externalStore);
 
+    const cspPolicy = buildCspPolicy(this.recipe.definition.cspAllow ?? []);
+
     const bagTiddlers = includeTiddlers ? await this.prisma!.bag.findMany({
       where: { id: { in: bagIds } },
       select: {
@@ -399,6 +436,7 @@ export class RecipeResolver {
       const hash = createHash("md5");
       hash.update(temp);
       hash.update(this.recipe.recipe_bags.map(e => e.bag.name).join(","));
+      hash.update(cspPolicy);
       // this is always needed because of the integrity hashes
       const version = pluginCache.versionFromTemplate(template.twVersion);
       hash.update(plugins.map(e => pluginCache.getHashForTitle(version, injectionFunction, e) ?? "").join(","));
@@ -419,7 +457,7 @@ export class RecipeResolver {
       return plugins;
     }
 
-    return { bagTiddlers, lastEventId, template, injectDefault, getIndexEtag, getPluginList, }
+    return { bagTiddlers, lastEventId, template, injectDefault, getIndexEtag, getPluginList, cspPolicy }
 
   }
 

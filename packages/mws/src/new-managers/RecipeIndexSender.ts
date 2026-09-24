@@ -153,6 +153,7 @@ abstract class IndexSender {
   protected abstract injectionFunction: string;
   protected abstract customHtmlEnabled: boolean;
   protected abstract injectDefaultPreloadScript: boolean;
+  protected cspPolicy: string | undefined = undefined;
   protected abstract recipeSlug: string;
   protected abstract wikiSlug: string;
   protected abstract etag: string;
@@ -229,6 +230,7 @@ abstract class IndexSender {
       contentType: "text/html",
       etag: this.etag,
       cacheControl: "max-age=0, private, no-cache",
+      ...(this.cspPolicy ? { contentSecurityPolicy: this.cspPolicy } : {}),
       setCookie: {
         name: "mws_index_cache",
         value: writerCacheKey,
@@ -372,6 +374,7 @@ class WikiIndexSender extends IndexSender {
     this.injectionFunction = index.template.injectionFunction;
     this.customHtmlEnabled = index.template.customHtmlEnabled;
     this.injectDefaultPreloadScript = index.injectDefault;
+    this.cspPolicy = index.cspPolicy;
     this.recipeSlug = encodeURIComponent(recipe.slug);
     this.wikiSlug = recipe.slug;
     this.pluginCache = state.pluginCache;

@@ -172,6 +172,7 @@ export class LoadWikiFolderCommand extends BaseCommand<[string], {
 						// recipePermissions: ownerRoles.map(role => ({ level: "B_write", role })),4
 						recipeAdmins: ownerRoles,
 						recipeUsers,
+						cspAllow: [],
 					});
 				}
 			}

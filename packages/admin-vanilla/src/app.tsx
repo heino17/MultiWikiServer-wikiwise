@@ -1657,6 +1657,11 @@ export class App extends JSXElement {
     const isTeacher = userState.isTeacher;
     const isStudent = userState.isLoggedIn && !isAdmin && !isTeacher;
     const ownWikiCount = itemsByTab.wikis.filter((wiki) => wiki.ownerUsername === userState.username).length;
+    // Wikis are grouped into "mine / shared with me / system"; every other
+    // tab stays a flat list.
+    const listRows: WikiListRow[] = activeTab === "wikis"
+      ? groupWikiRows(activeTabItems, userState.username)
+      : activeTabItems.map((item) => ({ kind: "row" as const, item }));
     // Admins and teachers create freely; students are limited by the
     // teacher-configured wiki limit (NULL = unlimited, 0 = none).
     const canCreateOwnWiki = isAdmin || isTeacher
@@ -2195,7 +2200,11 @@ export class App extends JSXElement {
               <div class="field-callout full-row">
                 <p>{t("Loading {tab}…", { tab: currentTab.label.toLowerCase() })}</p>
               </div>
-            ) : activeTabItems.length ? activeTabItems.map((item) => (
+            ) : listRows.length ? listRows.map((row) => row.kind === "group" ? (
+              <div class="list-row list-group-row">
+                <div class="list-cell list-group-label">{row.label}</div>
+              </div>
+            ) : (
               <div
                 class="list-row"
                 role="button"
@@ -2203,19 +2212,19 @@ export class App extends JSXElement {
                 aria-disabled={isListInteractionDisabled ? "true" : undefined}
                 onclick={() => {
                   if (!isListInteractionDisabled)
-                    void store.openItem(currentTab.id, item.id);
+                    void store.openItem(currentTab.id, row.item.id);
                 }}
                 onkeydown={(event) => {
                   if (isListInteractionDisabled) return;
                   if (event.key !== "Enter" && event.key !== " ") return;
                   event.preventDefault();
-                  void store.openItem(currentTab.id, item.id);
+                  void store.openItem(currentTab.id, row.item.id);
                 }}
               >
                 {currentTab.columns.map((column) => {
-                  const value = getAdminRecordValue(column, item);
+                  const value = getAdminRecordValue(column, row.item);
                   const isFirstColumn = column.key === currentTab.columns[0]?.key;
-                  const linkUrl = isFirstColumn ? getListColumnLink(currentTab.id, column.key, item) : null;
+                  const linkUrl = isFirstColumn ? getListColumnLink(currentTab.id, column.key, row.item) : null;
                   if (typeof linkUrl === "string") {
                     return <a
                       class={"list-cell list-cell-link" + (column.width && column.width > 1 ? " span-" + column.width : "")}
@@ -2403,6 +2412,17 @@ function renderListCellValue(columnKey: string, value: string | undefined, onThu
     );
   }
 
+  if (columnKey === "sharedWritableBags") {
+    const names = Array.isArray(value) ? value.filter((name): name is string => typeof name === "string" && Boolean(name)) : [];
+    if (!names.length) return <span class="shared-areas-badge is-private">{t("Private")}</span>;
+    return (
+      <span class="shared-areas-badge is-shared" title={names.join("\n")}>
+        <MaterialSymbol icon={warningIcon} />
+        <span>{t("Shared")}</span>
+      </span>
+    );
+  }
+
   return textWithSlashes(formattedValue);
 }
 
@@ -2434,3 +2454,30 @@ function getListColumnLinkMappers(tabId: TabId): Partial<Record<string, ListColu
 }
 
 type ListColumnLinkMapper = (item: AdminRecord) => string | null;
+
+type WikiListRow =
+  | { kind: "group"; label: string }
+  | { kind: "row"; item: AdminRecord };
+
+/** Groups the wiki list into "mine / shared with me / system" sections. */
+function groupWikiRows(items: readonly AdminRecord[], username: string): WikiListRow[] {
+  const groups: { label: string; rows: AdminRecord[] }[] = [
+    { label: t("My wikis"), rows: [] },
+    { label: t("Shared with you"), rows: [] },
+    { label: t("System wikis"), rows: [] },
+  ];
+  for (const item of items) {
+    definitely<WikiAdminRecord>(item);
+    const owner = item.ownerUsername ?? "";
+    if (owner === username) groups[0].rows.push(item);
+    else if (owner === "") groups[2].rows.push(item);
+    else groups[1].rows.push(item);
+  }
+  const rows: WikiListRow[] = [];
+  for (const group of groups) {
+    if (!group.rows.length) continue;
+    rows.push({ kind: "group", label: group.label });
+    for (const item of group.rows) rows.push({ kind: "row", item });
+  }
+  return rows;
+}
