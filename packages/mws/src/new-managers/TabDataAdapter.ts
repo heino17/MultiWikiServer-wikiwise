@@ -399,7 +399,7 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
       compiledBags: bags,
       plugins: plugins,
       definition: authoredDefinition,
-      ownerUserId: existingRecipe ? undefined : new IdString(this.user.user_id),
+      ownerUserId: existingRecipe ? undefined : (this.user.user_id ? new IdString(this.user.user_id) : undefined),
       permissions: recipePermissions.map(row => ({
         level: row.level,
         role_id: roles(row.role),
@@ -676,7 +676,7 @@ export class TemplateDataAdapter extends TabDataAdapter<"templates"> {
           externalStore: data.externalStore,
         },
         permissions: templatePermissions.map(e => ({ level: e.level, role_id: roleIds(e.role), })),
-        ownerUserId: record ? undefined : new IdString(this.user.user_id),
+        ownerUserId: record ? undefined : (this.user.user_id ? new IdString(this.user.user_id) : undefined),
       }
     } else {
       template = {
@@ -697,7 +697,7 @@ export class TemplateDataAdapter extends TabDataAdapter<"templates"> {
           injectionLocation: data.injectionLocation,
         },
         permissions: templatePermissions.map(e => ({ level: e.level, role_id: roleIds(e.role), })),
-        ownerUserId: record ? undefined : new IdString(this.user.user_id),
+        ownerUserId: record ? undefined : (this.user.user_id ? new IdString(this.user.user_id) : undefined),
       };
     }
 
@@ -844,7 +844,7 @@ export class BagDataAdapter extends TabDataAdapter<"bags"> {
     const [bag] = await importer.upsert([{
       name: data.name,
       description: data.description,
-      ownerUserId: existing ? undefined : new IdString(this.user.user_id),
+      ownerUserId: existing ? undefined : (this.user.user_id ? new IdString(this.user.user_id) : undefined),
       permissions: data.bagPermissions.map(e => ({
         role_id: roles(e.role),
         level: e.level as BagPermissionLevel
@@ -993,7 +993,7 @@ export class RoleDataAdapter extends TabDataAdapter<"roles"> {
       description: data.description,
       name: data.name,
       isTeacher: data.isTeacher,
-      ownerUserId: record ? undefined : new IdString(this.user.user_id),
+      ownerUserId: record ? undefined : (this.user.user_id ? new IdString(this.user.user_id) : undefined),
     }]);
 
     const ownerUserId = record?.owner_user_id ?? this.user.user_id;

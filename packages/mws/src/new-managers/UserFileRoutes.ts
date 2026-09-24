@@ -392,10 +392,15 @@ export const UserFileUpload = zodRoute({
       if (!canWrite)
         throw state.sendEmpty(403, { "x-reason": "no write access to this wiki" });
       const targetId = recipe.owner_user_id ?? state.user.user_id;
+      // Attribute the file to the wiki's owner only when that account actually
+      // exists: system wikis and any stale/orphan owner id (e.g. a bogus
+      // "undefined" written by older imports) fall back to the uploader.
       const targetUser = targetId === state.user.user_id
         ? { username: state.user.username }
         : await state.engine.users.findUnique({ where: { user_id: targetId }, select: { username: true } });
-      owner = { user_id: targetId, username: targetUser?.username ?? state.user.username };
+      owner = targetUser
+        ? { user_id: targetId, username: targetUser.username }
+        : { user_id: state.user.user_id, username: state.user.username };
     }
 
     const storePath = state.config.storePath as string;
