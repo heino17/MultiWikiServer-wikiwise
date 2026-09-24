@@ -685,6 +685,22 @@ Speichern — ungültige Formate werden mit klarer Meldung abgelehnt
 (statt still speichern zu können). Eindeutigkeit sichert weiterhin
 `checkExisting`.
 
+**Dasselbe Verfügbarkeits-Signal für Bag-Namen:** Im Bags-Tab prüft
+`renderBagNameLiveValidation` (`packages/admin-vanilla/src/definition/renders.tsx`)
+live gegen `itemsByTab.bags`, ob der getippte Name schon vergeben ist —
+gleiche grüne/rote Meldungen wie beim Slug (i18n-Keys werden
+mitbenutzt). Beim Bearbeiten ist der eigene Name von der Prüfung
+ausgenommen. Ein Format-Check entfällt bewusst: Bag-Namen sind freie
+Bezeichner (Leerzeichen, Umlaute, Großschreibung erlaubt — 
+wir testeten „Mein erstes Bag"), da sie nie in URLs auftauchen.
+Eindeutigkeit erzwingt weiterhin der Server per `checkExisting`
+(Fremde Bags → 403 „Only the user who created the bag …").
+
+**Genauso für den Benutzername im Benutzer-Tab:**
+`renderUsernameLiveValidation` gleicht live gegen `itemsByTab.users`
+(Key `username`, bei Eindeutigkeit serverseitig `checkExisting` +
+`username @unique`). Eigener Name ist beim Bearbeiten ausgenommen.
+
 ---
 
 ## 17. Wiki-Erstellung als Dropdown (statt zweier Buttons)

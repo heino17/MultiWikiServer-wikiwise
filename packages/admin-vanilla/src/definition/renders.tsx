@@ -1,6 +1,6 @@
 import { DraftChangeHandler, OperationTriggerHandler, PendingRowsChangeHandler, PermissionRowsChangeHandler, PerTabFieldState, ResolverTitleChangeHandler } from "../app";
 import { MaterialSymbol } from "../material-symbol";
-import { AdminRecordStore, FieldDefinition, FieldType, IdString, PermissionRow, WikiAdminRecord, WritablePrefixRow } from "./tabs";
+import { AdminRecordStore, BagAdminRecord, FieldDefinition, FieldType, IdString, PermissionRow, UserAdminRecord, WikiAdminRecord, WritablePrefixRow } from "./tabs";
 import { definitely, is } from "./utils";
 import warningIcon from "@material-symbols/svg-400/outlined/warning.svg";
 import { findTemplateRecordForWikiRecord, jsonReviver } from "./store";
@@ -223,6 +223,40 @@ function renderSlugLiveValidation(ctx: FieldEditorContext) {
   );
 }
 
+function renderNameTakenStatus(value: string, names: readonly string[], savedName?: string) {
+  const takenNames = names.filter((item) => item !== savedName);
+  if (takenNames.includes(value)) {
+    return (
+      <p class="field-helper" role="alert" aria-live="polite" style={{ color: "var(--color-danger)" }}>
+        {t("This name is already taken.")}
+      </p>
+    );
+  }
+  return (
+    <p class="field-helper" role="status" aria-live="polite" style={{ color: "var(--color-success)" }}>
+      {t("This name is available.")}
+    </p>
+  );
+}
+
+function renderBagNameLiveValidation(ctx: FieldEditorContext) {
+  const { field, value, fieldState, itemsByTab } = ctx;
+  if (field.key !== "name" || fieldState.tabId !== "bags") return null;
+  const name = String(value ?? "");
+  if (!name) return null;
+  const savedName = (fieldState.saved as Partial<BagAdminRecord> | undefined)?.name;
+  return renderNameTakenStatus(name, itemsByTab.bags.map((bag) => bag.name), savedName);
+}
+
+function renderUsernameLiveValidation(ctx: FieldEditorContext) {
+  const { field, value, fieldState, itemsByTab } = ctx;
+  if (field.key !== "username" || fieldState.tabId !== "users") return null;
+  const username = String(value ?? "");
+  if (!username) return null;
+  const savedName = (fieldState.saved as Partial<UserAdminRecord> | undefined)?.username;
+  return renderNameTakenStatus(username, itemsByTab.users.map((user) => user.username), savedName);
+}
+
 function renderTextInputField(ctx: FieldEditorContext, type: "text" | "number" | "password") {
   const { field, value, disabled, inputId, onDraftChange, } = ctx;
   definitely<string>(value);
@@ -247,6 +281,8 @@ function renderTextInputField(ctx: FieldEditorContext, type: "text" | "number" |
       onDraftChange(field.key, nextValue);
     }} />
     {renderSlugLiveValidation(ctx)}
+    {renderBagNameLiveValidation(ctx)}
+    {renderUsernameLiveValidation(ctx)}
     {passwordGenerator}
   </>;
 }

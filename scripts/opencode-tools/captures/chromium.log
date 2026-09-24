@@ -1,2 +1,0 @@
-[51608:51612:0923/212315.678569:ERROR:base/nix/mime_util_xdg.cc:121] Failed reading in mime.cache file: /home/r2d2/.local/share/flatpak/exports/share/mime/mime.cache
-[51720:51726:0923/212315.873051:ERROR:base/nix/mime_util_xdg.cc:121] Failed reading in mime.cache file: /home/r2d2/.local/share/flatpak/exports/share/mime/mime.cache

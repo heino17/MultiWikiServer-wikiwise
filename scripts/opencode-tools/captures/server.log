@@ -1,3 +1,0 @@
-CWD: /home/r2d2/Documents/AI_Master/MultiWikiServer-wikiwise/dev/wiki
-DB: /home/r2d2/Documents/AI_Master/MultiWikiServer-wikiwise/dev/wiki/store/database.sqlite
-Listening on { address: '127.0.0.1', family: 'IPv4', port: 5001 } 
