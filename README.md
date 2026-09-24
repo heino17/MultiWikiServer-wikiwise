@@ -2,7 +2,7 @@
 
 <a href="https://www.paypal.com/donate/?hosted_button_id=BVDDREGEU2ZEA">
   <img src="https://github.com/user-attachments/assets/6467378f-26fd-40ff-b60e-b8d62555c08a" width="20" />
-Donate via PayPal to support development
+Donate to MultiWikiServer founder Arlen Beiler via PayPal to support development
 </a>
 
 ---
@@ -11,8 +11,8 @@ Multiple users, multiple wikis for TiddlyWiki.
 
 - Bag & Recipe system for storing tiddlers.
 - User and Role management with ACL.
-- Multiple database engines supported, using Prisma.
-- Third-party OAuth and password-based login.
+- SQLite database managed with Prisma.
+- Password-based login.
 
 ## Flexible and Extendible
 
@@ -27,11 +27,11 @@ Most of these features are still in development.
 
 ### Dark Mode
 
-<img width="800" alt="light mode" src="https://github.com/user-attachments/assets/d2c8177a-e504-4bff-999d-4b260467ac2e" />
+<img width="800" alt="dark mode" src="https://github.com/user-attachments/assets/d2c8177a-e504-4bff-999d-4b260467ac2e" />
 
 ### Light Mode
 
-<img width="800" alt="dark mode" src="https://github.com/user-attachments/assets/301cb61c-1f39-4d4f-8f4a-8ecd5306c084" />
+<img width="800" alt="light mode" src="https://github.com/user-attachments/assets/301cb61c-1f39-4d4f-8f4a-8ecd5306c084" />
 
 ## Warning: Security between users is still a dumpster fire.
 
@@ -40,9 +40,6 @@ Most of these features are still in development.
 **Do not use it to protect feelings or intellectual property.**
 
 **There are plenty of ways for anyone with write access to get around the security restrictions.**
-
-<img width="800" alt="this is fine" src="https://github.com/user-attachments/assets/49505d25-7a48-42f1-b4f7-73e8630c1ba1" />
-
 
 ## Also, this is a database, please make backups
 
@@ -64,7 +61,7 @@ You can run `npx mws help` to get more information about the commands.
 
 The initial user created on first run has the username `admin` and password `1234`.
 
-If you run into trouble, or need help figuring something out, feel free to [start a discussion](https://github.com/TiddlyWiki/MultiWikiServer/discussions). If you know what's wrong, you can also open an issue.
+If you run into trouble, or need help figuring something out, feel free to [start a discussion](https://github.com/heino17/MultiWikiServer-wikiwise/discussions). If you know what's wrong, you can also open an issue.
 
 ## Updates
 
@@ -105,7 +102,7 @@ In 0.2, the development data folder is `/dev/wiki`.
 
 If you want to work on the project, or just try out the latest changes,
 
-- `git clone https://github.com/TiddlyWiki/MultiWikiServer`
+- `git clone https://github.com/heino17/MultiWikiServer-wikiwise`
 - `cd MultiWikiServer`
 - `npm install` or `npm run install-android`
 - `npm run certs` - if you want https (unix only)
