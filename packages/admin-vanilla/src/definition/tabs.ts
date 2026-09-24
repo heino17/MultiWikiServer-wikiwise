@@ -194,6 +194,7 @@ const tabs = {
       { key: "recipeUsers", label: "Readable by" },
       { key: "recipeAdmins", label: "Writable by" },
       { key: "myRights", label: "My rights" },
+      { key: "sharedWritableBags", label: "Shared areas", width: 2 },
       // { key: "edit", label: "" }
       // { key: "lastCompiledAt", label: "Compiled" },
       // { key: "statusFlags", label: "Status" },
@@ -209,6 +210,22 @@ const tabs = {
       { key: "lastCompiledAt", label: "Compiled", type: "string", section: "runtime", mode: "server" },
       { key: "ownerUsername", label: "Created by", type: "string", section: "runtime", mode: "server" },
       { key: "myRights", label: "My rights", type: "string", section: "runtime", mode: "server" },
+      {
+        key: "cspAllow",
+        label: "Additional allowed external sources",
+        type: "table",
+        section: "authored",
+        mode: "create edit",
+        architecture: "External source expressions (e.g. https://youtube.com) the wiki's browsers may additionally load for images, media, frames, and network requests. The base Content-Security-Policy stays strict same-origin; external scripts are never allowed.",
+      },
+      {
+        key: "sharedWritableBags",
+        label: "Shared writable areas",
+        type: "summary-list",
+        section: "runtime",
+        mode: "server",
+        architecture: "Bags of this wiki that another user can also write to. If one exists, third parties who write there can read all of the wiki's tiddlers (known platform limitation), so share with care — or keep such areas in their own wiki.",
+      },
       {
         key: "writablePrefixBags",
         label: "Writable prefix bags",
@@ -291,9 +308,11 @@ const tabs = {
         { title: "Plugins", description: "Add wiki-specific plugins on top of the template plugin set.", keys: ["plugins"], width: halfWidth },
         { title: "Readers", description: "Who can open this wiki (read access).", keys: ["recipeUsers"], width: halfWidth },
         { title: "Editors", description: "Who can make changes to this wiki.", keys: ["recipeAdmins"], width: halfWidth },
+        { title: "Browser security", description: "External sources browsers may load beyond the strict same-origin default (images, media, frames, network); external scripts stay locked to same-origin.", keys: ["cspAllow"], width: fullWidth },
         { title: "Access", description: "Controls who can edit the wiki settings.", keys: ["recipePermissions"], width: fullWidth },
       ],
       runtime: [
+        { title: "Shared areas", description: "Bags that users other than the owner can write to. Every writer can currently read all of the wiki's tiddlers, so share these areas with care — or keep them in their own wiki.", keys: ["sharedWritableBags"], width: fullWidth },
         // { title: "Computed Write Prefix", description: "", keys: ["effectiveWritableBags"], width: fullWidth },
         // { title: "Computed Bag Order", description: "", keys: ["effectiveReadonlyBags"], width: halfWidth },
         // { title: "Computed Plugin Set", description: "", keys: ["effectivePluginSet"], width: halfWidth },
@@ -813,6 +832,10 @@ export interface WikiAdminRecord {
   ownerUsername: string,
   // summary of the current user's rights on this wiki ("admin"/"owner"/"write"/"read"/"")
   myRights: string,
+  // writable bags that users other than the wiki owner can also write to
+  sharedWritableBags: readonly string[],
+  // external sources the wiki's pages may additionally load (CSP allowlist)
+  cspAllow: readonly string[],
   // client field
   defaultWritableBag: string;
   thumbnailUrl: string;

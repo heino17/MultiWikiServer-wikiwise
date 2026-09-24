@@ -80,6 +80,7 @@ export type RecipeDefinition = Omit<
   | "recipeAdmins"
   | "ownerUsername"
   | "myRights"
+  | "sharedWritableBags"
 >;
 
 declare global {
@@ -348,6 +349,7 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
       readonlyBags: normalizeLineList(data.readonlyBags),
       writablePrefixBags: normalizePrefixRows(data.writablePrefixBags),
       plugins: normalizeLineList(data.plugins),
+      cspAllow: normalizeLineList(data.cspAllow ?? []),
     };
 
     await importer.checkExisting(data.id, data.slug, this.user);
@@ -428,6 +430,11 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
       ownerUsername = this.user.username;
     }
 
+    const sharedWritableBags = await classifySharedWritableBags(prisma, {
+      ownerUserId: existingRecipe?.owner_user_id ?? this.user.user_id,
+      compiledBags: bags,
+    });
+
     return this.buildResponse({
       id: new IdString(id),
       slug: data.slug,
@@ -439,11 +446,12 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
       recipePermissions,
       ownerUsername,
       myRights: this.user.isAdmin ? "admin" : existingRecipe?.owner_user_id === this.user.user_id ? "owner" : "",
+      sharedWritableBags,
     });
 
   }
 
-  private buildResponse({ definition, plugins, allbags, id, slug, templateName, lastCompiledAt, recipePermissions, ownerUsername = "", myRights = "" }: {
+  private buildResponse({ definition, plugins, allbags, id, slug, templateName, lastCompiledAt, recipePermissions, ownerUsername = "", myRights = "", sharedWritableBags = [] }: {
     id: IdString;
     slug: string;
     lastCompiledAt: Date;
@@ -454,6 +462,8 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
     templateName: string;
     ownerUsername: string;
     myRights: string;
+    /** writable bags that users other than the wiki owner can write to */
+    sharedWritableBags: string[];
   }): DataStore["wikis"][number] {
     const effectivePluginSet = plugins;
     const effectiveReadonlyBags = allbags
@@ -466,6 +476,8 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
 
     return {
       ...definition,
+      // legacy definitions predate cspAllow — default to empty
+      cspAllow: definition.cspAllow ?? [],
       id,
       slug,
       templateName,
@@ -476,6 +488,7 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
       effectivePluginSet,
       ownerUsername,
       myRights,
+      sharedWritableBags,
       recipeAdmins: recipePermissions.filter(e => e.level === "B_write").map(e => e.role),
       recipeUsers: recipePermissions.filter(e => e.level === "A_read").map(e => e.role),
     };
@@ -521,6 +534,7 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
             prefix: true,
             bag: {
               select: {
+                name: true,
                 owner_user_id: true,
                 permissions: {
                   where: { role_id: { in: myRoleIdArray } },
@@ -539,12 +553,41 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
     const templates = await new TemplateImportWriter(prisma, false).getIdMapper();
     const bags = await new BagImportWriter(prisma, false).getIdMapper();
 
+    // Unfiltered bag permissions for the shared-area classification: the
+    // select above is (deliberately) filtered to the current user's roles, so
+    // the writable grants for all roles are fetched in a separate pass.
+    const allBagIds = Array.from(new Set(recipes.flatMap(r => r.recipe_bags).map(rb => rb.bag_id)));
+    const classificationBags = new Map(
+      allBagIds.length
+        ? (await prisma.bag.findMany({
+            where: { id: { in: allBagIds } },
+            select: {
+              id: true,
+              name: true,
+              owner_user_id: true,
+              permissions: { orderBy: { level: "desc" }, select: { level: true, role_id: true } },
+            },
+          })).map(e => [e.id, e])
+        : []
+    );
+
     const ownerIds = Array.from(new Set(recipes.map(e => e.owner_user_id).filter((id): id is string => Boolean(id))));
     const ownerNames = new Map((
       ownerIds.length
         ? await prisma.users.findMany({ where: { user_id: { in: ownerIds } }, select: { user_id: true, username: true } })
         : []
     ).map(e => [e.user_id, e.username]));
+
+    // Foreign-writer classification for the shared-area warning: every
+    // role_id granted B_write/C_admin anywhere in the visible recipe set,
+    // its members, and its role names, fetched in a few round-trips.
+    const grantRoleIds = Array.from(new Set(
+      recipes.flatMap(r => r.recipe_bags)
+        .flatMap(rb => classificationBags.get(rb.bag_id)?.permissions ?? [])
+        .map(p => p.role_id)
+        .filter((id): id is string => Boolean(id))
+    ));
+    const { roleNames, memberIdsByRole } = await roleNamesAndMembers(prisma, grantRoleIds);
 
     return recipes.map((recipe): IRecipeRow => {
       recipe.recipe_bags.sort(e => e.priority);
@@ -559,6 +602,21 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
         if (writeTarget && bagWriteAllowed(writeTarget, this.user)) myRights = "write";
         else if (recipeLevel) myRights = "read";
       }
+
+      const sharedWritableBags = foreignWritableBagNames({
+        ownerUserId: recipe.owner_user_id,
+        roleNameById: (role_id) => roleNames.get(role_id) ?? "",
+        memberIdsByRole,
+        bags: recipe.recipe_bags.map(e => {
+          const bag = classificationBags.get(e.bag_id);
+          return {
+            bagName: bag?.name ?? "",
+            owner_user_id: bag?.owner_user_id ?? null,
+            isWritable: e.is_writable,
+            allPermissions: bag?.permissions ?? [],
+          };
+        }),
+      });
 
       return this.buildResponse({
         allbags: recipe.recipe_bags.map(e => ({
@@ -579,6 +637,7 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
         })),
         templateName: templates(new IdString(recipe.template_id)),
         myRights,
+        sharedWritableBags,
       });
     })
   }
@@ -1319,6 +1378,116 @@ function bagWriteAllowed(
   return ["B_write", "C_admin"].includes(rb.bag.permissions[0]?.level ?? "");
 }
 
+/** Carried by the site admin account; never counts as a "foreign" writer. */
+const SYSTEM_WRITER_ROLES = new Set(["ADMIN", "USER", "ANON"]);
+
+/**
+ * Names of a wiki's writable bags that users other than the wiki owner can
+ * write to, making the wiki a collaboration surface. A bag counts when
+ *   * it is itself a write target owned by a different user, or
+ *   * it carries a write-level (B_write/C_admin) grant for a role whose
+ *     members include someone who is not the wiki owner (system roles
+ *     ADMIN/USER/ANON are excluded — those belong to the platform).
+ * Every writer of a shared bag can read all of the wiki's tiddlers today
+ * (see the known H2 limitation), so the admin UI warns about these areas.
+ */
+function foreignWritableBagNames(opts: {
+  ownerUserId: string | null;
+  roleNameById: (role_id: string) => string;
+  /** role_id → user_ids of everyone holding that role. */
+  memberIdsByRole: ReadonlyMap<string, ReadonlySet<string>>;
+  bags: {
+    bagName: string;
+    owner_user_id: string | null;
+    isWritable: boolean;
+    allPermissions: { level: string; role_id: string }[];
+  }[];
+}): string[] {
+  const { ownerUserId, roleNameById, memberIdsByRole, bags } = opts;
+  const shared: string[] = [];
+  for (const bag of bags) {
+    const writers = new Set<string>();
+    if (bag.isWritable && bag.owner_user_id && bag.owner_user_id !== ownerUserId)
+      writers.add(bag.owner_user_id);
+    for (const p of bag.allPermissions) {
+      if (p.level !== "B_write" && p.level !== "C_admin") continue;
+      const roleName = roleNameById(p.role_id);
+      if (SYSTEM_WRITER_ROLES.has(roleName)) continue;
+      const members = memberIdsByRole.get(p.role_id);
+      if (!members) continue;
+      for (const memberId of members) writers.add(memberId);
+    }
+    // No known owner: any writer is "foreign". With an owner, only writers
+    // that are not the owner make the area shared.
+    const sharedArea = ownerUserId
+      ? [...writers].some(id => id !== ownerUserId)
+      : writers.size > 0;
+    if (sharedArea) shared.push(bag.bagName);
+  }
+  return shared.sort();
+}
+
+/**
+ * Resolves role names and role memberships for a set of role_ids in a couple
+ * of round-trips. Roles have no FK from the permission tables, so names and
+ * members have to come from the auth module's own tables.
+ */
+async function roleNamesAndMembers(
+  prisma: PrismaTxnClient,
+  roleIds: string[],
+): Promise<{ roleNames: Map<string, string>; memberIdsByRole: Map<string, Set<string>> }> {
+  const roleNames = new Map(
+    roleIds.length
+      ? (await prisma.roles.findMany({ where: { role_id: { in: roleIds } }, select: { role_id: true, role_name: true } }))
+          .map(e => [e.role_id, e.role_name])
+      : []
+  );
+  const memberIdsByRole = new Map<string, Set<string>>();
+  if (roleIds.length) {
+    const roleMembers = await prisma.users.findMany({
+      where: { roles: { some: { role_id: { in: roleIds } } } },
+      select: { user_id: true, roles: { where: { role_id: { in: roleIds } }, select: { role_id: true } } },
+    });
+    for (const member of roleMembers)
+      for (const role of member.roles) {
+        const set = memberIdsByRole.get(role.role_id) ?? new Set<string>();
+        set.add(member.user_id);
+        memberIdsByRole.set(role.role_id, set);
+      }
+  }
+  return { roleNames, memberIdsByRole };
+}
+
+/** Fetches the bag, role, and membership data for one compiled recipe and
+ * classifies its shared (foreign-writable) areas. Used after a wiki save. */
+async function classifySharedWritableBags(
+  prisma: PrismaTxnClient,
+  opts: { ownerUserId: string; compiledBags: { bagName: string; isWritable: boolean }[] },
+): Promise<string[]> {
+  const { ownerUserId, compiledBags } = opts;
+  const bagNames = compiledBags.map(e => e.bagName);
+  const bagRows = bagNames.length
+    ? await prisma.bag.findMany({
+        where: { name: { in: bagNames } },
+        select: { name: true, owner_user_id: true, permissions: { select: { level: true, role_id: true } } },
+      })
+    : [];
+  const byName = new Map(bagRows.map(b => [b.name, b]));
+  const grantRoleIds = Array.from(new Set(bagRows.flatMap(b => b.permissions).map(p => p.role_id)));
+  const { roleNames, memberIdsByRole } = await roleNamesAndMembers(prisma, grantRoleIds);
+  return foreignWritableBagNames({
+    ownerUserId,
+    roleNameById: (role_id) => roleNames.get(role_id) ?? "",
+    memberIdsByRole,
+    bags: compiledBags.map(e => ({
+      bagName: e.bagName,
+      isWritable: e.isWritable,
+      owner_user_id: byName.get(e.bagName)?.owner_user_id ?? null,
+      allPermissions: byName.get(e.bagName)?.permissions ?? [],
+    })),
+  });
+}
+
 // Generische Systemrollen erzeugen keine Sichtbarkeit in den Admin-Listen:
 // Wer nur über USER/ANON (geteilte Systemrollen) oder über eine Rolle mit
 // Lehrer-Capability (is_teacher, unabhängig vom Rollennamen) Zugriff auf ein
@@ -1532,6 +1701,7 @@ export const AdminCreateWiki = zodRoute({
         readonlyBags: [],
         writablePrefixBags: [{ prefix: "", bagName }],
         plugins: [],
+        cspAllow: [],
       };
       const { bags, plugins } = recipeWriter.compileRecipeSimpleV1(authoredDefinition, template.definition);
       const [[recipeId, lastCompiledAt]] = await recipeWriter.upsert([{
