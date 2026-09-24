@@ -794,6 +794,7 @@ h6 {
 	padding: 20px 16px 6px;
 	border-top: 1px solid var(--color-border-soft);
 	background: var(--color-surface);
+	grid-column: 1 / -1;
 }
 
 .list-group-row:first-child > .list-group-label {
