@@ -1,7 +1,7 @@
 # Use Node.js 22 Alpine image
 FROM node:24-alpine
 
-# Install MultiWikiServer from npm globally
+# Install MultiWikiServer (wikiwise fork) from npm globally
 RUN npm install @tiddlywiki/mws@latest -g
 
 # Set working directory

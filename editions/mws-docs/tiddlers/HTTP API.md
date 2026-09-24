@@ -1,4 +1,4 @@
-The MultiWikiServer HTTP API provides management and tiddler endpoints. 
+The MultiWikiServer-wikiwise HTTP API provides management and tiddler endpoints. 
 
 The design goals of the API are:
 

@@ -1,7 +1,7 @@
 {
 	"title": "$:/plugins/mws/client",
-	"name": "MultiWikiClient",
-	"description": "Synchronise changes from the browser to TiddlyWiki MultiWikiServer",
+	"name": "MultiWikiClient-wikiwise",
+	"description": "Synchronise changes from the browser to TiddlyWiki MultiWikiServer-wikiwise",
 	"list": "readme",
 	"plugin-priority": 12,
 	"stability": "STABILITY_1_EXPERIMENTAL",

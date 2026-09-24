@@ -1,4 +1,4 @@
-# MultiWikiServer
+# MultiWikiServer-wikiwise
 
 <a href="https://www.paypal.com/donate/?hosted_button_id=BVDDREGEU2ZEA">
   <img src="https://github.com/user-attachments/assets/6467378f-26fd-40ff-b60e-b8d62555c08a" width="20" />
@@ -123,7 +123,7 @@ In 0.2, the development data folder is `/dev/wiki`.
 If you want to work on the project, or just try out the latest changes,
 
 - `git clone https://github.com/heino17/MultiWikiServer-wikiwise`
-- `cd MultiWikiServer`
+- `cd MultiWikiServer-wikiwise`
 - `npm install` or `npm run install-android`
 - `npm run certs` - if you want https (unix only)
 - `npm start update-tiddlywiki` - Download the latest TiddlyWiki version
