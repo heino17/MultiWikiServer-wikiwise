@@ -229,19 +229,69 @@ function permissionLevelRank(level: "A_read" | "B_write" | "C_admin"): number {
 }
 
 /**
+ * Closes the bag-hijack hole in editors' save paths. A recipe/template may
+ * only reference bags the current editor already has rights on:
+ *   * an existing bag must be owned by the editor or carry at least A_read
+ *     for one of their roles, otherwise referencing it would leak its
+ *     tiddlers to the wiki's visitors;
+ *   * bags used as write targets additionally need B_write (or ownership)
+ *     whenever the saved definition grants write access to anyone, otherwise
+ *     an A_read-only editor could silently hand out write on a foreign wiki.
+ * Unknown names are allowed: they do not exist yet, so the importer creates
+ * them as the editor's own bags (referencing a bag that genuinely belongs to
+ * someone else only works if it already exists – which is exactly the case
+ * this gate blocks). Admins bypass the check.
+ */
+async function assertBagReferencesAllowed(
+  prisma: PrismaTxnClient,
+  user: ServerRequest["user"],
+  refs: { bagName: string; isWritable: boolean }[],
+  permissions: readonly { level: string }[],
+): Promise<void> {
+  if (user.isAdmin) return;
+  const existing = await prisma.bag.findMany({
+    where: { name: { in: refs.map(r => r.bagName) } },
+    select: { name: true, owner_user_id: true, permissions: true },
+  });
+  const byName = new Map(existing.map(b => [b.name, b] as const));
+  const grantsWrite = permissions.some(p => p.level === "B_write");
+  for (const ref of refs) {
+    const bag = byName.get(ref.bagName);
+    if (!bag) continue;
+    if (bag.owner_user_id === user.user_id) continue;
+    const held = bag.permissions.reduce(
+      (max, p) => user.roles.some(r => r.role_id === p.role_id)
+        ? Math.max(max, permissionLevelRank(p.level as BagPermissionLevel))
+        : max,
+      0,
+    );
+    const required = ref.isWritable && grantsWrite ? 2 : 1;
+    if (held >= required) continue;
+    if (ref.isWritable && grantsWrite)
+      throw new SendError("ACCESS_DENIED", 403, { reason: `write access on the bag "${ref.bagName}" is required to use it as a write target in this wiki's definition` });
+    throw new SendError("ACCESS_DENIED", 403, { reason: `no read access on the bag "${ref.bagName}"` });
+  }
+}
+
+/**
  * Konsistenz: MWS prüft beim Öffnen eines Wikis Rezept UND Bags
  * (RecipeResolver.assertRecipe). Rollen mit A_read/B_write auf Rezept
  * werden deshalb automatisch auch auf allen Bags des Wikis eingetragen
  * (A_read bleibt A_read, B_write wird als B_write gespiegelt). Bestehende
  * höhere Berechtigungen (z.B. C_admin des Owners) bleiben unangetastet.
+ * B_write wird dabei nur auf Bags gespiegelt, die das Wiki tatsächlich als
+ * Schreibziel nutzt (isWritable); rein lesend referenzierte Bags bekommen
+ * höchstens A_read, damit der Editor nie mehr vergeben kann, als
+ * assertBagReferencesAllowed zuvor zugelassen hat.
  */
 async function syncRecipePermissionsToBags(
   prisma: PrismaTxnClient,
-  bags: { bagName: string }[],
+  bags: { bagName: string; isWritable: boolean }[],
   recipePermissions: PermissionRow<RecipePermissionLevel>[],
   roles: (name: string) => IdString,
 ): Promise<void> {
   if (bags.length === 0 || recipePermissions.length === 0) return;
+  const writableBagNames = new Set(bags.filter(b => b.isWritable).map(b => b.bagName));
   const bagRows = await prisma.bag.findMany({
     where: { name: { in: bags.map(e => e.bagName) } },
     include: { permissions: true },
@@ -250,7 +300,8 @@ async function syncRecipePermissionsToBags(
     const current = new Map(bag.permissions.map(p => [p.role_id, p.level] as const));
     for (const rp of recipePermissions) {
       const role_id = roles(rp.role).toString();
-      const desired: BagPermissionLevel = rp.level === "B_write" ? "B_write" : "A_read";
+      const mirrorWrite = rp.level === "B_write" && writableBagNames.has(bag.name);
+      const desired: BagPermissionLevel = mirrorWrite ? "B_write" : "A_read";
       const existing = current.get(role_id);
       if (existing === undefined || permissionLevelRank(desired) > permissionLevelRank(existing)) {
         await prisma.bagPermission.upsert({
@@ -329,6 +380,16 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
       user: this.user,
       kind: "wiki",
     });
+
+    // Editors may only reference bags they already have rights on. Without
+    // this gate a recipe author could attach a foreign bag and expose its
+    // tiddlers (or hand out write) through the wiki's compiled access list.
+    await assertBagReferencesAllowed(
+      prisma,
+      this.user,
+      bags.map(e => ({ bagName: e.bagName, isWritable: e.isWritable })),
+      recipePermissions,
+    );
 
     const [[id, lastCompiledAt]] = await importer.upsert([{
       slug: data.slug,
@@ -579,6 +640,22 @@ export class TemplateDataAdapter extends TabDataAdapter<"templates"> {
         permissions: templatePermissions.map(e => ({ level: e.level, role_id: roleIds(e.role), })),
         ownerUserId: record ? undefined : new IdString(this.user.user_id),
       };
+    }
+
+    // Same bag-hijack gate as for recipes: a template's writablePrefixBags /
+    // readonlyBags compile into the access list of every wiki built from it.
+    // The default template only authors externalPlugins/externalStore, so its
+    // save path is not affected.
+    if (!isDefault) {
+      await assertBagReferencesAllowed(
+        prisma,
+        this.user,
+        [
+          ...normalizePrefixRows(data.writablePrefixBags).map(e => ({ bagName: e.bagName, isWritable: true })),
+          ...normalizeLineList(data.readonlyBags).map(e => ({ bagName: e, isWritable: false })),
+        ],
+        templatePermissions,
+      );
     }
 
     const [{ id: template_id, updated }] = await importer.upsert([template]);

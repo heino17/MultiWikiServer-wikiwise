@@ -145,30 +145,25 @@ export class RecipeResolver {
     if (!recipe)
       throw state.sendEmpty(404, { "x-reason": "recipe not found" });
 
-    // The creator/owner of the wiki may always read it, even when their roles
-    // were changed after creation (mirrors the admin-panel owner visibility).
-    const isOwner = recipe.owner_user_id === state.user.user_id
-      || recipe.recipe_bags.some(rb => rb.bag.owner_user_id === state.user.user_id);
-
-    if (!state.user.isAdmin && !isOwner) {
-      if (!recipe.permissions.length)
+    // Read gate, enforced per item so one permission can never unlock rows
+    // the user has no right to:
+    //   * the recipe definition is readable by admins, by its owner and by
+    //     any role holding a recipe permission row;
+    //   * every bag is readable only when the user owns that bag or holds a
+    //     permission row on it (admins read everything).
+    // The former "owner of the wiki — or of any single bag in it — reads the
+    // whole wiki" shortcut is gone: read access is now decided bag by bag, so
+    // referencing a foreign bag in a recipe can no longer expose its tiddlers.
+    if (!isAdmin) {
+      const isRecipeOwner = recipe.owner_user_id === state.user.user_id;
+      if (!isRecipeOwner && recipe.permissions.length === 0)
         throw state.sendEmpty(403, { "x-reason": "no read access to the recipe definition" });
-      if (recipe.recipe_bags.some(rb => !rb.bag.permissions.length))
+      const deniedBag = recipe.recipe_bags.find(
+        rb => rb.bag.owner_user_id !== state.user.user_id && rb.bag.permissions.length === 0
+      );
+      if (deniedBag)
         throw state.sendEmpty(403, { "x-reason": "missing read access on a bag in this wiki" });
     }
-
-    // TODO: this was from assert access
-
-    if (!recipe)
-      throw new SendError("RECIPE_NOT_FOUND", 404, { recipeName: recipe_slug })
-
-    if (!isAdmin && !isOwner && !recipe.permissions.length)
-      throw new SendError("RECIPE_NO_READ_PERMISSION", 403, { recipeName: recipe_slug })
-
-    const hasBagDeniedAccess = recipe.recipe_bags.find(recipeBag => !recipeBag.bag.permissions.length);
-
-    if (!isAdmin && !isOwner && hasBagDeniedAccess)
-      throw new SendError("BAG_NO_READ_PERMISSION", 403, { bagName: hasBagDeniedAccess.bag_id })
 
     return recipe;
 

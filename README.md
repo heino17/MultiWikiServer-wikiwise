@@ -41,6 +41,26 @@ Most of these features are still in development.
 
 **There are plenty of ways for anyone with write access to get around the security restrictions.**
 
+Two of the biggest holes have been closed in this fork:
+
+- A recipe/template save can no longer drag in a foreign bag: the editor needs
+  read access (or, for write targets, write access) on every referenced bag.
+  Referencing `editions/<someone-else>` no longer exposes that wiki to you or
+  grants write access you do not hold yourself.
+- Reading a wiki no longer uses a shortcut where owning any single bag inside
+  it unlocked every other bag of that wiki: read access is decided bag by bag.
+
+What is still fundamentally open:
+
+- Anyone who can read a bag can read all tiddlers in it; anyone who can write a
+  bag can write all tiddlers in it. There is no per-tiddler or per-field
+  restriction, so a leak is binary per bag.
+- Bag names follow guessable patterns (`editions/<username>`) and plain
+  enumeration of existing names is possible. Whatever a bag ID reveals is
+  guarded only by the access lists you configure, not by obscurity.
+- Users with elevated roles (teachers, admins) can read and reassign a lot by
+  design; the role/user system is shared across the whole installation.
+
 ## Also, this is a database, please make backups
 
 Databases try very hard to be perfect, and data bugs are rare. But that doesn't mean things can't go wrong. Backups are pretty important. 
