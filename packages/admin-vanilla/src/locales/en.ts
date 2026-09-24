@@ -293,7 +293,7 @@ export const enStrings: Record<string, string> = {
   "Disk usage and storage overview of the app.": "Disk usage and storage overview of the app.",
   "System disk": "System disk",
   "Disk storage status": "Disk storage status",
-  "MultiWikiServer storage usage": "MultiWikiServer storage usage",
+  "MWS-wikiwise storage usage": "MWS-wikiwise storage usage",
   "Storage status": "Storage status",
   "Loading…": "Loading…",
   "Scanning…": "Scanning…",

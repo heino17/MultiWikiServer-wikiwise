@@ -51,9 +51,9 @@ For detailed instructions, backup strategies, migration guides, and troubleshoot
 
 
 
-# Docker Deployment Guide for MultiWikiServer
+# Docker Deployment Guide for MultiWikiServer-wikiwise
 
-This guide explains how to deploy MultiWikiServer using Docker and Docker Compose.
+This guide explains how to deploy MultiWikiServer-wikiwise using Docker and Docker Compose.
 
 ## GitHub Copilot implemented the Docker files, and wrote this page, and we need testers who know Docker
 
@@ -69,7 +69,7 @@ No, seriously. This Docker stuff hasn't been properly tested yet by someone who 
 
 ## Two Deployment Modes
 
-MultiWikiServer provides two Docker Compose configurations:
+MultiWikiServer-wikiwise provides two Docker Compose configurations:
 
 1. **docker-compose.volume.yml** - Uses Docker-managed volumes (simpler, data managed by Docker)
 2. **docker-compose.directory.yml** - Uses a local directory bind mount (data easily accessible on host)

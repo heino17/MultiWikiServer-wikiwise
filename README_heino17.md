@@ -1,6 +1,6 @@
 # README_heino17
 
-Dokumentation der Änderungen am MultiWikiServer-Fork von heino17.
+Dokumentation der Änderungen am MultiWikiServer-wikiwise-Fork von heino17.
 
 Stand: 2026-09-22 · Basis: `TiddlyWiki/MultiWikiServer` @ `3627482`
 
@@ -37,7 +37,7 @@ klein gehalten und rückwärtskompatibel.
 
 Ergänzend kommt ein **Admin-Tab „Speicher"** hinzu (§39–§41): Er trennt
 den **System-Festplattenstatus** klar von der **Speicherbelegung des
-MultiWikiServer**, weist die **Binärinhalte (Blobs & Dateien)** aus
+MultiWikiServer-wikiwise**, weist die **Binärinhalte (Blobs & Dateien)** aus
 (Anzahl/Größe, Dateispeicher, Inbox, verwaiste Dateien) und zeigt den
 **Speicherverbrauch pro User (Top 10)** inkl. Wiki-Inhalten und
 Dateispeicher. Damit wird sichtbar, dass MWS Binärinhalte inline als
@@ -224,7 +224,7 @@ längst `isReadOnly`/`$:/StoryList`/State-Tiddler ausfiltert.
 Der Client-Plugin-Cache (`dev/wiki/cache/mws/0.2.5/client/plugin.json`)
 wird beim Serverstart automatisch regeneriert, wenn sich
 `plugins/client` ändert (Hash-Vergleich) — ein `npm run build:client`
-(`tsc`) + `pm2 restart MultiWikiServer` genügt. Anschließend im
+(`tsc`) + `pm2 restart MultiWikiServer-wikiwise` genügt. Anschließend im
 Browser einmal hart neu laden (Strg+F5).
 
 ---
@@ -1441,11 +1441,11 @@ laufenden Betrieb kann durch das WAL inkonsistent sein.
 
 **Restore:**
 
-1. Server stoppen (`pm2 stop MultiWikiServer`).
+1. Server stoppen (`pm2 stop MultiWikiServer-wikiwise`).
 2. Aktuellen `store/`-Ordner wegsichern.
 3. `database.sqlite` aus dem Backup nach `store/database.sqlite` kopieren
    (ggf. zusätzlich `passwords.key` und `mws*.json` zurückspielen).
-4. Server starten (`pm2 start MultiWikiServer`).
+4. Server starten (`pm2 start MultiWikiServer-wikiwise`).
 
 **Verifikation:** Typecheck grün, `pm2 restart`. Live-Test als Admin:
 Backup erstellt → 200, Ordner enthält valide DB (`PRAGMA integrity_check`
@@ -1551,7 +1551,7 @@ Wiki): `canUserWrite: false`, `batch/save` → 403 `BAG_NO_WRITE_PERMISSION`.
 
 **Problem:** Es gab keine Stelle, an der ein Admin auf einen Blick sieht,
 wie voll die System-Festplatte ist und wie viel Platz jeder einzelne
-Bestandteil des MultiWikiServer belegt. Für den Betrieb (Backups,
+Bestandteil des MultiWikiServer-wikiwise belegt. Für den Betrieb (Backups,
 Aufräumen, Kapazitätsplanung) fehlte diese Transparenz komplett.
 
 **Fix:**
@@ -1583,7 +1583,7 @@ Aufräumen, Kapazitätsplanung) fehlte diese Transparenz komplett.
     `{free} frei`. Die frühere Überschrift `System disk` wurde bewusst
     umbenannt bzw. getrennt, damit Festplattenplatz und App-Belegung
     nicht verwechselt werden.
-  - **„Speicherbelegung MultiWikiServer"** — eigener Abschnitt
+  - **„Speicherbelegung MWS-wikiwise"** — eigener Abschnitt
     (`storage-records-section`) mit den Counts für Tiddler, Bags, Wikis,
     Templates und Benutzer.
   - **Datenübersicht** — Tabelle über die Verzeichnis-Kategorien mit
@@ -1594,7 +1594,7 @@ Aufräumen, Kapazitätsplanung) fehlte diese Transparenz komplett.
 - Alle Bezeichnungen sind zweisprachig (EN/DE) als i18n-Keys hinterlegt
   (u. a. „Storage"/„Speicher", „System disk"/„System-Festplatte",
   „Disk storage status"/„Speicherstatus der Festplatte",
-  „MultiWikiServer storage usage"/„Speicherbelegung MultiWikiServer").
+  „MWS-wikiwise storage usage"/„Speicherbelegung MWS-wikiwise").
 
 **Verifikation:** Typecheck (Root + `admin-vanilla`) grün, `tsup`-Build
 ok. Live-Test gegen `dev/wiki/store/database.sqlite`: `GET /admin/storage`

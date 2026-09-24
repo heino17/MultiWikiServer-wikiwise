@@ -292,7 +292,7 @@ export const deStrings: Record<string, string> = {
   "System disk": "System-Festplatte",
   "Disk storage status": "Speicherstatus der Festplatte",
   "Disk usage and storage overview of the app.": "Speicherverbrauch und Speicherübersicht der Anwendung.",
-  "MultiWikiServer storage usage": "Speicherbelegung MultiWikiServer",
+  "MWS-wikiwise storage usage": "Speicherbelegung MWS-wikiwise",
   "Storage status": "Speicherstatus",
   "Loading…": "Lädt …",
   "Scanning…": "Scannt …",

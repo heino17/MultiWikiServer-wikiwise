@@ -1959,7 +1959,7 @@ export class App extends JSXElement {
                 </section>
 
                 <section class="storage-records-section">
-                  <h3>{t("MultiWikiServer storage usage")}</h3>
+                  <h3>{t("MWS-wikiwise storage usage")}</h3>
                   {(() => {
                     const counts = this.storageInfo.recordCounts;
                     return (
