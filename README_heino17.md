@@ -59,6 +59,11 @@ Dazu kommt in jeder Wiki-Werkzeugleiste ein **„Upload file"-Button**
 Schreibzugriff in den Dateispeicher des **Wiki-Besitzers**, nicht des
 Hochladenden.
 
+Seit September 2026 gibt es außerdem einen **Security-Umbau „C"** (§47):
+Personalisierte Bag-Namespaces gegen Namens-Squatting (C1), Wiki-
+Klassifikation + CSP-Header + Existenz-Orakel (C2) und die gegliederte
+„Meine Bereiche"-UI mit Vertrauens-Labeln (C3).
+
 ---
 
 ## 1. Fehlende Dependency: `escape-string-regexp`
@@ -355,8 +360,9 @@ Admins ab (`wiki-<benutzername>`, bei Kollision `-2`, `-3`, … erhöht).
 `ClientRoutes`):
 
 - eine `$transaction` erzeugt:
-  - **Bag** `editions/<slug>`, Perms: `ADMIN → C_admin`, `USER → A_read`,
-    `ANON → A_read`
+  - **Bag** `editions/<owner-id>/<slug>` (owner-namespaced, siehe C1;
+    System-Wikis ohne Owner: `editions/<slug>`), Perms:
+    `ADMIN → C_admin`, `USER → A_read`, `ANON → A_read`
   - **Recipe** (Slug `<slug>`, Template „Blank Template"), Perms:
     `ADMIN → B_write`, `USER → A_read`, `ANON → A_read`; einziges
     `writablePrefixBags`-Reading: `{prefix: "", bagName}`
@@ -557,21 +563,21 @@ halten die abhängigen Daten konsistent mit.
 - Der Slug ist der URL-Pfad-Anteil (`/wiki/<slug>`). Wird er geändert,
   wird die Recipe-Definition auf den neuen Slug umgeschrieben
   (`checkExisting` → `rename`).
-- Das **Standard-Bag** `editions/<alter-slug>` wird automatisch auf
-  `editions/<neuer-slug>` mit umbenannt
+- Das **Standard-Bag** `editions/<owner-id>/<alter-slug>` wird automatisch
+  auf `editions/<owner-id>/<neuer-slug>` mit umbenannt
   (`followDefaultBagOnSlugRename` in `TabDataAdapter.ts`) — **Tiddler,
   Berechtigungen und RecipeBag-Verknüpfungen bleiben dabei über die
   unveränderte `bag_id` erhalten** (kein Datenverlust, keine „frisch
   angelegte" leere Bag).
 - Sicherheits-Guards vor dem Umbenennen des Bags:
-  - nur wenn die Bag exakt der `editions/<slug>`-Konvention folgt
+  - nur wenn die Bag exakt der `editions/<owner-id>/<slug>`-Konvention folgt
     (Custom-Bag-Namen werden nie angetastet);
   - nur wenn der Ziel-Bag-Name **nicht schon existiert** (sonst wird
     falls möglich der vorhandene verwendet);
   - nur wenn **kein anderes Wiki** die Bag noch referenziert
     (geteilte Bags werden nie umbenannt).
-- Der Client zieht das Write-Target (`editions/<slug>`) beim Slug-Edit
-  automatisch mit (`syncDefaultBagOnSlugChange` in `renders.tsx`).
+- Der Client zieht das Write-Target (`editions/<owner-id>/<slug>`) beim
+  Slug-Edit automatisch mit (`syncDefaultBagOnSlugChange` in `renders.tsx`).
 
 **Display name ändern (Anzeigetitel):**
 
@@ -866,7 +872,7 @@ Lehrer-Wikis sehen (Datenleck). Deshalb bekommt jeder Lehrer eine
   Owner = der Benutzer selbst.
 - Beim **1-Klick-Wiki** (`AdminCreateWiki`, `PUT /admin/wiki`) vergibt
   ein Lehrer **seine eigene** persönliche Rolle statt `ADMIN`:
-  - Bag `editions/<slug>` → `<Benutzername> → C_admin`
+  - Bag `editions/<owner-id>/<slug>` → `<Benutzername> → C_admin`
   - Recipe → `<Benutzername> → B_write`
   - **Keine** `USER`-/`ANON`-A_read mehr! Privat-Wikis eines Lehrers
     sind damit nur für ihn selbst lesbar — egal ob eingeloggt oder
@@ -2227,6 +2233,46 @@ Ein früherer Ansatz bündelte Deutsch fest (Start-Tiddler für neue Wikis via
 Bestand). Das zwang allen Wikis Deutsch auf und ist ersetzt durch die
 Automatik oben; `wiki-language-defaults.ts` und `translations/de-DE.multids`
 sind entfernt, ebenso die zuvor in den Bestand geschriebenen Tiddler.
+
+---
+
+## 47. Security-Umbau „C" (Namespace-Partition C1 + Vertrauensgrenzen C2 + Meine-Bereiche C3)
+
+**C1 · Namespace-Partition pro Owner (Squatting-Schutz):**
+
+- Standard-Bag eines Wikis heißt jetzt `editions/<owner-id>/<slug>` statt
+  `editions/<slug>` (`defaultBagName` in `TabDataAdapter.ts`). Damit ist
+  der persönliche Namensraum kollisionsfest: Kein anderer Nutzer kann das
+  Bag vorab anlegen, auf das das Wiki beim Speichern angewiesen ist
+  (vorher: Lehrer legte `editions/<schueler-slug>` an → Schüler erhielt
+  rätselhafte 403er).
+- **URL bleibt unverändert** (`/wiki/<slug>`): Die Namensraum-Id steckt
+  nur im internen Bag-Namen, nicht im Public-Slug. System-Wikis ohne
+  Owner (`mws-docs`, `bedienungsanleitung`) behalten `editions/<slug>`.
+- `name` bleibt global `@unique`; es ist **keine** Prisma-Schema-Migration
+  nötig (kein `@@unique([owner_user_id, name])`, keine NULL-Owner-Falle).
+- Bestandsdaten migrieren:
+
+  ```
+  node scripts/c1-namespace-migrate.mjs            # dev store
+  node scripts/c1-namespace-migrate.mjs --dry-run  # nur anzeigen
+  node scripts/c1-namespace-migrate.mjs --db <pfad>
+  ```
+
+  Das Skript benennt persönliche Standard-Bags um, schreibt die Bag-
+  Referenzen in allen `recipe.definition`/`template.definition`-JSONs neu
+  (Bag-IDs, Tiddler, Permissions und RecipeBag-Verknüpfungen bleiben
+  unangetastet) und ist idempotent. Es bereinigt zusätzlich den alten
+  Bug-Owner `"undefined"` (aus §44-Ära) zu `NULL`.
+- Slug-Umbenennung folgt mit (`followDefaultBagOnSlugRename`, siehe §13).
+
+**C2 · Vertrauensgrenzen + CSP** (Bestand aus dem Umbau): Klassifikation
+privat vs. kollaborativ (fremd-beschreibbare Bags), Warnung im Admin-UI,
+CSP-Header auf Wiki-Seiten, Existenz-Orakel (`404` statt `403`).
+
+**C3 · „Meine Bereiche"-UI** (Bestand aus dem Umbau): Gruppierung
+„Meine Wikis / Für mich freigegeben / Klassenbereiche / System" +
+Vertrauens-Label + Bag-Owner im Admin-UI.
 
 ---
 

@@ -140,14 +140,24 @@ function normalizePermissions<Level extends string>(rows: readonly PermissionRow
 }
 
 /**
- * Follows the derived default bag "editions/<slug>" when a wiki's slug is
- * renamed: unless the target name already exists or the bag is still shared
- * with other recipes, the bag row is renamed in place so the compiled recipe
- * connects to it and existing tiddlers/permissions keep their bag_id.
+ * Returns the derived default bag name for a wiki. A wiki's default storage
+ * lives in an owner-namespaced bag "editions/<owner-id>/<slug>" so no other
+ * user can squat (or collide with) the name another wiki relies on. System
+ * wikis without an owner keep the legacy "editions/<slug>" convention.
+ */
+export function defaultBagName(ownerUserId: string | null | undefined, slug: string): string {
+  return ownerUserId ? `editions/${ownerUserId}/${slug}` : `editions/${slug}`;
+}
+
+/**
+ * Follows the derived default bag when a wiki's slug is renamed: unless the
+ * target name already exists or the bag is still shared with other recipes,
+ * the bag row is renamed in place so the compiled recipe connects to it and
+ * existing tiddlers/permissions keep their bag_id.
  */
 async function followDefaultBagOnSlugRename(
   prisma: PrismaTxnClient,
-  prior: { id: string; slug: string; definition: PrismaJson.Recipe_definition | null },
+  prior: { id: string; slug: string; owner_user_id: string | null; definition: PrismaJson.Recipe_definition | null },
   data: DataSave["wikis"][number],
 ) {
   const oldDefaultBag = prior.definition?.writablePrefixBags?.find((row) => row.prefix === "")?.bagName;
@@ -155,8 +165,8 @@ async function followDefaultBagOnSlugRename(
   const newDefaultBag = data.writablePrefixBags.find((row) => row.prefix === "")?.bagName;
   if (!newDefaultBag || oldDefaultBag === newDefaultBag) return;
 
-  // only follow the derived "editions/<slug>" convention
-  if (oldDefaultBag !== `editions/${prior.slug}` || newDefaultBag !== `editions/${data.slug}`) return;
+  // only follow the derived "editions/<owner>/<slug>" convention
+  if (oldDefaultBag !== defaultBagName(prior.owner_user_id, prior.slug) || newDefaultBag !== defaultBagName(prior.owner_user_id, data.slug)) return;
 
   const oldBag = await prisma.bag.findUnique({ where: { name: oldDefaultBag }, select: { id: true } });
   if (!oldBag) return;
@@ -339,7 +349,7 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
     const priorRecipe = data.id.toString()
       ? await prisma.recipe.findUnique({
           where: { id: data.id.toString() },
-          select: { id: true, slug: true, definition: true },
+          select: { id: true, slug: true, owner_user_id: true, definition: true },
         })
       : null;
 
@@ -355,8 +365,9 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
     await importer.checkExisting(data.id, data.slug, this.user);
 
     // When the slug is renamed, the derived default write target
-    // "editions/<old-slug>" follows along to "editions/<new-slug>", so the
-    // compiled recipe can connect to it and existing tiddlers keep their data.
+    // "editions/<owner>/<old-slug>" follows along to
+    // "editions/<owner>/<new-slug>", so the compiled recipe can connect to
+    // it and existing tiddlers keep their data.
     if (priorRecipe && priorRecipe.slug !== data.slug)
       await followDefaultBagOnSlugRename(prisma, priorRecipe, data);
 
@@ -1675,7 +1686,7 @@ export const AdminCreateWiki = zodRoute({
       const anonRole = isAdmin ? rolesMapper("ANON") : undefined;
 
       const slug = await findFreeWikiSlug(prisma, wikiSlugBase(state.user.username));
-      const bagName = `editions/${slug}`;
+      const bagName = defaultBagName(state.user.user_id, slug);
 
       const bagWriter = new BagImportWriter(prisma, false);
       await bagWriter.checkExisting(new IdString(""), bagName, state.user, { allowCreate: true });
