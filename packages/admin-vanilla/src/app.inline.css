@@ -4185,6 +4185,10 @@ odt-preview-document {
 .landing-section {
 	display: grid;
 	gap: 12px;
+}
+
+.landing-markdown,
+.landing-section-copy {
 	max-width: 72rem;
 }
 
@@ -4201,7 +4205,8 @@ odt-preview-document {
 
 .landing-wiki-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(220px, 21rem));
+	justify-content: center;
 	gap: 16px;
 }
 
