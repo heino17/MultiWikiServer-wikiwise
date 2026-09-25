@@ -17,6 +17,9 @@ export const PREF_KEYS = {
   showLocaleSelect: "admin.showLocaleSelect",
   showThumbnails: "admin.showThumbnails",
   thumbnailTtlHours: "admin.thumbnailTtlHours",
+  showLanding: "admin.showLanding",
+  landingMessage: "admin.landingMessage",
+  landingNews: "admin.landingNews",
 } as const;
 
 const THEMES = ["dark", "light"] as const;
@@ -32,6 +35,13 @@ export interface ServerPrefs {
   showThumbnails: boolean;
   /** Thumbnail cache time in hours. `null` = install default (24h). */
   thumbnailTtlHours: number | null;
+  /** Serve a public landing page to anonymous visitors at "/" instead of
+   *  redirecting them straight to the login form. */
+  showLanding: boolean;
+  /** Welcome text shown on the landing page (markdown, "" = off). */
+  landingMessage: string | null;
+  /** News block shown on the landing page (markdown, "" = off). */
+  landingNews: string | null;
 }
 
 const validThemes = new Set<string>(THEMES);
@@ -67,6 +77,9 @@ export async function readPrefs(prisma: PrismaTxnClient): Promise<ServerPrefs> {
     showLocaleSelect: boolPref(map, PREF_KEYS.showLocaleSelect, true),
     showThumbnails: boolPref(map, PREF_KEYS.showThumbnails, true),
     thumbnailTtlHours: ttlHours != null && Number.isFinite(ttlHours) && ttlHours > 0 ? ttlHours : null,
+    showLanding: boolPref(map, PREF_KEYS.showLanding, true),
+    landingMessage: map.get(PREF_KEYS.landingMessage)?.trim() || null,
+    landingNews: map.get(PREF_KEYS.landingNews)?.trim() || null,
   };
 }
 
@@ -99,6 +112,9 @@ export const AdminPrefsPut = zodRoute({
     showLocaleSelect: z.boolean().nullable(),
     showThumbnails: z.boolean().nullable(),
     thumbnailTtlHours: z.number().int().min(1).max(2160).nullable(),
+    showLanding: z.boolean().nullable(),
+    landingMessage: z.string().max(2000).nullable(),
+    landingNews: z.string().max(10000).nullable(),
   }),
   inner: async (state) => {
     state.assertReferer(["/"]);
@@ -114,6 +130,9 @@ export const AdminPrefsPut = zodRoute({
       showLocaleSelect,
       showThumbnails,
       thumbnailTtlHours,
+      showLanding,
+      landingMessage,
+      landingNews,
     } = state.data;
     const entries: { key: string; value: string }[] = [];
     if (defaultLocale) entries.push({ key: PREF_KEYS.locale, value: defaultLocale });
@@ -124,6 +143,9 @@ export const AdminPrefsPut = zodRoute({
     if (showLocaleSelect != null) entries.push({ key: PREF_KEYS.showLocaleSelect, value: showLocaleSelect ? "true" : "false" });
     if (showThumbnails != null) entries.push({ key: PREF_KEYS.showThumbnails, value: showThumbnails ? "true" : "false" });
     if (thumbnailTtlHours != null) entries.push({ key: PREF_KEYS.thumbnailTtlHours, value: String(thumbnailTtlHours) });
+    if (showLanding != null) entries.push({ key: PREF_KEYS.showLanding, value: showLanding ? "true" : "false" });
+    if (landingMessage != null) entries.push({ key: PREF_KEYS.landingMessage, value: landingMessage.trim() });
+    if (landingNews != null) entries.push({ key: PREF_KEYS.landingNews, value: landingNews.trim() });
 
     await state.$transaction(async (prisma) => {
       const keepKeys = new Set(entries.map((entry) => entry.key));
