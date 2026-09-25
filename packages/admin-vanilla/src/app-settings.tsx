@@ -40,6 +40,12 @@ export class SettingsForm extends JSXElement {
 
   @state() accessor thumbnailTtlHours = embeddedServerResponse.prefs?.thumbnailTtlHours ?? null;
 
+  @state() accessor showLanding = embeddedServerResponse.prefs?.showLanding ?? true;
+
+  @state() accessor landingMessage = embeddedServerResponse.prefs?.landingMessage ?? "";
+
+  @state() accessor landingNews = embeddedServerResponse.prefs?.landingNews ?? "";
+
   @state() accessor isSubmitting = false;
   @state() accessor message = "";
   @state() accessor error = "";
@@ -65,6 +71,9 @@ export class SettingsForm extends JSXElement {
       if (typeof prefs.showLocaleSelect === "boolean") this.showLocaleSelect = prefs.showLocaleSelect;
       if (typeof prefs.showThumbnails === "boolean") this.showThumbnails = prefs.showThumbnails;
       if (typeof prefs.thumbnailTtlHours === "number") this.thumbnailTtlHours = prefs.thumbnailTtlHours;
+      if (typeof prefs.showLanding === "boolean") this.showLanding = prefs.showLanding;
+      if (typeof prefs.landingMessage === "string") this.landingMessage = prefs.landingMessage;
+      if (typeof prefs.landingNews === "string") this.landingNews = prefs.landingNews;
       if (!this.showUserFiles) this.showWikiUpload = false;
     } catch {
       // keep the embedded values
@@ -93,6 +102,9 @@ export class SettingsForm extends JSXElement {
           showLocaleSelect: this.showLocaleSelect,
           showThumbnails: this.showThumbnails,
           thumbnailTtlHours: this.thumbnailTtlHours,
+          showLanding: this.showLanding,
+          landingMessage: this.landingMessage.trim() || null,
+          landingNews: this.landingNews.trim() || null,
         }),
       });
       // Saved — head back to the overview right away. The "Close" button
@@ -110,6 +122,12 @@ export class SettingsForm extends JSXElement {
   private readonly onLocaleSelectChange = (checked: boolean) => { this.touched = true; this.showLocaleSelect = checked; };
 
   private readonly onThumbnailsChange = (checked: boolean) => { this.touched = true; this.showThumbnails = checked; };
+
+  private readonly onLandingChange = (checked: boolean) => { this.touched = true; this.showLanding = checked; };
+
+  private readonly onLandingMessageChange = (value: string) => { this.touched = true; this.landingMessage = value; };
+
+  private readonly onLandingNewsChange = (value: string) => { this.touched = true; this.landingNews = value; };
 
   private readonly onThumbnailTtlChange = (value: string) => {
     this.touched = true;
@@ -279,6 +297,53 @@ export class SettingsForm extends JSXElement {
                     disabled={!this.isAdmin}
                     oninput={(event) => this.onThumbnailTtlChange((event.target as HTMLInputElement).value)}
                   />
+                </div>
+
+                <label class="settings-toggle-row">
+                  <span class="settings-toggle-copy">
+                    <strong>{t("Show the public landing page")}</strong>
+                    <p>{t("Anonymous visitors get an overview with statistics and the public wikis instead of the login form.")}</p>
+                  </span>
+                  <input
+                    class="header-switch-input"
+                    type="checkbox"
+                    checked={this.showLanding}
+                    disabled={!this.isAdmin}
+                    onchange={(event) => this.onLandingChange((event.currentTarget as HTMLInputElement).checked)}
+                  />
+                  <span class={this.showLanding ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
+                    <span class="header-switch-thumb"></span>
+                  </span>
+                </label>
+
+                <div class="settings-toggle-row">
+                  <span class="settings-toggle-copy">
+                    <strong>{t("Landing welcome message")}</strong>
+                    <p>{t("A welcome text on the public page. Markdown is supported.")}</p>
+                  </span>
+                  <textarea
+                    class="field-textarea settings-textarea"
+                    rows="4"
+                    placeholder={t("A welcome text on the public page. Markdown is supported.")}
+                    disabled={!this.isAdmin}
+                    ref={(element) => { if (element && element.value !== this.landingMessage) element.value = this.landingMessage; }}
+                    oninput={(event) => this.onLandingMessageChange((event.target as HTMLTextAreaElement).value)}
+                  ></textarea>
+                </div>
+
+                <div class="settings-toggle-row">
+                  <span class="settings-toggle-copy">
+                    <strong>{t("Landing news")}</strong>
+                    <p>{t("News shown on the public page. Markdown is supported.")}</p>
+                  </span>
+                  <textarea
+                    class="field-textarea settings-textarea"
+                    rows="4"
+                    placeholder={t("News shown on the public page. Markdown is supported.")}
+                    disabled={!this.isAdmin}
+                    ref={(element) => { if (element && element.value !== this.landingNews) element.value = this.landingNews; }}
+                    oninput={(event) => this.onLandingNewsChange((event.target as HTMLTextAreaElement).value)}
+                  ></textarea>
                 </div>
               </div>
             </div>

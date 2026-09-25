@@ -8,7 +8,7 @@ import { createReadStream, existsSync, readdirSync } from "node:fs";
 import { mkdir, readdir, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { SendError, ServerRequest } from "@tiddlywiki/server";
+import { ServerRequest } from "@tiddlywiki/server";
 import { serverEvents } from "@tiddlywiki/events";
 import { chromium } from "playwright-core";
 import { RecipeResolver } from "./RecipeResolver";
@@ -306,10 +306,12 @@ async function renderThumbnail(state: ServerRequest, slug: string, outPath: stri
 }
 
 export async function serveWikiThumbnail(state: ServerRequest) {
-  if (!state.user.isLoggedIn)
-    throw new SendError("ACCESS_DENIED", 403, { reason: "User not authenticated" });
-
   const { recipe_slug } = state.pathParams as { recipe_slug: string };
+  // The read gate determines what a caller may see: logged-in users render
+  // the wiki through their own session, anonymous visitors only ever get a
+  // previously cached preview of a wiki they are allowed to read. Trying to
+  // fetch the thumbnail of a private wiki answers like the wiki itself does
+  // (404/403), so the public gallery cannot leak whether a wiki exists.
   await RecipeResolver.assertRecipe({ state, recipe_slug });
 
   const dir = join(state.config.storePath, "thumbnails");
@@ -319,8 +321,13 @@ export async function serveWikiThumbnail(state: ServerRequest) {
 
   const cached = await statSafe(outPath);
   const ttlMs = await thumbnailTtlMs(state);
-  if (!cached || Date.now() - cached.mtimeMs > ttlMs) {
-    await queue(outPath, () => withRenderSlot(() => renderThumbnail(state, recipe_slug, outPath)));
+  if (state.user.isLoggedIn) {
+    // Logged-in callers refresh the cache (bounded by render slots).
+    // Anonymous visitors never trigger a headless browser render, so the
+    // public landing page cannot be abused to run up CPU/RAM.
+    if (!cached || Date.now() - cached.mtimeMs > ttlMs) {
+      await queue(outPath, () => withRenderSlot(() => renderThumbnail(state, recipe_slug, outPath)));
+    }
   }
 
   const current = (await statSafe(outPath)) ?? cached;

@@ -2329,6 +2329,9 @@ Sprache/Theme immer Vorrang — die Vorgabe ist nur der Fallback.
 | `admin.showLocaleSelect` | Sprach-Dropdown im Header | `true` |
 | `admin.showThumbnails` | Vorschaubild-Spalte in der Wikis-Liste (§43) | `true` |
 | `admin.thumbnailTtlHours` | Vorschaubild-Cache-Zeit in Stunden (§43) | `null` (= 24 h) |
+| `admin.showLanding` | Öffentliche Startseite (`/`) für anonyme Besucher (§48) | `true` |
+| `admin.landingMessage` | Begrüßungstext auf der öffentlichen Startseite (Markdown) | `null` |
+| `admin.landingNews` | Neuigkeiten auf der öffentlichen Startseite (Markdown) | `null` |
 
 Bools werden als `"true"`/`"false"` gespeichert; ein fehlender Eintrag
 bedeutet `true` (Rückwärtskompatibilität).
@@ -2336,9 +2339,12 @@ bedeutet `true` (Rückwärtskompatibilität).
 - `GET /api/prefs` — jeder eingeloggte Nutzer liest die aktuellen Vorgaben.
 - `PUT /api/prefs` — nur `admin` (`state.okAdmin()`), Body enthält **alle**
   Felder: `{ defaultLocale: string|null, defaultTheme: "dark"|"light"|null,
-  showPinboard: boolean|null, …, thumbnailTtlHours: number|null }`; `null`
+  showPinboard: boolean|null, …, thumbnailTtlHours: number|null,
+  showLanding: boolean|null, landingMessage: string|null,
+  landingNews: string|null }`; `null`
   löscht die Vorgabe (→ Default). `thumbnailTtlHours` ist auf 1..2160
-  (Stunden) begrenzt.
+  (Stunden) begrenzt, `landingMessage` auf 2000 und `landingNews` auf 10000
+  Zeichen.
 
 **Abhängigkeit:** „Dateien aus Wikis hochladen" (2.1) erfordert „Meine
 Dateien": Ist `showUserFiles` aus, ist der Switch 2.1 auf der
@@ -2374,9 +2380,11 @@ die Anzeige spiegelt also immer die tatsächlich gespeicherten Werte.
 **UI:** ⚙-Button (`settings.svg`) im Header, nur für Admins sichtbar, öffnet
 `/settings` (`app-settings.tsx`, Route in `main.tsx`). Zwei Auswahlfelder
 (Sprache mit „Browser-Sprache folgen", Theme mit „System-Theme folgen") sowie
-ein Abschnitt **„Funktionen"** mit fünf Schaltern (Pinnwand, Meine Dateien,
-Aus-Wikis-Hochladen, Sprachwahl anzeigen, Vorschaubilder) + Zahlenfeld
-„Vorschaubild-Cache-Zeit (Stunden)" (leer = Standard 24 h) + Speichern-Button.
+ein Abschnitt **„Funktionen"** mit sechs Schaltern (Pinnwand, Meine Dateien,
+Aus-Wikis-Hochladen, Sprachwahl anzeigen, Vorschaubilder, Öffentliche
+Startseite) + Zahlenfeld „Vorschaubild-Cache-Zeit (Stunden)" (leer = Standard
+24 h) + zwei Markdown-Textfelder „Landing welcome message" / „Landing news"
++ Speichern-Button.
 Nicht-Admins sehen die Seite schreibgeschützt mit dem Hinweis „Nur
 Administratoren …". Die Funktions-Schalter gelten installationsweit (ein
 persönliches Ausblenden pro Nutzer ist bewusst nicht vorgesehen — im
@@ -2394,6 +2402,83 @@ bei deaktiviertem Wiki-Upload den Config-Tiddler
 type="nomatch" text="yes">`, und `upload-file.js` registriert den
 `tm-upload-file`-Listener dann gar nicht erst. Neue i18n-Keys (23) in allen
 8 Sprachen (Sektion `#region admin settings`).
+
+---
+
+## 48. Feature: Öffentliche Startseite (`/`) für anonyme Besucher
+
+**Ziel:** Wer den Server ohne Login aufruft, landet nicht mehr direkt auf dem
+Login-Formular, sondern auf einer einladenden Startseite mit Hero-Text,
+Statistik-Kacheln, der Liste der öffentlich lesbaren Wikis (mit
+Vorschaubildern) und — optional — einem Begrüßungstext und News-Block des
+Betreibers. Der Login-Button („Log in") führt zum gewohnten Formular.
+Der Admin kann die Startseite per Schalter abschalten (dann greift wieder der
+bisherige Redirect nach `/login`).
+
+### Backend
+
+- **`GET /api/landing`** — öffentlich (`securityChecks.requestedWithHeader:
+  false`), kein Login nötig. Liefert:
+  - `versions`: `{ mws, tw5[] }` (Versions-Ecke im Footer),
+  - `stats`: `{ publicWikis, tiddlers, users, online }` — `online` = aktive
+    Sessions mit `last_accessed` < 15 min (throttled Touch in §sessions),
+  - `wikis`: `[{ slug, displayName, description }]` — **nur** Wikis, deren
+    Rezept **und** alle Bags dem ANON-Lesezugriff erlauben
+    (gleicher Filter wie das `assertRecipe`-Read-Gate; private Wikis werden
+    nicht geleakt, auch nicht als Name),
+  - `message` / `news`: die Prefs `admin.landingMessage` / `admin.landingNews`.
+  - Routen-Registrierung in `new-managers/index.ts` (`LandingData`).
+  - Implementierung: `packages/mws/src/new-managers/LandingRoutes.ts`.
+
+- **Anon-Thumbnails nur aus dem Cache:** `WikiThumbnailRoutes` dient
+  Vorschaubilder für anonyme Besucher nur noch aus dem existierenden
+  Thumbnail-`<canvas>`-Snapshot aus (`store/thumbnails/<slug>.png`); ein
+  serverseitiges **Rendern des Wikis für Anon ist ausdrücklich untersagt**
+  (DoS-Schutz). Eingeloggte Nutzer rendern wie gehabt. Die Rezept-Prüfung
+  (`assertRecipe`) gilt für alle — privates Wiki ⇒ `404` für Anon.
+
+- **`last_accessed`-Touch:** `sessions.ts` aktualisiert `last_accessed` jetzt
+  throttled (~5 min) in `parseIncomingRequest`, damit der Online-Zähler
+  stimmt, ohne bei jedem Request auf die DB zu schreiben.
+
+### Frontend
+
+- **Routing (`main.tsx`):** Anonym + `prefs.showLanding !== false` + Pfad
+  `/` ⇒ `new LandingPage()`. Alle übrigen Pfade (und Anon mit abgeschalteter
+  Startseite) verhalten sich wie bisher (Redirect zu `/login`).
+- **`app-landing.tsx` (neu):** Header (Branding + Theme-Umschalter +
+  Sprachauswahl + „Log in"), optionaler Willkommens-`message`, vier
+  Statistik-Kacheln (Tiddler total, öffentliche Wikis, Nutzer, Online),
+  Sektion „Öffentliche Wikis" als Kartenraster mit `image`-Thumbnails
+  (Fallback-Gradient wenn kein Bild), optionaler `news`-Block und ein
+  Versions-Footer („MWS {version}" / „TiddlyWiki {version}" + Link zu den
+  TiddlyWiki-Docs). Markdown im `message`/`news` wird nach dem
+  `escapeHtml`-Muster gerendert (Headings, Listen, Blockquote, Code,
+  Links — XSS-sicher, da roher HTML-Ausgabe zuerst escapt wird).
+  Beim Laden ruft sie `GET /api/landing`; Fehler ⇒ „The overview could not
+  be loaded."
+- **Einstellungen (§47):** Schalter „Show the public landing page" +
+  zwei Textfelder „Landing welcome message" / „Landing news" (Markdown,
+  max. 2000 / 10000 Zeichen). Schalter aus ⇒ anonyme `/`-auflösung entfällt.
+- **i18n:** neue Keys 17 in allen 8 Sprachen (Sektionen `#region admin
+  settings` und `#region landing page`).
+
+### Verifikation
+
+- `GET /api/landing` anonym: 200 mit 7 öffentlichen Wikis, Stats (Tiddler
+  1127, 6 Nutzer, online 0 ohne aktive Sessions), Versions, `message`/`news`
+  aus den Prefs.
+- Anonym `GET /` headless: rendert Landing (Stat-Kacheln, Wiki-Karten,
+  Thumbnails via `/wiki/<slug>/thumbnail`), kein Redirect nach `/login`.
+  Mit `showLanding=false` (per `PUT /api/prefs`) ⇒ `/` leitet wieder nach
+  `/login`; danach zurückgesetzt auf `true`.
+- Anon-Thumbnail `/wiki/bedienungsanleitung/thumbnail` ⇒ `200 image/png`
+  (nur Cache); willkürliches privates Wiki ⇒ `404`.
+- Eingeloggter Admin (`/settings` headless): Schalter + beide Textfelder
+  sichtbar und bedienbar; `PUT`/`GET`/DB-Zeilen für die 3 neuen Keys
+  verifiziert (`null` löscht die Zeile), Werte danach auf den
+  Ausgangszustand zurückgesetzt.
+- `tsc` (admin-vanilla) + `tsc2` (Root) grün; Locale-Parität 516/516.
 
 ---
 

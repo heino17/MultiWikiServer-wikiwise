@@ -3,6 +3,7 @@
 import "./main.css";
 import { App } from "./app";
 import { LoginForm } from "./app-login";
+import { LandingPage } from "./app-landing";
 import { AuthUser } from "@tiddlywiki/mws/src/new-managers/sessions";
 import { SendError } from "@tiddlywiki/server";
 import { ProfileForm } from "./app-profile";
@@ -34,6 +35,9 @@ declare global {
       showLocaleSelect: boolean;
       showThumbnails: boolean;
       thumbnailTtlHours: number | null;
+      showLanding: boolean;
+      landingMessage: string | null;
+      landingNews: string | null;
     };
   }
 }
@@ -61,6 +65,13 @@ function setup() {
   }
   else if (location.pathname === pathPrefix + "/login") {
     document.body.appendChild(new LoginForm());
+  }
+  else if (location.pathname === pathPrefix + "/"
+    && !embeddedServerResponse.userState.isLoggedIn
+    && embeddedServerResponse.prefs?.showLanding !== false) {
+    // Anonymous visitors get the public landing page instead of being sent
+    // to the login form right away (unless the admin disabled it).
+    document.body.appendChild(new LandingPage());
   }
   else if (!embeddedServerResponse.userState.isLoggedIn) {
     location.pathname = pathPrefix + "/login";

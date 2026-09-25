@@ -173,10 +173,20 @@ export class SessionManager {
     const sessionId = cookies.getAll("session") as PrismaField<"Sessions", "session_id">[];
     const session = sessionId && await config.engine.sessions.findFirst({
       where: { session_id: { in: sessionId } },
-      select: { session_id: true, user: { select: { user_id: true, username: true, email: true, wiki_limit: true, roles: { select: { role_id: true, role_name: true, is_teacher: true } } } } }
+      select: { session_id: true, last_accessed: true, user: { select: { user_id: true, username: true, email: true, wiki_limit: true, roles: { select: { role_id: true, role_name: true, is_teacher: true } } } } }
     });
 
-    if (sessionId && session) return {
+    if (sessionId && session) {
+      // Throttled touch of `last_accessed` so the public "online" counter on
+      // the landing page reflects real activity instead of session creation
+      // times. At most one write per session per few minutes.
+      if (Date.now() - new Date(session.last_accessed).getTime() > 5 * 60 * 1000) {
+        void config.engine.sessions.update({
+          where: { session_id: session.session_id },
+          data: { last_accessed: new Date() },
+        }).catch(() => {});
+      }
+      return {
       user_id: session.user.user_id,
       username: session.user.username,
       email: session.user.email,
@@ -195,7 +205,7 @@ export class SessionManager {
       AdminRoleID: this.roleLookup[this.AdminRoleName],
       UserRoleID: this.roleLookup[this.UserRoleName],
     };
-    else return {
+    } else return {
       user_id: "" as PrismaField<"Users", "user_id">,
       username: "(anon)" as PrismaField<"Users", "username">,
       email: "",
