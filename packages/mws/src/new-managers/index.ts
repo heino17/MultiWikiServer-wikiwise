@@ -21,7 +21,7 @@ import { UserFileDelete, UserFileDownload, UserFileList, UserFilePreview, UserFi
 import { serveWikiThumbnail } from "./WikiThumbnailRoutes";
 import { RecipeStatus, RecipeStoreJS, RecipeStoreJSON, RecipeUpdates, TiddlerBatch, TiddlerList } from "./RecipeRoutes";
 import { AdminPrefsGet, AdminPrefsPut } from "./PrefsRoutes";
-import { LandingData } from "./LandingRoutes";
+import { LandingData, LandingWikisGet, LandingWikisPut } from "./LandingRoutes";
 
 export * from "./RecipeResolver";
 export * from "./TabDataAdapter";
@@ -183,6 +183,8 @@ const ApiRoutes = {
   AdminPrefsGet,
   AdminPrefsPut,
   LandingData,
+  LandingWikisGet,
+  LandingWikisPut,
   UserFileUpload,
   UserFileList,
   UserFileDownload,
@@ -202,6 +204,8 @@ interface ClientRoutes {
   AdminSave: ClientRoute<typeof AdminSave>;
   AdminPrefsGet: ClientRoute<typeof AdminPrefsGet>;
   AdminPrefsPut: ClientRoute<typeof AdminPrefsPut>;
+  LandingWikisGet: ClientRoute<typeof LandingWikisGet>;
+  LandingWikisPut: ClientRoute<typeof LandingWikisPut>;
   AdminBackup: ClientRoute<typeof AdminBackup>;
   AdminBackupList: ClientRoute<typeof AdminBackupList>;
   AdminBackupDownload: ClientRoute<typeof AdminBackupDownload>;

@@ -526,6 +526,10 @@ export const jaStrings: Record<string, string> = {
   "A welcome text on the public page. Markdown is supported.": "公開ページに表示される歓迎文。Markdown に対応しています。",
   "Landing news": "ランディングページのお知らせ",
   "News shown on the public page. Markdown is supported.": "公開ページに表示されるお知らせ。Markdown に対応しています。",
+  "Public wikis on the landing page": "ランディングページの公開ウィキ",
+  "Choose which of your publicly readable wikis appear on the landing page.": "公開閲覧できるウィキのうち、ランディングページに表示するものを選べます。",
+  "No publicly readable wikis.": "公開閲覧できるウィキはまだありません。",
+  "Visitors on the start page can open this wiki without an account.": "スタートページの訪問者はアカウントなしでこのウィキを開けます。",
 // #region landing page
   "Wikis anyone can read without an account.": "アカウントなしで誰でも読めるWiki。",
   "No public wikis yet.": "公開Wikiはまだありません。",

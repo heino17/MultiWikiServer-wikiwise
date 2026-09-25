@@ -526,6 +526,10 @@ export const koStrings: Record<string, string> = {
   "A welcome text on the public page. Markdown is supported.": "공개 페이지에 표시되는 환영 문구. Markdown을 지원합니다.",
   "Landing news": "랜딩 페이지 소식",
   "News shown on the public page. Markdown is supported.": "공개 페이지에 표시되는 소식. Markdown을 지원합니다.",
+  "Public wikis on the landing page": "랜딩 페이지의 공개 위키",
+  "Choose which of your publicly readable wikis appear on the landing page.": "공개 읽기가 가능한 위키 중 랜딩 페이지에 표시할 위키를 선택하세요.",
+  "No publicly readable wikis.": "공개 읽기가 가능한 위키가 아직 없습니다.",
+  "Visitors on the start page can open this wiki without an account.": "시작 페이지의 방문자는 계정 없이 이 위키를 열 수 있습니다.",
 // #region landing page
   "Wikis anyone can read without an account.": "계정 없이 누구나 읽을 수 있는 위키.",
   "No public wikis yet.": "아직 공개 위키가 없습니다.",

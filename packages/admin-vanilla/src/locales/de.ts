@@ -544,6 +544,10 @@ export const deStrings: Record<string, string> = {
   "A welcome text on the public page. Markdown is supported.": "Ein Willkommenstext auf der öffentlichen Seite. Markdown wird unterstützt.",
   "Landing news": "Neuigkeiten der Startseite",
   "News shown on the public page. Markdown is supported.": "Neuigkeiten auf der öffentlichen Seite. Markdown wird unterstützt.",
+  "Public wikis on the landing page": "Öffentliche Wikis auf der Startseite",
+  "Choose which of your publicly readable wikis appear on the landing page.": "Bestimme, welche deiner öffentlich lesbaren Wikis auf der Startseite erscheinen.",
+  "No publicly readable wikis.": "Noch keine öffentlich lesbaren Wikis.",
+  "Visitors on the start page can open this wiki without an account.": "Besucher der Startseite können dieses Wiki ohne Konto öffnen.",
 // #region landing page
   "Wikis anyone can read without an account.": "Wikis, die jeder ohne Konto lesen kann.",
   "No public wikis yet.": "Noch keine öffentlichen Wikis.",

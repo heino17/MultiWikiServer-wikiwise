@@ -526,6 +526,10 @@ export const zhCnStrings: Record<string, string> = {
   "A welcome text on the public page. Markdown is supported.": "公开页面上显示的欢迎文字。支持 Markdown。",
   "Landing news": "落地页新闻",
   "News shown on the public page. Markdown is supported.": "公开页面上显示的新闻。支持 Markdown。",
+  "Public wikis on the landing page": "首页上的公开维基",
+  "Choose which of your publicly readable wikis appear on the landing page.": "选择你的哪些公开可读维基显示在首页上。",
+  "No publicly readable wikis.": "暂无公开可读的维基。",
+  "Visitors on the start page can open this wiki without an account.": "首页访客无需账户即可打开此维基。",
 // #region landing page
   "Wikis anyone can read without an account.": "任何人无需账户即可阅读的 Wiki。",
   "No public wikis yet.": "还没有公开 Wiki。",

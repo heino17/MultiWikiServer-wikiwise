@@ -235,6 +235,8 @@ export class LandingPage extends JSXElement {
                     <a
                       class="landing-wiki-card"
                       href={pathPrefix + "/wiki/" + encodeURIComponent(wiki.slug)}
+                      target="_blank"
+                      rel="noopener noreferrer"
                     >
                       <div class="landing-wiki-thumb">
                         <img

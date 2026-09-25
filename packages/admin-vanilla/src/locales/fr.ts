@@ -526,6 +526,10 @@ export const frStrings: Record<string, string> = {
   "A welcome text on the public page. Markdown is supported.": "Un texte de bienvenue sur la page publique. Markdown pris en charge.",
   "Landing news": "Actualités de la page d'accueil",
   "News shown on the public page. Markdown is supported.": "Actualités affichées sur la page publique. Markdown pris en charge.",
+  "Public wikis on the landing page": "Wikis publics sur la page d'accueil",
+  "Choose which of your publicly readable wikis appear on the landing page.": "Choisissez lesquels de vos wikis publics apparaissent sur la page d'accueil.",
+  "No publicly readable wikis.": "Aucun wiki public disponible.",
+  "Visitors on the start page can open this wiki without an account.": "Les visiteurs de la page d'accueil peuvent ouvrir ce wiki sans compte.",
 // #region landing page
   "Wikis anyone can read without an account.": "Des wikis que tout le monde peut lire sans compte.",
   "No public wikis yet.": "Aucun wiki public pour l'instant.",
