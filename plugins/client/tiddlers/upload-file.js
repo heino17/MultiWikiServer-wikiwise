@@ -15,12 +15,17 @@ exports.synchronous = true;
 
 var CONFIG_HOST_TIDDLER = "$:/config/multiwikiclient/host",
 	CONFIG_RECIPE_TIDDLER = "$:/config/multiwikiclient/recipe",
+	CONFIG_HIDE_UPLOAD_TIDDLER = "$:/config/multiwikiclient/hide-upload-file",
 	DEFAULT_HOST_TIDDLER = "$protocol$//$host$/",
 	UPLOAD_PATH = "api/user-files/upload",
 	INPUT_ID = "mws-upload-file-input";
 
 exports.startup = function() {
 	if(!$tw.browser || !($tw.rootWidget && $tw.wiki)) {
+		return;
+	}
+	// The installation-wide "Upload files from wikis" switch can hide the button.
+	if($tw.wiki.getTiddlerText(CONFIG_HIDE_UPLOAD_TIDDLER) === "yes") {
 		return;
 	}
 	$tw.rootWidget.addEventListener("tm-upload-file",function() {

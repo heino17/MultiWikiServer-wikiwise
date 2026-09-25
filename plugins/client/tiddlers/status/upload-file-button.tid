@@ -5,6 +5,7 @@ description: {{$:/language/MWS/UploadFile/Description}}
 tooltip: {{$:/language/MWS/UploadFile/ButtonTooltip}}
 
 \whitespace trim
+<$reveal state="$:/config/multiwikiclient/hide-upload-file" type="nomatch" text="yes">
 <$button class=<<tv-config-toolbar-class>> tooltip={{$:/language/MWS/UploadFile/ButtonTooltip}} aria-label={{$:/language/MWS/UploadFile/ButtonCaption}}>
 <$action-sendmessage $message="tm-upload-file"/>
 <%if [<tv-config-toolbar-icons>match[yes]] %>
@@ -14,3 +15,4 @@ tooltip: {{$:/language/MWS/UploadFile/ButtonTooltip}}
 <span class="tc-btn-text"><$text text={{$:/language/MWS/UploadFile/ButtonCaption}}/></span>
 <%endif%>
 </$button>
+</$reveal>

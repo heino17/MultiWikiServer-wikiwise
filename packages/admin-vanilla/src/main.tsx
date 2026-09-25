@@ -28,6 +28,11 @@ declare global {
     prefs?: {
       defaultLocale: string | null;
       defaultTheme: "dark" | "light" | null;
+      showPinboard: boolean;
+      showUserFiles: boolean;
+      showWikiUpload: boolean;
+      showLocaleSelect: boolean;
+      showThumbnails: boolean;
     };
   }
 }

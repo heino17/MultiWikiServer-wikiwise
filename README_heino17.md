@@ -2310,16 +2310,37 @@ Vertrauens-Label + Bag-Owner im Admin-UI.
 
 **Ziel:** Der Betreiber legt installationsweit fest, in welcher Sprache und
 in Hell oder Dunkel die Admin-App beim **ersten** Seitenaufruf ausgeliefert
-wird. Die eigene Wahl eines Besuchers (Sprach-/Theme-Umschalter im Header,
-`localStorage`) behält immer Vorrang — die Vorgabe ist nur der Fallback.
+wird — und welche Features für alle sichtbar sind. Die eigene Wahl eines
+Besuchers (Sprach-/Theme-Umschalter im Header, `localStorage`) behält bei
+Sprache/Theme immer Vorrang — die Vorgabe ist nur der Fallback.
 
-**Ablage (server-seitig):** Keys in der `settings`-Tabelle
-(`admin.defaultLocale`, `admin.defaultTheme`), verarbeitet in
-`packages/mws/src/new-managers/PrefsRoutes.ts` (`readPrefs`).
+**Ablage (server-seitig):** Keys in der `settings`-Tabelle, verarbeitet in
+`packages/mws/src/new-managers/PrefsRoutes.ts` (`readPrefs`):
+
+| Key | Bedeutung | Default |
+|-----|-----------|---------|
+| `admin.defaultLocale` | Sprache beim 1. Laden | Browser-Sprache |
+| `admin.defaultTheme` | Hell/Dunkel beim 1. Laden | System-Theme |
+| `admin.showPinboard` | Pinnwand-Tab (+ 30-s-Badge-Poll) | `true` |
+| `admin.showUserFiles` | „Meine Dateien"-Tab | `true` |
+| `admin.showWikiUpload` | „Upload file"-Button in der Wiki-Werkzeugleiste (§45) | `true` |
+| `admin.showLocaleSelect` | Sprach-Dropdown im Header | `true` |
+| `admin.showThumbnails` | Vorschaubild-Spalte in der Wikis-Liste (§43) | `true` |
+
+Bools werden als `"true"`/`"false"` gespeichert; ein fehlender Eintrag
+bedeutet `true` (Rückwärtskompatibilität).
+
 - `GET /api/prefs` — jeder eingeloggte Nutzer liest die aktuellen Vorgaben.
-- `PUT /api/prefs` — nur `admin` (`state.okAdmin()`), Body
-  `{ defaultLocale: string|null, defaultTheme: "dark"|"light"|null }`;
-  `null` löscht die Vorgabe (→ Browser-Sprache bzw. System-Theme).
+- `PUT /api/prefs` — nur `admin` (`state.okAdmin()`), Body enthält **alle**
+  Felder: `{ defaultLocale: string|null, defaultTheme: "dark"|"light"|null,
+  showPinboard: boolean|null, … }`; `null` löscht die Vorgabe (→ Default).
+
+**Abhängigkeit:** „Dateien aus Wikis hochladen" (2.1) erfordert „Meine
+Dateien": Ist `showUserFiles` aus, ist der Switch 2.1 auf der
+Einstellungen-Seite ausgegraut (`is-disabled`-Row, Hinweis „Erfordert
+'Meine Dateien'."), und serverseitig werden **beide** Keys als
+Upload-Erlaubnis gewertet (`isWikiUploadEnabled`: `showWikiUpload &&
+showUserFiles`, oben in `RecipeIndexSender.ts`).
 
 **Auslieferung vor dem 1. Paint:** `serveIndex`
 (`services/setupDevServer.ts`) liest die Prefs pro Request und injiziert sie
@@ -2347,10 +2368,26 @@ die Anzeige spiegelt also immer die tatsächlich gespeicherten Werte.
 
 **UI:** ⚙-Button (`settings.svg`) im Header, nur für Admins sichtbar, öffnet
 `/settings` (`app-settings.tsx`, Route in `main.tsx`). Zwei Auswahlfelder
-(Sprache mit „Browser-Sprache folgen", Theme mit „System-Theme folgen") +
-Speichern-Button. Nicht-Admins sehen die Seite schreibgeschützt mit dem
-Hinweis „Nur Administratoren …". Neue i18n-Keys (13) in allen 8 Sprachen
-(Sektion `#region admin settings`).
+(Sprache mit „Browser-Sprache folgen", Theme mit „System-Theme folgen") sowie
+ein Abschnitt **„Funktionen"** mit fünf Schaltern (Pinnwand, Meine Dateien,
+Aus-Wikis-Hochladen, Sprachwahl anzeigen, Vorschaubilder) + Speichern-Button.
+Nicht-Admins sehen die Seite schreibgeschützt mit dem Hinweis „Nur
+Administratoren …". Die Funktions-Schalter gelten installationsweit (ein
+persönliches Ausblenden pro Nutzer ist bewusst nicht vorgesehen — im
+Einzelnutzer-Betrieb ist der Betreiber gleichzeitig der Nutzer).
+
+**Anwendung der Schalter (Client):** In `app.tsx` liest `featurePref(name)`
+die Prefs aus `embeddedServerResponse.prefs`: Pinboard-/Dateien-Tab und
+deren Panels werden ausgeblendet, der Pinboard-Poll startet nur bei
+aktivem Pinboard, das Sprach-`<select>` im Header entfällt, und die
+Thumbnail-Spalte wird aus `listColumns` gefiltert. Im Wiki bleibt der
+„Upload file"-Button serverseitig verborgen: `RecipeIndexSender` schreibt
+bei deaktiviertem Wiki-Upload den Config-Tiddler
+`$:/config/multiwikiclient/hide-upload-file` (text `yes`) in den Store;
+`upload-file-button.tid` versteckt den Button über `<$reveal state="..."
+type="nomatch" text="yes">`, und `upload-file.js` registriert den
+`tm-upload-file`-Listener dann gar nicht erst. Neue i18n-Keys (23) in allen
+8 Sprachen (Sektion `#region admin settings`).
 
 ---
 

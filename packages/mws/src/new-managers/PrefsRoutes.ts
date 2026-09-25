@@ -1,9 +1,9 @@
-// Installation-wide defaults for the admin app's first paint.
+// Installation-wide defaults for the admin app.
 //
 // These settings choose the language and light/dark theme the admin app is
-// served with on first load. They live in the `settings` key/value table
-// (`admin.defaultLocale`, `admin.defaultTheme`) so the server can inject them
-// early into the served HTML. A visitor's own localStorage choice (made in the
+// served with on first load, and which features are shown. They live in the
+// `settings` key/value table (keys below) so the server can inject them early
+// into the served HTML. A visitor's own localStorage choice (made in the
 // header's language / theme switches) always wins over these defaults.
 
 import { zodRoute } from "@tiddlywiki/server";
@@ -11,6 +11,11 @@ import { zodRoute } from "@tiddlywiki/server";
 export const PREF_KEYS = {
   locale: "admin.defaultLocale",
   theme: "admin.defaultTheme",
+  showPinboard: "admin.showPinboard",
+  showUserFiles: "admin.showUserFiles",
+  showWikiUpload: "admin.showWikiUpload",
+  showLocaleSelect: "admin.showLocaleSelect",
+  showThumbnails: "admin.showThumbnails",
 } as const;
 
 const THEMES = ["dark", "light"] as const;
@@ -19,13 +24,27 @@ type DefaultTheme = (typeof THEMES)[number] | null;
 export interface ServerPrefs {
   defaultLocale: string | null;
   defaultTheme: DefaultTheme;
+  showPinboard: boolean;
+  showUserFiles: boolean;
+  showWikiUpload: boolean;
+  showLocaleSelect: boolean;
+  showThumbnails: boolean;
 }
 
 const validThemes = new Set<string>(THEMES);
+const ALL_KEYS: string[] = Object.values(PREF_KEYS);
+
+/** Boolean prefs are stored as "true"/"false"; an absent row means the default. */
+function boolPref(map: Map<string, string>, key: string, fallback: boolean): boolean {
+  const raw = map.get(key);
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  return fallback;
+}
 
 export async function readPrefs(prisma: PrismaTxnClient): Promise<ServerPrefs> {
   const rows = await prisma.settings.findMany({
-    where: { key: { in: [PREF_KEYS.locale, PREF_KEYS.theme] } },
+    where: { key: { in: ALL_KEYS } },
     select: { key: true, value: true },
   });
   const map = new Map(rows.map((row) => [row.key, row.value]));
@@ -34,7 +53,15 @@ export async function readPrefs(prisma: PrismaTxnClient): Promise<ServerPrefs> {
   const defaultTheme = rawTheme && validThemes.has(rawTheme)
     ? (rawTheme as NonNullable<DefaultTheme>)
     : null;
-  return { defaultLocale, defaultTheme };
+  return {
+    defaultLocale,
+    defaultTheme,
+    showPinboard: boolPref(map, PREF_KEYS.showPinboard, true),
+    showUserFiles: boolPref(map, PREF_KEYS.showUserFiles, true),
+    showWikiUpload: boolPref(map, PREF_KEYS.showWikiUpload, true),
+    showLocaleSelect: boolPref(map, PREF_KEYS.showLocaleSelect, true),
+    showThumbnails: boolPref(map, PREF_KEYS.showThumbnails, true),
+  };
 }
 
 export const AdminPrefsGet = zodRoute({
@@ -60,20 +87,38 @@ export const AdminPrefsPut = zodRoute({
   zodRequestBody: z => z.object({
     defaultLocale: z.string().trim().max(20).nullable(),
     defaultTheme: z.enum(THEMES).nullable(),
+    showPinboard: z.boolean().nullable(),
+    showUserFiles: z.boolean().nullable(),
+    showWikiUpload: z.boolean().nullable(),
+    showLocaleSelect: z.boolean().nullable(),
+    showThumbnails: z.boolean().nullable(),
   }),
   inner: async (state) => {
     state.assertReferer(["/"]);
     state.okAdmin();
     state.asserted = true;
 
-    const { defaultLocale, defaultTheme } = state.data;
+    const {
+      defaultLocale,
+      defaultTheme,
+      showPinboard,
+      showUserFiles,
+      showWikiUpload,
+      showLocaleSelect,
+      showThumbnails,
+    } = state.data;
     const entries: { key: string; value: string }[] = [];
     if (defaultLocale) entries.push({ key: PREF_KEYS.locale, value: defaultLocale });
     if (defaultTheme) entries.push({ key: PREF_KEYS.theme, value: defaultTheme });
+    if (showPinboard != null) entries.push({ key: PREF_KEYS.showPinboard, value: showPinboard ? "true" : "false" });
+    if (showUserFiles != null) entries.push({ key: PREF_KEYS.showUserFiles, value: showUserFiles ? "true" : "false" });
+    if (showWikiUpload != null) entries.push({ key: PREF_KEYS.showWikiUpload, value: showWikiUpload ? "true" : "false" });
+    if (showLocaleSelect != null) entries.push({ key: PREF_KEYS.showLocaleSelect, value: showLocaleSelect ? "true" : "false" });
+    if (showThumbnails != null) entries.push({ key: PREF_KEYS.showThumbnails, value: showThumbnails ? "true" : "false" });
 
     await state.$transaction(async (prisma) => {
       const keepKeys = new Set(entries.map((entry) => entry.key));
-      for (const key of [PREF_KEYS.locale, PREF_KEYS.theme]) {
+      for (const key of ALL_KEYS) {
         if (keepKeys.has(key)) continue;
         await prisma.settings.deleteMany({ where: { key } });
       }

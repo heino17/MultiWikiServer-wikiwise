@@ -46,6 +46,13 @@ import { getEffectiveTheme, toggleTheme, type ThemeMode } from "./theme";
 import "./pinboard";
 import "./user-files";
 
+// Installation-wide feature defaults administered on the "Settings" page
+// (keys in the `settings` table, read into embeddedServerResponse.prefs).
+// An absent pref means the feature is enabled (current behaviour).
+function featurePref(name: "showPinboard" | "showUserFiles" | "showWikiUpload" | "showLocaleSelect" | "showThumbnails"): boolean {
+  return embeddedServerResponse.prefs?.[name] ?? true;
+}
+
 
 declare global {
   namespace JSX {
@@ -1634,8 +1641,10 @@ export class App extends JSXElement {
     void this.loadAdminRecords();
     void this.loadBackups();
     void this.loadStorage();
-    void this.loadPinboardUnread();
-    this.pinboardTimer = window.setInterval(() => void this.loadPinboardUnread(), 30000);
+    if (featurePref("showPinboard")) {
+      void this.loadPinboardUnread();
+      this.pinboardTimer = window.setInterval(() => void this.loadPinboardUnread(), 30000);
+    }
   }
 
   disconnectedCallback(): void {
@@ -1657,6 +1666,9 @@ export class App extends JSXElement {
     const isListInteractionDisabled = store.isListInteractionDisabled;
     const mainStorageError = this.mainStorageError;
     const isStorageTab = activeTab === "storage";
+    const listColumns = featurePref("showThumbnails")
+      ? currentTab.columns
+      : currentTab.columns.filter((column) => column.key !== "thumbnailUrl");
 
     const userState = embeddedServerResponse.userState;
     const isAdmin = userState.isAdmin;
@@ -1700,15 +1712,17 @@ export class App extends JSXElement {
             >
               <MaterialSymbol icon={this.themeMode === "dark" ? lightModeIcon : darkModeIcon} />
             </button>
-            <select
-              class="hero-locale-select"
-              aria-label={t("Language")}
-              onchange={this.handleLocaleChange}
-            >
-              {supportedLocales.map((code) => (
-                <option value={code} selected={code === getCurrentLocale()}>{localeLabels[code]}</option>
-              ))}
-            </select>
+            {featurePref("showLocaleSelect") ? (
+              <select
+                class="hero-locale-select"
+                aria-label={t("Language")}
+                onchange={this.handleLocaleChange}
+              >
+                {supportedLocales.map((code) => (
+                  <option value={code} selected={code === getCurrentLocale()}>{localeLabels[code]}</option>
+                ))}
+              </select>
+            ) : null}
             {isAdmin ? (
               <button
                 class="hero-settings-button"
@@ -1736,6 +1750,8 @@ export class App extends JSXElement {
                     class="hero-account-action"
                     type="button"
                     role="menuitem"
+                    target="_blank"
+                    rel="noreferrer"
                   >{e}</a>
                 </>)}
               </div>
@@ -1807,28 +1823,32 @@ export class App extends JSXElement {
                   : ""}</small>
             </button>
           ) : null}
-          <button
-            class={activeTab === "pinboard" ? "tab-button is-active" : "tab-button"}
-            onclick={() => {
-              store.setActiveTab("pinboard");
-              void this.loadPinboardUnread();
-            }}
-            type="button"
-          >
-            <span>{t("Pinboard")}</span>
-            <small class="pinboard-tab-counts">
-              <span>{t("{count} notes", { count: this.pinboardCount })}</span>
-              <span>{t("{count} new notes", { count: this.pinboardUnread })}</span>
-            </small>
-          </button>
-          <button
-            class={activeTab === "files" ? "tab-button is-active" : "tab-button"}
-            onclick={() => store.setActiveTab("files")}
-            type="button"
-          >
-            <span>{t("My files")}</span>
-            <small>{t("{count} files", { count: this.userFileCount })}</small>
-          </button>
+          {featurePref("showPinboard") ? (
+            <button
+              class={activeTab === "pinboard" ? "tab-button is-active" : "tab-button"}
+              onclick={() => {
+                store.setActiveTab("pinboard");
+                void this.loadPinboardUnread();
+              }}
+              type="button"
+            >
+              <span>{t("Pinboard")}</span>
+              <small class="pinboard-tab-counts">
+                <span>{t("{count} notes", { count: this.pinboardCount })}</span>
+                <span>{t("{count} new notes", { count: this.pinboardUnread })}</span>
+              </small>
+            </button>
+          ) : null}
+          {featurePref("showUserFiles") ? (
+            <button
+              class={activeTab === "files" ? "tab-button is-active" : "tab-button"}
+              onclick={() => store.setActiveTab("files")}
+              type="button"
+            >
+              <span>{t("My files")}</span>
+              <small>{t("{count} files", { count: this.userFileCount })}</small>
+            </button>
+          ) : null}
         </nav>
 
         <section class="section-header">
@@ -2156,11 +2176,11 @@ export class App extends JSXElement {
               </div>
             ) : null}
           </section>
-        ) : activeTab === "pinboard" ? (
+        ) : featurePref("showPinboard") && activeTab === "pinboard" ? (
           <section class="list-panel">
             <mws-pinboard onCountsChange={this.handlePinboardCounts} />
           </section>
-        ) : activeTab === "files" ? (
+        ) : featurePref("showUserFiles") && activeTab === "files" ? (
           <section class="list-panel">
             <mws-user-files onCountChange={this.handleUserFileCount} admin={embeddedServerResponse.userState.isAdmin} />
           </section>
@@ -2201,9 +2221,9 @@ export class App extends JSXElement {
             </div>
           ) : null}
 
-          <div class="list-grid" style={{ ["--grid-columns"]: buildListGridTemplate(currentTab.columns) }}>
+          <div class="list-grid" style={{ ["--grid-columns"]: buildListGridTemplate(listColumns) }}>
             <div class="list-head-row">
-              {currentTab.columns.map((column) => (
+              {listColumns.map((column) => (
                 <div class={"list-cell list-head" + (column.width && column.width > 1 ? " span-" + column.width : "")}>{t(column.label)}</div>
               ))}
             </div>
@@ -2234,9 +2254,9 @@ export class App extends JSXElement {
                   void store.openItem(currentTab.id, row.item.id);
                 }}
               >
-                {currentTab.columns.map((column) => {
+                {listColumns.map((column) => {
                   const value = getAdminRecordValue(column, row.item);
-                  const isFirstColumn = column.key === currentTab.columns[0]?.key;
+                  const isFirstColumn = column.key === listColumns[0]?.key;
                   const linkUrl = isFirstColumn ? getListColumnLink(currentTab.id, column.key, row.item) : null;
                   if (typeof linkUrl === "string") {
                     return <a
