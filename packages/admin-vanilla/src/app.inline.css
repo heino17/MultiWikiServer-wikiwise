@@ -385,6 +385,17 @@ h6 {
 	cursor: default;
 }
 
+.settings-toggle-row.is-input-row {
+	cursor: default;
+}
+
+.settings-toggle-row .settings-number-input {
+	width: 6.5rem;
+	padding: 8px 12px;
+	border-radius: 10px;
+	text-align: right;
+}
+
 .settings-toggle-row .header-switch-input {
 	position: absolute;
 }

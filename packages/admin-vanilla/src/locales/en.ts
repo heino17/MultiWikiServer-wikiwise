@@ -536,5 +536,7 @@ export const enStrings: Record<string, string> = {
   "The language dropdown in the header.": "The language dropdown in the header.",
   "Show wiki thumbnails": "Show wiki thumbnails",
   "Screenshot previews in the Wikis list.": "Screenshot previews in the Wikis list.",
+  "Thumbnail cache time (hours)": "Thumbnail cache time (hours)",
+  "How long a wiki's screenshot preview stays cached. Leave empty to use the default of 24 hours.": "How long a wiki's screenshot preview stays cached. Leave empty to use the default of 24 hours.",
   "A visitor's own language or theme choice always wins. Feature switches apply to everyone.": "A visitor's own language or theme choice always wins. Feature switches apply to everyone.",
 };

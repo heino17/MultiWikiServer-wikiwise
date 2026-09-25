@@ -535,5 +535,7 @@ export const deStrings: Record<string, string> = {
   "The language dropdown in the header.": "Das Sprach-Dropdown in der Kopfzeile.",
   "Show wiki thumbnails": "Wiki-Vorschaubilder anzeigen",
   "Screenshot previews in the Wikis list.": "Screenshot-Vorschauen in der Wikis-Liste.",
+  "Thumbnail cache time (hours)": "Vorschaubild-Cache-Zeit (Stunden)",
+  "How long a wiki's screenshot preview stays cached. Leave empty to use the default of 24 hours.": "Wie lange eine Screenshot-Vorschau eines Wikis zwischengespeichert bleibt. Für die Standardeinstellung von 24 Stunden leer lassen.",
   "A visitor's own language or theme choice always wins. Feature switches apply to everyone.": "Eine eigene Sprach- oder Theme-Wahl eines Besuchers hat immer Vorrang. Die Funktionsschalter gelten für alle.",
 };
