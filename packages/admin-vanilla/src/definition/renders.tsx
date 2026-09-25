@@ -344,6 +344,17 @@ export function renderSwitchField(ctx: Pick<
 
 
 
+export function renderLandingVisibilityFieldEditor(ctx: FieldEditorContext<boolean>) {
+  const { field, value, onDraftChange, fieldState } = ctx;
+  const draft = fieldState?.draft as Partial<WikiAdminRecord> | null | undefined;
+  const anonEnabled = Array.isArray(draft?.recipeUsers)
+    && (draft.recipeUsers as readonly string[]).includes("ANON");
+  if (!anonEnabled)
+    return <p class="field-callout">{t("Only wikis you have made publicly readable (ANON in Readers) can appear on the landing page.")}</p>;
+  return renderSwitchField({ field, value, onDraftChange });
+}
+
+
 function renderActivityFeedField(ctx: ReadonlyFieldContext<readonly string[]>) {
   const lines = ctx.value;
   return <ul class="timeline-list">{lines.map((line) => <li>{line}</li>)}</ul>;
@@ -848,6 +859,7 @@ export const fieldTypeRenderEditors = {
   "summary-list": renderValueListFieldSidebar,
   "activity-feed": renderActivityFeedField,
   "metadata-table": renderMetadataTableField,
+  "landing-visibility": renderLandingVisibilityFieldEditor,
   "table": renderTableField,
   "structured-preview": renderCalloutField,
   "validation-report": renderCalloutField,
@@ -874,6 +886,7 @@ export const fieldTypeRenderSidebars = {
   "summary-list": renderValueListFieldSidebar,
   "activity-feed": renderActivityFeedField,
   "metadata-table": renderMetadataTableField,
+  "landing-visibility": () => null,
   "table": renderTableField,
   "structured-preview": renderCalloutField,
   "validation-report": renderCalloutField,
