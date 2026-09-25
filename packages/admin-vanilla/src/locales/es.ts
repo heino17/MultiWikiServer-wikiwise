@@ -491,4 +491,19 @@ export const esStrings: Record<string, string> = {
   "You have created {used} of {limit} own wikis – {remaining} more possible.": "Has creado {used} de {limit} wikis propios; {remaining} más posibles.",
   "You have created {used} of ∞ own wikis – unlimited more possible.": "Has creado {used} de ∞ wikis propios; ilimitados más posibles.",
   "Own wikis": "Wikis propios",
+
+  // #region admin settings
+  "Settings": "Configuración",
+  "Choose the language and theme every visitor sees on their first load.": "Elija el idioma y el tema que verá cada visitante en su primera carga.",
+  "Language on first load": "Idioma en la primera carga",
+  "Theme on first load": "Tema en la primera carga",
+  "Follow browser language": "Seguir el idioma del navegador",
+  "Follow system theme": "Seguir el tema del sistema",
+  "Light theme": "Tema claro",
+  "Dark theme": "Tema oscuro",
+  "Save settings": "Guardar configuración",
+  "Settings saved.": "Configuración guardada.",
+  "Failed to save settings.": "No se pudo guardar la configuración.",
+  "A visitor's own language or theme choice always wins.": "La elección de idioma o tema del visitante siempre prevalece.",
+  "Only administrators can change installation-wide defaults.": "Solo los administradores pueden cambiar los valores por defecto de la instalación.",
 };

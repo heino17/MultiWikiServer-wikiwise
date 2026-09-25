@@ -65,12 +65,15 @@ function normalizeLocaleCode(raw: string): LocaleCode {
   return "en";
 }
 
-/** The locale currently in effect (from localStorage override, else browser language). */
+/** The locale currently in effect (from localStorage override, else the
+ *  installation-wide default, else the browser language). */
 export function getCurrentLocale(): LocaleCode {
   try {
     const stored = globalThis.localStorage?.getItem(STORAGE_KEY);
     if (stored) return normalizeLocaleCode(stored);
   } catch { /* storage unavailable */ }
+  const defaultLocale = embeddedServerResponse?.prefs?.defaultLocale;
+  if (defaultLocale) return normalizeLocaleCode(defaultLocale);
   return normalizeLocaleCode(globalThis.navigator?.language ?? "en");
 }
 

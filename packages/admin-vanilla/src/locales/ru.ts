@@ -491,4 +491,19 @@ export const ruStrings: Record<string, string> = {
   "You have created {used} of {limit} own wikis – {remaining} more possible.": "Создано собственных вики: {used} из {limit} — ещё {remaining}.",
   "You have created {used} of ∞ own wikis – unlimited more possible.": "Создано собственных вики: {used} из ∞ — можно без ограничений.",
   "Own wikis": "Собственные вики",
+
+  // #region admin settings
+  "Settings": "Настройки",
+  "Choose the language and theme every visitor sees on their first load.": "Выберите язык и тему, которые каждый посетитель увидит при первой загрузке.",
+  "Language on first load": "Язык при первой загрузке",
+  "Theme on first load": "Тема при первой загрузке",
+  "Follow browser language": "Следовать языку браузера",
+  "Follow system theme": "Следовать теме системы",
+  "Light theme": "Светлая тема",
+  "Dark theme": "Тёмная тема",
+  "Save settings": "Сохранить настройки",
+  "Settings saved.": "Настройки сохранены.",
+  "Failed to save settings.": "Не удалось сохранить настройки.",
+  "A visitor's own language or theme choice always wins.": "Собственный выбор языка или темы посетителем всегда имеет приоритет.",
+  "Only administrators can change installation-wide defaults.": "Изменять установочные значения по умолчанию могут только администраторы.",
 };

@@ -7,6 +7,7 @@ import { BuildOptions, BuildResult } from "esbuild";
 import { serverEvents } from "@tiddlywiki/events";
 import { objNumberSort } from "@tiddlywiki/server";
 import escapeStringRegexp from 'escape-string-regexp';
+import { readPrefs, ServerPrefs } from "../new-managers/PrefsRoutes";
 
 
 // export type ServerToReactAdmin = Partial<ServerToReactAdminMap> | null;
@@ -15,6 +16,7 @@ export interface ServerToReactAdmin {
   sendError?: SendError<any>;
   userState: ServerRequest["user"];
   tw5Versions: string[];
+  prefs?: ServerPrefs;
 }
 
 export interface SendAdmin {
@@ -112,16 +114,19 @@ async function generateHtml({ js, css, publicdir, rootdir, title }: {
 }
 
 
-async function make_index_file({ publicdir, pathPrefix, serverResponseJSON }: {
+async function make_index_file({ publicdir, pathPrefix, serverResponseJSON, preflightJSON }: {
   publicdir: string;
   pathPrefix: string;
   serverResponseJSON: string;
+  preflightJSON: string;
 }) {
   pathPrefix = (pathPrefix).replaceAll("</script>", "<\\/script>").toString();
   serverResponseJSON = (serverResponseJSON).replaceAll("</script>", "<\\/script>").toString();
+  preflightJSON = (preflightJSON).replaceAll("</script>", "<\\/script>").toString();
   return Buffer.from((await readFile(publicdir + ".html", "utf8"))
     .replaceAll("$$js:pathPrefix$$", pathPrefix)
     .replaceAll("`$$js:pathPrefix:stringify$$`", JSON.stringify(pathPrefix))
+    .replaceAll("`$$js:embeddedServerPreflight:stringify$$`", preflightJSON)
     .replaceAll("`$$js:embeddedServerResponse:stringify$$`", serverResponseJSON),
     "utf8");
 }
@@ -175,14 +180,23 @@ async function serveIndex({ state, publicdir, status, serverResponse }: {
   serverResponse: ServerToReactAdmin;
 }): Promise<typeof STREAM_ENDED> {
 
+  const prefs = await readPrefs(state.engine);
+  const serverResponseWithPrefs: ServerToReactAdmin = { ...serverResponse, prefs };
+  const preflightJSON = JSON.stringify({
+    theme: prefs.defaultTheme,
+    locale: prefs.defaultLocale,
+  });
+
   const indexBuffer = await make_index_file({
     publicdir,
     pathPrefix: state.pathPrefix,
-    serverResponseJSON: JSON.stringify(serverResponse)
+    serverResponseJSON: JSON.stringify(serverResponseWithPrefs),
+    preflightJSON,
   });
   return state.sendBuffer(status, {
     contentType: { mediaType: "text/html", charset: "utf-8" },
     contentLength: indexBuffer.length,
+    cacheControl: "no-store",
   }, indexBuffer);
 }
 

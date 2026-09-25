@@ -2,6 +2,16 @@
 <html class="mdui-theme-auto">
 
 <head>
+  <script>window.embeddedServerPreflight = `$$js:embeddedServerPreflight:stringify$$`;</script>
+  <script>
+    try {
+      var preflight = window.embeddedServerPreflight;
+      if (preflight && (preflight.theme === "dark" || preflight.theme === "light")) {
+        document.documentElement.setAttribute("data-theme", preflight.theme);
+        document.documentElement.style.setProperty("background-color", preflight.theme === "dark" ? "#121212" : "#eeeeee");
+      }
+    } catch (e) { }
+  </script>
   <style>
     @media (prefers-color-scheme: dark) {
       html:not(.loaded) {

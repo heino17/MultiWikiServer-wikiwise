@@ -8,6 +8,7 @@ import backupIcon from "@material-symbols/svg-400/outlined/backup.svg";
 import deleteIcon from "@material-symbols/svg-400/outlined/delete.svg";
 import darkModeIcon from "@material-symbols/svg-400/outlined/dark_mode.svg";
 import lightModeIcon from "@material-symbols/svg-400/outlined/light_mode.svg";
+import settingsIcon from "@material-symbols/svg-400/outlined/settings.svg";
 import { MaterialSymbol } from "./material-symbol";
 import {
   getAllTabs,
@@ -1697,16 +1698,23 @@ export class App extends JSXElement {
             <select
               class="hero-locale-select"
               aria-label={t("Language")}
-              ref={(element) => {
-                const current = getCurrentLocale();
-                if (element.value !== current) element.value = current;
-              }}
               onchange={this.handleLocaleChange}
             >
               {supportedLocales.map((code) => (
-                <option value={code}>{localeLabels[code]}</option>
+                <option value={code} selected={code === getCurrentLocale()}>{localeLabels[code]}</option>
               ))}
             </select>
+            {isAdmin ? (
+              <button
+                class="hero-settings-button"
+                type="button"
+                aria-label={t("Settings")}
+                title={t("Settings")}
+                onclick={() => { location.pathname = pathPrefix + "/settings"; }}
+              >
+                <MaterialSymbol icon={settingsIcon} />
+              </button>
+            ) : null}
             <details class="hero-account-menu">
               <summary class="hero-account-trigger">
                 <span class="hero-account-name">

@@ -509,4 +509,19 @@ export const deStrings: Record<string, string> = {
   "Loading preview…": "Lade Vorschau…",
   "Preview not available for this file type.": "Für diesen Dateityp ist keine Vorschau verfügbar.",
   // #endregion user files
+
+  // #region admin settings
+  "Settings": "Einstellungen",
+  "Choose the language and theme every visitor sees on their first load.": "Wählen Sie die Sprache und das Theme, das jeder Besucher beim ersten Laden sieht.",
+  "Language on first load": "Sprache beim ersten Laden",
+  "Theme on first load": "Theme beim ersten Laden",
+  "Follow browser language": "Browser-Sprache folgen",
+  "Follow system theme": "System-Theme folgen",
+  "Light theme": "Helles Theme",
+  "Dark theme": "Dunkles Theme",
+  "Save settings": "Einstellungen speichern",
+  "Settings saved.": "Einstellungen gespeichert.",
+  "Failed to save settings.": "Speichern der Einstellungen fehlgeschlagen.",
+  "A visitor's own language or theme choice always wins.": "Eine eigene Sprach- oder Theme-Wahl eines Besuchers hat immer Vorrang.",
+  "Only administrators can change installation-wide defaults.": "Nur Administratoren können installationsweite Vorgaben ändern.",
 };
