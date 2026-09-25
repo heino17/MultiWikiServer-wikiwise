@@ -22,11 +22,7 @@ const themeOptions = [
   { value: "dark", labelKey: "Dark theme" },
 ] as const;
 
-interface LandingWikiEntry {
-  slug: string;
-  displayName: string;
-  hiddenOnLanding: boolean;
-}
+@addstyles(css)
 
 @addstyles(css)
 @customElement("mws-settings-form")
@@ -52,8 +48,6 @@ export class SettingsForm extends JSXElement {
 
   @state() accessor landingNews = embeddedServerResponse.prefs?.landingNews ?? "";
 
-  @state() accessor landingWikis: LandingWikiEntry[] | null = null;
-
   @state() accessor isSubmitting = false;
   @state() accessor message = "";
   @state() accessor error = "";
@@ -65,17 +59,7 @@ export class SettingsForm extends JSXElement {
   connectedCallback(): void {
     super.connectedCallback();
     void this.loadPrefs();
-    void this.loadLandingWikis();
   }
-
-  private readonly loadLandingWikis = async () => {
-    try {
-      const data = await apiJson("/api/landing/wikis");
-      this.landingWikis = Array.isArray(data?.wikis) ? data.wikis : [];
-    } catch {
-      this.landingWikis = [];
-    }
-  };
 
   private readonly loadPrefs = async () => {
     try {
@@ -146,21 +130,6 @@ export class SettingsForm extends JSXElement {
   private readonly onLandingMessageChange = (value: string) => { this.touched = true; this.landingMessage = value; };
 
   private readonly onLandingNewsChange = (value: string) => { this.touched = true; this.landingNews = value; };
-
-  private readonly onLandingWikiChange = async (slug: string, visible: boolean) => {
-    this.touched = true;
-    const previous = this.landingWikis;
-    this.landingWikis = this.landingWikis?.map((w) => (w.slug === slug ? { ...w, hiddenOnLanding: !visible } : w)) ?? null;
-    try {
-      await apiJson("/api/landing/wikis", {
-        method: "PUT",
-        body: JSON.stringify({ slug, hidden: !visible }),
-      });
-    } catch {
-      this.landingWikis = previous;
-      this.error = t("Failed to save settings.");
-    }
-  };
 
   private readonly onThumbnailTtlChange = (value: string) => {
     this.touched = true;
@@ -379,37 +348,6 @@ export class SettingsForm extends JSXElement {
                   ></textarea>
                 </div>
               </div>
-            </div>
-
-            <div class="login-field">
-              <span class="login-field-label">{t("Public wikis on the landing page")}</span>
-              <p class="settings-hint">{t("Choose which of your publicly readable wikis appear on the landing page.")}</p>
-              {this.landingWikis && this.landingWikis.length > 0 ? (
-                <div class="settings-toggle-list">
-                  {this.landingWikis.map((wiki) => {
-                    const visible = !wiki.hiddenOnLanding;
-                    return (
-                      <label class="settings-toggle-row" key={wiki.slug}>
-                        <span class="settings-toggle-copy">
-                          <strong>{wiki.displayName}</strong>
-                          <p>{t("Visitors on the start page can open this wiki without an account.")}</p>
-                        </span>
-                        <input
-                          class="header-switch-input"
-                          type="checkbox"
-                          checked={visible}
-                          onchange={(event) => this.onLandingWikiChange(wiki.slug, (event.currentTarget as HTMLInputElement).checked)}
-                        />
-                        <span class={visible ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
-                          <span class="header-switch-thumb"></span>
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              ) : this.landingWikis ? (
-                <p class="settings-hint">{t("No publicly readable wikis.")}</p>
-              ) : null}
             </div>
 
             {this.isAdmin ? (

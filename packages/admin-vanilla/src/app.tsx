@@ -785,7 +785,7 @@ class FieldBlockElement<T> extends JSXElement {
     const editable = isEditable(field, modalMode);
     const disabled = Boolean(this.props.disabled) || !editable;
     // const useToggleEditor = editable && field.key === "requiredPluginsEnabled";
-    const isToggle = field.type === "switch";
+    const isToggle = field.type === "switch" || field.type === "landing-visibility";
     const children = <>
       {renderFieldEditor({
         inputId: `field-${field.key}`,

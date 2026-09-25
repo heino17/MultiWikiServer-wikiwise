@@ -41,6 +41,7 @@ import { Debug } from "@prisma/client/runtime/client";
 import { WikiStore } from "./RecipeResolver";
 import { SessionManager } from "./sessions";
 import { deleteThumbnail } from "./WikiThumbnailRoutes";
+import { HIDDEN_PREFIX } from "./LandingRoutes";
 import type { PasswordService } from "../services/PasswordService";
 
 
@@ -81,6 +82,7 @@ export type RecipeDefinition = Omit<
   | "ownerUsername"
   | "myRights"
   | "sharedWritableBags"
+  | "landingVisible"
 >;
 
 declare global {
@@ -425,12 +427,27 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
 
     // Mirror the wiki's display name into the default bag's starter tiddlers.
     // Runs on every save of an existing wiki: it also heals tiddlers that were
-    // left behind by edits made before this sync existed.
+    // left behind by edits made before this save flow existed.
     if (priorRecipe) {
       const defaultBagName = data.writablePrefixBags.find((row) => row.prefix === "")?.bagName
         ?? bags.find((e) => e.isWritable && e.prefix === "")?.bagName;
       if (defaultBagName)
         await mirrorDisplayNameIntoStarterTiddlers(prisma, new IdString(id), defaultBagName, data.displayName);
+    }
+
+    // Persist whether the wiki should appear on the public landing page. The
+    // landing page only surfaces ANON-readable wikis anyway; this flag is the
+    // per-wiki, per-owner control that lets them opt out of the overview.
+    const landingVisible = data.landingVisible ?? true;
+    const landingHiddenKey = HIDDEN_PREFIX + id;
+    if (!landingVisible) {
+      await prisma.settings.upsert({
+        where: { key: landingHiddenKey },
+        create: { key: landingHiddenKey, value: "true" },
+        update: { value: "true" },
+      });
+    } else {
+      await prisma.settings.deleteMany({ where: { key: landingHiddenKey } });
     }
 
     let ownerUsername = "";
@@ -458,11 +475,12 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
       ownerUsername,
       myRights: this.user.isAdmin ? "admin" : existingRecipe?.owner_user_id === this.user.user_id ? "owner" : "",
       sharedWritableBags,
+      landingVisible,
     });
 
   }
 
-  private buildResponse({ definition, plugins, allbags, id, slug, templateName, lastCompiledAt, recipePermissions, ownerUsername = "", myRights = "", sharedWritableBags = [] }: {
+  private buildResponse({ definition, plugins, allbags, id, slug, templateName, lastCompiledAt, recipePermissions, ownerUsername = "", myRights = "", sharedWritableBags = [], landingVisible = true }: {
     id: IdString;
     slug: string;
     lastCompiledAt: Date;
@@ -475,6 +493,8 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
     myRights: string;
     /** writable bags that users other than the wiki owner can write to */
     sharedWritableBags: string[];
+    /** whether this publicly readable wiki appears on the public landing page */
+    landingVisible: boolean;
   }): DataStore["wikis"][number] {
     const effectivePluginSet = plugins;
     const effectiveReadonlyBags = allbags
@@ -502,6 +522,7 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
       sharedWritableBags,
       recipeAdmins: recipePermissions.filter(e => e.level === "B_write").map(e => e.role),
       recipeUsers: recipePermissions.filter(e => e.level === "A_read").map(e => e.role),
+      landingVisible,
     };
   }
 
@@ -589,6 +610,17 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
         : []
     ).map(e => [e.user_id, e.username]));
 
+    // Which of the visible wikis are hidden from the public landing page.
+    const hiddenLandingRows = await prisma.settings.findMany({
+      where: { key: { startsWith: HIDDEN_PREFIX } },
+      select: { key: true },
+    });
+    const hiddenLandingIds = new Set(
+      hiddenLandingRows
+        .filter((row) => row.key.startsWith(HIDDEN_PREFIX))
+        .map((row) => row.key.slice(HIDDEN_PREFIX.length)),
+    );
+
     // Foreign-writer classification for the shared-area warning: every
     // role_id granted B_write/C_admin anywhere in the visible recipe set,
     // its members, and its role names, fetched in a few round-trips.
@@ -649,6 +681,7 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
         templateName: templates(new IdString(recipe.template_id)),
         myRights,
         sharedWritableBags,
+        landingVisible: !hiddenLandingIds.has(recipe.id),
       });
     })
   }
@@ -1792,6 +1825,9 @@ export const AdminDeleteWiki = zodRoute({
         throw new SendError("ACCESS_DENIED", 403, { reason: "Only the user who created the wiki (or the site admin 'admin') may delete it." });
 
       await prisma.recipe.delete({ where: { id: recipe.id } });
+
+      // Drop the landing-page visibility flag alongside the wiki.
+      await prisma.settings.deleteMany({ where: { key: HIDDEN_PREFIX + recipe.id } });
 
       for (const { bag_id } of recipe.recipe_bags) {
         const remainingReferences = await prisma.recipeBag.count({ where: { bag_id } });

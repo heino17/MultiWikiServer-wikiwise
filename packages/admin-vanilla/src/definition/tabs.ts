@@ -54,7 +54,8 @@ export type FieldType =
   | "activity-feed"
   | "version"
   | "select"
-  | "metadata-table";
+  | "metadata-table"
+  | "landing-visibility";
 
 
 export class IdString extends String {
@@ -97,6 +98,7 @@ export const fieldTypeZodShapes = {
   "select": z.string(),
   "switch": z.boolean(),
   "metadata-table": z.string().array(),
+  "landing-visibility": z.boolean(),
 } satisfies Record<FieldType, any>;
 
 export type FieldZodType<T extends FieldType = FieldType> = z.infer<(typeof fieldTypeZodShapes)[T]>;
@@ -125,6 +127,7 @@ export const fieldTypeCreateFactories = {
   "version": () => "",
   "select": () => "",
   "metadata-table": () => [],
+  "landing-visibility": () => true,
 } satisfies { [K in FieldType]: () => FieldZodType<K> };
 
 
@@ -275,6 +278,14 @@ const tabs = {
         architecture: "Edits permission rows on the wiki definition itself. These govern access to the wiki surface separately from bag-level read and write rights.",
       },
       {
+        key: "landingVisible",
+        label: "Show on the landing page",
+        type: "landing-visibility",
+        section: "authored",
+        mode: "create edit",
+        architecture: "Whether this publicly readable (ANON-open) wiki appears in the public overview on the start page. Only shown once ANON is among the wiki's Readers.",
+      },
+      {
         key: "compileValidation",
         label: "Compile validation",
         type: "validation-report",
@@ -308,6 +319,7 @@ const tabs = {
         { title: "Plugins", description: "Add wiki-specific plugins on top of the template plugin set.", keys: ["plugins"], width: halfWidth },
         { title: "Readers", description: "Who can open this wiki (read access).", keys: ["recipeUsers"], width: halfWidth },
         { title: "Editors", description: "Who can make changes to this wiki.", keys: ["recipeAdmins"], width: halfWidth },
+        { title: "Landing page", description: "Show this publicly readable wiki on the start page for visitors without an account.", keys: ["landingVisible"], width: halfWidth },
         { title: "Browser security", description: "External sources browsers may load beyond the strict same-origin default (images, media, frames, network); external scripts stay locked to same-origin.", keys: ["cspAllow"], width: fullWidth },
         { title: "Access", description: "Controls who can edit the wiki settings.", keys: ["recipePermissions"], width: fullWidth },
       ],
@@ -836,6 +848,8 @@ export interface WikiAdminRecord {
   sharedWritableBags: readonly string[],
   // external sources the wiki's pages may additionally load (CSP allowlist)
   cspAllow: readonly string[],
+  // whether this publicly readable wiki appears on the public landing page
+  landingVisible: boolean,
   // client field
   defaultWritableBag: string;
   thumbnailUrl: string;

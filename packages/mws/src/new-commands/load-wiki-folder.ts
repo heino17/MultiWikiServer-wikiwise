@@ -173,6 +173,7 @@ export class LoadWikiFolderCommand extends BaseCommand<[string], {
 						recipeAdmins: ownerRoles,
 						recipeUsers,
 						cspAllow: [],
+						landingVisible: true,
 					});
 				}
 			}

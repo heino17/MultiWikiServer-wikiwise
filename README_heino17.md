@@ -2431,16 +2431,21 @@ bisherige Redirect nach `/login`).
   - Routen-Registrierung in `new-managers/index.ts` (`LandingData`).
   - Implementierung: `packages/mws/src/new-managers/LandingRoutes.ts`.
 
-- **Pro-Wiki-Sichtbarkeit auf der Startseite:** Jeder angemeldete Nutzer kann
-  in den Einstellungen (`/settings`, eigener Bereich „Öffentliche Wikis auf
-  der Startseite") pro eigenem öffentlich-lesbarem Wiki entscheiden, ob es
-  anonymen Besuchern angezeigt wird. Speicherung als `landing.hidden.<recipeId>`
-  = `"true"` in der `settings`-Tabelle (Zeile fehlt ⇒ Standard „anzeigen");
-  geprüft wird nur der Owner (`recipe.owner_user_id`) bzw. das Site-Admin-
-  Konto (`admin`). Endpunkte: `GET`/`PUT /api/landing/wikis` (Referer
-  `/settings`, XHR-Header nötig; fremde Wikis ⇒ 403). `GET /api/landing`
-  filtert diese aus `wikis` und `stats.publicWikis` heraus. Die Schalter
-  speichern sofort (kein „Einstellungen speichern" nötig).
+- **Pro-Wiki-Sichtbarkeit auf der Startseite:** Pro Wiki steuert eine
+  Checkbox im **Wiki-Editor** (Feld `landingVisible`, Gruppe „Landing page"),
+  ob ein öffentlich lesbares Wiki anonymen Besuchern angezeigt wird. Die
+  Checkbox erscheint nur, solange `ANON` unter den Readers (`recipeUsers`)
+  steht — ist das nicht der Fall, wird stattdessen ein Hinweis gerendert.
+  Kein Template-Fork nötig: Templates sind reiner Startinhalt, die
+  Sichtbarkeit ist eine reine Wiki-Einstellung. Speicherung als
+  `landing.hidden.<recipeId>` = `"true"` in der `settings`-Tabelle (Zeile
+  fehlt ⇒ Standard „anzeigen"); geschrieben/gelesen in
+  `new-managers/TabDataAdapter.ts` (`saveRow` upsert/delete, `getList`
+  invertiert in `landingVisible`, `AdminDeleteWiki` räumt die Zeile ab).
+  `GET /api/landing` filtert diese aus `wikis` und `stats.publicWikis`
+  heraus. Die Änderung wird mit dem regulären „Änderungen speichern" des
+  Editors persistiert. Ein dedizierter `/api/landing/wikis`-Endpunkt
+  existiert nicht mehr (entfernt, zusammen mit dem `/settings`-Bereich).
 
 - **Anon-Thumbnails nur aus dem Cache:** `WikiThumbnailRoutes` dient
   Vorschaubilder für anonyme Besucher nur noch aus dem existierenden
@@ -2472,11 +2477,13 @@ bisherige Redirect nach `/login`).
 - **Einstellungen (§47):** Schalter „Show the public landing page" +
   zwei Textfelder „Landing welcome message" / „Landing news" (Markdown,
   max. 2000 / 10000 Zeichen). Schalter aus ⇒ anonyme `/`-auflösung entfällt.
-  Zusätzlich der Bereich „Public wikis on the landing page" mit einem
-  sofort wirkenden An/Aus-Schalter pro öffentlich lesbarem eigenen Wiki
-  (§ „Pro-Wiki-Sichtbarkeit").
+  Der frühere Bereich „Public wikis on the landing page" wurde entfernt —
+  die Pro-Wiki-Sichtbarkeit ist in den Wiki-Editor gewandert (§ „Pro-Wiki-
+  Sichtbarkeit").
 - **i18n:** neue Keys 21 in allen 8 Sprachen (Sektionen `#region admin
-  settings` und `#region landing page`).
+  settings` und `#region landing page`); später −4 Settings-Keys der
+  Pro-Wiki-Sichtbarkeit +3 Editor-Keys („Landing page", Callout, Hinweis).
+  Aktuelle Parität: 519 Keys.
 
 ### Verifikation
 
@@ -2494,12 +2501,12 @@ bisherige Redirect nach `/login`).
   sichtbar und bedienbar; `PUT`/`GET`/DB-Zeilen für die 3 neuen Keys
   verifiziert (`null` löscht die Zeile), Werte danach auf den
   Ausgangszustand zurückgesetzt.
-- Pro-Wiki-Sichtbarkeit: `GET /api/landing/wikis` (Admin) listet 8 öffentlich
-  lesbare Wikis mit `hiddenOnLanding:false`; `PUT {slug, hidden:true}` ⇒
-  `GET /api/landing` zeigt 7 (Wiki + Zähler weg), `hidden:false` stellt es
-  wieder her (DB-Zeile verschwindet). Falscher Referer ⇒ 403. Toggle-Klick
-  headless: Karten 8 → 7 → 8.
-- `tsc` (admin-vanilla) + `tsc2` (Root) grün; Locale-Parität 520/520.
+- Pro-Wiki-Sichtbarkeit (Wiki-Editor, Admin headless): „Landing page"-
+  Schalter nur bei `ANON` in Readers; AUS + speichern ⇒ `settings`-Zeile
+  `landing.hidden.<recipeId>`=`"true"` und `GET /api/landing` zeigt 7
+  (Wiki + Zähler weg), AN + speichern ⇒ Zeile verschwindet, 8. Privates
+  Wiki ohne ANON ⇒ Callout statt Schalter. `/settings` ohne den alten Bereich.
+- `tsc` (admin-vanilla) + `tsc2` (Root) grün; Locale-Parität 519/519.
 
 ---
 
