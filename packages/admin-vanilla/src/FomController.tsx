@@ -37,6 +37,7 @@ export class FomController<T extends AdminRecord> {
       pendingRows: this.pendingRows,
       transientPermissionRows: this.transientPermissionRows,
       storageError: "",
+      liveValidation: false,
     };
   }
 

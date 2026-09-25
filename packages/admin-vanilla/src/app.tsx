@@ -75,6 +75,8 @@ type ModalState = {
     transientPermissionRows: Record<string, PermissionRow[]>;
     storageError: string;
     loading?: boolean;
+    /** Live availability checks for names/slugs only apply to real admin record editors. */
+    liveValidation: boolean;
   };
 }[TabId];
 
@@ -91,6 +93,8 @@ export interface PerTabFieldState {
   readonly transientPermissionRows: Record<string, PermissionRow[]>;
   readonly storageError: string;
   readonly loading?: boolean;
+  /** Live availability checks for names/slugs only apply to real admin record editors. */
+  readonly liveValidation: boolean;
 }
 
 interface PerTabStore {
@@ -606,6 +610,7 @@ class PerTabStoreImpl implements PerTabStore {
       transientPermissionRows: {},
       storageError,
       loading,
+      liveValidation: true,
     } as ModalStateForTab<T>;
   }
 
