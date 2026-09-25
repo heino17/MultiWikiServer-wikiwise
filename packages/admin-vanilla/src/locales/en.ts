@@ -510,4 +510,19 @@ export const enStrings: Record<string, string> = {
   "You have created {used} of {limit} own wikis – {remaining} more possible.": "You have created {used} of {limit} own wikis – {remaining} more possible.",
   "You have created {used} of ∞ own wikis – unlimited more possible.": "You have created {used} of ∞ own wikis – unlimited more possible.",
   "Own wikis": "Own wikis",
+
+  // #region admin settings
+  "Settings": "Settings",
+  "Choose the language and theme every visitor sees on their first load.": "Choose the language and theme every visitor sees on their first load.",
+  "Language on first load": "Language on first load",
+  "Theme on first load": "Theme on first load",
+  "Follow browser language": "Follow browser language",
+  "Follow system theme": "Follow system theme",
+  "Light theme": "Light theme",
+  "Dark theme": "Dark theme",
+  "Save settings": "Save settings",
+  "Settings saved.": "Settings saved.",
+  "Failed to save settings.": "Failed to save settings.",
+  "A visitor's own language or theme choice always wins.": "A visitor's own language or theme choice always wins.",
+  "Only administrators can change installation-wide defaults.": "Only administrators can change installation-wide defaults.",
 };

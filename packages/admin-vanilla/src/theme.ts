@@ -20,20 +20,21 @@ export function setThemeSetting(setting: ThemeSetting): void {
   }
 }
 
-/** The effective theme: explicit setting if any, else the system preference. */
+/** The effective theme: explicit setting if any, else the installation-wide
+ *  default (set in the settings page), else the system preference. */
 export function getEffectiveTheme(): ThemeMode {
   const setting = getThemeSetting();
   if (setting !== "system") return setting;
+  const defaultTheme = embeddedServerResponse?.prefs?.defaultTheme ?? null;
+  if (defaultTheme === "dark" || defaultTheme === "light") return defaultTheme;
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 export function initializeTheme(): void {
-  const setting = getThemeSetting();
-  if (setting === "system") {
-    document.documentElement.removeAttribute("data-theme");
-  } else {
-    resolveTheme(setting);
-  }
+  resolveTheme(getEffectiveTheme());
+  // Drop the first-paint background set by the preflight script in
+  // index.html now that the app stylesheet is loaded.
+  document.documentElement.style.removeProperty("background-color");
 }
 
 /** Apply the other theme and persist it. */

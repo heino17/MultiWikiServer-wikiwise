@@ -491,4 +491,19 @@ export const koStrings: Record<string, string> = {
   "You have created {used} of {limit} own wikis – {remaining} more possible.": "자신의 Wiki를 한도 {limit}개 중 {used}개 만들었습니다 – {remaining}개 더 가능합니다.",
   "You have created {used} of ∞ own wikis – unlimited more possible.": "자신의 Wiki를 무제한 중 {used}개 만들었습니다 – 무제한으로 더 가능합니다.",
   "Own wikis": "자신의 Wiki",
+
+  // #region admin settings
+  "Settings": "설정",
+  "Choose the language and theme every visitor sees on their first load.": "모든 방문자가 첫 로드 시 보게 될 언어와 테마를 선택하세요.",
+  "Language on first load": "첫 로드 시 언어",
+  "Theme on first load": "첫 로드 시 테마",
+  "Follow browser language": "브라우저 언어 따르기",
+  "Follow system theme": "시스템 테마 따르기",
+  "Light theme": "밝은 테마",
+  "Dark theme": "어두운 테마",
+  "Save settings": "설정 저장",
+  "Settings saved.": "설정이 저장되었습니다.",
+  "Failed to save settings.": "설정을 저장하지 못했습니다.",
+  "A visitor's own language or theme choice always wins.": "방문자가 직접 선택한 언어 또는 테마가 항상 우선합니다.",
+  "Only administrators can change installation-wide defaults.": "설치 전체 기본값은 관리자만 변경할 수 있습니다.",
 };

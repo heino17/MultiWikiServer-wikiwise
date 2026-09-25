@@ -624,10 +624,11 @@ liefern für `#one` u. a. eine eigene Form; ja/ko/zh verwenden die Basisform.
 `🇪🇸 Español`, `🇫🇷 Français`, `🇯🇵 日本語`, `🇰🇷 한국어`, `🇷🇺 Русский`,
 `🇨🇳 中文` in der Kopfzeile (Labels aus `localeLabels` in `i18n.ts`). Die
 Auswahl wird in `localStorage` (`"mws.admin.locale"`) gespeichert und wirkt
-sofort über `setCurrentLocale()` + `location.reload()`; ohne Eintrag wird die
-Browser-Sprache (`navigator.language`) verwendet (`normalizeLocaleCode`
-mappt `de`/`es`/`fr`/`ja`/`ko`/`ru`/`zh` auf die passende Sprache, alles
-andere auf `en`).
+sofort über `setCurrentLocale()` + `location.reload()`; ohne eigenen Eintrag
+gilt die installationsweite Standard-Sprache (siehe §47), sonst die
+Browser-Sprache (`navigator.language`) (`normalizeLocaleCode` mappt
+`de`/`es`/`fr`/`ja`/`ko`/`ru`/`zh` auf die passende Sprache, alles andere auf
+`en`).
 
 **Detailfixes in diesem Zuge:**
 - `description`/`headerDescription`/`footerDescription` werden jetzt
@@ -2296,6 +2297,54 @@ CSP-Header auf Wiki-Seiten, Existenz-Orakel (`404` statt `403`).
 **C3 · „Meine Bereiche"-UI** (Bestand aus dem Umbau): Gruppierung
 „Meine Wikis / Für mich freigegeben / Klassenbereiche / System" +
 Vertrauens-Label + Bag-Owner im Admin-UI.
+
+---
+
+## 47. Admin-App: Standard-Sprache und Theme fürs 1. Laden (`Einstellungen`)
+
+**Ziel:** Der Betreiber legt installationsweit fest, in welcher Sprache und
+in Hell oder Dunkel die Admin-App beim **ersten** Seitenaufruf ausgeliefert
+wird. Die eigene Wahl eines Besuchers (Sprach-/Theme-Umschalter im Header,
+`localStorage`) behält immer Vorrang — die Vorgabe ist nur der Fallback.
+
+**Ablage (server-seitig):** Keys in der `settings`-Tabelle
+(`admin.defaultLocale`, `admin.defaultTheme`), verarbeitet in
+`packages/mws/src/new-managers/PrefsRoutes.ts` (`readPrefs`).
+- `GET /api/prefs` — jeder eingeloggte Nutzer liest die aktuellen Vorgaben.
+- `PUT /api/prefs` — nur `admin` (`state.okAdmin()`), Body
+  `{ defaultLocale: string|null, defaultTheme: "dark"|"light"|null }`;
+  `null` löscht die Vorgabe (→ Browser-Sprache bzw. System-Theme).
+
+**Auslieferung vor dem 1. Paint:** `serveIndex`
+(`services/setupDevServer.ts`) liest die Prefs pro Request und injiziert sie
+doppelt:
+- als `prefs` in `window.embeddedServerResponse` (genutzt von `i18n.ts`
+  `getCurrentLocale()` und `theme.ts` `getEffectiveTheme()` beim Start) und
+- als kleines Objekt in `window.embeddedServerPreflight` in `index.html` —
+  ein winziges Inline-`<script>` ganz oben im `<head>` setzt daraus
+  `data-theme` (+ passenden Hintergrund) **bevor** das CSS greift, damit es
+  keinen falschen Falsch-Flash gibt. `initializeTheme()` räumt das Inline-
+  Hintergrund-Style-Objekt nach dem App-Start wieder weg.
+
+Die Admin-HTML-Antwort geht mit `Cache-Control: no-store` raus (kein
+Zwischenspeichern, kein Back-Forward-Cache), damit beim erneuten Öffnen
+immer der aktuelle Stand geliefert wird. Zusätzlich holt die
+Einstellungen-Seite beim Öffnen (`connectedCallback` → `GET /api/prefs`)
+den aktuellen Stand nach und setzt die Auswahlfelder entsprechend —
+die Anzeige spiegelt also immer die tatsächlich gespeicherten Werte.
+
+**Auflösungsreihenfolge:**
+- Sprache: `localStorage` (`mws.admin.locale`) → `prefs.defaultLocale` →
+  `navigator.language` → `en`
+- Theme: `localStorage` (`mws.admin.theme`) → `prefs.defaultTheme` →
+  `prefers-color-scheme` (OS)
+
+**UI:** ⚙-Button (`settings.svg`) im Header, nur für Admins sichtbar, öffnet
+`/settings` (`app-settings.tsx`, Route in `main.tsx`). Zwei Auswahlfelder
+(Sprache mit „Browser-Sprache folgen", Theme mit „System-Theme folgen") +
+Speichern-Button. Nicht-Admins sehen die Seite schreibgeschützt mit dem
+Hinweis „Nur Administratoren …". Neue i18n-Keys (13) in allen 8 Sprachen
+(Sektion `#region admin settings`).
 
 ---
 

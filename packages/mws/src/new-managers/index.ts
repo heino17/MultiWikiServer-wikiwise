@@ -20,6 +20,7 @@ import { PinboardDeleteNote, PinboardList, PinboardMarkRead, PinboardSaveNote, P
 import { UserFileDelete, UserFileDownload, UserFileList, UserFilePreview, UserFileShareTargets, UserFileShareUpdate, UserFileSharedList, UserFileUpload } from "./UserFileRoutes";
 import { serveWikiThumbnail } from "./WikiThumbnailRoutes";
 import { RecipeStatus, RecipeStoreJS, RecipeStoreJSON, RecipeUpdates, TiddlerBatch, TiddlerList } from "./RecipeRoutes";
+import { AdminPrefsGet, AdminPrefsPut } from "./PrefsRoutes";
 
 export * from "./RecipeResolver";
 export * from "./TabDataAdapter";
@@ -178,6 +179,8 @@ const ApiRoutes = {
   PinboardDeleteNote,
   PinboardMarkRead,
   AdminSave,
+  AdminPrefsGet,
+  AdminPrefsPut,
   UserFileUpload,
   UserFileList,
   UserFileDownload,
@@ -195,6 +198,8 @@ interface ClientRoutes {
   AdminDeleteBag: ClientRoute<typeof AdminDeleteBag>;
   AdminDeleteUser: ClientRoute<typeof AdminDeleteUser>;
   AdminSave: ClientRoute<typeof AdminSave>;
+  AdminPrefsGet: ClientRoute<typeof AdminPrefsGet>;
+  AdminPrefsPut: ClientRoute<typeof AdminPrefsPut>;
   AdminBackup: ClientRoute<typeof AdminBackup>;
   AdminBackupList: ClientRoute<typeof AdminBackupList>;
   AdminBackupDownload: ClientRoute<typeof AdminBackupDownload>;

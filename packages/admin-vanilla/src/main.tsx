@@ -6,6 +6,7 @@ import { LoginForm } from "./app-login";
 import { AuthUser } from "@tiddlywiki/mws/src/new-managers/sessions";
 import { SendError } from "@tiddlywiki/server";
 import { ProfileForm } from "./app-profile";
+import { SettingsForm } from "./app-settings";
 import { initializeTheme } from "./theme";
 
 // disables the "flash of white" styles
@@ -24,6 +25,10 @@ declare global {
     userState: AuthUser;
     tw5Versions: string[];
     sendError?: ReturnType<SendError<any>["toJSON"]>;
+    prefs?: {
+      defaultLocale: string | null;
+      defaultTheme: "dark" | "light" | null;
+    };
   }
 }
 
@@ -56,6 +61,9 @@ function setup() {
   }
   else if (location.pathname === pathPrefix + "/profile") {
     document.body.appendChild(new ProfileForm());
+  }
+  else if (location.pathname === pathPrefix + "/settings") {
+    document.body.appendChild(new SettingsForm());
   }
   else {
     document.body.appendChild(new App());

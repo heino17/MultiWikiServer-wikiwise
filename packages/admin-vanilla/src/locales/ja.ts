@@ -491,4 +491,19 @@ export const jaStrings: Record<string, string> = {
   "You have created {used} of {limit} own wikis – {remaining} more possible.": "自分の Wiki を {limit} 中 {used} 作成しました – あと {remaining} 作成できます。",
   "You have created {used} of ∞ own wikis – unlimited more possible.": "自分の Wiki を ∞ 中 {used} 作成しました – 無制限に作成できます。",
   "Own wikis": "自分の Wiki",
+
+  // #region admin settings
+  "Settings": "設定",
+  "Choose the language and theme every visitor sees on their first load.": "初回読み込み時にすべての訪問者に表示する言語とテーマを選択します。",
+  "Language on first load": "初回読み込み時の言語",
+  "Theme on first load": "初回読み込み時のテーマ",
+  "Follow browser language": "ブラウザーの言語に従う",
+  "Follow system theme": "システムのテーマに従う",
+  "Light theme": "ライトテーマ",
+  "Dark theme": "ダークテーマ",
+  "Save settings": "設定を保存",
+  "Settings saved.": "設定を保存しました。",
+  "Failed to save settings.": "設定を保存できませんでした。",
+  "A visitor's own language or theme choice always wins.": "訪問者自身による言語またはテーマの選択が常に優先されます。",
+  "Only administrators can change installation-wide defaults.": "インストール全体の既定値を変更できるのは管理者のみです。",
 };

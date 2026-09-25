@@ -491,4 +491,19 @@ export const zhCnStrings: Record<string, string> = {
   "You have created {used} of {limit} own wikis – {remaining} more possible.": "您已创建 {used} 个自有 Wiki（上限 {limit}）——还可以再创建 {remaining} 个。",
   "You have created {used} of ∞ own wikis – unlimited more possible.": "您已创建 {used} 个自有 Wiki（上限 ∞）——可以无限制地创建。",
   "Own wikis": "自有 Wiki",
+
+  // #region admin settings
+  "Settings": "设置",
+  "Choose the language and theme every visitor sees on their first load.": "选择每位访客首次加载时看到的语言和主题。",
+  "Language on first load": "首次加载时使用的语言",
+  "Theme on first load": "首次加载时使用的主题",
+  "Follow browser language": "跟随浏览器语言",
+  "Follow system theme": "跟随系统主题",
+  "Light theme": "浅色主题",
+  "Dark theme": "深色主题",
+  "Save settings": "保存设置",
+  "Settings saved.": "设置已保存。",
+  "Failed to save settings.": "保存设置失败。",
+  "A visitor's own language or theme choice always wins.": "访客自己选择的语言或主题始终优先。",
+  "Only administrators can change installation-wide defaults.": "只有管理员才能更改整个安装的默认设置。",
 };
