@@ -1,20 +1,67 @@
 import { deStrings } from "./locales/de";
 import { enStrings } from "./locales/en";
+import { esStrings } from "./locales/es";
+import { frStrings } from "./locales/fr";
+import { jaStrings } from "./locales/ja";
+import { koStrings } from "./locales/ko";
+import { ruStrings } from "./locales/ru";
+import { zhCnStrings } from "./locales/zh-cn";
 
-export type LocaleCode = "en" | "de";
+export type LocaleCode =
+  | "en"
+  | "de"
+  | "es"
+  | "fr"
+  | "ja"
+  | "ko"
+  | "ru"
+  | "zh-cn";
 
 const dictionaries: Record<LocaleCode, Record<string, string>> = {
   en: enStrings,
   de: deStrings,
+  es: esStrings,
+  fr: frStrings,
+  ja: jaStrings,
+  ko: koStrings,
+  ru: ruStrings,
+  "zh-cn": zhCnStrings,
 };
 
-export const supportedLocales: LocaleCode[] = ["en", "de"];
+export const supportedLocales: LocaleCode[] = [
+  "en",
+  "de",
+  "es",
+  "fr",
+  "ja",
+  "ko",
+  "ru",
+  "zh-cn",
+];
+
+/** Display labels for the locale selector. */
+export const localeLabels: Record<LocaleCode, string> = {
+  en: "🇺🇸 English",
+  de: "🇩🇪 Deutsch",
+  es: "🇪🇸 Español",
+  fr: "🇫🇷 Français",
+  ja: "🇯🇵 日本語",
+  ko: "🇰🇷 한국어",
+  ru: "🇷🇺 Русский",
+  "zh-cn": "🇨🇳 中文",
+};
 
 const STORAGE_KEY = "mws.admin.locale";
 
 function normalizeLocaleCode(raw: string): LocaleCode {
-  const code = raw.replace("_", "-").split("-")[0].toLowerCase();
+  const code = raw.replace("_", "-").toLowerCase().split("-")[0];
   if (code === "de") return "de";
+  if (code === "es") return "es";
+  if (code === "fr") return "fr";
+  if (code === "ja") return "ja";
+  if (code === "ko") return "ko";
+  if (code === "ru") return "ru";
+  if (code === "zh") return "zh-cn";
   return "en";
 }
 
