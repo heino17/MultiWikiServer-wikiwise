@@ -217,6 +217,13 @@ export class LandingPage extends JSXElement {
               </section>
             ) : null}
 
+            {this.data.news ? (
+              <section class="landing-markdown landing-news" aria-label={t("News")}>
+                <h2 class="landing-section-title">{t("News")}</h2>
+                <LandingMarkdown markdown={this.data.news} />
+              </section>
+            ) : null}
+
             <section class="landing-stats" aria-label={t("Server statistics")}>
               {this.statCards().map((card) => (
                 <div class="landing-stat-card">
@@ -228,7 +235,7 @@ export class LandingPage extends JSXElement {
 
             <section class="landing-section" aria-label={t("Public wikis")}>
               <h2 class="landing-section-title">{t("Public wikis")}</h2>
-              <p class="landing-section-copy">{t("Wikis anyone can read without an account.")}</p>
+              <p class="landing-section-copy">{t("User-created wikis")}</p>
               {this.data.wikis.length > 0 ? (
                 <div class="landing-wiki-grid">
                   {this.data.wikis.map((wiki) => (
@@ -259,13 +266,6 @@ export class LandingPage extends JSXElement {
                 <p class="landing-empty">{t("No public wikis yet.")}</p>
               )}
             </section>
-
-            {this.data.news ? (
-              <section class="landing-markdown landing-news" aria-label={t("News")}>
-                <h2 class="landing-section-title">{t("News")}</h2>
-                <LandingMarkdown markdown={this.data.news} />
-              </section>
-            ) : null}
           </>
         ) : this.loadError ? (
           <p class="landing-empty">{this.loadError}</p>
@@ -274,7 +274,7 @@ export class LandingPage extends JSXElement {
         )}
 
         <footer class="landing-footer">
-          <span>{t("MWS {version}", { version: this.data?.versions.mws ?? "" })} · {t("TiddlyWiki {version}", { version: currentTw5 ?? "" })}</span>
+          <span>{t("MWS-wikiwise {version}", { version: this.data?.versions.mws ?? "" })} · {t("TiddlyWiki {version}", { version: currentTw5 ?? "" })}</span>
           <a href={pathPrefix + "/tw5/" + (currentTw5 ?? "")}>{t("TiddlyWiki docs")}</a>
         </footer>
       </div>
