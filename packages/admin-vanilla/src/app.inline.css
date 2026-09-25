@@ -4087,7 +4087,7 @@ odt-preview-document {
 	min-height: 100vh;
 	display: grid;
 	gap: 24px;
-	padding: 18px 32px 44px;
+	padding: 18px 32px 18px;
 	background:
 		radial-gradient(circle at top left, var(--color-decor-top-left) 0, transparent 30vw),
 		radial-gradient(circle at top right, var(--color-decor-top-right) 0, transparent 26vw),
