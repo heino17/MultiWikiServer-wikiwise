@@ -8,11 +8,21 @@ import { IdString } from "@mws/admin-vanilla/src/definition/tabs";
 import { serverEvents } from "@tiddlywiki/events";
 import { BagImport, defaultPreloadFunction, PluginDefinition, TiddlerHasher, PluginCache } from "../plugin-cache";
 import { RecipeInfo, RecipeResolver } from "./RecipeResolver";
+import { readPrefs } from "./PrefsRoutes";
 import { TiddlerFields } from "tiddlywiki";
 import { ok } from "node:assert";
 
 
 type IndexData = ART<RecipeResolver["getIndexData"]>;
+
+/** Whether the wiki toolbox's "Upload file" button should be served.
+ *  The wiki upload lands in the owner's user files, so it needs both the
+ *  "My files" feature and the dedicated wiki-upload switch enabled. */
+async function isWikiUploadEnabled(state: ServerRequest): Promise<boolean> {
+  if (!state.engine) return true;
+  const prefs = await readPrefs(state.engine);
+  return prefs.showWikiUpload && prefs.showUserFiles;
+}
 // #region serveIndex
 export async function serveWikiIndex(
   state: ServerRequest,
@@ -520,6 +530,12 @@ abstract class StoreWriter {
       await this.writeTiddler({
         title: "$:/state/multiwikiclient/dev-mode",
         text: "yes"
+      });
+    }
+    if (!(await isWikiUploadEnabled(this.state))) {
+      await this.writeTiddler({
+        title: "$:/config/multiwikiclient/hide-upload-file",
+        text: "yes",
       });
     }
     await this.writeTiddler({

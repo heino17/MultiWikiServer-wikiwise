@@ -244,7 +244,7 @@ h6 {
 	top: 0.57em;
 	font-size: 0.22em;
 	font-weight: 600;
-	color: #E7BF63;
+	color: var(--color-text-on-accent);
 	letter-spacing: 0.2em;
 	line-height: 1;
 	white-space: nowrap;
@@ -360,6 +360,51 @@ h6 {
 	font-size: 0.9rem;
 	line-height: 1.5;
 	color: var(--color-text-soft);
+}
+
+.settings-toggle-list {
+	display: grid;
+	gap: 6px;
+}
+
+.settings-toggle-row {
+	position: relative;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) max-content;
+	gap: 16px;
+	align-items: center;
+	padding: 12px 14px;
+	border-radius: 10px;
+	border: 1px solid var(--color-border-soft);
+	background: var(--color-surface-field);
+	cursor: pointer;
+}
+
+.settings-toggle-row.is-disabled {
+	opacity: 0.55;
+	cursor: default;
+}
+
+.settings-toggle-row .header-switch-input {
+	position: absolute;
+}
+
+.settings-toggle-copy {
+	min-width: 0;
+}
+
+.settings-toggle-copy strong {
+	display: block;
+	font-size: 0.92rem;
+	line-height: 1.4;
+	color: var(--color-text-strong);
+}
+
+.settings-toggle-copy p {
+	margin: 4px 0 0;
+	font-size: 0.85rem;
+	line-height: 1.5;
+	color: var(--color-text-subtle);
 }
 
 .hero-theme-toggle material-symbol {
@@ -974,6 +1019,8 @@ body:has(.modal-shell[open]) {
 	display: grid;
 	gap: 20px;
 	padding: 24px 30px 30px;
+	min-height: 0;
+	overflow-y: auto;
 }
 
 .login-fields {
