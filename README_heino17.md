@@ -709,6 +709,12 @@ Eindeutigkeit erzwingt weiterhin der Server per `checkExisting`
 (Key `username`, bei Eindeutigkeit serverseitig `checkExisting` +
 `username @unique`). Eigener Name ist beim Bearbeiten ausgenommen.
 
+Die Live-Validierung läuft nur in den echten Admin-Editoren
+(`liveValidation: true` in `createModalState`) — die
+Login-/Profilformulare (`FomController`, `liveValidation: false`) zeigen
+beim Tippen im Benutzernamen-Feld bewusst **keine**
+Verfügbarkeits-Meldung.
+
 ---
 
 ## 17. Wiki-Erstellung als Dropdown (statt zweier Buttons)

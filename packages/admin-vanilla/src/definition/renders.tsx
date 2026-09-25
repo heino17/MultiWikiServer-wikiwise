@@ -189,7 +189,7 @@ const SLUG_FORMAT_REGEX = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 function renderSlugLiveValidation(ctx: FieldEditorContext) {
   const { field, value, fieldState, itemsByTab } = ctx;
-  if (field.key !== "slug" || fieldState.tabId !== "wikis") return null;
+  if (!fieldState.liveValidation || field.key !== "slug" || fieldState.tabId !== "wikis") return null;
   const slug = String(value ?? "");
   if (!slug) {
     return (
@@ -241,7 +241,7 @@ function renderNameTakenStatus(value: string, names: readonly string[], savedNam
 
 function renderBagNameLiveValidation(ctx: FieldEditorContext) {
   const { field, value, fieldState, itemsByTab } = ctx;
-  if (field.key !== "name" || fieldState.tabId !== "bags") return null;
+  if (!fieldState.liveValidation || field.key !== "name" || fieldState.tabId !== "bags") return null;
   const name = String(value ?? "");
   if (!name) return null;
   const savedName = (fieldState.saved as Partial<BagAdminRecord> | undefined)?.name;
@@ -250,7 +250,7 @@ function renderBagNameLiveValidation(ctx: FieldEditorContext) {
 
 function renderUsernameLiveValidation(ctx: FieldEditorContext) {
   const { field, value, fieldState, itemsByTab } = ctx;
-  if (field.key !== "username" || fieldState.tabId !== "users") return null;
+  if (!fieldState.liveValidation || field.key !== "username" || fieldState.tabId !== "users") return null;
   const username = String(value ?? "");
   if (!username) return null;
   const savedName = (fieldState.saved as Partial<UserAdminRecord> | undefined)?.username;
