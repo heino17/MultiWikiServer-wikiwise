@@ -604,23 +604,30 @@ halten die abhängigen Daten konsistent mit.
 
 ---
 
-## 14. Admin-App zweisprachig: DE/EN (`i18n`)
+## 14. Admin-App mehrsprachig: 8 Sprachen (`i18n`)
 
 **Dateien:**
 - `packages/admin-vanilla/src/i18n.ts` (neu)
-- `packages/admin-vanilla/src/locales/en.ts` / `de.ts` (neu)
+- `packages/admin-vanilla/src/locales/en.ts` … `zh-cn.ts` (neu; en, de, es,
+  fr, ja, ko, ru, zh-cn)
 - `packages/admin-vanilla/src/app.tsx` (alle sichtbaren Strings via `t()`)
 
 **Konzept:** Keys sind englische Strings (en.ts = Source-of-Truth); die
-deutsche Übersetzung steht in de.ts. `t(key, params?)` unterstützt
-`{name}`-Interpolation und fällt auf den Key selbst zurück, wenn eine
-Übersetzung fehlt. Aktuell 237 Keys in beiden Sprachen, 1:1 konsistent.
+übrigen Übersetzungen stehen in je einer Datei pro Sprache. `t(key, params?)`
+unterstützt `{name}`-Interpolation und fällt auf den Key selbst zurück, wenn
+eine Übersetzung fehlt. Aktuell **472 Keys** in allen 8 Sprachen, 1:1
+konsistent (per Checks verifiziert: gleiche Key-Menge, gleiche
+Platzhalter). Plural-Varianten nutzen `Intl.PluralRules`: en/de/es/fr/ru
+liefern für `#one` u. a. eine eigene Form; ja/ko/zh verwenden die Basisform.
 
-**Umschalter:** `<select>` mit den Optionen `🇩🇪 Deutsch` / `🇺🇸 English`
-in der Kopfzeile. Die Auswahl wird in `localStorage`
-(`"mws.admin.locale"`) gespeichert und wirkt sofort über
-`setCurrentLocale()` + `location.reload()`; ohne Eintrag wird die
-Browser-Sprache (`navigator.language`) verwendet.
+**Umschalter:** `<select>` mit den Optionen `🇺🇸 English`, `🇩🇪 Deutsch`,
+`🇪🇸 Español`, `🇫🇷 Français`, `🇯🇵 日本語`, `🇰🇷 한국어`, `🇷🇺 Русский`,
+`🇨🇳 中文` in der Kopfzeile (Labels aus `localeLabels` in `i18n.ts`). Die
+Auswahl wird in `localStorage` (`"mws.admin.locale"`) gespeichert und wirkt
+sofort über `setCurrentLocale()` + `location.reload()`; ohne Eintrag wird die
+Browser-Sprache (`navigator.language`) verwendet (`normalizeLocaleCode`
+mappt `de`/`es`/`fr`/`ja`/`ko`/`ru`/`zh` auf die passende Sprache, alles
+andere auf `en`).
 
 **Detailfixes in diesem Zuge:**
 - `description`/`headerDescription`/`footerDescription` werden jetzt

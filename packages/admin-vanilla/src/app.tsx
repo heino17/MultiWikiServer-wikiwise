@@ -40,7 +40,7 @@ import { definitely, is } from "./definition/utils";
 import { logout } from "./passwords";
 import { fieldTypeRenderSidebars, formatFieldValue, renderFieldEditor, renderFieldSidebar, renderSwitchField, textWithSlashes } from "./definition/renders";
 import { tw5logo } from "./logos";
-import { getCurrentLocale, setCurrentLocale, supportedLocales, t, type LocaleCode } from "./i18n";
+import { getCurrentLocale, localeLabels, setCurrentLocale, supportedLocales, t, type LocaleCode } from "./i18n";
 import { getEffectiveTheme, toggleTheme, type ThemeMode } from "./theme";
 import "./pinboard";
 import "./user-files";
@@ -1704,7 +1704,7 @@ export class App extends JSXElement {
               onchange={this.handleLocaleChange}
             >
               {supportedLocales.map((code) => (
-                <option value={code}>{code === "de" ? "🇩🇪 Deutsch" : "🇺🇸 English"}</option>
+                <option value={code}>{localeLabels[code]}</option>
               ))}
             </select>
             <details class="hero-account-menu">
