@@ -38,6 +38,8 @@ export class SettingsForm extends JSXElement {
   @state() accessor showLocaleSelect = embeddedServerResponse.prefs?.showLocaleSelect ?? true;
   @state() accessor showThumbnails = embeddedServerResponse.prefs?.showThumbnails ?? true;
 
+  @state() accessor thumbnailTtlHours = embeddedServerResponse.prefs?.thumbnailTtlHours ?? null;
+
   @state() accessor isSubmitting = false;
   @state() accessor message = "";
   @state() accessor error = "";
@@ -62,6 +64,7 @@ export class SettingsForm extends JSXElement {
       if (typeof prefs.showWikiUpload === "boolean") this.showWikiUpload = prefs.showWikiUpload;
       if (typeof prefs.showLocaleSelect === "boolean") this.showLocaleSelect = prefs.showLocaleSelect;
       if (typeof prefs.showThumbnails === "boolean") this.showThumbnails = prefs.showThumbnails;
+      if (typeof prefs.thumbnailTtlHours === "number") this.thumbnailTtlHours = prefs.thumbnailTtlHours;
       if (!this.showUserFiles) this.showWikiUpload = false;
     } catch {
       // keep the embedded values
@@ -89,6 +92,7 @@ export class SettingsForm extends JSXElement {
           showWikiUpload: this.showUserFiles && this.showWikiUpload,
           showLocaleSelect: this.showLocaleSelect,
           showThumbnails: this.showThumbnails,
+          thumbnailTtlHours: this.thumbnailTtlHours,
         }),
       });
       // Saved — head back to the overview right away. The "Close" button
@@ -106,6 +110,16 @@ export class SettingsForm extends JSXElement {
   private readonly onLocaleSelectChange = (checked: boolean) => { this.touched = true; this.showLocaleSelect = checked; };
 
   private readonly onThumbnailsChange = (checked: boolean) => { this.touched = true; this.showThumbnails = checked; };
+
+  private readonly onThumbnailTtlChange = (value: string) => {
+    this.touched = true;
+    if (value.trim() === "") {
+      this.thumbnailTtlHours = null;
+      return;
+    }
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 2160) this.thumbnailTtlHours = parsed;
+  };
 
   private readonly onUserFilesChange = (checked: boolean) => {
     this.touched = true;
@@ -249,6 +263,23 @@ export class SettingsForm extends JSXElement {
                     <span class="header-switch-thumb"></span>
                   </span>
                 </label>
+
+                <div class="settings-toggle-row is-input-row">
+                  <span class="settings-toggle-copy">
+                    <strong>{t("Thumbnail cache time (hours)")}</strong>
+                    <p>{t("How long a wiki's screenshot preview stays cached. Leave empty to use the default of 24 hours.")}</p>
+                  </span>
+                  <input
+                    class="field-input settings-number-input"
+                    type="number"
+                    min="1"
+                    max="2160"
+                    step="1"
+                    value={this.thumbnailTtlHours ?? ""}
+                    disabled={!this.isAdmin}
+                    oninput={(event) => this.onThumbnailTtlChange((event.target as HTMLInputElement).value)}
+                  />
+                </div>
               </div>
             </div>
 

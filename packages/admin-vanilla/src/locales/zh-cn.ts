@@ -517,5 +517,7 @@ export const zhCnStrings: Record<string, string> = {
   "The language dropdown in the header.": "页眉中的语言下拉列表。",
   "Show wiki thumbnails": "显示 Wiki 缩略图",
   "Screenshot previews in the Wikis list.": "Wikis 列表中的截图预览。",
+  "Thumbnail cache time (hours)": "缩略图缓存时间（小时）",
+  "How long a wiki's screenshot preview stays cached. Leave empty to use the default of 24 hours.": "Wiki 的截图预览在重新渲染前缓存的时长。留空则使用默认值 24 小时。",
   "A visitor's own language or theme choice always wins. Feature switches apply to everyone.": "访客自己选择的语言或主题始终优先。功能开关适用于所有人。",
 };

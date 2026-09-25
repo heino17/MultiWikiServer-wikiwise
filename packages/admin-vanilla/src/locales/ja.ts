@@ -517,5 +517,7 @@ export const jaStrings: Record<string, string> = {
   "The language dropdown in the header.": "ヘッダーの言語ドロップダウン。",
   "Show wiki thumbnails": "Wikiのサムネイルを表示",
   "Screenshot previews in the Wikis list.": "Wiki一覧のスクリーンショットプレビュー。",
+  "Thumbnail cache time (hours)": "サムネイルのキャッシュ時間（時間）",
+  "How long a wiki's screenshot preview stays cached. Leave empty to use the default of 24 hours.": "Wikiのスクリーンショットプレビューが再描画されるまでキャッシュに保持される時間。24時間のデフォルトを使用するには空欄のままにします。",
   "A visitor's own language or theme choice always wins. Feature switches apply to everyone.": "訪問者自身による言語またはテーマの選択が常に優先されます。機能スイッチは全員に適用されます。",
 };

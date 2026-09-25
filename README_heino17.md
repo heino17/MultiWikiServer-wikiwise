@@ -1899,8 +1899,10 @@ allgemeinen Rezept-Route (`REGEX_WIKI_THUMBNAIL`):
   Per-User-Cache (`<slug>.<userId>.png`) wäre N×M Render-Slots und würde die
   Render-Begrenzung (s. o.) konterkarieren — deshalb bewusst nicht.
 - **Cache:** Ergebnis liegt unter `store/thumbnails/<slug>.png` im
-  Daten-Store (außerhalb der Web-Auslieferung). TTL standardmäßig **24 h**
-  (`MWS_THUMBNAIL_TTL_HOURS` übersteuerbar). Schreiben atomar (`…png.tmp` +
+  Daten-Store (außerhalb der Web-Auslieferung). TTL standardmäßig **24 h**;
+  Auflösung: `MWS_THUMBNAIL_TTL_HOURS` (Umgebungsvariable) →
+  `admin.thumbnailTtlHours` (Einstellungen-Seite, §47) → 24 h (`thumbnailTtlMs`
+  in `WikiThumbnailRoutes.ts`). Schreiben atomar (`…png.tmp` +
   `rename`), eine In-Flight-Queue verhindert parallele Doppel-Render für
   denselben Pfad. Response: `image/png`, `Cache-Control: private,
   max-age=<TTL in s>` (stets per Session privat, Wert folgt der Server-TTL),
@@ -2326,6 +2328,7 @@ Sprache/Theme immer Vorrang — die Vorgabe ist nur der Fallback.
 | `admin.showWikiUpload` | „Upload file"-Button in der Wiki-Werkzeugleiste (§45) | `true` |
 | `admin.showLocaleSelect` | Sprach-Dropdown im Header | `true` |
 | `admin.showThumbnails` | Vorschaubild-Spalte in der Wikis-Liste (§43) | `true` |
+| `admin.thumbnailTtlHours` | Vorschaubild-Cache-Zeit in Stunden (§43) | `null` (= 24 h) |
 
 Bools werden als `"true"`/`"false"` gespeichert; ein fehlender Eintrag
 bedeutet `true` (Rückwärtskompatibilität).
@@ -2333,7 +2336,9 @@ bedeutet `true` (Rückwärtskompatibilität).
 - `GET /api/prefs` — jeder eingeloggte Nutzer liest die aktuellen Vorgaben.
 - `PUT /api/prefs` — nur `admin` (`state.okAdmin()`), Body enthält **alle**
   Felder: `{ defaultLocale: string|null, defaultTheme: "dark"|"light"|null,
-  showPinboard: boolean|null, … }`; `null` löscht die Vorgabe (→ Default).
+  showPinboard: boolean|null, …, thumbnailTtlHours: number|null }`; `null`
+  löscht die Vorgabe (→ Default). `thumbnailTtlHours` ist auf 1..2160
+  (Stunden) begrenzt.
 
 **Abhängigkeit:** „Dateien aus Wikis hochladen" (2.1) erfordert „Meine
 Dateien": Ist `showUserFiles` aus, ist der Switch 2.1 auf der
@@ -2370,7 +2375,8 @@ die Anzeige spiegelt also immer die tatsächlich gespeicherten Werte.
 `/settings` (`app-settings.tsx`, Route in `main.tsx`). Zwei Auswahlfelder
 (Sprache mit „Browser-Sprache folgen", Theme mit „System-Theme folgen") sowie
 ein Abschnitt **„Funktionen"** mit fünf Schaltern (Pinnwand, Meine Dateien,
-Aus-Wikis-Hochladen, Sprachwahl anzeigen, Vorschaubilder) + Speichern-Button.
+Aus-Wikis-Hochladen, Sprachwahl anzeigen, Vorschaubilder) + Zahlenfeld
+„Vorschaubild-Cache-Zeit (Stunden)" (leer = Standard 24 h) + Speichern-Button.
 Nicht-Admins sehen die Seite schreibgeschützt mit dem Hinweis „Nur
 Administratoren …". Die Funktions-Schalter gelten installationsweit (ein
 persönliches Ausblenden pro Nutzer ist bewusst nicht vorgesehen — im

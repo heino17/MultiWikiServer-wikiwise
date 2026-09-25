@@ -16,6 +16,7 @@ export const PREF_KEYS = {
   showWikiUpload: "admin.showWikiUpload",
   showLocaleSelect: "admin.showLocaleSelect",
   showThumbnails: "admin.showThumbnails",
+  thumbnailTtlHours: "admin.thumbnailTtlHours",
 } as const;
 
 const THEMES = ["dark", "light"] as const;
@@ -29,6 +30,8 @@ export interface ServerPrefs {
   showWikiUpload: boolean;
   showLocaleSelect: boolean;
   showThumbnails: boolean;
+  /** Thumbnail cache time in hours. `null` = install default (24h). */
+  thumbnailTtlHours: number | null;
 }
 
 const validThemes = new Set<string>(THEMES);
@@ -53,6 +56,8 @@ export async function readPrefs(prisma: PrismaTxnClient): Promise<ServerPrefs> {
   const defaultTheme = rawTheme && validThemes.has(rawTheme)
     ? (rawTheme as NonNullable<DefaultTheme>)
     : null;
+  const rawTtl = map.get(PREF_KEYS.thumbnailTtlHours);
+  const ttlHours = rawTtl == null ? null : Number.parseInt(rawTtl, 10);
   return {
     defaultLocale,
     defaultTheme,
@@ -61,6 +66,7 @@ export async function readPrefs(prisma: PrismaTxnClient): Promise<ServerPrefs> {
     showWikiUpload: boolPref(map, PREF_KEYS.showWikiUpload, true),
     showLocaleSelect: boolPref(map, PREF_KEYS.showLocaleSelect, true),
     showThumbnails: boolPref(map, PREF_KEYS.showThumbnails, true),
+    thumbnailTtlHours: ttlHours != null && Number.isFinite(ttlHours) && ttlHours > 0 ? ttlHours : null,
   };
 }
 
@@ -92,6 +98,7 @@ export const AdminPrefsPut = zodRoute({
     showWikiUpload: z.boolean().nullable(),
     showLocaleSelect: z.boolean().nullable(),
     showThumbnails: z.boolean().nullable(),
+    thumbnailTtlHours: z.number().int().min(1).max(2160).nullable(),
   }),
   inner: async (state) => {
     state.assertReferer(["/"]);
@@ -106,6 +113,7 @@ export const AdminPrefsPut = zodRoute({
       showWikiUpload,
       showLocaleSelect,
       showThumbnails,
+      thumbnailTtlHours,
     } = state.data;
     const entries: { key: string; value: string }[] = [];
     if (defaultLocale) entries.push({ key: PREF_KEYS.locale, value: defaultLocale });
@@ -115,6 +123,7 @@ export const AdminPrefsPut = zodRoute({
     if (showWikiUpload != null) entries.push({ key: PREF_KEYS.showWikiUpload, value: showWikiUpload ? "true" : "false" });
     if (showLocaleSelect != null) entries.push({ key: PREF_KEYS.showLocaleSelect, value: showLocaleSelect ? "true" : "false" });
     if (showThumbnails != null) entries.push({ key: PREF_KEYS.showThumbnails, value: showThumbnails ? "true" : "false" });
+    if (thumbnailTtlHours != null) entries.push({ key: PREF_KEYS.thumbnailTtlHours, value: String(thumbnailTtlHours) });
 
     await state.$transaction(async (prisma) => {
       const keepKeys = new Set(entries.map((entry) => entry.key));

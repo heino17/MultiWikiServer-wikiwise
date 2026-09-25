@@ -517,5 +517,7 @@ export const esStrings: Record<string, string> = {
   "The language dropdown in the header.": "El desplegable de idioma en la cabecera.",
   "Show wiki thumbnails": "Mostrar miniaturas de los wikis",
   "Screenshot previews in the Wikis list.": "Vistas previas de captura en la lista de Wikis.",
+  "Thumbnail cache time (hours)": "Tiempo de caché de las miniaturas (horas)",
+  "How long a wiki's screenshot preview stays cached. Leave empty to use the default of 24 hours.": "Cuánto tiempo se mantiene en caché la vista previa de un wiki antes de regenerarse. Déjelo vacío para usar el valor predeterminado de 24 horas.",
   "A visitor's own language or theme choice always wins. Feature switches apply to everyone.": "La elección de idioma o tema del visitante siempre prevalece. Los interruptores de funciones se aplican a todos.",
 };

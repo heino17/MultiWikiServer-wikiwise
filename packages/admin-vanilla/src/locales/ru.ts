@@ -517,5 +517,7 @@ export const ruStrings: Record<string, string> = {
   "The language dropdown in the header.": "Раскрывающийся список языка в шапке.",
   "Show wiki thumbnails": "Показывать миниатюры вики",
   "Screenshot previews in the Wikis list.": "Предпросмотр скриншотов в списке вики.",
+  "Thumbnail cache time (hours)": "Время кеша миниатюр (часы)",
+  "How long a wiki's screenshot preview stays cached. Leave empty to use the default of 24 hours.": "Как долго скриншот-превью вики хранится в кеше перед повторной отрисовкой. Оставьте пустым, чтобы использовать значение по умолчанию — 24 часа.",
   "A visitor's own language or theme choice always wins. Feature switches apply to everyone.": "Собственный выбор языка или темы посетителем всегда имеет приоритет. Переключатели функций применяются ко всем.",
 };

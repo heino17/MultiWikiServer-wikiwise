@@ -12,6 +12,7 @@ import { SendError, ServerRequest } from "@tiddlywiki/server";
 import { serverEvents } from "@tiddlywiki/events";
 import { chromium } from "playwright-core";
 import { RecipeResolver } from "./RecipeResolver";
+import { PREF_KEYS } from "./PrefsRoutes";
 import { ServerState } from "../ServerState";
 
 // Render the wiki at a higher resolution and downscale the screenshot, so the
@@ -177,9 +178,16 @@ function playwrightCacheCandidates(): string[] {
   return found.map((entry) => entry.path);
 }
 
-function thumbnailTtlMs(): number {
-  const value = Number.parseInt(process.env.MWS_THUMBNAIL_TTL_HOURS ?? "", 10);
-  return (Number.isFinite(value) && value > 0 ? value : 24) * 60 * 60 * 1000;
+/** Thumbnail cache time. Resolution order: env override
+ *  (MWS_THUMBNAIL_TTL_HOURS) → installation setting
+ *  (admin.thumbnailTtlHours, set in the admin Einstellungen page) → 24 h. */
+async function thumbnailTtlMs(state: ServerRequest): Promise<number> {
+  const envValue = Number.parseInt(process.env.MWS_THUMBNAIL_TTL_HOURS ?? "", 10);
+  if (Number.isFinite(envValue) && envValue > 0) return envValue * 60 * 60 * 1000;
+  const row = await state.engine.settings.findUnique({ where: { key: PREF_KEYS.thumbnailTtlHours }, select: { value: true } });
+  const configured = Number.parseInt(row?.value ?? "", 10);
+  if (Number.isFinite(configured) && configured > 0) return configured * 60 * 60 * 1000;
+  return 24 * 60 * 60 * 1000;
 }
 
 let browserPromise: ReturnType<typeof chromium.launch> | null = null;
@@ -310,7 +318,7 @@ export async function serveWikiThumbnail(state: ServerRequest) {
   const outPath = join(dir, fileName + ".png");
 
   const cached = await statSafe(outPath);
-  const ttlMs = thumbnailTtlMs();
+  const ttlMs = await thumbnailTtlMs(state);
   if (!cached || Date.now() - cached.mtimeMs > ttlMs) {
     await queue(outPath, () => withRenderSlot(() => renderThumbnail(state, recipe_slug, outPath)));
   }

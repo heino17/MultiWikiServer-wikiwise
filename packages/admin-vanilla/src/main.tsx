@@ -33,6 +33,7 @@ declare global {
       showWikiUpload: boolean;
       showLocaleSelect: boolean;
       showThumbnails: boolean;
+      thumbnailTtlHours: number | null;
     };
   }
 }
