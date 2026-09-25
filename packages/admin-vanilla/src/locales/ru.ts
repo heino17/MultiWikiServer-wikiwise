@@ -526,6 +526,10 @@ export const ruStrings: Record<string, string> = {
   "A welcome text on the public page. Markdown is supported.": "Приветственный текст на публичной странице. Поддерживается Markdown.",
   "Landing news": "Новости целевой страницы",
   "News shown on the public page. Markdown is supported.": "Новости на публичной странице. Поддерживается Markdown.",
+  "Public wikis on the landing page": "Публичные вики на стартовой странице",
+  "Choose which of your publicly readable wikis appear on the landing page.": "Выберите, какие из ваших публично читаемых вики появятся на стартовой странице.",
+  "No publicly readable wikis.": "Пока нет публично читаемых вики.",
+  "Visitors on the start page can open this wiki without an account.": "Посетители стартовой страницы могут открыть эту вики без учётной записи.",
 // #region landing page
   "Wikis anyone can read without an account.": "Вики, которые любой может читать без аккаунта.",
   "No public wikis yet.": "Публичных вики пока нет.",

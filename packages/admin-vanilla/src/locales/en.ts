@@ -545,6 +545,10 @@ export const enStrings: Record<string, string> = {
   "A welcome text on the public page. Markdown is supported.": "A welcome text on the public page. Markdown is supported.",
   "Landing news": "Landing news",
   "News shown on the public page. Markdown is supported.": "News shown on the public page. Markdown is supported.",
+  "Public wikis on the landing page": "Public wikis on the landing page",
+  "Choose which of your publicly readable wikis appear on the landing page.": "Choose which of your publicly readable wikis appear on the landing page.",
+  "No publicly readable wikis.": "No publicly readable wikis.",
+  "Visitors on the start page can open this wiki without an account.": "Visitors on the start page can open this wiki without an account.",
 // #region landing page
   "Wikis anyone can read without an account.": "Wikis anyone can read without an account.",
   "No public wikis yet.": "No public wikis yet.",

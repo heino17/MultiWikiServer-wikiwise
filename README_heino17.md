@@ -2425,10 +2425,22 @@ bisherige Redirect nach `/login`).
   - `wikis`: `[{ slug, displayName, description }]` — **nur** Wikis, deren
     Rezept **und** alle Bags dem ANON-Lesezugriff erlauben
     (gleicher Filter wie das `assertRecipe`-Read-Gate; private Wikis werden
-    nicht geleakt, auch nicht als Name),
+    nicht geleakt, auch nicht als Name). Der Owner kann ein öffentlich
+    lesbares Wiki zusätzlich von der Startseite nehmen (§ „Pro-Wiki-Sichtbarkeit"),
   - `message` / `news`: die Prefs `admin.landingMessage` / `admin.landingNews`.
   - Routen-Registrierung in `new-managers/index.ts` (`LandingData`).
   - Implementierung: `packages/mws/src/new-managers/LandingRoutes.ts`.
+
+- **Pro-Wiki-Sichtbarkeit auf der Startseite:** Jeder angemeldete Nutzer kann
+  in den Einstellungen (`/settings`, eigener Bereich „Öffentliche Wikis auf
+  der Startseite") pro eigenem öffentlich-lesbarem Wiki entscheiden, ob es
+  anonymen Besuchern angezeigt wird. Speicherung als `landing.hidden.<recipeId>`
+  = `"true"` in der `settings`-Tabelle (Zeile fehlt ⇒ Standard „anzeigen");
+  geprüft wird nur der Owner (`recipe.owner_user_id`) bzw. das Site-Admin-
+  Konto (`admin`). Endpunkte: `GET`/`PUT /api/landing/wikis` (Referer
+  `/settings`, XHR-Header nötig; fremde Wikis ⇒ 403). `GET /api/landing`
+  filtert diese aus `wikis` und `stats.publicWikis` heraus. Die Schalter
+  speichern sofort (kein „Einstellungen speichern" nötig).
 
 - **Anon-Thumbnails nur aus dem Cache:** `WikiThumbnailRoutes` dient
   Vorschaubilder für anonyme Besucher nur noch aus dem existierenden
@@ -2460,16 +2472,20 @@ bisherige Redirect nach `/login`).
 - **Einstellungen (§47):** Schalter „Show the public landing page" +
   zwei Textfelder „Landing welcome message" / „Landing news" (Markdown,
   max. 2000 / 10000 Zeichen). Schalter aus ⇒ anonyme `/`-auflösung entfällt.
-- **i18n:** neue Keys 17 in allen 8 Sprachen (Sektionen `#region admin
+  Zusätzlich der Bereich „Public wikis on the landing page" mit einem
+  sofort wirkenden An/Aus-Schalter pro öffentlich lesbarem eigenen Wiki
+  (§ „Pro-Wiki-Sichtbarkeit").
+- **i18n:** neue Keys 21 in allen 8 Sprachen (Sektionen `#region admin
   settings` und `#region landing page`).
 
 ### Verifikation
 
-- `GET /api/landing` anonym: 200 mit 7 öffentlichen Wikis, Stats (Tiddler
+- `GET /api/landing` anonym: 200 mit 8 öffentlichen Wikis, Stats (Tiddler
   1127, 6 Nutzer, online 0 ohne aktive Sessions), Versions, `message`/`news`
   aus den Prefs.
 - Anonym `GET /` headless: rendert Landing (Stat-Kacheln, Wiki-Karten,
   Thumbnails via `/wiki/<slug>/thumbnail`), kein Redirect nach `/login`.
+  Wiki-Karten öffnen mit `target="_blank" rel="noopener noreferrer"`.
   Mit `showLanding=false` (per `PUT /api/prefs`) ⇒ `/` leitet wieder nach
   `/login`; danach zurückgesetzt auf `true`.
 - Anon-Thumbnail `/wiki/bedienungsanleitung/thumbnail` ⇒ `200 image/png`
@@ -2478,7 +2494,12 @@ bisherige Redirect nach `/login`).
   sichtbar und bedienbar; `PUT`/`GET`/DB-Zeilen für die 3 neuen Keys
   verifiziert (`null` löscht die Zeile), Werte danach auf den
   Ausgangszustand zurückgesetzt.
-- `tsc` (admin-vanilla) + `tsc2` (Root) grün; Locale-Parität 516/516.
+- Pro-Wiki-Sichtbarkeit: `GET /api/landing/wikis` (Admin) listet 8 öffentlich
+  lesbare Wikis mit `hiddenOnLanding:false`; `PUT {slug, hidden:true}` ⇒
+  `GET /api/landing` zeigt 7 (Wiki + Zähler weg), `hidden:false` stellt es
+  wieder her (DB-Zeile verschwindet). Falscher Referer ⇒ 403. Toggle-Klick
+  headless: Karten 8 → 7 → 8.
+- `tsc` (admin-vanilla) + `tsc2` (Root) grün; Locale-Parität 520/520.
 
 ---
 
