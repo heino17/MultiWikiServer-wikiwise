@@ -5,11 +5,12 @@
 // ever leaks here.
 
 import { addstyles, customElement, JSXElement, state } from "@tiddlywiki/jsx-lit";
-import { getCurrentLocale, localeLabels, setCurrentLocale, supportedLocales, t, type LocaleCode } from "./i18n";
+import { t } from "./i18n";
 import { getEffectiveTheme, toggleTheme, type ThemeMode } from "./theme";
 import darkModeIcon from "@material-symbols/svg-400/outlined/dark_mode.svg";
 import lightModeIcon from "@material-symbols/svg-400/outlined/light_mode.svg";
 import { MaterialSymbol } from "./material-symbol";
+import "./hero-locale-select";
 import { openCookieConsent } from "./cookie-consent";
 import css from "./app.inline.css";
 
@@ -153,13 +154,6 @@ export class LandingPage extends JSXElement {
     this.themeMode = getEffectiveTheme();
   };
 
-  private readonly handleLocaleChange = (event: Event) => {
-    const code = (event.target as HTMLSelectElement).value as LocaleCode;
-    if (code === getCurrentLocale()) return;
-    setCurrentLocale(code);
-    location.reload();
-  };
-
   private statCards(): Array<{ value: number; label: string }> {
     const stats = this.data?.stats;
     if (!stats) return [];
@@ -194,15 +188,7 @@ export class LandingPage extends JSXElement {
               <MaterialSymbol icon={this.themeMode === "dark" ? lightModeIcon : darkModeIcon} />
             </button>
             {showLocaleSelect ? (
-              <select
-                class="hero-locale-select"
-                aria-label={t("Language")}
-                onchange={this.handleLocaleChange}
-              >
-                {supportedLocales.map((code) => (
-                  <option value={code} selected={code === getCurrentLocale()}>{localeLabels[code]}</option>
-                ))}
-              </select>
+              <hero-locale-select />
             ) : null}
             {embeddedServerResponse.userState.isLoggedIn ? (
               <a class="primary-button login-submit landing-login-button" href={pathPrefix + "/"}>

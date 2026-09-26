@@ -180,6 +180,8 @@ textarea {
 }
 
 .hero-panel {
+	position: relative;
+	z-index: 1;
 	display: grid;
 	grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr);
 	gap: 24px;
@@ -287,8 +289,17 @@ h6 {
 	text-decoration: none;
 }
 
-.hero-locale-select {
+.hero-locale-menu {
+	position: relative;
 	align-self: center;
+}
+
+.hero-locale-trigger {
+	list-style: none;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	width: max-content;
 	padding: 8px 10px;
 	border-radius: 8px;
 	border: 1px solid var(--color-border-soft);
@@ -299,9 +310,67 @@ h6 {
 	cursor: pointer;
 }
 
-.hero-locale-select:focus-visible {
+.hero-locale-trigger::-webkit-details-marker {
+	display: none;
+}
+
+.hero-locale-trigger:focus-visible {
 	outline: none;
 	border-color: var(--color-accent);
+}
+
+.hero-locale-caret {
+	display: inline-flex;
+	align-items: center;
+}
+
+.hero-locale-caret material-symbol {
+	display: inline-flex;
+	width: 16px;
+	height: 16px;
+}
+
+.hero-locale-caret material-symbol svg {
+	width: 16px;
+	height: 16px;
+	fill: currentColor;
+	transition: transform 120ms ease;
+}
+
+.hero-locale-menu[open] .hero-locale-caret svg {
+	transform: rotate(180deg);
+}
+
+.hero-locale-dropdown {
+	position: absolute;
+	right: 0;
+	top: calc(100% + 8px);
+	min-width: 180px;
+	display: grid;
+	gap: 4px;
+	padding: 8px;
+	border-radius: 14px;
+	border: 1px solid var(--color-border-soft);
+	background: var(--color-surface-card);
+	box-shadow: 0 18px 40px var(--color-shadow-card);
+	z-index: 150;
+}
+
+.hero-locale-option {
+	border: 0;
+	border-radius: 10px;
+	padding: 10px 12px;
+	text-align: left;
+	background: transparent;
+	color: var(--color-text-strong);
+	font-weight: 400;
+	cursor: pointer;
+}
+
+.hero-locale-option:hover,
+.hero-locale-option:focus-visible,
+.hero-locale-option.is-current {
+	background: var(--color-surface-field);
 }
 
 .hero-theme-toggle {
