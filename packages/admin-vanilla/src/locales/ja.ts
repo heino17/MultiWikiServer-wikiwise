@@ -543,4 +543,13 @@ export const jaStrings: Record<string, string> = {
   "Welcome": "ようこそ",
   "Public start page": "公開スタートページ",
   "Back to the wiki overview": "Wikiの概要に戻る",
+  "Cookie notice": "Cookieに関するお知らせ",
+  "We use only the cookies that are technically necessary for logging in and store preferences locally. No tracking or analytics cookies are set. Services from third parties (e.g. Google Fonts) are loaded only after your separate consent.": "当サイトはログインに必要なCookieのみを使用し、設定はローカルに保存します。トラッキングや分析用のCookieは設定されません。第三者サービス（例：Google Fonts）は、別途の同意を得てから読み込まれます。",
+  "Accept all cookies": "すべてのCookieに同意する",
+  "Only necessary cookies": "必要なCookieのみ",
+  "Cookie settings": "Cookieの設定",
+  "Necessary cookies": "必要なCookie",
+  "Login session and local preferences (theme, language).": "ログインセッションとローカル設定（テーマ、言語）。",
+  "External services": "外部サービス",
+  "Third-party services (e.g. Google Fonts) are loaded only after your consent.": "第三者サービス（例：Google Fonts）は、同意を得た場合にのみ読み込まれます。",
 };

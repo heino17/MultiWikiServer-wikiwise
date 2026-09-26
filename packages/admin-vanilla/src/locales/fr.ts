@@ -543,4 +543,13 @@ export const frStrings: Record<string, string> = {
   "Welcome": "Bienvenue",
   "Public start page": "Page d'accueil publique",
   "Back to the wiki overview": "Retour à la vue d'ensemble des wikis",
+  "Cookie notice": "Avis relatif aux cookies",
+  "We use only the cookies that are technically necessary for logging in and store preferences locally. No tracking or analytics cookies are set. Services from third parties (e.g. Google Fonts) are loaded only after your separate consent.": "Nous n'utilisons que les cookies techniquement nécessaires à la connexion et enregistrons vos préférences localement. Aucun cookie de suivi ou d'analyse n'est défini. Les services tiers (p. ex. Google Fonts) ne sont chargés qu'avec votre consentement séparé.",
+  "Accept all cookies": "Accepter tous les cookies",
+  "Only necessary cookies": "Cookies nécessaires uniquement",
+  "Cookie settings": "Paramètres des cookies",
+  "Necessary cookies": "Cookies nécessaires",
+  "Login session and local preferences (theme, language).": "Session de connexion et préférences locales (thème, langue).",
+  "External services": "Services externes",
+  "Third-party services (e.g. Google Fonts) are loaded only after your consent.": "Les services tiers (p. ex. Google Fonts) ne sont chargés qu'avec votre consentement.",
 };

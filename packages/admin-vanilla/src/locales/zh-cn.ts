@@ -543,4 +543,13 @@ export const zhCnStrings: Record<string, string> = {
   "Welcome": "欢迎",
   "Public start page": "公开首页",
   "Back to the wiki overview": "返回Wiki概览",
+  "Cookie notice": "Cookie通知",
+  "We use only the cookies that are technically necessary for logging in and store preferences locally. No tracking or analytics cookies are set. Services from third parties (e.g. Google Fonts) are loaded only after your separate consent.": "我们仅使用登录所需的技术必要Cookie，并在本地存储偏好设置。不设置任何跟踪或分析Cookie。第三方服务（如Google Fonts）仅在另行同意后加载。",
+  "Accept all cookies": "接受所有Cookie",
+  "Only necessary cookies": "仅必要Cookie",
+  "Cookie settings": "Cookie设置",
+  "Necessary cookies": "必要Cookie",
+  "Login session and local preferences (theme, language).": "登录会话和本地偏好设置（主题、语言）。",
+  "External services": "外部服务",
+  "Third-party services (e.g. Google Fonts) are loaded only after your consent.": "第三方服务（如Google Fonts）仅在您同意后加载。",
 };

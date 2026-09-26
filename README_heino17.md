@@ -2555,6 +2555,26 @@ bisherige Redirect nach `/login`).
   Roboto ist unter der **SIL Open Font License 1.1** lizenziert; die
   Lizenz liegt als `OFL.txt` bei `packages/admin-vanilla/public/fonts/`
   aus (unveränderte Nutzung, keine Reservierten Font-Namen berührt).
+- **Cookie-Hinweis (Consent-Banner, kategorienbasiert):** Am unteren
+  Bildschirmrand blendet ein Hinweis weich ein. Kategorien: `essential`
+  (Session-Cookie `session`, technisch erforderlich, immer), `preferences`
+  (lokal in `localStorage`: Design/Sprache, immer) und `external`
+  (Dienste Dritter wie z. B. Google Fonts — **standardmäßig aus**, laden
+  nur nach gesonderter Zustimmung). Buttons: „Alle Cookies akzeptieren",
+  „Nur notwendige Cookies" und „Cookie-Einstellungen" (Detail-Panel mit
+  Kippschaltern). Der Zustand liegt als versioniertes Objekt in
+  `localStorage` (`mws-cookie-consent`, `{version:"v2",…}`); die alte
+  `v1`-Annahme wird konservativ migriert (external=false, kein erneutes
+  Nachfragen). Umsetzung: `consent.ts` (zentrale API: `getConsent`,
+  `hasConsent`, `setExternalConsent`, `onConsentChange`,
+  `applyExternalStylesheet` als zukünftiger Einbindepunkt für externe
+  Ressourcen), `cookie-consent.tsx` + `.cookie-consent` in
+  `app.inline.css`, global in `main.tsx` eingebunden (Landing, Login,
+  Verwaltung). Die Zustimmung ist jederzeit änderbar:
+  `openCookieConsent(true)` in `cookie-consent.tsx` öffnet das Banner
+  erneut direkt auf dem Einstellungs-Panel; erreichbar über
+  „Cookie-Einstellungen" im Landing-Footer und über den Cookie-Icon-Button
+  im Verwaltungs-Header.
 
 ---
 

@@ -543,4 +543,13 @@ export const koStrings: Record<string, string> = {
   "Welcome": "환영합니다",
   "Public start page": "공개 시작 페이지",
   "Back to the wiki overview": "위키 개요로 돌아가기",
+  "Cookie notice": "쿠키 안내",
+  "We use only the cookies that are technically necessary for logging in and store preferences locally. No tracking or analytics cookies are set. Services from third parties (e.g. Google Fonts) are loaded only after your separate consent.": "당사는 로그인에 필요한 쿠키만 사용하며 환경 설정을 로컬에 저장합니다. 추적 또는 분석 쿠키는 설정되지 않습니다. 제3자 서비스(예: Google Fonts)는 별도의 동의 후에만 로드됩니다.",
+  "Accept all cookies": "모든 쿠키 수락",
+  "Only necessary cookies": "필요한 쿠키만",
+  "Cookie settings": "쿠키 설정",
+  "Necessary cookies": "필수 쿠키",
+  "Login session and local preferences (theme, language).": "로그인 세션 및 로컬 설정(테마, 언어).",
+  "External services": "외부 서비스",
+  "Third-party services (e.g. Google Fonts) are loaded only after your consent.": "제3자 서비스(예: Google Fonts)는 동의한 경우에만 로드됩니다.",
 };

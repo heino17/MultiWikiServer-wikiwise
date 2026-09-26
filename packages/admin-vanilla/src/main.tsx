@@ -9,6 +9,7 @@ import { SendError } from "@tiddlywiki/server";
 import { ProfileForm } from "./app-profile";
 import { SettingsForm } from "./app-settings";
 import { initializeTheme } from "./theme";
+import { CookieConsent } from "./cookie-consent";
 
 // disables the "flash of white" styles
 document.documentElement.classList.add("loaded");
@@ -60,6 +61,11 @@ if (isInStandaloneMode()) {
 
 
 function setup() {
+  // Cookie-consent notice (bottom edge). Applies to every route: it only
+  // informs about the strictly necessary login session cookie and records
+  // its acceptance in localStorage, so it appears once per browser.
+  document.body.appendChild(new CookieConsent());
+
   if (location.pathname === pathPrefix + "/login" && embeddedServerResponse.userState.isLoggedIn) {
     location.replace(pathPrefix + "/");
   }
