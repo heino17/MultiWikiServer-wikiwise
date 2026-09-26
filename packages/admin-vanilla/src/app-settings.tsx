@@ -22,6 +22,14 @@ const themeOptions = [
   { value: "dark", labelKey: "Dark theme" },
 ] as const;
 
+const newsStyleOptions = [
+  { value: "neutral", labelKey: "Neutral" },
+  { value: "info", labelKey: "Info" },
+  { value: "success", labelKey: "Success" },
+  { value: "warning", labelKey: "Warning" },
+  { value: "danger", labelKey: "Danger" },
+] as const;
+
 @addstyles(css)
 
 @addstyles(css)
@@ -48,6 +56,8 @@ export class SettingsForm extends JSXElement {
   @state() accessor landingMessage = embeddedServerResponse.prefs?.landingMessage ?? "";
 
   @state() accessor landingNews = embeddedServerResponse.prefs?.landingNews ?? "";
+
+  @state() accessor landingNewsStyle = embeddedServerResponse.prefs?.landingNewsStyle ?? "neutral";
 
   @state() accessor isSubmitting = false;
   @state() accessor message = "";
@@ -78,6 +88,7 @@ export class SettingsForm extends JSXElement {
       if (typeof prefs.showLanding === "boolean") this.showLanding = prefs.showLanding;
       if (typeof prefs.landingMessage === "string") this.landingMessage = prefs.landingMessage;
       if (typeof prefs.landingNews === "string") this.landingNews = prefs.landingNews;
+      if (typeof prefs.landingNewsStyle === "string") this.landingNewsStyle = prefs.landingNewsStyle;
       if (!this.showUserFiles) this.showWikiUpload = false;
     } catch {
       // keep the embedded values
@@ -110,6 +121,7 @@ export class SettingsForm extends JSXElement {
           showLanding: this.showLanding,
           landingMessage: this.landingMessage.trim() || null,
           landingNews: this.landingNews.trim() || null,
+          landingNewsStyle: this.landingNewsStyle,
         }),
       });
       // Saved — head back to the overview right away. The "Close" button
@@ -358,7 +370,7 @@ export class SettingsForm extends JSXElement {
                 <div class="settings-toggle-row">
                   <span class="settings-toggle-copy">
                     <strong>{t("Landing news")}</strong>
-                    <p>{t("News shown on the public page. Markdown is supported.")}</p>
+                    <p>{t("A collapsible block visitors can close with the X for the rest of their session. Markdown is supported.")}</p>
                   </span>
                   <textarea
                     class="field-textarea settings-textarea"
@@ -368,6 +380,25 @@ export class SettingsForm extends JSXElement {
                     ref={(element) => { if (element && element.value !== this.landingNews) element.value = this.landingNews; }}
                     oninput={(event) => this.onLandingNewsChange((event.target as HTMLTextAreaElement).value)}
                   ></textarea>
+                </div>
+
+                <div class="settings-toggle-row is-input-row">
+                  <span class="settings-toggle-copy">
+                    <strong>{t("News block style")}</strong>
+                    <p>{t("Background of the news block on the public page, e.g. reddish for an important notice.")}</p>
+                  </span>
+                  <span class="news-style-picker">
+                    <span class={"news-style-swatch is-" + this.landingNewsStyle} aria-hidden="true"></span>
+                    <select
+                      class="field-select"
+                      disabled={!this.isAdmin}
+                      onchange={(event) => { this.touched = true; this.landingNewsStyle = (event.target as HTMLSelectElement).value; }}
+                    >
+                      {newsStyleOptions.map((option) => (
+                        <option value={option.value} selected={this.landingNewsStyle === option.value}>{t(option.labelKey)}</option>
+                      ))}
+                    </select>
+                  </span>
                 </div>
               </div>
             </div>

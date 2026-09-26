@@ -24,6 +24,7 @@ html {
 	--color-accent-fill: hsl(42 87% 85%);
 	--color-danger: #9f3a2a;
 	--color-success: #2f7d4f;
+	--color-warning: #9a7b1a;
 	--color-white: #fff;
 	--color-white-solid: #ffffff;
 	--color-surface-page-top: #f7ecd2;
@@ -97,6 +98,7 @@ html {
 		--color-accent-fill: hsl(210deg 40% 24%);
 		--color-danger: #f08b7d;
 		--color-success: #6fd08f;
+		--color-warning: #e2b84d;
 		--color-white: #fff;
 		--color-white-solid: #ffffff;
 		--color-surface-page-top: #11161c;
@@ -2483,6 +2485,7 @@ html[data-theme="dark"] {
 	--color-accent-fill: hsl(210deg 40% 24%);
 	--color-danger: #f08b7d;
 	--color-success: #6fd08f;
+	--color-warning: #e2b84d;
 	--color-white: #fff;
 	--color-white-solid: #ffffff;
 	--color-surface-page-top: #11161c;
@@ -4387,7 +4390,7 @@ odt-preview-document {
 
 .landing-markdown,
 .landing-section-copy {
-	max-width: 72rem;
+	max-width: 100%;
 }
 
 .landing-section-title {
@@ -4526,19 +4529,149 @@ odt-preview-document {
 	margin: 4px 0;
 }
 
+.landing-news {
+	position: relative;
+	border: 1px solid var(--color-border-soft);
+	border-radius: 18px;
+	padding: 14px 44px 18px 18px;
+}
+
 .landing-news .landing-section-title {
 	margin-bottom: 8px;
 }
 
+.landing-news.is-neutral {
+	background: var(--color-surface-summary-note);
+	border-color: var(--color-border-soft);
+}
+
+.landing-news.is-info {
+	background: color-mix(in srgb, var(--color-accent-track) 16%, var(--color-surface-card));
+	border-color: color-mix(in srgb, var(--color-accent-track) 45%, var(--color-border-soft));
+}
+
+.landing-news.is-info .landing-section-title {
+	color: var(--color-accent-track);
+}
+
+.landing-news.is-success {
+	background: color-mix(in srgb, var(--color-success) 12%, var(--color-surface-card));
+	border-color: color-mix(in srgb, var(--color-success) 42%, var(--color-border-soft));
+}
+
+.landing-news.is-success .landing-section-title {
+	color: var(--color-success);
+}
+
+.landing-news.is-warning {
+	background: color-mix(in srgb, var(--color-warning) 22%, var(--color-surface-card));
+	border-color: color-mix(in srgb, var(--color-warning) 52%, var(--color-border-soft));
+}
+
+.landing-news.is-warning .landing-section-title {
+	color: var(--color-warning);
+}
+
+.landing-news.is-danger {
+	background: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface-card));
+	border-color: color-mix(in srgb, var(--color-danger) 45%, var(--color-border-soft));
+}
+
+.landing-news.is-danger .landing-section-title {
+	color: var(--color-danger);
+}
+
+.landing-news-dismiss {
+	position: absolute;
+	top: 14px;
+	right: 14px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border-radius: 999px;
+	border: 1px solid var(--color-border-soft);
+	background: var(--color-surface-stat);
+	color: var(--color-text-muted);
+	cursor: pointer;
+	transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.landing-news-dismiss:hover,
+.landing-news-dismiss:focus-visible {
+	border-color: var(--color-accent);
+	color: var(--color-accent-heading);
+}
+
+.landing-news-dismiss material-symbol {
+	display: inline-flex;
+	width: 18px;
+	height: 18px;
+}
+
+.landing-news-dismiss material-symbol svg {
+	width: 18px;
+	height: 18px;
+	fill: currentColor;
+}
+
+.news-style-picker {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.news-style-picker .field-select {
+	flex: 1;
+	min-width: 0;
+}
+
+.news-style-swatch {
+	display: inline-block;
+	width: 18px;
+	height: 18px;
+	flex-shrink: 0;
+	border-radius: 999px;
+	border: 1px solid var(--color-border-input);
+}
+
+.news-style-swatch.is-neutral {
+	background: var(--color-surface-summary-note);
+}
+
+.news-style-swatch.is-info {
+	background: color-mix(in srgb, var(--color-accent-track) 55%, var(--color-surface-card));
+}
+
+.news-style-swatch.is-success {
+	background: color-mix(in srgb, var(--color-success) 55%, var(--color-surface-card));
+}
+
+.news-style-swatch.is-warning {
+	background: color-mix(in srgb, var(--color-warning) 70%, var(--color-surface-card));
+}
+
+.news-style-swatch.is-danger {
+	background: color-mix(in srgb, var(--color-danger) 55%, var(--color-surface-card));
+}
+
 .landing-footer {
 	display: flex;
-	flex-wrap: wrap;
+	flex-wrap: nowrap;
+	align-items: baseline;
 	gap: 2px 10px;
 	margin-top: 12px;
 	padding-top: 18px;
 	border-top: 1px solid var(--color-border-soft);
 	font-size: 0.69rem;
 	color: var(--color-text-soft);
+}
+
+.landing-footer > span {
+	flex: 0 1 auto;
+	min-width: 0;
 }
 
 .landing-footer a {

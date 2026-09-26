@@ -9,7 +9,7 @@
 
 import { zodRoute } from "@tiddlywiki/server";
 import { SessionManager } from "./sessions";
-import { PREF_KEYS } from "./PrefsRoutes";
+import { PREF_KEYS, LANDING_NEWS_STYLES, type LandingNewsStyle } from "./PrefsRoutes";
 
 /** A session counts as "online" while it was touched within this window. */
 const ONLINE_WINDOW_MS = 15 * 60 * 1000;
@@ -28,6 +28,10 @@ function hiddenLandingRows(settingsRows: { key: string; value: string }[]): Set<
       hidden.add(key.slice(HIDDEN_PREFIX.length));
   }
   return hidden;
+}
+
+function newsStyleOf(value: string | undefined): LandingNewsStyle {
+  return LANDING_NEWS_STYLES.includes(value as LandingNewsStyle) ? (value as LandingNewsStyle) : "neutral";
 }
 
 export const LandingData = zodRoute({
@@ -129,6 +133,7 @@ export const LandingData = zodRoute({
       wikis,
       message: settings.get(PREF_KEYS.landingMessage)?.trim() || null,
       news: settings.get(PREF_KEYS.landingNews)?.trim() || null,
+      newsStyle: newsStyleOf(settings.get(PREF_KEYS.landingNewsStyle)),
     };
   },
 });
