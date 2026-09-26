@@ -16,6 +16,7 @@ export interface ServerToReactAdmin {
   sendError?: SendError<any>;
   userState: ServerRequest["user"];
   tw5Versions: string[];
+  mwsVersion?: string;
   prefs?: ServerPrefs;
 }
 
@@ -181,7 +182,7 @@ async function serveIndex({ state, publicdir, status, serverResponse }: {
 }): Promise<typeof STREAM_ENDED> {
 
   const prefs = await readPrefs(state.engine);
-  const serverResponseWithPrefs: ServerToReactAdmin = { ...serverResponse, prefs };
+  const serverResponseWithPrefs: ServerToReactAdmin = { ...serverResponse, mwsVersion: state.config.versions.mws, prefs };
   const preflightJSON = JSON.stringify({
     theme: prefs.defaultTheme,
     locale: prefs.defaultLocale,

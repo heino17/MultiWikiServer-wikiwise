@@ -10,7 +10,6 @@ import darkModeIcon from "@material-symbols/svg-400/outlined/dark_mode.svg";
 import lightModeIcon from "@material-symbols/svg-400/outlined/light_mode.svg";
 import settingsIcon from "@material-symbols/svg-400/outlined/settings.svg";
 import publicIcon from "@material-symbols/svg-400/outlined/public.svg";
-import cookieIcon from "@material-symbols/svg-400/outlined/cookie.svg";
 import { MaterialSymbol } from "./material-symbol";
 import { openCookieConsent } from "./cookie-consent";
 import {
@@ -1736,15 +1735,6 @@ export class App extends JSXElement {
                 <MaterialSymbol icon={publicIcon} />
               </a>
             ) : null}
-            <button
-              class="hero-settings-button"
-              type="button"
-              aria-label={t("Cookie settings")}
-              title={t("Cookie settings")}
-              onclick={() => openCookieConsent(true)}
-            >
-              <MaterialSymbol icon={cookieIcon} />
-            </button>
             {isAdmin ? (
               <button
                 class="hero-settings-button"
@@ -2396,6 +2386,13 @@ export class App extends JSXElement {
             </section>
           </div>
         ) : null}
+        <footer class="landing-footer admin-footer">
+          <span>{t("MWS-wikiwise {version}", { version: embeddedServerResponse.mwsVersion ?? "" })} · {t("TiddlyWiki {version}", { version: embeddedServerResponse.tw5Versions.slice(-1)[0] ?? "" })}</span>
+          <a href={pathPrefix + "/tw5/" + (embeddedServerResponse.tw5Versions.slice(-1)[0] ?? "")}>{t("TiddlyWiki docs")}</a>
+          <button class="landing-footer-action" type="button" onclick={() => openCookieConsent(true)}>
+            {t("Cookie settings")}
+          </button>
+        </footer>
       </div>
     );
   }

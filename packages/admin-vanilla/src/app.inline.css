@@ -4368,6 +4368,10 @@ odt-preview-document {
 	text-decoration: none;
 }
 
+.admin-shell > .landing-footer.admin-footer {
+	margin-top: 28px;
+}
+
 @media (max-width: 720px) {
 	.landing-stats {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
