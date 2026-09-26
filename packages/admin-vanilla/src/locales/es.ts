@@ -541,4 +541,6 @@ export const esStrings: Record<string, string> = {
   "TiddlyWiki docs": "Documentación de TiddlyWiki",
   "The overview could not be loaded.": "No se pudo cargar el resumen.",
   "Welcome": "Bienvenido",
+  "Public start page": "Página de inicio pública",
+  "Back to the wiki overview": "Volver a la vista general de wikis",
 };

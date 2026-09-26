@@ -73,6 +73,12 @@ function setup() {
     // to the login form right away (unless the admin disabled it).
     document.body.appendChild(new LandingPage());
   }
+  else if (location.pathname === pathPrefix + "/landing") {
+    // The public landing page as a dedicated route. Works for anonymous
+    // visitors and logged-in users alike: the header link "Public start page"
+    // opens it in a new tab, showing exactly what anonymous visitors see.
+    document.body.appendChild(new LandingPage());
+  }
   else if (!embeddedServerResponse.userState.isLoggedIn) {
     location.pathname = pathPrefix + "/login";
   }

@@ -541,4 +541,6 @@ export const ruStrings: Record<string, string> = {
   "TiddlyWiki docs": "Документация TiddlyWiki",
   "The overview could not be loaded.": "Не удалось загрузить обзор.",
   "Welcome": "Добро пожаловать",
+  "Public start page": "Публичная стартовая страница",
+  "Back to the wiki overview": "Назад к обзору вики",
 };

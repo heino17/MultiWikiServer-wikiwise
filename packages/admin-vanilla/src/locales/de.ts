@@ -559,4 +559,6 @@ export const deStrings: Record<string, string> = {
   "TiddlyWiki docs": "TiddlyWiki-Dokumentation",
   "The overview could not be loaded.": "Die Übersicht konnte nicht geladen werden.",
   "Welcome": "Willkommen",
+  "Public start page": "Öffentliche Startseite",
+  "Back to the wiki overview": "Zurück zur Wiki-Übersicht",
 };

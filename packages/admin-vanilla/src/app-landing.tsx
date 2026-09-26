@@ -203,9 +203,15 @@ export class LandingPage extends JSXElement {
                 ))}
               </select>
             ) : null}
-            <a class="primary-button login-submit landing-login-button" href={pathPrefix + "/login"}>
-              {t("Log in")}
-            </a>
+            {embeddedServerResponse.userState.isLoggedIn ? (
+              <a class="primary-button login-submit landing-login-button" href={pathPrefix + "/"}>
+                {t("Back to the wiki overview")}
+              </a>
+            ) : (
+              <a class="primary-button login-submit landing-login-button" href={pathPrefix + "/login"}>
+                {t("Log in")}
+              </a>
+            )}
           </div>
         </header>
 
