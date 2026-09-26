@@ -527,6 +527,8 @@ export const koStrings: Record<string, string> = {
   "Screenshot previews in the Wikis list.": "Wikis 목록의 스크린샷 미리보기.",
   "Thumbnail cache time (hours)": "썸네일 캐시 시간(시간)",
   "How long a wiki's screenshot preview stays cached. Leave empty to use the default of 24 hours.": "위키의 스크린샷 미리보기가 다시 렌더링되기 전까지 캐시에 유지되는 시간입니다. 24시간 기본값을 사용하려면 비워 두세요.",
+  "Show the cookie consent": "쿠키 안내 표시",
+  "The cookie notice shown to visitors on their first visit.": "방문자가 처음 방문할 때 표시되는 쿠키 안내.",
   "A visitor's own language or theme choice always wins. Feature switches apply to everyone.": "방문자가 직접 선택한 언어 또는 테마가 항상 우선합니다. 기능 스위치는 모든 사용자에게 적용됩니다.",
   "Show the public landing page": "공개 랜딩 페이지 표시",
   "Anonymous visitors get an overview with statistics and the public wikis instead of the login form.": "익명 방문자는 로그인 양식 대신 통계와 공개 위키 개요를 봅니다.",

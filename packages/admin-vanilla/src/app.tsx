@@ -52,7 +52,7 @@ import "./hero-locale-select";
 // Installation-wide feature defaults administered on the "Settings" page
 // (keys in the `settings` table, read into embeddedServerResponse.prefs).
 // An absent pref means the feature is enabled (current behaviour).
-function featurePref(name: "showPinboard" | "showUserFiles" | "showWikiUpload" | "showLocaleSelect" | "showThumbnails"): boolean {
+function featurePref(name: "showPinboard" | "showUserFiles" | "showWikiUpload" | "showLocaleSelect" | "showThumbnails" | "showCookieConsent"): boolean {
   return embeddedServerResponse.prefs?.[name] ?? true;
 }
 
@@ -2378,9 +2378,11 @@ export class App extends JSXElement {
         <footer class="landing-footer admin-footer">
           <span>{t("MWS-wikiwise {version}", { version: embeddedServerResponse.mwsVersion ?? "" })} · {t("TiddlyWiki {version}", { version: embeddedServerResponse.tw5Versions.slice(-1)[0] ?? "" })}</span>
           <a href={pathPrefix + "/tw5/" + (embeddedServerResponse.tw5Versions.slice(-1)[0] ?? "")}>{t("TiddlyWiki docs")}</a>
-          <button class="landing-footer-action" type="button" onclick={() => openCookieConsent(true)}>
-            {t("Cookie settings")}
-          </button>
+          {featurePref("showCookieConsent") ? (
+            <button class="landing-footer-action" type="button" onclick={() => openCookieConsent(true)}>
+              {t("Cookie settings")}
+            </button>
+          ) : null}
         </footer>
       </div>
     );

@@ -527,6 +527,8 @@ export const ruStrings: Record<string, string> = {
   "Screenshot previews in the Wikis list.": "Предпросмотр скриншотов в списке вики.",
   "Thumbnail cache time (hours)": "Время кеша миниатюр (часы)",
   "How long a wiki's screenshot preview stays cached. Leave empty to use the default of 24 hours.": "Как долго скриншот-превью вики хранится в кеше перед повторной отрисовкой. Оставьте пустым, чтобы использовать значение по умолчанию — 24 часа.",
+  "Show the cookie consent": "Показывать уведомление о cookie",
+  "The cookie notice shown to visitors on their first visit.": "Уведомление о cookie, которое посетители видят при первом посещении.",
   "A visitor's own language or theme choice always wins. Feature switches apply to everyone.": "Собственный выбор языка или темы посетителем всегда имеет приоритет. Переключатели функций применяются ко всем.",
   "Show the public landing page": "Показывать публичную целевую страницу",
   "Anonymous visitors get an overview with statistics and the public wikis instead of the login form.": "Анонимные посетители видят обзор со статистикой и публичными вики вместо формы входа.",

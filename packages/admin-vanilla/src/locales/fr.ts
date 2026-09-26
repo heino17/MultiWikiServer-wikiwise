@@ -527,6 +527,8 @@ export const frStrings: Record<string, string> = {
   "Screenshot previews in the Wikis list.": "Aperçus de captures d'écran dans la liste des Wikis.",
   "Thumbnail cache time (hours)": "Durée du cache des miniatures (heures)",
   "How long a wiki's screenshot preview stays cached. Leave empty to use the default of 24 hours.": "Combien de temps l'aperçu d'un wiki reste en cache avant d'être régénéré. Laissez vide pour utiliser la valeur par défaut de 24 heures.",
+  "Show the cookie consent": "Afficher l'avis relatif aux cookies",
+  "The cookie notice shown to visitors on their first visit.": "L'avis relatif aux cookies affiché aux visiteurs lors de leur première visite.",
   "A visitor's own language or theme choice always wins. Feature switches apply to everyone.": "Le choix personnel de langue ou de thème d'un visiteur prévaut toujours. Les interrupteurs de fonctionnalités s'appliquent à tous.",
   "Show the public landing page": "Afficher la page d'accueil publique",
   "Anonymous visitors get an overview with statistics and the public wikis instead of the login form.": "Les visiteurs anonymes voient un aperçu avec des statistiques et les wikis publics au lieu du formulaire de connexion.",

@@ -28,6 +28,7 @@ type LandingData = {
   message: string | null;
   news: string | null;
   newsStyle: string | null;
+  showCookieConsent: boolean;
 };
 
 const LANDING_NEWS_STYLES = ["neutral", "info", "success", "warning", "danger"] as const;
@@ -148,6 +149,8 @@ export class LandingPage extends JSXElement {
     typeof sessionStorage !== "undefined"
     && sessionStorage.getItem("mws-news-dismissed") === "1"
   );
+  /** Fade-out in progress (mirrors the cookie-consent dismissal effect). */
+  @state() accessor newsLeaving = false;
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -170,12 +173,14 @@ export class LandingPage extends JSXElement {
   };
 
   private readonly handleNewsDismiss = () => {
+    if (this.newsLeaving) return;
     try {
       sessionStorage.setItem("mws-news-dismissed", "1");
     } catch {
       // private / restricted browsing mode: still hide for this render
     }
-    this.newsDismissed = true;
+    this.newsLeaving = true;
+    window.setTimeout(() => { this.newsDismissed = true; }, 400);
   };
 
   private statCards(): Array<{ value: number; label: string }> {
@@ -236,7 +241,7 @@ export class LandingPage extends JSXElement {
 
             {this.data.news && !this.newsDismissed ? (
               <section
-                class={"landing-markdown landing-news is-" + newsStyleOf(this.data.newsStyle)}
+                class={"landing-markdown landing-news is-" + newsStyleOf(this.data.newsStyle) + (this.newsLeaving ? " leaving" : "")}
                 aria-label={t("News")}
               >
                 <h2 class="landing-section-title">{t("News")}</h2>
@@ -305,9 +310,11 @@ export class LandingPage extends JSXElement {
         <footer class="landing-footer">
           <span>{t("MWS-wikiwise {version}", { version: this.data?.versions.mws ?? "" })} · {t("TiddlyWiki {version}", { version: currentTw5 ?? "" })}</span>
           <a href={pathPrefix + "/tw5/" + (currentTw5 ?? "")}>{t("TiddlyWiki docs")}</a>
-          <button class="landing-footer-action" type="button" onclick={() => openCookieConsent(true)}>
-            {t("Cookie settings")}
-          </button>
+          {this.data?.showCookieConsent !== false ? (
+            <button class="landing-footer-action" type="button" onclick={() => openCookieConsent(true)}>
+              {t("Cookie settings")}
+            </button>
+          ) : null}
         </footer>
       </div>
     );

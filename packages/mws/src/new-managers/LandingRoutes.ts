@@ -134,6 +134,7 @@ export const LandingData = zodRoute({
       message: settings.get(PREF_KEYS.landingMessage)?.trim() || null,
       news: settings.get(PREF_KEYS.landingNews)?.trim() || null,
       newsStyle: newsStyleOf(settings.get(PREF_KEYS.landingNewsStyle)),
+      showCookieConsent: settings.get(PREF_KEYS.showCookieConsent) !== "false",
     };
   },
 });

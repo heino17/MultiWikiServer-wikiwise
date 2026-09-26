@@ -545,6 +545,8 @@ export const enStrings: Record<string, string> = {
   "Screenshot previews in the Wikis list.": "Screenshot previews in the Wikis list.",
   "Thumbnail cache time (hours)": "Thumbnail cache time (hours)",
   "How long a wiki's screenshot preview stays cached. Leave empty to use the default of 24 hours.": "How long a wiki's screenshot preview stays cached. Leave empty to use the default of 24 hours.",
+  "Show the cookie consent": "Show the cookie consent",
+  "The cookie notice shown to visitors on their first visit.": "The cookie notice shown to visitors on their first visit.",
   "A visitor's own language or theme choice always wins. Feature switches apply to everyone.": "A visitor's own language or theme choice always wins. Feature switches apply to everyone.",
   "Show the public landing page": "Show the public landing page",
   "Anonymous visitors get an overview with statistics and the public wikis instead of the login form.": "Anonymous visitors get an overview with statistics and the public wikis instead of the login form.",

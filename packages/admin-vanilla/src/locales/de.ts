@@ -544,6 +544,8 @@ export const deStrings: Record<string, string> = {
   "Screenshot previews in the Wikis list.": "Screenshot-Vorschauen in der Wikis-Liste.",
   "Thumbnail cache time (hours)": "Vorschaubild-Cache-Zeit (Stunden)",
   "How long a wiki's screenshot preview stays cached. Leave empty to use the default of 24 hours.": "Wie lange eine Screenshot-Vorschau eines Wikis zwischengespeichert bleibt. Für die Standardeinstellung von 24 Stunden leer lassen.",
+  "Show the cookie consent": "Cookie-Hinweis anzeigen",
+  "The cookie notice shown to visitors on their first visit.": "Der Cookie-Hinweis, der Besuchern bei ihrem ersten Besuch angezeigt wird.",
   "A visitor's own language or theme choice always wins. Feature switches apply to everyone.": "Eine eigene Sprach- oder Theme-Wahl eines Besuchers hat immer Vorrang. Die Funktionsschalter gelten für alle.",
   "Show the public landing page": "Öffentliche Startseite anzeigen",
   "Anonymous visitors get an overview with statistics and the public wikis instead of the login form.": "Anonyme Besucher sehen einen Überblick mit Statistiken und den öffentlichen Wikis statt des Login-Formulars.",

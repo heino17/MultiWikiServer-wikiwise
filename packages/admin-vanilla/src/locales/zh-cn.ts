@@ -527,6 +527,8 @@ export const zhCnStrings: Record<string, string> = {
   "Screenshot previews in the Wikis list.": "Wikis 列表中的截图预览。",
   "Thumbnail cache time (hours)": "缩略图缓存时间（小时）",
   "How long a wiki's screenshot preview stays cached. Leave empty to use the default of 24 hours.": "Wiki 的截图预览在重新渲染前缓存的时长。留空则使用默认值 24 小时。",
+  "Show the cookie consent": "显示Cookie通知",
+  "The cookie notice shown to visitors on their first visit.": "访问者首次访问时显示的Cookie通知。",
   "A visitor's own language or theme choice always wins. Feature switches apply to everyone.": "访客自己选择的语言或主题始终优先。功能开关适用于所有人。",
   "Show the public landing page": "显示公开落地页",
   "Anonymous visitors get an overview with statistics and the public wikis instead of the login form.": "匿名访客会看到包含统计和公开 Wiki 的概览，而不是登录表单。",
