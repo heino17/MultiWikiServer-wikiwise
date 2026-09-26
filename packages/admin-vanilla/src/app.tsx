@@ -43,10 +43,11 @@ import { definitely, is } from "./definition/utils";
 import { logout } from "./passwords";
 import { fieldTypeRenderSidebars, formatFieldValue, renderFieldEditor, renderFieldSidebar, renderSwitchField, textWithSlashes } from "./definition/renders";
 import { tw5logo } from "./logos";
-import { getCurrentLocale, localeLabels, setCurrentLocale, supportedLocales, t, type LocaleCode } from "./i18n";
+import { t } from "./i18n";
 import { getEffectiveTheme, toggleTheme, type ThemeMode } from "./theme";
 import "./pinboard";
 import "./user-files";
+import "./hero-locale-select";
 
 // Installation-wide feature defaults administered on the "Settings" page
 // (keys in the `settings` table, read into embeddedServerResponse.prefs).
@@ -63,6 +64,7 @@ declare global {
         onCountsChange?: (counts: { noteCount: number; unreadCount: number }) => void;
       };
       "mws-user-files": import("./user-files").UserFilesPanelProps;
+      "hero-locale-select": {};
     }
   }
 }
@@ -1404,12 +1406,6 @@ export class App extends JSXElement {
       // Keep the previous badge if the request fails (e.g. a racing logout).
     }
   };
-  private readonly handleLocaleChange = (event: Event) => {
-    const code = (event.target as HTMLSelectElement).value as LocaleCode;
-    if (code === getCurrentLocale()) return;
-    setCurrentLocale(code);
-    location.reload();
-  };
   private readonly handleThemeToggle = () => {
     toggleTheme();
     this.themeMode = getEffectiveTheme();
@@ -1715,15 +1711,7 @@ export class App extends JSXElement {
               <MaterialSymbol icon={this.themeMode === "dark" ? lightModeIcon : darkModeIcon} />
             </button>
             {featurePref("showLocaleSelect") ? (
-              <select
-                class="hero-locale-select"
-                aria-label={t("Language")}
-                onchange={this.handleLocaleChange}
-              >
-                {supportedLocales.map((code) => (
-                  <option value={code} selected={code === getCurrentLocale()}>{localeLabels[code]}</option>
-                ))}
-              </select>
+              <hero-locale-select />
             ) : null}
             {embeddedServerResponse.prefs?.showLanding !== false ? (
               <a
