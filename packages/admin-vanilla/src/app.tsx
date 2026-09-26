@@ -10,7 +10,9 @@ import darkModeIcon from "@material-symbols/svg-400/outlined/dark_mode.svg";
 import lightModeIcon from "@material-symbols/svg-400/outlined/light_mode.svg";
 import settingsIcon from "@material-symbols/svg-400/outlined/settings.svg";
 import publicIcon from "@material-symbols/svg-400/outlined/public.svg";
+import cookieIcon from "@material-symbols/svg-400/outlined/cookie.svg";
 import { MaterialSymbol } from "./material-symbol";
+import { openCookieConsent } from "./cookie-consent";
 import {
   getAllTabs,
   getTab,
@@ -1734,6 +1736,15 @@ export class App extends JSXElement {
                 <MaterialSymbol icon={publicIcon} />
               </a>
             ) : null}
+            <button
+              class="hero-settings-button"
+              type="button"
+              aria-label={t("Cookie settings")}
+              title={t("Cookie settings")}
+              onclick={() => openCookieConsent(true)}
+            >
+              <MaterialSymbol icon={cookieIcon} />
+            </button>
             {isAdmin ? (
               <button
                 class="hero-settings-button"

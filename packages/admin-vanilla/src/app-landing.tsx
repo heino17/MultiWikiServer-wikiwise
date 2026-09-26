@@ -10,6 +10,7 @@ import { getEffectiveTheme, toggleTheme, type ThemeMode } from "./theme";
 import darkModeIcon from "@material-symbols/svg-400/outlined/dark_mode.svg";
 import lightModeIcon from "@material-symbols/svg-400/outlined/light_mode.svg";
 import { MaterialSymbol } from "./material-symbol";
+import { openCookieConsent } from "./cookie-consent";
 import css from "./app.inline.css";
 
 type LandingWiki = {
@@ -282,6 +283,9 @@ export class LandingPage extends JSXElement {
         <footer class="landing-footer">
           <span>{t("MWS-wikiwise {version}", { version: this.data?.versions.mws ?? "" })} · {t("TiddlyWiki {version}", { version: currentTw5 ?? "" })}</span>
           <a href={pathPrefix + "/tw5/" + (currentTw5 ?? "")}>{t("TiddlyWiki docs")}</a>
+          <button class="landing-footer-action" type="button" onclick={() => openCookieConsent(true)}>
+            {t("Cookie settings")}
+          </button>
         </footer>
       </div>
     );

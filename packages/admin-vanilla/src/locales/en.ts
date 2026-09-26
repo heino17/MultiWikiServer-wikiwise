@@ -520,7 +520,6 @@ export const enStrings: Record<string, string> = {
   "Follow system theme": "Follow system theme",
   "Light theme": "Light theme",
   "Dark theme": "Dark theme",
-  "Save settings": "Save settings",
   "Settings saved.": "Settings saved.",
   "Failed to save settings.": "Failed to save settings.",
   "A visitor's own language or theme choice always wins.": "A visitor's own language or theme choice always wins.",
@@ -562,4 +561,15 @@ export const enStrings: Record<string, string> = {
   "Welcome": "Welcome",
   "Public start page": "Public start page",
   "Back to the wiki overview": "Back to the wiki overview",
+  // #region cookie consent
+  "Cookie notice": "Cookie notice",
+  "We use only the cookies that are technically necessary for logging in and store preferences locally. No tracking or analytics cookies are set. Services from third parties (e.g. Google Fonts) are loaded only after your separate consent.": "We use only the cookies that are technically necessary for logging in and store preferences locally. No tracking or analytics cookies are set. Services from third parties (e.g. Google Fonts) are loaded only after your separate consent.",
+  "Accept all cookies": "Accept all cookies",
+  "Only necessary cookies": "Only necessary cookies",
+  "Cookie settings": "Cookie settings",
+  "Save settings": "Save settings",
+  "Necessary cookies": "Necessary cookies",
+  "Login session and local preferences (theme, language).": "Login session and local preferences (theme, language).",
+  "External services": "External services",
+  "Third-party services (e.g. Google Fonts) are loaded only after your consent.": "Third-party services (e.g. Google Fonts) are loaded only after your consent.",
 };

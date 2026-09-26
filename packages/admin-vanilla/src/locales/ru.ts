@@ -543,4 +543,13 @@ export const ruStrings: Record<string, string> = {
   "Welcome": "Добро пожаловать",
   "Public start page": "Публичная стартовая страница",
   "Back to the wiki overview": "Назад к обзору вики",
+  "Cookie notice": "Уведомление о файлах cookie",
+  "We use only the cookies that are technically necessary for logging in and store preferences locally. No tracking or analytics cookies are set. Services from third parties (e.g. Google Fonts) are loaded only after your separate consent.": "Мы используем только технически необходимые для входа файлы cookie и храним настройки локально. Файлы cookie для отслеживания или анализа не устанавливаются. Сторонние сервисы (например, Google Fonts) загружаются только после отдельного согласия.",
+  "Accept all cookies": "Принять все файлы cookie",
+  "Only necessary cookies": "Только необходимые cookie",
+  "Cookie settings": "Настройки cookie",
+  "Necessary cookies": "Необходимые cookie",
+  "Login session and local preferences (theme, language).": "Сеанс входа и локальные настройки (тема, язык).",
+  "External services": "Сторонние сервисы",
+  "Third-party services (e.g. Google Fonts) are loaded only after your consent.": "Сторонние сервисы (например, Google Fonts) загружаются только с вашего согласия.",
 };
