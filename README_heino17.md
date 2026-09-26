@@ -437,6 +437,11 @@ Bearbeitungen überschreiben den Owner **nicht**). **Speichern**
 darf nur `recipe.owner_user_id === user.user_id` **oder** das
 Bootstrap-Konto `admin` (Super-Admin). Legacy-Wikis ohne Owner
 (z. B. `mws-docs`) sind nur über das `admin`-Konto bearbeitbar/löschbar.
+Der Owner-Check in `checkExisting` (`TabUpserts.ts`) zählt den Ersteller
+dabei unabhängig von Rollen: Wer das Wiki/Bag besitzt, darf es auch
+speichern, selbst wenn die Editor-Liste nur eine Rolle enthält, die der
+Owner nicht hält (z. B. `ADMIN` bei geseedeten Wikis). Templates bleiben
+beim strengen Rollenmodell (`templateAdmins`).
 Der rote Button wird im Frontend nur angezeigt, wenn der eingeloggte
 User Ersteller ist oder `admin` heißt. Im Wikis-Tab gibt es zusätzlich
 die Spalte **„Created by"** (Server-Feld `ownerUsername`).
