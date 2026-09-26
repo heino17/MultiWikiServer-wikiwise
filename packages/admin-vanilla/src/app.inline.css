@@ -4534,6 +4534,28 @@ odt-preview-document {
 	border: 1px solid var(--color-border-soft);
 	border-radius: 18px;
 	padding: 14px 44px 18px 18px;
+	margin: 0;
+	box-shadow: 0 10px 24px var(--color-shadow-card);
+	opacity: 1;
+	max-height: 2000px;
+	overflow: hidden;
+	transition:
+		opacity 340ms ease,
+		transform 340ms ease,
+		max-height 420ms ease,
+		padding 420ms ease,
+		border-width 420ms ease,
+		margin-bottom 420ms ease;
+}
+
+.landing-news.leaving {
+	opacity: 0;
+	transform: translateY(-8px);
+	max-height: 0;
+	padding-top: 0;
+	padding-bottom: 0;
+	border-width: 0;
+	margin-bottom: -12px;
 }
 
 .landing-news .landing-section-title {

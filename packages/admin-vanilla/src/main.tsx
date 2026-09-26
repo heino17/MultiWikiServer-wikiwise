@@ -42,6 +42,7 @@ declare global {
       landingMessage: string | null;
       landingNews: string | null;
       landingNewsStyle: string;
+      showCookieConsent: boolean;
     };
   }
 }
@@ -66,8 +67,11 @@ if (isInStandaloneMode()) {
 function setup() {
   // Cookie-consent notice (bottom edge). Applies to every route: it only
   // informs about the strictly necessary login session cookie and records
-  // its acceptance in localStorage, so it appears once per browser.
-  document.body.appendChild(new CookieConsent());
+  // its acceptance in localStorage, so it appears once per browser. The
+  // admin can disable the banner entirely (admin.showCookieConsent).
+  if (embeddedServerResponse.prefs?.showCookieConsent ?? true) {
+    document.body.appendChild(new CookieConsent());
+  }
 
   if (location.pathname === pathPrefix + "/login" && embeddedServerResponse.userState.isLoggedIn) {
     location.replace(pathPrefix + "/");

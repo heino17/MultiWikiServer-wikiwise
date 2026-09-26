@@ -527,6 +527,8 @@ export const jaStrings: Record<string, string> = {
   "Screenshot previews in the Wikis list.": "Wiki一覧のスクリーンショットプレビュー。",
   "Thumbnail cache time (hours)": "サムネイルのキャッシュ時間（時間）",
   "How long a wiki's screenshot preview stays cached. Leave empty to use the default of 24 hours.": "Wikiのスクリーンショットプレビューが再描画されるまでキャッシュに保持される時間。24時間のデフォルトを使用するには空欄のままにします。",
+  "Show the cookie consent": "Cookie同意を表示する",
+  "The cookie notice shown to visitors on their first visit.": "訪問者に初回訪問時に表示されるCookieのお知らせ。",
   "A visitor's own language or theme choice always wins. Feature switches apply to everyone.": "訪問者自身による言語またはテーマの選択が常に優先されます。機能スイッチは全員に適用されます。",
   "Show the public landing page": "公開ランディングページを表示",
   "Anonymous visitors get an overview with statistics and the public wikis instead of the login form.": "匿名の訪問者にはログインフォームの代わりに、統計と公開Wikiの概要を表示します。",

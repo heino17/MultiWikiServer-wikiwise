@@ -48,6 +48,7 @@ export class SettingsForm extends JSXElement {
   @state() accessor showLocaleSelect = embeddedServerResponse.prefs?.showLocaleSelect ?? true;
   @state() accessor showThumbnails = embeddedServerResponse.prefs?.showThumbnails ?? true;
   @state() accessor showLoginPuzzle = embeddedServerResponse.prefs?.showLoginPuzzle ?? true;
+  @state() accessor showCookieConsent = embeddedServerResponse.prefs?.showCookieConsent ?? true;
 
   @state() accessor thumbnailTtlHours = embeddedServerResponse.prefs?.thumbnailTtlHours ?? null;
 
@@ -89,6 +90,7 @@ export class SettingsForm extends JSXElement {
       if (typeof prefs.landingMessage === "string") this.landingMessage = prefs.landingMessage;
       if (typeof prefs.landingNews === "string") this.landingNews = prefs.landingNews;
       if (typeof prefs.landingNewsStyle === "string") this.landingNewsStyle = prefs.landingNewsStyle;
+      if (typeof prefs.showCookieConsent === "boolean") this.showCookieConsent = prefs.showCookieConsent;
       if (!this.showUserFiles) this.showWikiUpload = false;
     } catch {
       // keep the embedded values
@@ -122,6 +124,7 @@ export class SettingsForm extends JSXElement {
           landingMessage: this.landingMessage.trim() || null,
           landingNews: this.landingNews.trim() || null,
           landingNewsStyle: this.landingNewsStyle,
+          showCookieConsent: this.showCookieConsent,
         }),
       });
       // Saved — head back to the overview right away. The "Close" button
@@ -141,6 +144,8 @@ export class SettingsForm extends JSXElement {
   private readonly onThumbnailsChange = (checked: boolean) => { this.touched = true; this.showThumbnails = checked; };
 
   private readonly onLoginPuzzleChange = (checked: boolean) => { this.touched = true; this.showLoginPuzzle = checked; };
+
+  private readonly onCookieConsentChange = (checked: boolean) => { this.touched = true; this.showCookieConsent = checked; };
 
   private readonly onLandingChange = (checked: boolean) => { this.touched = true; this.showLanding = checked; };
 
@@ -314,6 +319,23 @@ export class SettingsForm extends JSXElement {
                     onchange={(event) => this.onThumbnailsChange((event.currentTarget as HTMLInputElement).checked)}
                   />
                   <span class={this.showThumbnails ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
+                    <span class="header-switch-thumb"></span>
+                  </span>
+                </label>
+
+                <label class="settings-toggle-row">
+                  <span class="settings-toggle-copy">
+                    <strong>{t("Show the cookie consent")}</strong>
+                    <p>{t("The cookie notice shown to visitors on their first visit.")}</p>
+                  </span>
+                  <input
+                    class="header-switch-input"
+                    type="checkbox"
+                    checked={this.showCookieConsent}
+                    disabled={!this.isAdmin}
+                    onchange={(event) => this.onCookieConsentChange((event.currentTarget as HTMLInputElement).checked)}
+                  />
+                  <span class={this.showCookieConsent ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
                     <span class="header-switch-thumb"></span>
                   </span>
                 </label>
