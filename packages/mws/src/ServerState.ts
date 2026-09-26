@@ -3,6 +3,7 @@ import { dist_resolve } from "@tiddlywiki/server";
 import { readFileSync } from "fs";
 import { TW } from "tiddlywiki";
 import { SessionManager, SessionManagerObject } from "./new-managers/sessions";
+import { applyInstallDefaults } from "./new-managers/PrefsRoutes";
 import { PluginCache } from "./plugin-cache/PluginCache";
 import { createPasswordService } from "./services/PasswordService";
 
@@ -100,6 +101,8 @@ export class ServerState {
         existing[key] = value as any;
       }
     }
+
+    await applyInstallDefaults(this.engine);
 
     await this.initSettings(existing);
 

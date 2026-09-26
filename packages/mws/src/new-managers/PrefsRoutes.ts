@@ -50,6 +50,44 @@ export interface ServerPrefs {
 const validThemes = new Set<string>(THEMES);
 const ALL_KEYS: string[] = Object.values(PREF_KEYS);
 
+/** Fresh-install defaults. Seeded once when the settings table is empty, so a
+ *  brand-new server already ships pre-filled ("landing welcome text",
+ *  "landing news", en/dark, thumbnail TTL 24h) and every feature switch on. */
+export const INSTALL_DEFAULTS: { key: string; value: string }[] = [
+  { key: PREF_KEYS.locale, value: "en" },
+  { key: PREF_KEYS.theme, value: "dark" },
+  { key: PREF_KEYS.showPinboard, value: "true" },
+  { key: PREF_KEYS.showUserFiles, value: "true" },
+  { key: PREF_KEYS.showWikiUpload, value: "true" },
+  { key: PREF_KEYS.showLocaleSelect, value: "true" },
+  { key: PREF_KEYS.showThumbnails, value: "true" },
+  { key: PREF_KEYS.showLoginPuzzle, value: "true" },
+  { key: PREF_KEYS.thumbnailTtlHours, value: "24" },
+  { key: PREF_KEYS.showLanding, value: "true" },
+  {
+    key: PREF_KEYS.landingMessage,
+    value: "A block can be displayed here permanently as a welcome message for your site...",
+  },
+  {
+    key: PREF_KEYS.landingNews,
+    value: "Here a collapsible news block for displaying brief news items...",
+  },
+];
+
+/** Writes the install defaults for every pref key without a row yet. Keeps any
+ *  value an admin has already stored. */
+export async function applyInstallDefaults(prisma: PrismaTxnClient): Promise<void> {
+  const existing = await prisma.settings.findMany({
+    where: { key: { in: INSTALL_DEFAULTS.map((entry) => entry.key) } },
+    select: { key: true },
+  });
+  const have = new Set(existing.map((row) => row.key));
+  for (const entry of INSTALL_DEFAULTS) {
+    if (have.has(entry.key)) continue;
+    await prisma.settings.create({ data: { key: entry.key, value: entry.value } });
+  }
+}
+
 /** Boolean prefs are stored as "true"/"false"; an absent row means the default. */
 function boolPref(map: Map<string, string>, key: string, fallback: boolean): boolean {
   const raw = map.get(key);
