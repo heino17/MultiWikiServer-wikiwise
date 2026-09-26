@@ -31,17 +31,17 @@ const dictionaries: Record<LocaleCode, Record<string, string>> = {
 export const supportedLocales: LocaleCode[] = [
   "en",
   "de",
+  "ru",
   "es",
   "fr",
   "ja",
   "ko",
-  "ru",
   "zh-cn",
 ];
 
 /** Display labels for the locale selector. */
 export const localeLabels: Record<LocaleCode, string> = {
-  en: "🇺🇸 English",
+  en: "🇺🇸 American",
   de: "🇩🇪 Deutsch",
   es: "🇪🇸 Español",
   fr: "🇫🇷 Français",
