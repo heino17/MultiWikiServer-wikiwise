@@ -541,4 +541,6 @@ export const jaStrings: Record<string, string> = {
   "TiddlyWiki docs": "TiddlyWiki ドキュメント",
   "The overview could not be loaded.": "概要を読み込めませんでした。",
   "Welcome": "ようこそ",
+  "Public start page": "公開スタートページ",
+  "Back to the wiki overview": "Wikiの概要に戻る",
 };

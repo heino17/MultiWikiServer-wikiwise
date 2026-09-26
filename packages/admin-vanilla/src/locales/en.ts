@@ -560,4 +560,6 @@ export const enStrings: Record<string, string> = {
   "TiddlyWiki docs": "TiddlyWiki docs",
   "The overview could not be loaded.": "The overview could not be loaded.",
   "Welcome": "Welcome",
+  "Public start page": "Public start page",
+  "Back to the wiki overview": "Back to the wiki overview",
 };

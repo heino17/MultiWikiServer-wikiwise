@@ -541,4 +541,6 @@ export const zhCnStrings: Record<string, string> = {
   "TiddlyWiki docs": "TiddlyWiki 文档",
   "The overview could not be loaded.": "无法加载概览。",
   "Welcome": "欢迎",
+  "Public start page": "公开首页",
+  "Back to the wiki overview": "返回Wiki概览",
 };

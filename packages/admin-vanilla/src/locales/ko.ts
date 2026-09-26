@@ -541,4 +541,6 @@ export const koStrings: Record<string, string> = {
   "TiddlyWiki docs": "TiddlyWiki 문서",
   "The overview could not be loaded.": "개요를 불러올 수 없습니다.",
   "Welcome": "환영합니다",
+  "Public start page": "공개 시작 페이지",
+  "Back to the wiki overview": "위키 개요로 돌아가기",
 };

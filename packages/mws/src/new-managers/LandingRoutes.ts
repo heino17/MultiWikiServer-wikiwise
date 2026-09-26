@@ -39,7 +39,14 @@ export const LandingData = zodRoute({
   inner: async (state) => {
     state.asserted = true;
 
-    const anonRoleId = state.user.roles.find((r) => r.role_name === SessionManager.AnonRoleName)?.role_id;
+    // The public landing must be login-independent: the anonymous ANON role
+    // is resolved from the roles table directly, not from the requesting
+    // user's roles (a logged-in user carries no ANON role).
+    const anonRole = await state.engine.roles.findUnique({
+      where: { role_name: SessionManager.AnonRoleName },
+      select: { role_id: true },
+    });
+    const anonRoleId = anonRole?.role_id;
 
     const [recipeRows, [userCount, onlineCount], settingsRows] = await Promise.all([
       anonRoleId

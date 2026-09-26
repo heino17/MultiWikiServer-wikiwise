@@ -9,6 +9,7 @@ import deleteIcon from "@material-symbols/svg-400/outlined/delete.svg";
 import darkModeIcon from "@material-symbols/svg-400/outlined/dark_mode.svg";
 import lightModeIcon from "@material-symbols/svg-400/outlined/light_mode.svg";
 import settingsIcon from "@material-symbols/svg-400/outlined/settings.svg";
+import publicIcon from "@material-symbols/svg-400/outlined/public.svg";
 import { MaterialSymbol } from "./material-symbol";
 import {
   getAllTabs,
@@ -1722,6 +1723,16 @@ export class App extends JSXElement {
                   <option value={code} selected={code === getCurrentLocale()}>{localeLabels[code]}</option>
                 ))}
               </select>
+            ) : null}
+            {embeddedServerResponse.prefs?.showLanding !== false ? (
+              <a
+                class="hero-settings-button"
+                href={pathPrefix + "/landing"}
+                aria-label={t("Public start page")}
+                title={t("Public start page")}
+              >
+                <MaterialSymbol icon={publicIcon} />
+              </a>
             ) : null}
             {isAdmin ? (
               <button

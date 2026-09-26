@@ -2487,8 +2487,19 @@ bisherige Redirect nach `/login`).
   Sichtbarkeit").
 - **i18n:** neue Keys 21 in allen 8 Sprachen (Sektionen `#region admin
   settings` und `#region landing page`); später −4 Settings-Keys der
-  Pro-Wiki-Sichtbarkeit +3 Editor-Keys („Landing page", Callout, Hinweis).
-  Aktuelle Parität: 519 Keys.
+  Pro-Wiki-Sichtbarkeit +3 Editor-Keys („Landing page", Callout, Hinweis)
+  und +2 für die `/landing`-Vorschau („Public start page",
+  „Back to the wiki overview"). Aktuelle Parität: 521 Keys.
+- **`/landing`-Route (eingeloggt die Startseite sehen):** Eingeloggte landen
+  auf `/` in der Verwaltung. Eine eigene Route `/landing` rendert dieselbe
+  öffentliche Startseite für anonyme **und** eingeloggte Besucher. Wichtig:
+  `/api/landing` löst die ANON-Rolle login-unabhängig aus der
+  `roles`-Tabelle auf (nicht aus `state.user.roles` — ein eingeloggter
+  Nutzer trägt keine ANON-Rolle, sonst war die Liste leer). Im
+  Verwaltungs-Header erscheint ein Globe-Button „Öffentliche Startseite"
+  (nur wenn `showLanding` aktiv ist), der `/landing` im selben Fenster
+  öffnet — exakt die Anonym-Vorschau. Auf der Landing zeigt der Header bei
+  eingeloggten Nutzern „Zurück zur Wiki-Übersicht" statt „Log in".
 
 ### Verifikation
 
@@ -2500,6 +2511,10 @@ bisherige Redirect nach `/login`).
   Wiki-Karten öffnen mit `target="_blank" rel="noopener noreferrer"`.
   Mit `showLanding=false` (per `PUT /api/prefs`) ⇒ `/` leitet wieder nach
   `/login`; danach zurückgesetzt auf `true`.
+- `/landing` headless: anonym ⇒ Landing mit „Log in"-Button; eingeloggt
+  (Admin-Session) ⇒ Landing mit „Zurück zur Wiki-Übersicht"; Verwaltungs-
+  Header zeigt den Globe-Link `href="/landing"`, der im selben Fenster
+  zur Landing navigiert.
 - Anon-Thumbnail `/wiki/bedienungsanleitung/thumbnail` ⇒ `200 image/png`
   (nur Cache); willkürliches privates Wiki ⇒ `404`.
 - Eingeloggter Admin (`/settings` headless): Schalter + beide Textfelder
@@ -2511,7 +2526,7 @@ bisherige Redirect nach `/login`).
   `landing.hidden.<recipeId>`=`"true"` und `GET /api/landing` zeigt 7
   (Wiki + Zähler weg), AN + speichern ⇒ Zeile verschwindet, 8. Privates
   Wiki ohne ANON ⇒ Callout statt Schalter. `/settings` ohne den alten Bereich.
-- `tsc` (admin-vanilla) + `tsc2` (Root) grün; Locale-Parität 519/519.
+- `tsc` (admin-vanilla) + `tsc2` (Root) grün; Locale-Parität 521/521.
 
 ---
 

@@ -541,4 +541,6 @@ export const frStrings: Record<string, string> = {
   "TiddlyWiki docs": "Documentation TiddlyWiki",
   "The overview could not be loaded.": "Impossible de charger l'aperçu.",
   "Welcome": "Bienvenue",
+  "Public start page": "Page d'accueil publique",
+  "Back to the wiki overview": "Retour à la vue d'ensemble des wikis",
 };
