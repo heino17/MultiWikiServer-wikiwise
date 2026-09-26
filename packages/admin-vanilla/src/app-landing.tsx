@@ -179,7 +179,7 @@ export class LandingPage extends JSXElement {
       <div class="landing-shell">
         <header class="landing-header">
           <div class="landing-header-left">
-            <p class="eyebrow landing-eyebrow">{t("Multi-wiki server administration")}</p>
+            <p class="eyebrow landing-eyebrow">Multi-Wiki-Server - {t("Administration")}</p>
             <h1 class="landing-title">MWS<sup class="hero-wordmark-suffix">-wikiwise</sup></h1>
             <p class="hero-copy landing-tagline">{t("All your thoughts, in as many places as you need them.")}</p>
           </div>

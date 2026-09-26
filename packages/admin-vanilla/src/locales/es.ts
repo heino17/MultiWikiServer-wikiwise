@@ -56,7 +56,7 @@ export const esStrings: Record<string, string> = {
   "Cancel": "Cancelar",
   "Login form": "Formulario de inicio de sesión",
 
-  "Multi-wiki server administration": "Administración del servidor multi-wiki",
+  "Administration": "Administración",
   "All your thoughts, in as many places as you need them.": "Todos tus pensamientos, en tantos lugares como necesites.",
   "Account options": "Opciones de cuenta",
   "Open account menu": "Abrir el menú de cuenta",

@@ -56,7 +56,7 @@ export const frStrings: Record<string, string> = {
   "Cancel": "Annuler",
   "Login form": "Formulaire de connexion",
 
-  "Multi-wiki server administration": "Administration du serveur multi-wiki",
+  "Administration": "Administration",
   "All your thoughts, in as many places as you need them.": "Toutes vos pensées, dans autant d'endroits que nécessaire.",
   "Account options": "Options du compte",
   "Open account menu": "Ouvrir le menu du compte",

@@ -56,7 +56,7 @@ export const ruStrings: Record<string, string> = {
   "Cancel": "Отмена",
   "Login form": "Форма входа",
 
-  "Multi-wiki server administration": "Администрирование мульти-вики сервера",
+  "Administration": "Администрирование",
   "All your thoughts, in as many places as you need them.": "Все ваши мысли — в стольких местах, сколько нужно.",
   "Account options": "Параметры учётной записи",
   "Open account menu": "Открыть меню учётной записи",

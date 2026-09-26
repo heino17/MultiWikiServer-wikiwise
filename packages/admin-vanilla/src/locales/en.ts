@@ -61,7 +61,7 @@ export const enStrings: Record<string, string> = {
   "Login form": "Login form",
 
   // #region app.tsx
-  "Multi-wiki server administration": "Multi-wiki server administration",
+  "Administration": "Administration",
   "All your thoughts, in as many places as you need them.": "All your thoughts, in as many places as you need them.",
   "Account options": "Account options",
   "Open account menu": "Open account menu",
