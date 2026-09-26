@@ -111,7 +111,11 @@ export abstract class PerClassImportWriter<Modal extends PrismaModalKeys> {
         this.asserted = true;
         this.debug("teacher create allowed");
       } else {
-        const ownerMatch: number = teacherWritable
+        // Owners may edit the wikis/bags they own even without a personal
+        // B_write/C_admin role grant (e.g. seeded wikis whose Editor list
+        // only contains the ADMIN role). Templates keep the strict
+        // role-grant model (templateAdmins/templateUsers).
+        const ownerMatch: number = (this.tabid === "wikis" || this.tabid === "bags")
           ? await (this.tx[this.modal] as any).count({
               where: { id: id.toString(), owner_user_id: user.user_id }
             })
