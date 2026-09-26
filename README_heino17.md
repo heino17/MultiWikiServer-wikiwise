@@ -2544,6 +2544,18 @@ bisherige Redirect nach `/login`).
 > Hinweis: Standard-Port 8080 ist auf dem Server bereits von Apache2
 > belegt (Ubuntu-Default-Page), deshalb Port 5000.
 
+## Datenschutz / Privacy
+
+- **Keine externen Fonts/Assets:** Die Verwaltungsoberfläche lädt weder
+  Google Fonts noch Material-Icons-Fonts von fremden Servern. Die
+  Icons sind eingebettete SVGs (`@material-symbols/svg-400`); die
+  Roboto-Variable-Font (latin/latin-ext, normal/kursiv) wird lokal aus
+  `packages/admin-vanilla/public/fonts/` ausgeliefert (→ `/fonts/*.woff2`).
+  Damit entfällt z. B. der Google-Fonts-abhängige Cookie-Hinweis.
+  Roboto ist unter der **SIL Open Font License 1.1** lizenziert; die
+  Lizenz liegt als `OFL.txt` bei `packages/admin-vanilla/public/fonts/`
+  aus (unveränderte Nutzung, keine Reservierten Font-Namen berührt).
+
 ---
 
 ## Betrieb / Ausblick
