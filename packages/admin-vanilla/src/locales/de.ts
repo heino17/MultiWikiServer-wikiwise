@@ -60,7 +60,7 @@ export const deStrings: Record<string, string> = {
   "Login form": "Anmeldeformular",
 
   // #region app.tsx
-  "Multi-wiki server administration": "Multi-Wiki-Server-Verwaltung",
+  "Administration": "Administration",
   "All your thoughts, in as many places as you need them.": "Alle deine Gedanken – an so vielen Orten, wie du sie brauchst.",
   "Account options": "Kontoptionen",
   "Open account menu": "Kontomenü öffnen",

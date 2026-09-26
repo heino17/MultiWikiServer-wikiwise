@@ -56,7 +56,7 @@ export const zhCnStrings: Record<string, string> = {
   "Cancel": "取消",
   "Login form": "登录表单",
 
-  "Multi-wiki server administration": "多 Wiki 服务器管理",
+  "Administration": "管理",
   "All your thoughts, in as many places as you need them.": "您的所有想法，都可以放在您需要的任意多个地方。",
   "Account options": "账户选项",
   "Open account menu": "打开账户菜单",

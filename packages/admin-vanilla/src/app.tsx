@@ -1698,7 +1698,7 @@ export class App extends JSXElement {
       <div class="admin-shell">
         <header class="hero-panel">
           <div class="hero-panel-content">
-            <p class="eyebrow">{t("Multi-wiki server administration")}</p>
+            <p class="eyebrow">Multi-Wiki-Server - {t("Administration")}</p>
             <h1 style="display:flex; gap: 1rem; align-items:center;">
               <span>MWS<sup class="hero-wordmark-suffix">-wikiwise</sup></span>
             </h1>

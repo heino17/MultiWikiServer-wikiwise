@@ -56,7 +56,7 @@ export const jaStrings: Record<string, string> = {
   "Cancel": "キャンセル",
   "Login form": "ログインフォーム",
 
-  "Multi-wiki server administration": "マルチ Wiki サーバー管理",
+  "Administration": "管理",
   "All your thoughts, in as many places as you need them.": "あなたのすべての考えを、必要なだけ多くの場所へ。",
   "Account options": "アカウントオプション",
   "Open account menu": "アカウントメニューを開く",

@@ -56,7 +56,7 @@ export const koStrings: Record<string, string> = {
   "Cancel": "취소",
   "Login form": "로그인 양식",
 
-  "Multi-wiki server administration": "멀티 Wiki 서버 관리",
+  "Administration": "관리",
   "All your thoughts, in as many places as you need them.": "당신의 모든 생각을, 필요한 만큼 많은 곳에서.",
   "Account options": "계정 옵션",
   "Open account menu": "계정 메뉴 열기",
