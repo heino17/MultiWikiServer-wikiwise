@@ -65,6 +65,7 @@ declare global {
       };
       "mws-user-files": import("./user-files").UserFilesPanelProps;
       "hero-locale-select": {};
+      "mws-login-emoji-puzzle": import("./login-emoji-puzzle").LoginEmojiPuzzleProps;
     }
   }
 }

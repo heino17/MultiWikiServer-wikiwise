@@ -35,6 +35,12 @@ export const deStrings: Record<string, string> = {
   "Reset code failed.": "Zurücksetzcode ungültig.",
   "Username: {username}": "Benutzername: {username}",
   "Login options": "Anmeldeoptionen",
+  "Tap all the animals": "Tippe alle Tiere an",
+  "Find all {count} animals.": "Finde alle {count} Tiere.",
+  "Find all {count} animals.#one": "Finde das {count} Tier.",
+  "That is not an animal.": "Das ist kein Tier.",
+  "Well done! You are definitely human.": "Geschafft! Du bist eindeutig ein Mensch.",
+  "New puzzle": "Neues Rätsel",
 
   // #region app-profile
   "User Profile": "Benutzerprofil",
@@ -532,6 +538,8 @@ export const deStrings: Record<string, string> = {
   "Requires \"My files\".": "Erfordert \"Meine Dateien\".",
   "Show the language selector": "Sprachwahl anzeigen",
   "The language dropdown in the header.": "Das Sprach-Dropdown in der Kopfzeile.",
+  "Login animal puzzle": "Tier-Rätsel beim Anmelden",
+  "Tap all the animals before logging in.": "Tippe vor der Anmeldung alle Tiere an.",
   "Show wiki thumbnails": "Wiki-Vorschaubilder anzeigen",
   "Screenshot previews in the Wikis list.": "Screenshot-Vorschauen in der Wikis-Liste.",
   "Thumbnail cache time (hours)": "Vorschaubild-Cache-Zeit (Stunden)",

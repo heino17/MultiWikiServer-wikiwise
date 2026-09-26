@@ -7,6 +7,7 @@ import css from "./app.inline.css";
 import { changeExistingPasswordWithCode, loginWithOpaque, serverAcceptResetCode } from "./passwords";
 import { FomController } from "./FomController";
 import { t } from "./i18n";
+import "./login-emoji-puzzle";
 
 // #region Login
 type LoginFormMode = "login" | "forgot-password" | "reset-code" | "update-password";
@@ -47,10 +48,13 @@ export class LoginForm extends JSXElement {
   @state() private accessor isSubmitting: boolean = false;
   @state() private accessor isResolvingServerState: boolean = false;
   @state() private accessor rememberMe: boolean = false;
+  @state() private accessor loginPuzzleSolved: boolean = false;
   @state() private accessor serverState: LoginServerState | null = null;
   @state() private accessor submitMessage: string = new URLSearchParams(globalThis.location?.search ?? "").get("state") === "password-changed"
     ? t("Password updated. You can now log in.")
     : "";
+
+  private readonly loginPuzzleEnabled = embeddedServerResponse.prefs?.showLoginPuzzle ?? true;
 
 
   private createDraft(): LoginDraft {
@@ -137,6 +141,7 @@ export class LoginForm extends JSXElement {
 
   private readonly handleBackClick = async () => {
     this.submitMessage = "";
+    this.loginPuzzleSolved = false;
     switch (this.mode) {
       case "login": break;
       case "forgot-password": {
@@ -166,8 +171,16 @@ export class LoginForm extends JSXElement {
     );
   };
 
+  private readonly handlePuzzleSolved = (eventOrValue: boolean | Event) => {
+    const solved = typeof eventOrValue === "boolean"
+      ? eventOrValue
+      : (eventOrValue as CustomEvent<boolean>).detail;
+    this.loginPuzzleSolved = solved;
+  };
+
   private readonly handleForgotPasswordClick = async () => {
     this.submitMessage = "";
+    this.loginPuzzleSolved = false;
     this.mode = "forgot-password";
     const serverState = await this.ensureServerState();
     if (!serverState.emailEnabled) {
@@ -231,7 +244,7 @@ export class LoginForm extends JSXElement {
           title: t("Log in"),
           copy: t("Enter your account credentials to continue."),
           submitAction: this.handleLoginSubmit,
-          submitDisabled: isLoginPageBusy,
+          submitDisabled: isLoginPageBusy || (this.loginPuzzleEnabled && !this.loginPuzzleSolved),
           submitLabel: this.isSubmitting ? t("Logging in…") : t("Log in"),
           isStart: true,
           backAction: this.handleBackClick,
@@ -262,6 +275,7 @@ export class LoginForm extends JSXElement {
               onclick={() => this.handleForgotPasswordClick()}
             >{t("Forgot password?")}</button>
           </div>
+          {this.loginPuzzleEnabled ? <mws-login-emoji-puzzle onSolvedChange={this.handlePuzzleSolved} /> : null}
         </>);
       }
       // #region forgot

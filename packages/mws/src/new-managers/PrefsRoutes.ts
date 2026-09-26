@@ -16,6 +16,7 @@ export const PREF_KEYS = {
   showWikiUpload: "admin.showWikiUpload",
   showLocaleSelect: "admin.showLocaleSelect",
   showThumbnails: "admin.showThumbnails",
+  showLoginPuzzle: "admin.showLoginPuzzle",
   thumbnailTtlHours: "admin.thumbnailTtlHours",
   showLanding: "admin.showLanding",
   landingMessage: "admin.landingMessage",
@@ -33,6 +34,8 @@ export interface ServerPrefs {
   showWikiUpload: boolean;
   showLocaleSelect: boolean;
   showThumbnails: boolean;
+  /** Animal-tap puzzle on the login form ("login CAPTCHA"). */
+  showLoginPuzzle: boolean;
   /** Thumbnail cache time in hours. `null` = install default (24h). */
   thumbnailTtlHours: number | null;
   /** Serve a public landing page to anonymous visitors at "/" instead of
@@ -76,6 +79,7 @@ export async function readPrefs(prisma: PrismaTxnClient): Promise<ServerPrefs> {
     showWikiUpload: boolPref(map, PREF_KEYS.showWikiUpload, true),
     showLocaleSelect: boolPref(map, PREF_KEYS.showLocaleSelect, true),
     showThumbnails: boolPref(map, PREF_KEYS.showThumbnails, true),
+    showLoginPuzzle: boolPref(map, PREF_KEYS.showLoginPuzzle, true),
     thumbnailTtlHours: ttlHours != null && Number.isFinite(ttlHours) && ttlHours > 0 ? ttlHours : null,
     showLanding: boolPref(map, PREF_KEYS.showLanding, true),
     landingMessage: map.get(PREF_KEYS.landingMessage)?.trim() || null,
@@ -111,6 +115,7 @@ export const AdminPrefsPut = zodRoute({
     showWikiUpload: z.boolean().nullable(),
     showLocaleSelect: z.boolean().nullable(),
     showThumbnails: z.boolean().nullable(),
+    showLoginPuzzle: z.boolean().nullable(),
     thumbnailTtlHours: z.number().int().min(1).max(2160).nullable(),
     showLanding: z.boolean().nullable(),
     landingMessage: z.string().max(2000).nullable(),
@@ -129,6 +134,7 @@ export const AdminPrefsPut = zodRoute({
       showWikiUpload,
       showLocaleSelect,
       showThumbnails,
+      showLoginPuzzle,
       thumbnailTtlHours,
       showLanding,
       landingMessage,
@@ -142,6 +148,7 @@ export const AdminPrefsPut = zodRoute({
     if (showWikiUpload != null) entries.push({ key: PREF_KEYS.showWikiUpload, value: showWikiUpload ? "true" : "false" });
     if (showLocaleSelect != null) entries.push({ key: PREF_KEYS.showLocaleSelect, value: showLocaleSelect ? "true" : "false" });
     if (showThumbnails != null) entries.push({ key: PREF_KEYS.showThumbnails, value: showThumbnails ? "true" : "false" });
+    if (showLoginPuzzle != null) entries.push({ key: PREF_KEYS.showLoginPuzzle, value: showLoginPuzzle ? "true" : "false" });
     if (thumbnailTtlHours != null) entries.push({ key: PREF_KEYS.thumbnailTtlHours, value: String(thumbnailTtlHours) });
     if (showLanding != null) entries.push({ key: PREF_KEYS.showLanding, value: showLanding ? "true" : "false" });
     if (landingMessage != null) entries.push({ key: PREF_KEYS.landingMessage, value: landingMessage.trim() });
