@@ -2573,8 +2573,10 @@ bisherige Redirect nach `/login`).
   Verwaltung). Die Zustimmung ist jederzeit änderbar:
   `openCookieConsent(true)` in `cookie-consent.tsx` öffnet das Banner
   erneut direkt auf dem Einstellungs-Panel; erreichbar über
-  „Cookie-Einstellungen" im Landing-Footer und über den Cookie-Icon-Button
-  im Verwaltungs-Header.
+  „Cookie-Einstellungen" im Footer der Startseite — derselbe Footer ist
+  auch in die Verwaltungsansicht übernommen (dafür entfiel der frühere
+  Cookie-Icon-Button im Verwaltungs-Header). Dazu liefert die embedded
+  Server-Response nun `mwsVersion` für die Versionsanzeige im Footer.
 
 ---
 

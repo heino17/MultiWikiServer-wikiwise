@@ -26,6 +26,7 @@ declare global {
   const embeddedServerResponse: {
     userState: AuthUser;
     tw5Versions: string[];
+    mwsVersion?: string;
     sendError?: ReturnType<SendError<any>["toJSON"]>;
     prefs?: {
       defaultLocale: string | null;
