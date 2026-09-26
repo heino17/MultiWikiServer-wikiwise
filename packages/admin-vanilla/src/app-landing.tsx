@@ -9,6 +9,7 @@ import { t } from "./i18n";
 import { getEffectiveTheme, toggleTheme, type ThemeMode } from "./theme";
 import darkModeIcon from "@material-symbols/svg-400/outlined/dark_mode.svg";
 import lightModeIcon from "@material-symbols/svg-400/outlined/light_mode.svg";
+import closeIcon from "@material-symbols/svg-400/outlined/close.svg";
 import { MaterialSymbol } from "./material-symbol";
 import "./hero-locale-select";
 import { openCookieConsent } from "./cookie-consent";
@@ -26,7 +27,10 @@ type LandingData = {
   wikis: LandingWiki[];
   message: string | null;
   news: string | null;
+  newsStyle: string | null;
 };
+
+const LANDING_NEWS_STYLES = ["neutral", "info", "success", "warning", "danger"] as const;
 
 // ---------------------------------------------------------------------------
 // Minimal markdown — enough for the admin-curated welcome message and news.
@@ -40,6 +44,12 @@ function escapeHtml(value: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function newsStyleOf(value: string | null | undefined): (typeof LANDING_NEWS_STYLES)[number] {
+  return LANDING_NEWS_STYLES.includes(value as (typeof LANDING_NEWS_STYLES)[number])
+    ? (value as (typeof LANDING_NEWS_STYLES)[number])
+    : "neutral";
 }
 
 function inlineMarkdown(text: string): string {
@@ -133,6 +143,11 @@ export class LandingPage extends JSXElement {
   @state() accessor themeMode: ThemeMode = getEffectiveTheme();
   @state() accessor data: LandingData | null = null;
   @state() accessor loadError = "";
+  /** From here until the end of the session the news block stays hidden. */
+  @state() accessor newsDismissed = (
+    typeof sessionStorage !== "undefined"
+    && sessionStorage.getItem("mws-news-dismissed") === "1"
+  );
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -152,6 +167,15 @@ export class LandingPage extends JSXElement {
   private readonly handleThemeToggle = () => {
     toggleTheme();
     this.themeMode = getEffectiveTheme();
+  };
+
+  private readonly handleNewsDismiss = () => {
+    try {
+      sessionStorage.setItem("mws-news-dismissed", "1");
+    } catch {
+      // private / restricted browsing mode: still hide for this render
+    }
+    this.newsDismissed = true;
   };
 
   private statCards(): Array<{ value: number; label: string }> {
@@ -210,10 +234,22 @@ export class LandingPage extends JSXElement {
               </section>
             ) : null}
 
-            {this.data.news ? (
-              <section class="landing-markdown landing-news" aria-label={t("News")}>
+            {this.data.news && !this.newsDismissed ? (
+              <section
+                class={"landing-markdown landing-news is-" + newsStyleOf(this.data.newsStyle)}
+                aria-label={t("News")}
+              >
                 <h2 class="landing-section-title">{t("News")}</h2>
                 <LandingMarkdown markdown={this.data.news} />
+                <button
+                  class="landing-news-dismiss"
+                  type="button"
+                  aria-label={t("Hide news for this session")}
+                  title={t("Hide news for this session")}
+                  onclick={this.handleNewsDismiss}
+                >
+                  <MaterialSymbol icon={closeIcon} />
+                </button>
               </section>
             ) : null}
 

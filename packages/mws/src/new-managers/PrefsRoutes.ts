@@ -21,7 +21,16 @@ export const PREF_KEYS = {
   showLanding: "admin.showLanding",
   landingMessage: "admin.landingMessage",
   landingNews: "admin.landingNews",
+  landingNewsStyle: "admin.landingNewsStyle",
 } as const;
+
+/** Background-color variants for the landing news block. */
+export const LANDING_NEWS_STYLES = ["neutral", "info", "success", "warning", "danger"] as const;
+export type LandingNewsStyle = (typeof LANDING_NEWS_STYLES)[number];
+
+function newsStyle(value: string | undefined | null): LandingNewsStyle {
+  return LANDING_NEWS_STYLES.includes(value as LandingNewsStyle) ? (value as LandingNewsStyle) : "neutral";
+}
 
 const THEMES = ["dark", "light"] as const;
 type DefaultTheme = (typeof THEMES)[number] | null;
@@ -45,6 +54,8 @@ export interface ServerPrefs {
   landingMessage: string | null;
   /** News block shown on the landing page (markdown, "" = off). */
   landingNews: string | null;
+  /** Background tint of the landing news block. */
+  landingNewsStyle: LandingNewsStyle;
 }
 
 const validThemes = new Set<string>(THEMES);
@@ -72,6 +83,7 @@ export const INSTALL_DEFAULTS: { key: string; value: string }[] = [
     key: PREF_KEYS.landingNews,
     value: "Here a collapsible news block for displaying brief news items...",
   },
+  { key: PREF_KEYS.landingNewsStyle, value: "neutral" },
 ];
 
 /** Writes the install defaults for every pref key without a row yet. Keeps any
@@ -122,6 +134,7 @@ export async function readPrefs(prisma: PrismaTxnClient): Promise<ServerPrefs> {
     showLanding: boolPref(map, PREF_KEYS.showLanding, true),
     landingMessage: map.get(PREF_KEYS.landingMessage)?.trim() || null,
     landingNews: map.get(PREF_KEYS.landingNews)?.trim() || null,
+    landingNewsStyle: newsStyle(map.get(PREF_KEYS.landingNewsStyle)),
   };
 }
 
@@ -158,6 +171,7 @@ export const AdminPrefsPut = zodRoute({
     showLanding: z.boolean().nullable(),
     landingMessage: z.string().max(2000).nullable(),
     landingNews: z.string().max(10000).nullable(),
+    landingNewsStyle: z.enum(LANDING_NEWS_STYLES).nullable(),
   }),
   inner: async (state) => {
     state.assertReferer(["/"]);
@@ -177,6 +191,7 @@ export const AdminPrefsPut = zodRoute({
       showLanding,
       landingMessage,
       landingNews,
+      landingNewsStyle,
     } = state.data;
     const entries: { key: string; value: string }[] = [];
     if (defaultLocale) entries.push({ key: PREF_KEYS.locale, value: defaultLocale });
@@ -191,6 +206,7 @@ export const AdminPrefsPut = zodRoute({
     if (showLanding != null) entries.push({ key: PREF_KEYS.showLanding, value: showLanding ? "true" : "false" });
     if (landingMessage != null) entries.push({ key: PREF_KEYS.landingMessage, value: landingMessage.trim() });
     if (landingNews != null) entries.push({ key: PREF_KEYS.landingNews, value: landingNews.trim() });
+    if (landingNewsStyle != null) entries.push({ key: PREF_KEYS.landingNewsStyle, value: landingNewsStyle });
 
     await state.$transaction(async (prisma) => {
       const keepKeys = new Set(entries.map((entry) => entry.key));

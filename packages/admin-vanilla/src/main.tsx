@@ -41,6 +41,7 @@ declare global {
       showLanding: boolean;
       landingMessage: string | null;
       landingNews: string | null;
+      landingNewsStyle: string;
     };
   }
 }
