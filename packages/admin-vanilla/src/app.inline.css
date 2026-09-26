@@ -1226,6 +1226,125 @@ body:has(.modal-shell[open]) {
 	width: 100%;
 }
 
+.emoji-puzzle {
+	display: grid;
+	gap: 6px;
+	padding: 7px;
+	border-radius: 16px;
+	border: 1px solid var(--color-border-soft);
+	background: var(--color-surface-field);
+}
+
+.emoji-puzzle.is-shaking {
+	animation: emoji-puzzle-shake 0.5s ease-in-out;
+}
+
+.emoji-puzzle-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.emoji-puzzle-task {
+	font-size: 0.92rem;
+	font-weight: 600;
+	color: var(--color-text-strong);
+	line-height: 1.45;
+}
+
+.emoji-puzzle-refresh {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	background: transparent;
+	color: var(--color-text-soft);
+	cursor: pointer;
+	transition: background 0.15s ease, color 0.15s ease;
+}
+
+.emoji-puzzle-refresh:hover,
+.emoji-puzzle-refresh:focus-visible {
+	background: var(--color-surface-hover, var(--color-surface-field-hover));
+	color: var(--color-text-strong);
+}
+
+.emoji-puzzle-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 80px);
+	justify-content: center;
+	gap: 5px;
+}
+
+.emoji-puzzle-tile {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 80px;
+	height: 80px;
+	min-width: 0;
+	padding: 0;
+	font-size: 1.75rem;
+	line-height: 1;
+	border: 1px solid var(--color-border-input);
+	border-radius: 14px;
+	background: var(--color-surface-modal-body, var(--color-surface-input));
+	cursor: pointer;
+	transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+}
+
+.emoji-puzzle-tile:hover {
+	transform: translateY(-2px);
+	border-color: var(--color-accent-track);
+}
+
+.emoji-puzzle-tile.is-selected {
+	border-color: var(--color-accent-track);
+	background: var(--color-accent-track-soft);
+	box-shadow: inset 0 0 0 1px var(--color-accent-track);
+}
+
+.emoji-puzzle-tile.is-wrong {
+	border-color: var(--color-danger);
+	background: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface-field));
+}
+
+.emoji-puzzle-tile.is-solved {
+	border-color: var(--color-success);
+	background: color-mix(in srgb, var(--color-success) 12%, var(--color-surface-field));
+	box-shadow: inset 0 0 0 1px var(--color-success);
+}
+
+.emoji-puzzle-feedback {
+	margin: 0;
+	min-height: 1.4em;
+	font-size: 0.9rem;
+	line-height: 1.4;
+	color: var(--color-text-soft);
+}
+
+.emoji-puzzle-feedback .is-wrong-text {
+	color: var(--color-danger);
+}
+
+.emoji-puzzle-feedback .is-solved-text {
+	color: var(--color-success);
+	font-weight: 600;
+}
+
+@keyframes emoji-puzzle-shake {
+	0%, 100% { transform: translateX(0); }
+	20% { transform: translateX(-6px); }
+	40% { transform: translateX(6px); }
+	60% { transform: translateX(-4px); }
+	80% { transform: translateX(4px); }
+}
+
 .primary-button:disabled,
 .ghost-button:disabled {
 	cursor: not-allowed;

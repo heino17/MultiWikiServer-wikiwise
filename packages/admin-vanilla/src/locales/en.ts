@@ -36,6 +36,12 @@ export const enStrings: Record<string, string> = {
   "Reset code failed.": "Reset code failed.",
   "Username: {username}": "Username: {username}",
   "Login options": "Login options",
+  "Tap all the animals": "Tap all the animals",
+  "Find all {count} animals.": "Find all {count} animals.",
+  "Find all {count} animals.#one": "Find the {count} animal.",
+  "That is not an animal.": "That is not an animal.",
+  "Well done! You are definitely human.": "Well done! You are definitely human.",
+  "New puzzle": "New puzzle",
 
   // #region app-profile
   "User Profile": "User Profile",
@@ -533,6 +539,8 @@ export const enStrings: Record<string, string> = {
   "Requires \"My files\".": "Requires \"My files\".",
   "Show the language selector": "Show the language selector",
   "The language dropdown in the header.": "The language dropdown in the header.",
+  "Login animal puzzle": "Login animal puzzle",
+  "Tap all the animals before logging in.": "Tap all the animals before logging in.",
   "Show wiki thumbnails": "Show wiki thumbnails",
   "Screenshot previews in the Wikis list.": "Screenshot previews in the Wikis list.",
   "Thumbnail cache time (hours)": "Thumbnail cache time (hours)",

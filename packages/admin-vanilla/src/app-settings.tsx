@@ -39,6 +39,7 @@ export class SettingsForm extends JSXElement {
   @state() accessor showWikiUpload = embeddedServerResponse.prefs?.showWikiUpload ?? true;
   @state() accessor showLocaleSelect = embeddedServerResponse.prefs?.showLocaleSelect ?? true;
   @state() accessor showThumbnails = embeddedServerResponse.prefs?.showThumbnails ?? true;
+  @state() accessor showLoginPuzzle = embeddedServerResponse.prefs?.showLoginPuzzle ?? true;
 
   @state() accessor thumbnailTtlHours = embeddedServerResponse.prefs?.thumbnailTtlHours ?? null;
 
@@ -72,6 +73,7 @@ export class SettingsForm extends JSXElement {
       if (typeof prefs.showWikiUpload === "boolean") this.showWikiUpload = prefs.showWikiUpload;
       if (typeof prefs.showLocaleSelect === "boolean") this.showLocaleSelect = prefs.showLocaleSelect;
       if (typeof prefs.showThumbnails === "boolean") this.showThumbnails = prefs.showThumbnails;
+      if (typeof prefs.showLoginPuzzle === "boolean") this.showLoginPuzzle = prefs.showLoginPuzzle;
       if (typeof prefs.thumbnailTtlHours === "number") this.thumbnailTtlHours = prefs.thumbnailTtlHours;
       if (typeof prefs.showLanding === "boolean") this.showLanding = prefs.showLanding;
       if (typeof prefs.landingMessage === "string") this.landingMessage = prefs.landingMessage;
@@ -103,6 +105,7 @@ export class SettingsForm extends JSXElement {
           showWikiUpload: this.showUserFiles && this.showWikiUpload,
           showLocaleSelect: this.showLocaleSelect,
           showThumbnails: this.showThumbnails,
+          showLoginPuzzle: this.showLoginPuzzle,
           thumbnailTtlHours: this.thumbnailTtlHours,
           showLanding: this.showLanding,
           landingMessage: this.landingMessage.trim() || null,
@@ -124,6 +127,8 @@ export class SettingsForm extends JSXElement {
   private readonly onLocaleSelectChange = (checked: boolean) => { this.touched = true; this.showLocaleSelect = checked; };
 
   private readonly onThumbnailsChange = (checked: boolean) => { this.touched = true; this.showThumbnails = checked; };
+
+  private readonly onLoginPuzzleChange = (checked: boolean) => { this.touched = true; this.showLoginPuzzle = checked; };
 
   private readonly onLandingChange = (checked: boolean) => { this.touched = true; this.showLanding = checked; };
 
@@ -263,6 +268,23 @@ export class SettingsForm extends JSXElement {
                     onchange={(event) => this.onLocaleSelectChange((event.currentTarget as HTMLInputElement).checked)}
                   />
                   <span class={this.showLocaleSelect ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
+                    <span class="header-switch-thumb"></span>
+                  </span>
+                </label>
+
+                <label class="settings-toggle-row">
+                  <span class="settings-toggle-copy">
+                    <strong>{t("Login animal puzzle")}</strong>
+                    <p>{t("Tap all the animals before logging in.")}</p>
+                  </span>
+                  <input
+                    class="header-switch-input"
+                    type="checkbox"
+                    checked={this.showLoginPuzzle}
+                    disabled={!this.isAdmin}
+                    onchange={(event) => this.onLoginPuzzleChange((event.currentTarget as HTMLInputElement).checked)}
+                  />
+                  <span class={this.showLoginPuzzle ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
                     <span class="header-switch-thumb"></span>
                   </span>
                 </label>

@@ -36,6 +36,7 @@ declare global {
       showWikiUpload: boolean;
       showLocaleSelect: boolean;
       showThumbnails: boolean;
+      showLoginPuzzle: boolean;
       thumbnailTtlHours: number | null;
       showLanding: boolean;
       landingMessage: string | null;
