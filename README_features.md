@@ -11,7 +11,7 @@ Standard-Sprache und Standard-Theme fürs erste Laden stellt der Betreiber in de
 
 > ⚠️ `@tiddlywiki/mws` auf npm ist das **Upstream**-Projekt. `npm init @tiddlywiki/mws@latest` installiert nicht diesen Fork. Dieser Fork wird als GitHub-Release verteilt, nicht über npm.
 >
-> **Schnellster Weg:** `mkdir mein-ordner && cd mein-ordner && npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.3.0/mws-wikiwise-0.3.0.tgz && npm pkg set name="@tiddlywiki/mws-instance" private=true version=0.2.0 --json`, dann `npx mws update-tiddlywiki`, `npx mws init-store`, `npx mws listen --listener`. Das `npm pkg set` ist Pflicht: der Server startet nur, wenn die `package.json` des Datenordners `@tiddlywiki/mws-instance` heißt, `private` ist und Version `0.2.x` trägt.
+> **Schnellster Weg:** `mkdir mein-ordner && cd mein-ordner && npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.3.0/mws-wikiwise-0.3.0.tgz && npm pkg set private=true --json && npm pkg set name="@tiddlywiki/mws-instance" version=0.2.0`, dann `npx mws update-tiddlywiki`, `npx mws init-store`, `npx mws listen --listener`. Das `npm pkg set` ist Pflicht: der Server startet nur, wenn die `package.json` des Datenordners `@tiddlywiki/mws-instance` heißt, `private` ist und Version `0.2.x` trägt.
 
 1. Repository holen und installieren: `git clone https://github.com/heino17/MultiWikiServer-wikiwise.git && cd MultiWikiServer-wikiwise && npm install`
 2. Entwicklungs-Wiki starten: `npm start` → Port `5000` unter `/dev/`
@@ -140,7 +140,7 @@ The operator sets the default language and theme for the very first load in "Set
 
 > ⚠️ `@tiddlywiki/mws` on npm is the **upstream** project. `npm init @tiddlywiki/mws@latest` does not install this fork. This fork is distributed as a GitHub release, not on npm.
 >
-> **Fastest route:** `mkdir my-folder && cd my-folder && npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.3.0/mws-wikiwise-0.3.0.tgz && npm pkg set name="@tiddlywiki/mws-instance" private=true version=0.2.0 --json`, then `npx mws update-tiddlywiki`, `npx mws init-store`, `npx mws listen --listener`. The `npm pkg set` is not optional: the server only starts if the data folder's `package.json` is named `@tiddlywiki/mws-instance`, is `private` and carries a `0.2.x` version.
+> **Fastest route:** `mkdir my-folder && cd my-folder && npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.3.0/mws-wikiwise-0.3.0.tgz && npm pkg set private=true --json && npm pkg set name="@tiddlywiki/mws-instance" version=0.2.0`, then `npx mws update-tiddlywiki`, `npx mws init-store`, `npx mws listen --listener`. The `npm pkg set` is not optional: the server only starts if the data folder's `package.json` is named `@tiddlywiki/mws-instance`, is `private` and carries a `0.2.x` version.
 
 1. Get and install the repository: `git clone https://github.com/heino17/MultiWikiServer-wikiwise.git && cd MultiWikiServer-wikiwise && npm install`
 2. Start the development wiki: `npm start` → port `5000` under `/dev/`

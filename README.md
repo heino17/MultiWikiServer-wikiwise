@@ -46,19 +46,21 @@ folder of your choice, and nothing has to be compiled:
 
 - `mkdir my-folder && cd my-folder`
 - `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.3.0/mws-wikiwise-0.3.0.tgz`
-- - `npm pkg set name="@tiddlywiki/mws-instance" private=true version=0.2.0 --json`
+- - `npm pkg set private=true --json`
+- `npm pkg set name="@tiddlywiki/mws-instance" version=0.2.0`
 - `npx mws update-tiddlywiki`
 - `npx mws init-store`
 - `npx mws listen --listener` – serves on <http://localhost:8080/>
 
-The second line is not optional. MWS insists on a data folder whose
+Those two lines are not optional. MWS insists on a data folder whose
 `package.json` is named `@tiddlywiki/mws-instance`, is marked `private` and
-carries a `0.2.x` version – it refuses to start otherwise, because that file
-is what keeps your tiddlers out of a public registry. `npm install <url>` in an
+carries a `0.2.x` version – it refuses to start otherwise, because that file is
+what keeps your tiddlers out of a public registry. `npm install <url>` in an
 empty folder writes a `package.json` named after the folder, so `npm pkg set`
-corrects exactly those three fields and keeps the dependency entry. The `--json`
-matters: without it `private` becomes the string `"true"` instead of the
-boolean, which the check does not accept.
+corrects exactly those three fields and keeps the dependency entry. The two
+commands are separate on purpose: `--json` makes npm parse **every** value as
+JSON, so it turns `private` into the boolean `true` but chokes on
+`@tiddlywiki/mws-instance`, which is not valid JSON.
 
 The download is an ordinary npm package, so `npm` resolves and installs all
 dependencies for you. Verify it before you trust it:
@@ -264,19 +266,21 @@ installieren – kompilieren musst du nichts:
 
 - `mkdir mein-ordner && cd mein-ordner`
 - `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.3.0/mws-wikiwise-0.3.0.tgz`
-- - `npm pkg set name="@tiddlywiki/mws-instance" private=true version=0.2.0 --json`
+- - `npm pkg set private=true --json`
+- `npm pkg set name="@tiddlywiki/mws-instance" version=0.2.0`
 - `npx mws update-tiddlywiki`
 - `npx mws init-store`
 - `npx mws listen --listener` – liefert auf <http://localhost:8080/>
 
-Die zweite Zeile ist nicht optional. MWS besteht auf einem Datenordner, dessen
+Diese zwei Zeilen sind nicht optional. MWS besteht auf einem Datenordner, dessen
 `package.json` `@tiddlywiki/mws-instance` heißt, als `private` markiert ist und
 eine `0.2.x`-Version trägt – sonst startet der Server nicht, denn genau diese
 Datei hält deine Tiddler aus einer öffentlichen Registry heraus. `npm install
 <url>` in einem leeren Ordner schreibt eine `package.json` mit dem Ordnernamen,
 also korrigiert `npm pkg set` genau diese drei Felder und behält den
-Dependency-Eintrag. `--json` ist wichtig: ohne das Flag wird `private` zum
-String `"true"` statt zum Boolean, was die Prüfung nicht akzeptiert.
+Dependency-Eintrag. Die zwei Befehle sind absicht getrennt: `--json` lässt npm
+**alle** Werte als JSON parsen, macht also aus `private` den Boolean `true`,
+scheitert aber an `@tiddlywiki/mws-instance`, weil das kein gültiges JSON ist.
 
 Der Download ist ein ganz normales npm-Paket, `npm` löst also alle Abhängigkeiten für
 dich auf. Prüfe die Datei, bevor du ihr vertraust:
