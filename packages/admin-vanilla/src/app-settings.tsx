@@ -386,7 +386,7 @@ export class SettingsForm extends JSXElement {
                   </span>
                 </label>
 
-                <div class="settings-toggle-row">
+                <div class="settings-toggle-row settings-text-field">
                   <span class="settings-toggle-copy">
                     <strong>{t("Landing welcome message")}</strong>
                     <p>{t("A welcome text on the public page. Markdown is supported.")}</p>
@@ -401,7 +401,7 @@ export class SettingsForm extends JSXElement {
                   ></textarea>
                 </div>
 
-                <div class="settings-toggle-row">
+                <div class="settings-toggle-row settings-text-field">
                   <span class="settings-toggle-copy">
                     <strong>{t("Landing news")}</strong>
                     <p>{t("A collapsible block visitors can close with the X for the rest of their session. Markdown is supported.")}</p>
@@ -452,7 +452,7 @@ export class SettingsForm extends JSXElement {
                   </span>
                 </label>
 
-                <div class="settings-toggle-row">
+                <div class="settings-toggle-row settings-text-field">
                   <span class="settings-toggle-copy">
                     <strong>{t("Legal notice")}</strong>
                     <p>{t("The Impressum text published on the public page. Markdown is supported.")}</p>
