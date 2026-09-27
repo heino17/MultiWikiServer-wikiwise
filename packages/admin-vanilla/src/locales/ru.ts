@@ -533,6 +533,8 @@ export const ruStrings: Record<string, string> = {
   "The Impressum text published on the public page. Markdown is supported.": "Текст импрессума, публикуемый на публичной странице. Поддерживается Markdown.",
   "No legal notice has been published yet.": "Импрессум ещё не опубликован.",
   "Back to the start page": "Вернуться на главную страницу",
+  "Show the legal notice": "Показывать импрессум",
+  "Show or hide the Impressum page and the links to it in the footers.": "Показывает или скрывает страницу импрессума и ссылки на неё в нижних колонтитулах.",
   "A visitor's own language or theme choice always wins. Feature switches apply to everyone.": "Собственный выбор языка или темы посетителем всегда имеет приоритет. Переключатели функций применяются ко всем.",
   "Show the public landing page": "Показывать публичную целевую страницу",
   "Anonymous visitors get an overview with statistics and the public wikis instead of the login form.": "Анонимные посетители видят обзор со статистикой и публичными вики вместо формы входа.",

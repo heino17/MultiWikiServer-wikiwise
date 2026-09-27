@@ -533,6 +533,8 @@ export const frStrings: Record<string, string> = {
   "The Impressum text published on the public page. Markdown is supported.": "Le texte des mentions légales publié sur la page publique. Markdown est pris en charge.",
   "No legal notice has been published yet.": "Aucune mention légale n'a encore été publiée.",
   "Back to the start page": "Retour à la page d'accueil",
+  "Show the legal notice": "Afficher les mentions légales",
+  "Show or hide the Impressum page and the links to it in the footers.": "Affiche ou masque la page des mentions légales et les liens qui y mènent dans les pieds de page.",
   "A visitor's own language or theme choice always wins. Feature switches apply to everyone.": "Le choix personnel de langue ou de thème d'un visiteur prévaut toujours. Les interrupteurs de fonctionnalités s'appliquent à tous.",
   "Show the public landing page": "Afficher la page d'accueil publique",
   "Anonymous visitors get an overview with statistics and the public wikis instead of the login form.": "Les visiteurs anonymes voient un aperçu avec des statistiques et les wikis publics au lieu du formulaire de connexion.",

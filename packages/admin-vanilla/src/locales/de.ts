@@ -550,6 +550,8 @@ export const deStrings: Record<string, string> = {
   "The Impressum text published on the public page. Markdown is supported.": "Der Impressum-Text, der auf der öffentlichen Seite veröffentlicht wird. Markdown wird unterstützt.",
   "No legal notice has been published yet.": "Es wurde noch kein Impressum veröffentlicht.",
   "Back to the start page": "Zurück zur Startseite",
+  "Show the legal notice": "Impressum anzeigen",
+  "Show or hide the Impressum page and the links to it in the footers.": "Zeigt oder versteckt die Impressum-Seite samt Links in den Fußzeilen.",
   "A visitor's own language or theme choice always wins. Feature switches apply to everyone.": "Eine eigene Sprach- oder Theme-Wahl eines Besuchers hat immer Vorrang. Die Funktionsschalter gelten für alle.",
   "Show the public landing page": "Öffentliche Startseite anzeigen",
   "Anonymous visitors get an overview with statistics and the public wikis instead of the login form.": "Anonyme Besucher sehen einen Überblick mit Statistiken und den öffentlichen Wikis statt des Login-Formulars.",

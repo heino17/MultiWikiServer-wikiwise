@@ -533,6 +533,8 @@ export const jaStrings: Record<string, string> = {
   "The Impressum text published on the public page. Markdown is supported.": "公開ページに掲載されるインプリズム（サイト運営者情報）のテキスト。Markdown に対応しています。",
   "No legal notice has been published yet.": "インプリズムはまだ公開されていません。",
   "Back to the start page": "スタートページに戻る",
+  "Show the legal notice": "インプリズムを表示する",
+  "Show or hide the Impressum page and the links to it in the footers.": "インプリズムのページとフッター内のリンクを表示・非表示にします。",
   "A visitor's own language or theme choice always wins. Feature switches apply to everyone.": "訪問者自身による言語またはテーマの選択が常に優先されます。機能スイッチは全員に適用されます。",
   "Show the public landing page": "公開ランディングページを表示",
   "Anonymous visitors get an overview with statistics and the public wikis instead of the login form.": "匿名の訪問者にはログインフォームの代わりに、統計と公開Wikiの概要を表示します。",

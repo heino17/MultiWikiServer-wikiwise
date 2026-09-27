@@ -551,6 +551,8 @@ export const enStrings: Record<string, string> = {
   "The Impressum text published on the public page. Markdown is supported.": "The Impressum text published on the public page. Markdown is supported.",
   "No legal notice has been published yet.": "No legal notice has been published yet.",
   "Back to the start page": "Back to the start page",
+  "Show the legal notice": "Show the legal notice",
+  "Show or hide the Impressum page and the links to it in the footers.": "Show or hide the Impressum page and the links to it in the footers.",
   "A visitor's own language or theme choice always wins. Feature switches apply to everyone.": "A visitor's own language or theme choice always wins. Feature switches apply to everyone.",
   "Show the public landing page": "Show the public landing page",
   "Anonymous visitors get an overview with statistics and the public wikis instead of the login form.": "Anonymous visitors get an overview with statistics and the public wikis instead of the login form.",

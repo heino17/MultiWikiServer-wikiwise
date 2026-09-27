@@ -96,7 +96,9 @@ export class LegalNoticePage extends JSXElement {
 
         <footer class="landing-footer">
           <a href={pathPrefix + "/"}>{t("Back to the start page")}</a>
-          <a href={pathPrefix + "/legal-notice"}>{t("Legal notice")}</a>
+          {(embeddedServerResponse.prefs?.showLegalNotice ?? true) ? (
+            <a href={pathPrefix + "/legal-notice"}>{t("Legal notice")}</a>
+          ) : null}
           {showCookieConsent ? (
             <button class="landing-footer-action" type="button" onclick={() => openCookieConsent(true)}>
               {t("Cookie settings")}

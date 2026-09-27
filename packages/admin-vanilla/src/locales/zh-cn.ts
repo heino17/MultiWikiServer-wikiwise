@@ -533,6 +533,8 @@ export const zhCnStrings: Record<string, string> = {
   "The Impressum text published on the public page. Markdown is supported.": "发布在公开页面上的法律声明（Impressum）文本。支持 Markdown。",
   "No legal notice has been published yet.": "尚未发布法律声明。",
   "Back to the start page": "返回首页",
+  "Show the legal notice": "显示法律声明",
+  "Show or hide the Impressum page and the links to it in the footers.": "显示或隐藏法律声明页面及页脚中的相关链接。",
   "A visitor's own language or theme choice always wins. Feature switches apply to everyone.": "访客自己选择的语言或主题始终优先。功能开关适用于所有人。",
   "Show the public landing page": "显示公开落地页",
   "Anonymous visitors get an overview with statistics and the public wikis instead of the login form.": "匿名访客会看到包含统计和公开 Wiki 的概览，而不是登录表单。",

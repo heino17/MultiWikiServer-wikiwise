@@ -62,6 +62,8 @@ export class SettingsForm extends JSXElement {
 
   @state() accessor legalNotice = embeddedServerResponse.prefs?.legalNotice ?? "";
 
+  @state() accessor showLegalNotice = embeddedServerResponse.prefs?.showLegalNotice ?? true;
+
   @state() accessor isSubmitting = false;
   @state() accessor message = "";
   @state() accessor error = "";
@@ -94,6 +96,7 @@ export class SettingsForm extends JSXElement {
       if (typeof prefs.landingNewsStyle === "string") this.landingNewsStyle = prefs.landingNewsStyle;
       if (typeof prefs.showCookieConsent === "boolean") this.showCookieConsent = prefs.showCookieConsent;
       if (typeof prefs.legalNotice === "string") this.legalNotice = prefs.legalNotice;
+      if (typeof prefs.showLegalNotice === "boolean") this.showLegalNotice = prefs.showLegalNotice;
       if (!this.showUserFiles) this.showWikiUpload = false;
     } catch {
       // keep the embedded values
@@ -129,6 +132,7 @@ export class SettingsForm extends JSXElement {
           landingNewsStyle: this.landingNewsStyle,
           showCookieConsent: this.showCookieConsent,
           legalNotice: this.legalNotice.trim() || null,
+          showLegalNotice: this.showLegalNotice,
         }),
       });
       // Saved — head back to the overview right away. The "Close" button
@@ -152,6 +156,8 @@ export class SettingsForm extends JSXElement {
   private readonly onCookieConsentChange = (checked: boolean) => { this.touched = true; this.showCookieConsent = checked; };
 
   private readonly onLegalNoticeChange = (value: string) => { this.touched = true; this.legalNotice = value; };
+
+  private readonly onShowLegalNoticeChange = (checked: boolean) => { this.touched = true; this.showLegalNotice = checked; };
 
   private readonly onLandingChange = (checked: boolean) => { this.touched = true; this.showLanding = checked; };
 
@@ -428,6 +434,23 @@ export class SettingsForm extends JSXElement {
                     </select>
                   </span>
                 </div>
+
+                <label class="settings-toggle-row">
+                  <span class="settings-toggle-copy">
+                    <strong>{t("Show the legal notice")}</strong>
+                    <p>{t("Show or hide the Impressum page and the links to it in the footers.")}</p>
+                  </span>
+                  <input
+                    class="header-switch-input"
+                    type="checkbox"
+                    checked={this.showLegalNotice}
+                    disabled={!this.isAdmin}
+                    onchange={(event) => this.onShowLegalNoticeChange((event.currentTarget as HTMLInputElement).checked)}
+                  />
+                  <span class={this.showLegalNotice ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
+                    <span class="header-switch-thumb"></span>
+                  </span>
+                </label>
 
                 <div class="settings-toggle-row">
                   <span class="settings-toggle-copy">
