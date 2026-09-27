@@ -500,7 +500,7 @@ export const esStrings: Record<string, string> = {
 
   // #region admin settings
   "Settings": "Configuración",
-  "Choose the language and theme every visitor sees on their first load.": "Elija el idioma y el tema que verá cada visitante en su primera carga.",
+  "Choose the language and theme every visitor sees on their first load.": "Establezca lo que los visitantes ven en su primera carga: idioma, tema y funciones, además del contenido de la página de inicio pública (mensaje de bienvenida, novedades, aviso legal) y el aviso de cookies.",
   "Language on first load": "Idioma en la primera carga",
   "Theme on first load": "Tema en la primera carga",
   "Follow browser language": "Seguir el idioma del navegador",

@@ -500,7 +500,7 @@ export const koStrings: Record<string, string> = {
 
   // #region admin settings
   "Settings": "설정",
-  "Choose the language and theme every visitor sees on their first load.": "모든 방문자가 첫 로드 시 보게 될 언어와 테마를 선택하세요.",
+  "Choose the language and theme every visitor sees on their first load.": "방문자가 처음 로드할 때 보게 될 내용을 설정합니다. 언어, 테마, 기능 외에도 공개 시작 페이지의 콘텐츠(환영 메시지, 소식, 법적 고지)와 쿠키 알림이 포함됩니다.",
   "Language on first load": "첫 로드 시 언어",
   "Theme on first load": "첫 로드 시 테마",
   "Follow browser language": "브라우저 언어 따르기",

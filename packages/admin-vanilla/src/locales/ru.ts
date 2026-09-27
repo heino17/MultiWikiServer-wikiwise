@@ -500,7 +500,7 @@ export const ruStrings: Record<string, string> = {
 
   // #region admin settings
   "Settings": "Настройки",
-  "Choose the language and theme every visitor sees on their first load.": "Выберите язык и тему, которые каждый посетитель увидит при первой загрузке.",
+  "Choose the language and theme every visitor sees on their first load.": "Задайте, что посетители увидят при первой загрузке: язык, тема и функции, а также содержимое публичной стартовой страницы (приветствие, новости, импрессум) и уведомление об использовании cookie.",
   "Language on first load": "Язык при первой загрузке",
   "Theme on first load": "Тема при первой загрузке",
   "Follow browser language": "Следовать языку браузера",
