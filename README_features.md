@@ -114,9 +114,9 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
 
 ## Lizenz
 
-Dieses Projekt steht unter der [GNU General Public License v3.0](LICENSE). Der Quellcode darf frei verwendet, verändert und weitergegeben werden – Weiterentwicklungen müssen ebenfalls unter der GPLv3 offen bleiben.
+Dieses Projekt steht unter der [BSD 3-Clause License](LICENSE). Der Quellcode darf verwendet, verändert und weitergegeben werden – auch kommerziell. Es gelten die üblichen drei Bedingungen: Copyright-Hinweis beibehalten, bei einer Binärverteilung den Urheber nennen, und die Namen der Beitragenden nicht ohne Erlaubnis für Empfehlungen nutzen.
 
-Copyright (C) 2026 heino17 https://github.com/heino17/MultiWikiServer-wikiwise
+Copyright (c) 2025, TiddlyWiki · Copyright (c) 2026, heino17 – https://github.com/heino17/MultiWikiServer-wikiwise
 
 
 ---
@@ -227,6 +227,6 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
 
 ## **License**
 
-This project is licensed under the [GNU General Public License v3.0](LICENSE). The source code may be freely used, modified, and distributed – any derivative works must also remain open under the GPLv3.
+This project is licensed under the [BSD 3-Clause License](LICENSE). The source code may be used, modified and redistributed – including commercially. The usual three conditions apply: retain the copyright notice, name the copyright holder in binary distributions, and do not use the names of the contributors to endorse derivative products without permission.
 
-Copyright (C) 2026 heino17 https://github.com/heino17/MultiWikiServer-wikiwise
+Copyright (c) 2025, TiddlyWiki · Copyright (c) 2026, heino17 – https://github.com/heino17/MultiWikiServer-wikiwise
