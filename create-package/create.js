@@ -7,7 +7,7 @@ const path = require("path");
 (async () => {
   if (!process.argv[2]) {
     console.error("Please provide a folder name.");
-    console.error("Usage: npm init @tiddlywiki/mws@latest <folder-name>");
+    console.error("Usage: npm init @mws/wikiwise@latest <folder-name>");
     process.exit(1);
   }
   const folder = path.resolve(process.cwd(), process.argv[2]);
@@ -41,7 +41,7 @@ const path = require("path");
   });
   // remember to update Dockerfile as well
   console.log("└─ Running npm install...");
-  await start("npm", ["install", "--save-prefix=~", "@tiddlywiki/mws@latest"], {
+  await start("npm", ["install", "--save-prefix=~", "@mws/wikiwise@latest"], {
     ...process.platform === "android" ? { GYP_DEFINES: "android_ndk_path=''", } : {}
   }, { cwd: folder });
   await start("npm", ["exec", "mws", "update-tiddlywiki"], {}, { cwd: folder });

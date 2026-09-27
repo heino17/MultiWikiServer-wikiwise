@@ -1,14 +1,14 @@
 {
-  "name": "@tiddlywiki/mws",
+  "name": "@mws/tools",
   "description": "TiddlyWiki Multiple Wiki Server",
-  "private": false,
+  "private": true,
   "version": "0.1.14",
   "bin": {
     "mws": "./mws.run.mjs"
   },
   "type": "module",
   "repository": {
-    "url": "https://github.com/TiddlyWiki/MultiWikiServer"
+    "url": "https://github.com/heino17/MultiWikiServer-wikiwise"
   },
   "license": "BSD-3-Clause",
   "author": "TiddlyWiki Community",

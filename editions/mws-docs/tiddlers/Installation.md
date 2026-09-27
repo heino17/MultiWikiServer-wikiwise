@@ -1,6 +1,6 @@
 These instructions require minimal knowledge of the terminal and require NodeJS to be installed.
 
-> **Note for the wikiwise fork:** the package `@tiddlywiki/mws` on npm is the *upstream* project. `npm init @tiddlywiki/mws@latest` therefore installs upstream MultiWikiServer without any fork feature. This fork is installed from its repository.
+> **Note for the wikiwise fork:** the package `@tiddlywiki/mws` on npm is the *upstream* project. `npm init @tiddlywiki/mws@latest` therefore installs upstream MultiWikiServer without any fork feature. This fork will be published as `@mws/wikiwise`; until then it is installed from its repository.
 
 - Get the fork and install it. The install also builds the server bundle, so there is no separate build step. 
 <<.copy-code-to-clipboard """git clone https://github.com/heino17/MultiWikiServer-wikiwise.git """>>
@@ -11,7 +11,7 @@ These instructions require minimal knowledge of the terminal and require NodeJS 
 <<.copy-code-to-clipboard """npm pack """>>
 <<.copy-code-to-clipboard """mkdir "new_folder_name" && cp create-package/files/* "new_folder_name"/ """>>
 <<.copy-code-to-clipboard """cd "new_folder_name" """>>
-<<.copy-code-to-clipboard """npm install ../tiddlywiki-mws-0.1.0.tgz """>>
+<<.copy-code-to-clipboard """npm install ../mws-wikiwise-0.3.0.tgz """>>
 - Initialize the TiddlyWiki files and the database 
 <<.copy-code-to-clipboard """npx mws update-tiddlywiki """>>
 <<.copy-code-to-clipboard """npx mws init-store """>>

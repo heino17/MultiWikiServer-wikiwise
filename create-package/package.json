@@ -1,11 +1,14 @@
 {
-  "name": "@tiddlywiki/create-mws",
-  "version": "0.0.13",
+  "name": "@mws/create-wikiwise",
+  "version": "0.1.0",
   "bin": "create.js",
-  "files":[
+  "files": [
     "create.js",
     "package.json",
     "README.md",
     "files"
-  ]
+  ],
+  "repository": {
+    "url": "https://github.com/heino17/MultiWikiServer-wikiwise"
+  }
 }

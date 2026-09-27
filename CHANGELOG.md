@@ -2710,6 +2710,89 @@ All of it on a fresh clone and a fresh instance, not on an existing store:
 
 ---
 
+## 51. Repo: the fork gets its own package name `@mws/wikiwise`
+
+**Goal:** §50 ended with the question of which name the fork should be
+published under. Decided: `@mws/wikiwise`, with `@mws/create-wikiwise` as the
+init package that `npm init` runs.
+
+### The name
+
+- The root `package.json` was called `@tiddlywiki/mws`, inherited from
+  upstream. That name belongs to the TiddlyWiki project, and the scope
+  `@tiddlywiki` can only be published by them, so `npm publish` with the
+  inherited name is impossible.
+- `@mws-wikiwise` is not a legal package name at all: npm only accepts
+  `@scope/name` or a plain name, and rejects a name that starts with `@`
+  without a slash with `EINVALIDPACKAGENAME` — found because installing the
+  packed tarball failed. `@mws/wikiwise` keeps the scope the fork already
+  uses for `@mws/admin-vanilla`.
+- Changed: root `package.json` → `@mws/wikiwise`, `tools/package.json` →
+  `@mws/tools` (it carried the root's name and pointed its `repository` at
+  upstream; it is now `private`), `create-package/package.json` →
+  `@mws/create-wikiwise`, plus `package-lock.json`.
+- The workspace packages keep their internal names (`@tiddlywiki/server`,
+  `@tiddlywiki/events`, `@mws/admin-vanilla`, …). They are bundled into
+  `dist` and never installed from the registry, so renaming them would only
+  add churn.
+- `create-package/create.js` installed `@tiddlywiki/mws@latest` and told the
+  user to run `npm init @tiddlywiki/mws@latest`; both now name
+  `@mws/wikiwise`, so `npm init @mws/wikiwise@latest <folder>` creates a
+  folder with the fork in it.
+
+### Version 0.3.0
+
+- The server version was `0.1.0` — *lower* than upstream's `0.2.5`, which is
+  misleading for a fork that is functionally ahead. It is now `0.3.0`, so the
+  fork's own numbering is clearly beyond upstream's 0.2.x line.
+- The **data folder** template stays at `0.2.0` on purpose.
+  `packages/mws/src/index.ts:79` requires the data folder's `package.json`
+  to start with `0.2`, and every existing installation carries `0.2.x`.
+  Raising the template to `0.3.0` would mean loosening that check, and any
+  existing store with `0.2.x` in it would still have to be accepted.
+  Server version and data folder version are independent: `ServerState.ts:66`
+  reads the server version from the root `package.json`, the gate only looks
+  at the data folder.
+- `create-package` is at `0.1.0`, its first release under its own name.
+
+### Documentation
+
+- `README.md` (both languages), `README_features.md` (both languages),
+  `editions/mws-docs/tiddlers/Installation.md` and
+  `create-package/README.md` name the new package and the new tarball name.
+  npm names the tarball of a scoped package `scope-name-version`, so
+  `npm pack` produces `mws-wikiwise-0.3.0.tgz`.
+
+### Verification
+
+Fresh clone, fresh instance, with the renamed package:
+
+- `npm install` → `prepare` builds `dist/mws.js`; `npm pack` produces
+  `mws-wikiwise-0.3.0.tgz` (3.47 MB).
+- Instance: `npm install <tarball>` → exit 0, the instance's dependency is
+  `@mws/wikiwise`, `repository.url` points to the fork.
+- `npx mws update-tiddlywiki`, `npx mws init-store` → exit 0, both wikis
+  loaded, `ANON` present 15× in the bundle.
+- `npx mws listen --listener` → `/`, `/admin` and `/wiki/bedienungsanleitung`
+  answer 200, and `GET /api/landing` reports `"mws": "0.3.0"` with the
+  manual as the one public wiki.
+
+### Still open
+
+- **Publishing is not done.** It needs an npm login, 2FA and the scope `mws`
+  to be available on npm — the scope cannot be checked without an account,
+  and `mws` is a short, generic name. If it is taken by someone else, the
+  unscoped `mws-wikiwise` (verified free) or `@heino17/wikiwise` are the
+  alternatives. Publishing under a name is permanent, so this is worth
+  checking before the first `npm publish`.
+- `packages/mws/src/db/sqlite-adapter.ts:45` and `:78` still print
+  `@tiddlywiki/mws` in the diagnostics for 0.0.x alpha databases. Those
+  databases cannot be used by the fork either, and the suggested
+  `npm install @tiddlywiki/mws@0.0` cannot be rewritten to the fork's name
+  because the fork has no 0.0.x release — left as is on purpose.
+
+---
+
 ## Unchecked-in starter configuration (local, gitignored)
 
 ```json
@@ -5504,6 +5587,92 @@ bestehenden Store:
   Das erfordert eine Namensentscheidung und npm-Zugang;
   `create-package/create.js:44` verdrahtet weiterhin
   `@tiddlywiki/mws@latest` und muss dieser Entscheidung folgen.
+
+---
+
+## 51. Repo: Der Fork bekommt seinen eigenen Paketnamen `@mws/wikiwise`
+
+**Ziel:** §50 endete mit der Frage, unter welchem Namen der Fork
+veröffentlicht werden soll. Entschieden: `@mws/wikiwise`, dazu das
+Init-Paket `@mws/create-wikiwise`, das `npm init` ausführt.
+
+### Der Name
+
+- Die Root-`package.json` hieß `@tiddlywiki/mws`, von Upstream geerbt. Der
+  Name gehört dem TiddlyWiki-Projekt, und die Scope `@tiddlywiki` kann nur
+  von dort publiziert werden – ein `npm publish` mit dem geerbten Namen ist
+  also unmöglich.
+- `@mws-wikiwise` ist überhaupt kein gültiger Paketname: npm akzeptiert nur
+  `@scope/name` oder einen einfachen Namen und lehnt einen Namen, der mit
+  `@` ohne Schrägstrich beginnt, mit `EINVALIDPACKAGENAME` ab. Das fiel beim
+  Installieren des gepackten Tarballs auf. `@mws/wikiwise` behält die Scope,
+  die der Fork mit `@mws/admin-vanilla` ohnehin schon nutzt.
+- Geändert: Root-`package.json` → `@mws/wikiwise`, `tools/package.json` →
+  `@mws/tools` (trug den Namen der Root und zeigte mit `repository` auf das
+  Upstream; ist jetzt `private`), `create-package/package.json` →
+  `@mws/create-wikiwise`, dazu `package-lock.json`.
+- Die Workspace-Pakete behalten ihre internen Namen
+  (`@tiddlywiki/server`, `@tiddlywiki/events`, `@mws/admin-vanilla`, …). Sie
+  werden nach `dist` gebündelt und nie aus der Registry installiert; ein
+  Umbenennen wäre nur zusätzlicher Churn.
+- `create-package/create.js` installierte `@tiddlywiki/mws@latest` und legte
+  `npm init @tiddlywiki/mws@latest` nahe; beides nennt jetzt
+  `@mws/wikiwise`, sodass `npm init @mws/wikiwise@latest <ordner>` einen
+  Ordner mit dem Fork darin anlegt.
+
+### Version 0.3.0
+
+- Die Serverversion war `0.1.0` – *niedriger* als die `0.2.5` des Upstreams,
+  was für einen funktional weiter entwickelten Fork irreführend ist. Sie ist
+  jetzt `0.3.0`, damit die eigene Nummerierung des Forks eindeutig hinter der
+  0.2.x-Linie des Upstreams liegt.
+- Die Vorlage für den **Datenordner** bleibt bewusst bei `0.2.0`.
+  `packages/mws/src/index.ts:79` verlangt, dass die `package.json` des
+  Datenordners mit `0.2` beginnt, und jede bestehende Installation trägt
+  `0.2.x`. Ein Anheben der Vorlage auf `0.3.0` hieße, diese Prüfung zu
+  lockern, und jeder bestehende Store mit `0.2.x` müsste weiterhin
+  akzeptiert werden. Serverversion und Datenordner-Version sind unabhängig
+  voneinander: `ServerState.ts:66` liest die Serverversion aus der
+  Root-`package.json`, das Gate sieht nur den Datenordner an.
+- `create-package` steht auf `0.1.0`, seiner ersten Veröffentlichung unter
+  eigenem Namen.
+
+### Dokumentation
+
+- `README.md` (beide Sprachen), `README_features.md` (beide Sprachen),
+  `editions/mws-docs/tiddlers/Installation.md` und
+  `create-package/README.md` nennen das neue Paket und den neuen
+  Tarball-Namen. npm benennt den Tarball eines Scoped-Pakets
+  `scope-name-version`, `npm pack` erzeugt also `mws-wikiwise-0.3.0.tgz`.
+
+### Verifikation
+
+Frischer Clone, frische Instanz, mit dem umbenannten Paket:
+
+- `npm install` → `prepare` baut `dist/mws.js`; `npm pack` erzeugt
+  `mws-wikiwise-0.3.0.tgz` (3,47 MB).
+- Instanz: `npm install <tarball>` → Exit 0, die Abhängigkeit der Instanz
+  ist `@mws/wikiwise`, `repository.url` zeigt auf den Fork.
+- `npx mws update-tiddlywiki`, `npx mws init-store` → Exit 0, beide Wikis
+  geladen, `ANON` 15-mal im Bundle vorhanden.
+- `npx mws listen --listener` → `/`, `/admin` und
+  `/wiki/bedienungsanleitung` antworten mit 200, `GET /api/landing` meldet
+  `"mws": "0.3.0"` und die Anleitung als einziges öffentliches Wiki.
+
+### Weiterhin offen
+
+- **Veroeffentlicht ist noch nichts.** Das braucht eine npm-Anmeldung, 2FA
+  und die Scope `mws` auf npm – die Scope lässt sich ohne Konto nicht
+  prüfen, und `mws` ist eine kurze, generische Bezeichnung. Gehoert sie
+  jemand anderem, sind `mws-wikiwise` ohne Scope (geprueft frei) oder
+  `@heino17/wikiwise` die Alternativen. Ein veroeffentlichter Name ist
+  endgueltig, deshalb sollte das vor dem ersten `npm publish` geklaert sein.
+- `packages/mws/src/db/sqlite-adapter.ts:45` und `:78` nennen in den
+  Meldungen fuer 0.0.x-Alpha-Datenbanken weiterhin `@tiddlywiki/mws`. Diese
+  Datenbanken kann der Fork ohnehin nicht verwenden, und der Vorschlag
+  `npm install @tiddlywiki/mws@0.0` laesst sich nicht auf den Fork-Namen
+  umschreiben, weil es keine 0.0.x-Veröffentlichung des Forks gibt – daher
+  bewusst unverändert.
 
 ---
 
