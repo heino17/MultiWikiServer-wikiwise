@@ -2,6 +2,7 @@
   "name": "@tiddlywiki/mws",
   "description": "TiddlyWiki Multiple Wiki Server",
   "private": true,
+  "license": "BSD-3-Clause",
   "type": "module",
   "devDependencies": {
     "@serenity-kit/opaque": "^0.8.4",

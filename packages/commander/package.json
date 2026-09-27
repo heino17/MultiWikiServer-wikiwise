@@ -2,6 +2,7 @@
   "name": "@tiddlywiki/commander",
   "description": "TiddlyWiki Commander",
   "private": true,
+  "license": "BSD-3-Clause",
   "type": "module",
   "types": "./src/index.ts",
   "module": "./src/index.ts",

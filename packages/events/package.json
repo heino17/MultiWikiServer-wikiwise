@@ -2,6 +2,7 @@
   "name": "@tiddlywiki/events",
   "description": "Server Events",
   "private": true,
+  "license": "BSD-3-Clause",
   "type": "module",
   "types": "./src/index.ts",
   "module": "./src/index.ts",

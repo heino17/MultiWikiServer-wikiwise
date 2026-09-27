@@ -1,6 +1,7 @@
 {
   "name": "@tiddlywiki/jsx-runtime",
   "private": true,
+  "license": "BSD-3-Clause",
   "module": "index.ts",
   "exports": {
     ".": {

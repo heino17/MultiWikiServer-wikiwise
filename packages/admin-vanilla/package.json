@@ -1,5 +1,6 @@
 {
   "name": "@mws/admin-vanilla",
+  "license": "BSD-3-Clause",
   "scripts": {
     "start": "cd .. && npm start",
     "tsc": "tsc --noEmit"

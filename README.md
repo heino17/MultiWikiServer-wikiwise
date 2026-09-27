@@ -1,5 +1,7 @@
 # 🇺🇸 MultiWikiServer-wikiwise
 
+[![License: BSD 3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](LICENSE)
+
 <a href="https://www.paypal.com/donate/?hosted_button_id=BVDDREGEU2ZEA">
   <img src="https://github.com/user-attachments/assets/6467378f-26fd-40ff-b60e-b8d62555c08a" width="20" />
 Donate to MultiWikiServer founder Arlen Beiler via PayPal to support development
@@ -157,9 +159,15 @@ The development wiki will be active at http://localhost:8080/
 
 You can change the listeners as explained in the mws.dev.mjs file.
 
+## 📄 License
+
+This project is licensed under the [BSD 3-Clause License](LICENSE) – free to use, modify and redistribute, including commercially. Copyright (c) 2025, TiddlyWiki · Copyright (c) 2026, heino17.
+
 ---
 
 # 🇩🇪 MultiWikiServer-wikiwise
+
+[![License: BSD 3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](LICENSE)
 
 <a href="https://www.paypal.com/donate/?hosted_button_id=BVDDREGEU2ZEA">
   <img src="https://github.com/user-attachments/assets/6467378f-26fd-40ff-b60e-b8d62555c08a" width="20" />
@@ -288,3 +296,7 @@ Wenn du am Projekt arbeiten oder einfach die neuesten Änderungen ausprobieren m
 Das Entwicklungs-Wiki ist aktiv unter http://localhost:8080/
 
 Du kannst die Listener ändern, wie es in der Datei mws.dev.mjs erklärt wird.
+
+## 📄 Lizenz
+
+Dieses Projekt steht unter der [BSD 3-Clause License](LICENSE) – frei verwendbar, veränderbar und weitergebbar, auch kommerziell. Copyright (c) 2025, TiddlyWiki · Copyright (c) 2026, heino17.
