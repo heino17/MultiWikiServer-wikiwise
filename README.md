@@ -37,8 +37,8 @@ Highlights only – the full story, with file names, code and background, lives 
 
 > ⚠️ **The package `@tiddlywiki/mws` on npm is the upstream project, not this fork.**
 > `npm init @tiddlywiki/mws@latest` installs upstream MultiWikiServer – without any of
-> the features listed above. This fork is not published on npm under a name of its own,
-> so it is installed from the repository.
+> the features listed above. This fork will be published as `@mws/wikiwise`; until then
+> it is installed from the repository.
 
 Clone the fork, install it and start it. `npm install` builds the server bundle, so
 there is no separate build step:
@@ -51,9 +51,9 @@ there is no separate build step:
 For your own data folder, independent of the development wiki, build a package once
 and install it into a new folder:
 
-- `npm pack` – creates `tiddlywiki-mws-0.1.0.tgz`
+- `npm pack` – creates `mws-wikiwise-0.3.0.tgz`
 - `mkdir my-folder && cp create-package/files/* my-folder/`
-- `cd my-folder && npm install ../tiddlywiki-mws-0.1.0.tgz`
+- `cd my-folder && npm install ../mws-wikiwise-0.3.0.tgz`
 - `npx mws update-tiddlywiki`
 - `npx mws init-store`
 - `npx mws listen --listener` – serves on <http://localhost:8080/>
@@ -221,8 +221,8 @@ Nur Highlights – die vollständige Geschichte mit Dateinamen, Code und Hinterg
 
 > ⚠️ **Das Paket `@tiddlywiki/mws` auf npm ist das Upstream-Projekt, nicht dieser Fork.**
 > `npm init @tiddlywiki/mws@latest` installiert das originale MultiWikiServer – ohne eine
-> einzige der oben genannten Funktionen. Dieser Fork ist nicht unter einem eigenen Namen
-> auf npm veröffentlicht, er wird aus dem Repository installiert.
+> einzige der oben genannten Funktionen. Dieser Fork wird als `@mws/wikiwise` auf npm
+> erscheinen; bis dahin wird er aus dem Repository installiert.
 
 Fork auschecken, installieren, starten. `npm install` baut das Server-Bundle mit, ein
 zusätzlicher Build-Schritt ist nicht nötig:
@@ -235,9 +235,9 @@ zusätzlicher Build-Schritt ist nicht nötig:
 Für einen eigenen Datenordner, unabhängig vom Entwicklungs-Wiki, einmal ein Paket bauen
 und in einen neuen Ordner installieren:
 
-- `npm pack` – erzeugt `tiddlywiki-mws-0.1.0.tgz`
+- `npm pack` – erzeugt `mws-wikiwise-0.3.0.tgz`
 - `mkdir my-folder && cp create-package/files/* my-folder/`
-- `cd my-folder && npm install ../tiddlywiki-mws-0.1.0.tgz`
+- `cd my-folder && npm install ../mws-wikiwise-0.3.0.tgz`
 - `npx mws update-tiddlywiki`
 - `npx mws init-store`
 - `npx mws listen --listener` – liefert auf <http://localhost:8080/>
