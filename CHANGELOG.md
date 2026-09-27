@@ -1,6 +1,8 @@
-# README_heino17
+# CHANGELOG – MultiWikiServer-wikiwise
 
 Dokumentation der Änderungen am MultiWikiServer-wikiwise-Fork von heino17.
+Dieses Log erzählt die Entwicklungsgeschichte in umgekehrter
+Reihenfolge der Features, Bug-Fixes und Umbauten seit dem Basis-Stand.
 
 Stand: 2026-09-22 · Basis: `TiddlyWiki/MultiWikiServer` @ `3627482`
 
