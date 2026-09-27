@@ -519,7 +519,7 @@ export const enStrings: Record<string, string> = {
 
   // #region admin settings
   "Settings": "Settings",
-  "Choose the language and theme every visitor sees on their first load.": "Choose the language and theme every visitor sees on their first load.",
+  "Choose the language and theme every visitor sees on their first load.": "Set what visitors see on their first load: language, theme and features — plus the content of the public start page (welcome message, news, legal notice) and the cookie notice.",
   "Language on first load": "Language on first load",
   "Theme on first load": "Theme on first load",
   "Follow browser language": "Follow browser language",

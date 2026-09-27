@@ -500,7 +500,7 @@ export const frStrings: Record<string, string> = {
 
   // #region admin settings
   "Settings": "Paramètres",
-  "Choose the language and theme every visitor sees on their first load.": "Choisissez la langue et le thème que chaque visiteur voit à son premier chargement.",
+  "Choose the language and theme every visitor sees on their first load.": "Définissez ce que les visiteurs voient à leur premier chargement : langue, thème et fonctionnalités, ainsi que le contenu de la page publique (message de bienvenue, actualités, mentions légales) et l'avis relatif aux cookies.",
   "Language on first load": "Langue au premier chargement",
   "Theme on first load": "Thème au premier chargement",
   "Follow browser language": "Suivre la langue du navigateur",

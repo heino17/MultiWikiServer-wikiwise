@@ -500,7 +500,7 @@ export const jaStrings: Record<string, string> = {
 
   // #region admin settings
   "Settings": "設定",
-  "Choose the language and theme every visitor sees on their first load.": "初回読み込み時にすべての訪問者に表示する言語とテーマを選択します。",
+  "Choose the language and theme every visitor sees on their first load.": "初回読み込み時に訪問者が見る内容を設定します。言語・テーマ・機能のほか、公開スタートページのコンテンツ（歓迎メッセージ、お知らせ、インプリズム）や Cookie 同意のお知らせも含みます。",
   "Language on first load": "初回読み込み時の言語",
   "Theme on first load": "初回読み込み時のテーマ",
   "Follow browser language": "ブラウザーの言語に従う",

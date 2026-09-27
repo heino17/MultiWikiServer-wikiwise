@@ -436,8 +436,9 @@ h6 {
 .settings-hint {
 	margin: 0;
 	font-size: 0.9rem;
+	font-weight: 600;
 	line-height: 1.5;
-	color: var(--color-text-soft);
+	color: var(--color-text);
 }
 
 .settings-toggle-list {

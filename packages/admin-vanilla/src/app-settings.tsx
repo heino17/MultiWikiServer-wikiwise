@@ -228,6 +228,12 @@ export class SettingsForm extends JSXElement {
               </div>
             </div>
 
+            {this.isAdmin ? (
+              <p class="settings-hint">{t("A visitor's own language or theme choice always wins. Feature switches apply to everyone.")}</p>
+            ) : (
+              <p class="settings-hint">{t("Only administrators can change installation-wide defaults.")}</p>
+            )}
+
             <div class="login-field">
               <span class="login-field-label">{t("Features")}</span>
               <div class="settings-toggle-list">
@@ -468,12 +474,6 @@ export class SettingsForm extends JSXElement {
                 </div>
               </div>
             </div>
-
-            {this.isAdmin ? (
-              <p class="settings-hint">{t("A visitor's own language or theme choice always wins. Feature switches apply to everyone.")}</p>
-            ) : (
-              <p class="settings-hint">{t("Only administrators can change installation-wide defaults.")}</p>
-            )}
 
             {(this.message || this.error) ? (
               <div class="login-feedback" role="status" aria-live="polite">

@@ -518,7 +518,7 @@ export const deStrings: Record<string, string> = {
 
   // #region admin settings
   "Settings": "Einstellungen",
-  "Choose the language and theme every visitor sees on their first load.": "Wählen Sie die Sprache und das Theme, das jeder Besucher beim ersten Laden sieht.",
+  "Choose the language and theme every visitor sees on their first load.": "Hier legst du fest, was Besucher beim ersten Laden sehen: Sprache, Theme und Features — dazu Inhalte für die öffentliche Startseite (Begrüßung, News, Impressum) und der Cookie-Hinweis.",
   "Language on first load": "Sprache beim ersten Laden",
   "Theme on first load": "Theme beim ersten Laden",
   "Follow browser language": "Browser-Sprache folgen",

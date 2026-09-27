@@ -500,7 +500,7 @@ export const zhCnStrings: Record<string, string> = {
 
   // #region admin settings
   "Settings": "设置",
-  "Choose the language and theme every visitor sees on their first load.": "选择每位访客首次加载时看到的语言和主题。",
+  "Choose the language and theme every visitor sees on their first load.": "设置访客首次加载时看到的内容：语言、主题和功能，以及公共首页的内容（欢迎信息、新闻、法律声明）和 Cookie 声明。",
   "Language on first load": "首次加载时使用的语言",
   "Theme on first load": "首次加载时使用的主题",
   "Follow browser language": "跟随浏览器语言",
