@@ -63,6 +63,9 @@ export default async function runMWS() {
   }
   const wikiPath = path.resolve(process.cwd());
   (async () => {
+    // init-data-folder is the command that creates this package.json, so the
+    // checks below cannot apply to it.
+    if (commandNamesThatNeedNoDataFolder().includes(wikiCommandName())) return;
     if (!existsSync(path.join(wikiPath, "package.json")))
       throw "The wiki path does not have a package.json file"
 
@@ -118,6 +121,18 @@ export default async function runMWS() {
   await runCLI();
   serverEvents.eventLogging = false;
 
+}
+
+// The first argument that is not an option is the command name. Programbits
+// are not a supported way to run these commands.
+function wikiCommandName(): string {
+  return process.argv.slice(2).find(arg => !arg.startsWith("-")) ?? "";
+}
+
+// Commands that run before a data folder exists. init-data-folder writes the
+// package.json the checks in runMWS() are about, so it must be exempt.
+function commandNamesThatNeedNoDataFolder(): string[] {
+  return ["init-data-folder"];
 }
 
 serverEvents.on("cli.commander", (program) => {

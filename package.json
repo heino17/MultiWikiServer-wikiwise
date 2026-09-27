@@ -2,7 +2,7 @@
   "name": "@mws/wikiwise",
   "description": "TiddlyWiki Multiple Wiki Server",
   "private": false,
-  "version": "0.3.0",
+  "version": "0.3.1",
   "bin": {
     "mws": "./mws.run.mjs"
   },
@@ -30,6 +30,7 @@
     "plugins",
     "prisma",
     "public",
+    "create-package/files/package.json",
     "scripts",
     "mws.run.mjs"
   ],
