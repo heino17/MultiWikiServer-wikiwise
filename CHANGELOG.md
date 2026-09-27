@@ -1,4 +1,2619 @@
-# CHANGELOG – MultiWikiServer-wikiwise
+# 🇺🇸 CHANGELOG – MultiWikiServer-wikiwise
+
+Documentation of the changes to heino17's MultiWikiServer-wikiwise fork. This log
+tells the development story in reverse order of features, bug fixes, and reworks
+since the base state.
+
+As of: 2026-09-22 · Base: `TiddlyWiki/MultiWikiServer` @ `3627482`
+
+## Summary
+
+This fork contains several small bug fixes as well as features
+for the HTTP/proxy operation of MWS: public read access via the ANON
+role, no phantom saving in read-only wikis, owner protection for
+wikis/bags/templates/roles/users, `admin` user management (direct
+password, deletion), wiki creation & deletion at the click of a
+button, as well as later renaming of wiki names and slugs (including
+automatic renaming of the default bag). The admin app is fully
+bilingual (DE/EN), protects system roles from deletion, validates
+wiki slugs live (format + availability), bundles wiki creation in a
+dropdown, toggles between a light (warm `#F3E6C5`) and dark
+design, and adds a secure random password generator with a
+selectable length (8–32) and a copy display to the password
+fields.
+
+Since September 2026, a complete **teacher area** has been added
+(§21–§27): A school administrator (principal/`admin`) creates teachers;
+each teacher manages **only their own class** and does **not** see the
+wikis of the other teachers. The separation is done via **personal
+roles** (named after the username, e.g. `Frau Meyer`) instead of via
+the shared TEACHER system role; a server-side role guard prevents
+the assignment of foreign teacher roles (as well as `ADMIN`/`TEACHER`),
+and the admin UI hides foreign personal roles in the user dialog.
+At the same time, **cooperation** remains possible: A teacher can
+invite another teacher into their wiki by invitation
+(`B_write`/`C_admin`), and class roles give students targeted read
+access. In addition, the email column of the user table is made
+`nullable`, so that multiple users without an email no longer collide
+on `""`. All changes are deliberately kept small and backward compatible.
+
+Additionally, an admin tab **"Storage"** has been added (§39–§41):
+It clearly separates the **system disk status** from the **storage usage
+of MultiWikiServer-wikiwise**, reports the **binary content (blobs &
+files)** (count/size, file store, inbox, orphaned files), and shows the
+**storage usage per user (top 10)** including wiki content and file
+store. This makes it visible that MWS keeps binary content inline as
+base64 in the SQLite database (no separate blob store).
+
+There is also a new tab **"My Files"** (§44): Every logged-in user
+uploads their own files (default limit of 100 MB per file, overridable
+via `MWS_USERFILE_SIZE_LIMIT`), keeps them available in the browser
+for download and inline preview (image, audio, video, PDF, text,
+Markdown, and ODT text documents), and can share them selectively —
+admin shares reach everyone, teacher shares reach their class members
+and admins, student shares reach specifically chosen recipients. The
+bytes are stored content-addressed (`store/files/<sha256>/`) on the
+disk; a SQLite table holds only metadata (`user_file` +
+`user_file_share`).
+
+In addition, every wiki toolbar has an **"Upload file" button**
+(§45): It uploads files directly from the opened wiki — with write
+access into the file store of the **wiki owner**, not of the
+uploader.
+
+Since September 2026 there is also a **security rework "C"** (§47):
+Personalized bag namespaces against name squatting (C1), wiki
+classification + CSP headers + existence oracle (C2), and the structured
+"My Areas" UI with trust labels (C3).
+
+---
+
+## 1. Missing dependency: `escape-string-regexp`
+
+**Files:** `package.json` (root)
+
+The server imported `escape-string-regexp` in
+`packages/mws/src/services/setupDevServer.ts`, but the package was missing in
+all `package.json` files → the build (`tsup`) failed with
+`Could not resolve "escape-string-regexp"`.
+
+**Fix:** Added the dependency to the root `package.json`:
+
+```json
+"escape-string-regexp": "^5.0.0"
+```
+
+---
+
+## 2. CSRF referer check blocked the password change
+
+**File:** `packages/mws/src/new-managers/sessions.ts`
+
+**Problem:** The pages `/login` and `/profile` are part of the same
+admin interface. The "Update password" flow on `/profile` internally
+performs a fresh login via `/login/1` and `/login/2`. Their
+referer check, however, only allowed pages under `/login`:
+
+```
+ACCESS_DENIED → reason: "Referer check failed"
+```
+
+**Fix:** The two login endpoints now additionally accept
+`/profile` as referer:
+
+```ts
+state.assertReferer(["/login", "/profile"]);
+```
+
+(Lines for `login1` and `login2`.)
+
+---
+
+## 3. `crypto.subtle` not available in the browser (HTTP)
+
+**File:** `packages/admin-vanilla/src/passwords.ts`
+**Package:** `packages/admin-vanilla/package.json`
+
+**Problem:** `generateSessionSignature()` used
+`window.crypto.subtle.digest("SHA-256", …)`. `crypto.subtle` only exists
+in a *secure context* — that is, HTTPS or `localhost`. Over
+`http://192.168.1.47:5000` the password change therefore failed:
+
+```
+can't access property "digest", window.crypto.subtle is undefined
+```
+
+**Fix:** SHA-256 via `js-sha256` (pure JS, no secure context required), with
+the same result as the server-side check
+(`sha256(session_key + session_id)` → base64):
+
+```ts
+import { sha256 } from "js-sha256";
+
+async function generateSessionSignature(sessionKey: string, session_id: string) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(sessionKey + session_id);
+  const hash = sha256.arrayBuffer(data);
+  return await arrayBufferToBase64_viaBlob(hash);
+}
+```
+
+---
+
+## 4. Public (anonymous) read access via the ANON role
+
+**Files:**
+- `packages/mws/src/new-managers/sessions.ts`
+- `packages/mws/src/new-commands/init-store.ts`
+- `packages/mws/src/new-managers/TabUpserts.ts`
+
+**Problem:** MWS has purely role-based ACLs. Anyone who is not logged in
+was hard-assigned `roles: []` (`sessions.ts`, `username: "(anon)"`)
+— which made a publicly readable wiki impossible. The AuthUser type does
+comment: "User role_ids may have length even if the user isn't
+logged in, to allow ACL for anon", but that was never implemented (in the
+Git history there was never an `ANON` role; the earlier
+"Allow anonymous reads/writes" flag comes from the old TW5 multi-wiki
+version and has long since been commented out).
+
+**Fix:** Introduction of a static `ANON` role that every anonymous
+user automatically receives:
+
+1. `sessions.ts`: `static AnonRoleName = "ANON"`; the
+
+   `roleLookup` query loads the roles `ADMIN`, `USER`, `ANON`; the
+   anon fallback gets `roles: [{ role_id, role_name: "ANON" }]`
+   (defensively, only if the role exists).
+
+2. `init-store.ts`: now additionally creates the role `ANON` alongside
+   `ADMIN`/`USER` (`description: "Anonymous users (not logged in)"`). In
+   order to be able to retrofit existing databases (in which an admin
+   user already exists) with `npm start init-store`, roles + blank
+   template are now created idempotently — only the creation of the
+   `admin` user remains tied to the empty users table.
+
+3. `TabUpserts.ts`: `ANON` is — like `ADMIN`/`USER` — a protected
+   static role (`CANNOT_WRITE_STATIC_ROWS`).
+
+**Usage:** Analogous to the other roles in the admin UI or directly in the
+DB. Example: assign the role `ANON` on the recipe *and* its bags with
+`A_read` → the wiki is publicly readable (writing remains blocked,
+`canUserWrite: false`).
+
+**Status:** Verified against `mws-docs` (rollback possible by removing the
+`ANON` entries from `recipe_permission`/`bag_permission`).
+
+---
+
+## 5. Read-only wikis: faulty "Save" banners for anonymous users
+
+**Files:**
+- `plugins/client/tiddlers/syncer/config-sync-filter.tid` (new)
+- `plugins/client/src/multiwikiclientadaptor.ts`
+- `plugins/client/src/new-multiwikiclientadaptor.ts`
+
+**Problem:** In a public (read-only) wiki the browser repeatedly threw the
+following while loading:
+`Sync error while processing save task: ... 403 BAG_NO_WRITE_PERMISSION`
+("count: 3").
+
+Cause: The TiddlyWeb standard `$:/config/SyncFilter`
+(`dev/wiki/tw5/5.4.1/core/wiki/config/SyncFilter.tid`) does exclude
+`$:/status/`, `$:/state/`, `$:/temp/`, etc., but **not** the
+story tiddlers `$:/StoryList` and `$:/History`. These are created or
+modified by the browser locally at startup. Since they have no
+`tiddlerInfo` (or `changeCount` has increased), they count as "needing to
+be saved" → the syncer sends them to the server → 403 when anonymous.
+
+In addition, the batch save paths of both sync adaptors
+(`saveTiddlers` → `rpcSaveRecipeTiddlerList` or `PUT /batch/save`)
+were not guarded, even though the single-tiddler variant (`saveTiddler`)
+has long filtered out `isReadOnly`/`$:/StoryList`/state tiddlers.
+
+**Fix:**
+1. New plugin tiddler `$:/config/SyncFilter` that, in addition to the
+   core filter, also excludes `[[$:/History]]` and `prefix[$:/StoryList]`
+   (deliberately not `[!is[system]]` — system tiddlers such as
+   `$:/SiteTitle` or palettes must still be synchronized).
+2. Both `saveTiddlers` implementations filter out tiddlers that are not
+   writable on the server (`isReadOnly`), the server-side
+   `$:/StoryList`, and local state tiddlers. These are marked
+   locally as "saved" (instead of being sent to the server) so that
+   the syncer stops repeating them — without error banners.
+
+The client plugin cache (`dev/wiki/cache/mws/0.2.5/client/plugin.json`)
+is automatically regenerated at server startup when
+`plugins/client` changes (hash comparison) — an `npm run build:client`
+(`tsc`) + `pm2 restart MultiWikiServer-wikiwise` is sufficient. Then
+hard-reload once in the browser (Ctrl+F5).
+
+---
+
+## 6. Red console message: `XHR OPTIONS /wiki/<slug> → 405`
+
+**File:** `packages/mws/src/new-managers/index.ts`
+
+**Problem:** When opening a wiki, the TW core saver
+"PutSaver" sends a one-time `OPTIONS` to the current wiki URL to test
+whether the server accepts WebDAV PUTs (header `dav`, see
+`core/modules/savers/put.js`). MWS deliberately answered `OPTIONS` on
+`/wiki/:slug` and `/tw5/:version` with `405` → in the browser a
+red (functionally harmless) network line.
+
+**Fix:** `OPTIONS` now responds with an empty `200` and **without** the
+`dav` header. This keeps the PutSaver disabled (a 2xx status is
+not sufficient, the `dav` header must additionally be set),
+but keeps the console clean. Saving goes through the
+MultiWikiClient adaptor anyway, not through the PutSaver.
+
+---
+
+## 7. Red console message: `GET /wiki/favicon.ico → NS_BINDING_ABORTED`
+
+**File:** `packages/mws/src/new-managers/index.ts`
+
+**Problem:** The rendered wiki HTML contains `<link rel="shortcut icon"
+href="favicon.ico">`. Since the page is located under `/wiki/<slug>`
+(without a trailing slash), the browser resolves `favicon.ico` relative
+to it as `/wiki/favicon.ico` — and that hit the recipe route
+`^/wiki/([^/]+)$` with `slug = "favicon.ico"` → 403. Firefox shows this
+as a canceled `favicon.ico` request (red console message). The actual
+favicon is set later by TW Startup (`favicon.js`) anyway, as a data URI
+from `$:/favicon.ico`.
+
+**Fix:** Dedicated route `^/wiki/favicon\.ico$` → **302 redirect** to
+`/favicon.ico` (which the server answers with the default icon, 200).
+The recipe route is never confronted with `favicon.ico` as a slug again.
+
+---
+
+## 8. Login directly in the wiki (`tc-password-wrapper` → writable, without `/login`)
+
+**Goal:** The built-in TW login dialog ("Login to TiddlySpace",
+`tc-password-wrapper`) should really log the user in — without the
+detour via the admin page `https://…/login`. After the login the
+wiki is writable if the user's role has write permissions on the
+recipe (ADMIN/USER yes, ANON read only).
+
+**Files:**
+- `plugins/client/build/build-opaque.mjs` — bundles `@serenity-kit/opaque`
+  (OPAQUE/PAKE login, WASM) via esbuild into a plugin tiddler
+  `tiddlers/library/opaque.js` (`build:opaque` script, which runs as
+  part of `build:client`).
+- `plugins/client/src/new-multiwikiclientadaptor.ts` — new methods
+  `login(username, password, cb)` and `logout(cb)`: they call `/login/1`,
+  `/login/2` and `/logout` respectively, `startLoginRequest`/`finishLoginRequest`
+  via the OPAQUE client. The server sets the session cookie
+  (`path: "/"`), so that all following wiki requests (same origin)
+  are automatically authenticated. Then `getStatus` reports the wiki
+  as writable.
+- `packages/mws/src/new-managers/sessions.ts` — `login1`/`login2`
+  now additionally allow referers from `/wiki` (previously only `/login`
+  and `/profile`), so that the login dialog works from within the wiki.
+
+**Browser flow:** Login button/click triggers `tm-login` → the
+TW syncer shows the password dialog → submit calls `adaptor.login()` →
+PAKE-11 login against the server → session cookie set → `getStatus`
+shows `isLoggedIn`/`canUserWrite` → wiki writable.
+
+**Note:** The plugin bundle is rebuilt from the
+plugin folder at server startup (cache `dev/wiki/cache/mws/…`); so
+after changes to the adaptor, run `npm run build:client` + restart.
+
+**Dialog text** (`Login to TiddlySpace` → "Log in to this wiki" /
+`Login bei TiddlySpace` → "In dieses Wiki einloggen"): The value comes from
+`Syncer.prototype.getLoginServiceName()` in
+`plugins/client/tiddlers/syncer/syncer.js` and depends on the
+active wiki language (`$:/language`). Supported codes (full
+code if it works, otherwise primarily the language code; underscores are
+normalized to hyphens, `zh_CN` = `zh-cn`): `de` "In dieses Wiki einloggen", `en` "Log
+in to this wiki", `es` "Iniciar sesión en este wiki", `fr` "Se connecter à ce
+wiki", `ja` "このWikiにログイン", `ko` "이 위키에 로그인", `ru` "Войти в эту
+вики", `zh-cn` "登录此 Wiki". Languages that are not listed fall back to
+English. Additional languages can simply be added as an entry in `languageMap`
+(key = language code, e.g. `"pl": "…"`). A wiki can override the text
+individually with the tiddler `$:/config/mws/LoginServiceName` (takes
+precedence over any language logic).
+
+---
+
+## 9. Type check: `npm run tsc2` reported a missing `react` import
+
+**File:** `packages/jsx-lit/src/JSXElement.tsx`
+
+**Problem:** `npm run tsc2` (`tsc -p tsconfig.json --noEmit`, type check
+across the whole repo) reported exactly one error:
+
+```
+error TS2307: Cannot find module 'react'
+```
+
+The cause was the pure type import `import type { Dispatch, SetStateAction }
+from 'react'` in `JSXElement.tsx`. `react` (or `@types/react`), however,
+is not installed anywhere in the repo and is not listed in any
+`package.json` — not even as a dependency/devDependency. Verified via
+`git stash` that the error occurred independently of the content changes.
+
+**Fix:** Only two trivial types are needed → defined **locally**
+instead of importing from `react` (no new dependency, no runtime change):
+
+```ts
+type Dispatch<T> = (value: T) => void;                    // wie React: (value: A) => void
+type SetStateAction<T> = T | ((prev: T) => T);            // wie React: S | ((prevState: S) => S)
+```
+
+**Result:** `npm run tsc2` reports 0 errors. The admin bundle
+(`admin-vanilla`, uses `jsx-lit` via esbuild) still builds cleanly
+unchanged (`/main.js` → 200). There is no build/restart note; `react`
+deliberately remains uninstalled.
+
+---
+
+## 10. Feature "New wiki at the click of a button" (`PUT /admin/wiki`)
+
+A new wiki is created atomically server-side — only a display name
+is required. The slug is derived from the username of the logged-in
+admin (`wiki-<benutzername>`, incremented to `-2`, `-3`, … in case of a collision).
+
+**Backend** (`packages/mws/src/new-managers/TabDataAdapter.ts`, route
+`AdminCreateWiki`; registered in `new-managers/index.ts` `ApiRoutes` +
+`ClientRoutes`):
+
+- a `$transaction` creates:
+  - **Bag** `editions/<owner-id>/<slug>` (owner-namespaced, see C1;
+    system wikis without an owner: `editions/<slug>`), perms:
+    `ADMIN → C_admin`, `USER → A_read`, `ANON → A_read`
+  - **Recipe** (slug `<slug>`, template "Blank Template"), perms:
+    `ADMIN → B_write`, `USER → A_read`, `ANON → A_read`; the only
+    `writablePrefixBags` reading: `{prefix: "", bagName}`
+  - **Start tiddlers**: `$:/SiteTitle` (= display name), `$:/DefaultTiddlers`
+    and a welcome tiddler (fields `created`/`modified` in the
+    `YYYYMMDDHHmmssmmm` format, `creator`/`modifier` = username)
+- Response: `{slug, displayName, bagName, templateName, lastCompiledAt}`
+- only the display name is validated (`min 1` / `max 120`); referer
+  and `X-Requested-With` check as with `AdminSave`; for non-admins
+  the usual `C_admin`/`B_write` access protection applies.
+- **Permission requirement:** According to `TabUpserts.ts`
+  (`checkExisting`), the creation of bags/recipes is fundamentally tied to
+  the `ADMIN` role (`isAdmin` = role `ADMIN`). A regular `USER` therefore
+  receives `403 ACCESS_DENIED "You don't have permission to create
+  bags."` when submitting. Since the wiki permissions are also assigned
+  based on roles (`ADMIN → B_write`, `USER → A_read`), the creator must
+  be in the `ADMIN` role — then they can also write to their wiki. The
+  user "Heino" received the role via a regular `PUT /admin/save/users`
+  (`userRoles: ["USER", "ADMIN"]`).
+
+**Frontend** (`packages/admin-vanilla/src/app.tsx`):
+
+- Button **"New wiki"** (only in the *Wikis* tab, next to "Create wiki")
+  opens a dialog with an input field, pre-filled with
+  `<benutzername>s Wiki`
+- Create via `PUT pathPrefix + "/admin/wiki"` (header
+  `X-Requested-With: TiddlyWiki`); on success the
+  `InMemoryAdminStorage` is reloaded and a link to
+  `/wiki/<slug>` is displayed.
+
+**Verification** (via a test admin session against `127.0.0.1:5000`):
+
+- Slug base + collision (`wiki-admin` → `wiki-admin-2`) ✓
+- anonymous `GET /wiki/<slug>` → 200 with the correct `<title>` (first
+  word: display name from the real `$:/SiteTitle`) ✓
+- permissions in the DB correct for bag and recipe ✓ (see above)
+- **as a non-admin user** (`Heino`, after role assignment): one-click
+  `PUT /admin/wiki` → 200 (`wiki-heino`); anonymous `GET /wiki/wiki-heino`
+  → 200 with `<title>Heinos Wiki`; Heino can write
+  (`PUT /recipe/wiki-heino/batch/save` → 200, `canWrite: true`) ✓
+- `/main.js` delivers the new UI code (markers `Neues Wiki`,
+  `startNewWiki`, `/admin/wiki`) ✓
+
+---
+
+## 11. Feature "Delete wiki" (`PUT /admin/wiki/delete`)
+
+Deleting belongs to the one-click creation as well. Server-side the
+wiki (recipe) is removed atomically; bags that **only** this wiki
+referenced are deleted along with their content (cascade via FK,
+`RecipeBag.bag` is `onDelete: Restrict` → for each bag it is checked
+whether other recipes still reference it, only then is it deleted).
+Shared bags are kept.
+
+**Backend** (`TabDataAdapter.ts`, `AdminDeleteWiki`; registered in
+`new-managers/index.ts`): `PUT /admin/wiki/delete`, body `{slug}`;
+ADMIN role required (otherwise `403 ACCESS_DENIED`), unknown slug →
+`404 RECIPE_NOT_FOUND`. Response `{slug, deleted: true}`.
+
+**Frontend** (`admin-vanilla/app.tsx`): In the edit dialog of a wiki
+(tab *Wikis*, mode "edit") a red button **"Delete wiki"**
+appears on the left next to Cancel/Save. It asks for confirmation
+via `confirm()`, then calls the endpoint, reloads the list on
+success (`PerTabStore.reloadItems`) and closes the dialog. Errors are
+shown in the dialog as a red message.
+
+**Ownership protection (creator + admin account):** In order to prevent
+an admin user from deleting **or editing** foreign wikis, each newly
+created wiki carries its creator (`Recipe.owner_user_id`, set on
+create in `AdminCreateWiki` and in `RecipeDataAdapter.saveRow`;
+edits do **not** overwrite the owner). **Saving**
+(`PUT /admin/save/wikis`) and **deleting** (`PUT /admin/wiki/delete`)
+is only allowed if `recipe.owner_user_id === user.user_id` **or** the
+bootstrap account `admin` (super-admin). Legacy wikis without an owner
+(e.g. `mws-docs`) can only be edited/deleted via the `admin` account.
+The owner check in `checkExisting` (`TabUpserts.ts`) counts the creator
+independently of roles: whoever owns the wiki/bag may also
+save it, even if the editor list only contains a role that the
+owner does not hold (e.g. `ADMIN` for seeded wikis). Templates remain
+subject to the strict role model (`templateAdmins`).
+The red button is only shown in the frontend if the logged-in
+user is the creator or is called `admin`. The Wikis tab additionally
+has the column **"Created by"** (server field `ownerUsername`).
+
+**Verification** (test admin session + Heino session):
+
+- Admin: create wiki → delete → 200; `GET /wiki/…` then 404 ✓
+- Heino: create own wiki → delete → 200 ✓
+- Heino: delete attempt on `mws-docs` → `403 ACCESS_DENIED`, wiki remains ✓
+- Heino: save `wiki-admin` (owner `admin`) → `403 ACCESS_DENIED`, definition in the DB unchanged ✓
+- Heino: save `mws-docs` (ownerless) → `403 ACCESS_DENIED` ✓
+- Heino: save his own wiki → 200 ✓
+- Admin: save `wiki-admin` → 200 (super-admin) ✓
+- Admin: deletes Heino's wiki → 200 (super-admin) ✓
+- `getList`/`/admin/load` delivers `ownerUsername` (creator username) ✓
+- unknown slug → `404 RECIPE_NOT_FOUND {recipeName}` ✓
+- existing wikis (`mws-docs`) still 200 ✓
+
+**Same protection for bags:** Bags now also carry a creator
+(`Bag.owner_user_id`, set in `AdminCreateWiki` and in
+`BagDataAdapter.saveRow` on creation; edits do not overwrite it).
+In the admin UI tab *Bags*, a bag may only be edited by whoever
+created it or by the `admin` account (`PUT /admin/save/bags` →
+otherwise `403 ACCESS_DENIED`); the creation of new bags is still
+allowed for every admin (the creator becomes the owner). Column
+**"Created by"** in the Bags tab (server field `ownerUsername`).
+
+**Verification bags** (Heino session + admin session):
+
+- Heino: `PUT /admin/save/bags` on the ownerless `editions/mws-docs` → 403, description unchanged ✓
+- Heino: edit own bag `editions/wiki-heino` → 200, owner remains Heino ✓
+- Heino: create a new bag → 200, `owner_user_id` = Heino ✓
+- admin: may edit Heino's bag → 200 (super-admin) ✓
+- `/admin/load` delivers `ownerUsername` for all bags ✓
+
+**Same protection for templates, roles, and users:** Like wikis and
+bags, templates, roles, and user accounts also carry a creator
+(`owner_user_id`; set on creation, edits do not overwrite it).
+The following applies everywhere: only the creator or the
+`admin` account may edit (`403 ACCESS_DENIED` otherwise); system/ownerless
+rows (e.g. `Blank Template`, `ADMIN`/`USER`/`ANON`) are only editable
+via `admin`. New user accounts are **owned by their creator**
+(creator = inviter is the owner, see §12); maintaining one's own
+account remains possible. All four tabs have the column **"Created by"**
+(server field `ownerUsername`).
+
+**Additionally closed security hole:** `PUT /admin/save/users`
+now strictly requires the ADMIN role — previously a
+non-admin user could grant themselves the ADMIN role via the API
+(self-promotion without UI access).
+
+**Verification (Heino session + admin session):**
+
+- Heino: change `Blank Template` → 403 ✓; create/change own template → 200 (owner Heino) ✓
+- Heino: write `ADMIN` role → 403/400 ✓; create/change own role → 200 ✓
+- Heino: change `admin` account → 403, email unchanged ✓; own account → 200 ✓
+- Heino: create a new user → 200, owner = Heino (see §12) ✓
+- Non-admin: promote own role to ADMIN via API → 403 ✓
+- admin: may change all templates/roles/users → 200 ✓
+- `/admin/load` delivers `ownerUsername` for templates, roles, users ✓
+
+---
+
+## 12. User management: Invitation, own password, deletion
+
+**Owner semantics ("inviter"):** Since users cannot register
+themselves but are created by others, the **creator** is the owner of
+the account (`Users.owner_user_id` = creator, not self-owned).
+Example: Heino creates `Testuser` → column
+**"Created by: Heino"**; Heino may edit **and delete** `Testuser`
+(his "sub-user"). The `admin` account may edit/delete any user
+— except **himself** (`admin` can never be deleted, protection
+against lockout). The created user himself may only act with the
+ADMIN role in the admin interface; his own maintenance runs
+via the profile/password system (`/login/*`), not via the
+Users tab.
+
+**Direct password (instead of email):** Since no emails are sent,
+the fields **"New password"** and **"Confirm password"** in the
+users dialog now have client-side password matching
+(`enter-password`/`confirm-password` renderer, helper text "Passwords
+do not match yet."). The server hashes the plaintext password
+server-side via `PasswordService.PasswordCreation` (OPAQUE aPAKE
+registration record) and stores only the hash; it is **never** stored
+in plaintext and `password` never appears in the response
+(`password: ""`). Leaving it empty = password remains unchanged; for
+new accounts without a password the reset code flow still works.
+
+**Deletion (`PUT /admin/user/delete`):**
+
+- Body `{username}`; ADMIN role required (otherwise 403).
+- Permission: the creator (owner) of the account, the `admin` account, or
+  the user themselves may delete. `admin` himself is **undeletable**.
+- Cascade: role links (`_RolesToUsers`) and sessions are
+  removed; **the user's wikis/bags/templates/roles are kept**
+  (they become ownerless → afterwards only `admin` may manage them).
+- Frontend: red **"Delete user"** button in the edit dialog of the
+  Users tab (only visible for the owner/creator, `admin`, and never for
+  the `admin` account itself).
+
+**Verification (Heino session + admin session):**
+
+- Heino creates a user → 200, `owner_user_id` = Heino, password hash
+  stored ✓
+- Heino edits the invited user (empty password = unchanged) → 200 ✓
+- Heino deletes his own sub-user → 200; role links + sessions gone ✓
+- Heino deletes `admin` → 403; `admin` deletes himself → 403 ✓
+- Heino deletes a foreign (admin-created) user → 403; `admin` deletes him → 200 ✓
+- Non-admin: self-edit/self-delete via the Users tab → 403 (the hole remains closed) ✓
+- `/admin/user/delete` shows `ownerUsername` correctly (Heino→Heino,
+  Testuser→Heino, admin→admin) ✓
+
+---
+
+## 13. Feature "Rename wiki" (slug, display name, bags)
+
+A wiki can be renamed afterwards in the Wikis tab (Wikis) —
+separately for **Slug** (URL path) and **Display name** (display title).
+Both take effect server-side when saving (`PUT /admin/save/wikis`) and
+keep the dependent data consistent.
+
+**Slug change (URL of the wiki):**
+
+- The slug is the URL path component (`/wiki/<slug>`). If it is changed,
+  the recipe definition is rewritten to the new slug
+  (`checkExisting` → `rename`).
+- The **default bag** `editions/<owner-id>/<old-slug>` is automatically
+  renamed along with it to `editions/<owner-id>/<new-slug>`
+  (`followDefaultBagOnSlugRename` in `TabDataAdapter.ts`) — **tiddlers,
+  permissions, and recipe bag links are preserved via the
+  unchanged `bag_id`** (no data loss, no "freshly created" empty bag).
+- Safety guards before the bag is renamed:
+  - only if the bag exactly follows the `editions/<owner-id>/<slug>` convention
+    (custom bag names are never touched);
+  - only if the target bag name does **not already exist** (otherwise
+    the existing one is used where possible);
+  - only if **no other wiki** still references the bag
+    (shared bags are never renamed).
+- The client automatically switches the write target (`editions/<owner-id>/<slug>`) along
+  with the slug edit (`syncDefaultBagOnSlugChange` in `renders.tsx`).
+
+**Change display name (display title):**
+
+- Changes only the display name, not the URL.
+- The wiki-internal title `$:/SiteTitle` and the **"Willkommen"**
+  starter teaser in the default bag are updated to the new display name
+  (`mirrorDisplayNameIntoStarterTiddlers`).
+- The reconciliation runs on **every** save of an existing wiki — this
+  also heals tiddlers that were left with an old name by renames **before**
+  the sync was introduced.
+- Conservative detection: the "Willkommen" teaser is only rewritten
+  if it still looks like the unchanged starter
+  (heading `# Willkommen in „…"` + sentence "per Knopfdruck");
+  **self-written/customized teasers remain untouched**.
+
+**Verification (Heino session):**
+
+- Both renames in one save (slug + display name) → 200, bag
+  renamed along, tiddlers retained ✓
+- Edit after a previous save with a further display name change → 200,
+  `$:/SiteTitle` + "Willkommen" follow along ✓
+- Customized `$:/SiteTitle` / "Willkommen" is not overwritten ✓
+- Custom bag names are not renamed; shared bags stay invalid ✓
+
+---
+
+## 14. Multilingual admin app: 8 languages (`i18n`)
+
+**Files:**
+- `packages/admin-vanilla/src/i18n.ts` (new)
+- `packages/admin-vanilla/src/locales/en.ts` … `zh-cn.ts` (new; en, de, es,
+  fr, ja, ko, ru, zh-cn)
+- `packages/admin-vanilla/src/app.tsx` (all visible strings via `t()`)
+
+**Concept:** The keys are English strings (en.ts = source of truth); the
+remaining translations are located in one file per language. `t(key, params?)`
+supports `{name}` interpolation and falls back to the key itself if
+a translation is missing. Currently **472 keys** in all 8 languages, 1:1
+consistent (verified by checks: same key set, same placeholders).
+Plural variants use `Intl.PluralRules`: en/de/es/fr/ru provide their
+own form for `#one` among others; ja/ko/zh use the base form.
+
+**Language switcher:** `<select>` with the options `🇺🇸 English`, `🇩🇪 Deutsch`,
+`🇪🇸 Español`, `🇫🇷 Français`, `🇯🇵 日本語`, `🇰🇷 한국어`, `🇷🇺 Русский`,
+`🇨🇳 中文` in the header (labels from `localeLabels` in `i18n.ts`). The
+selection is stored in `localStorage` (`"mws.admin.locale"`) and takes
+effect immediately via `setCurrentLocale()` + `location.reload()`; without
+its own entry the installation-wide default language applies (see §47),
+otherwise the browser language (`navigator.language`) (`normalizeLocaleCode`
+maps `de`/`es`/`fr`/`ja`/`ko`/`ru`/`zh` to the matching language, everything
+else to `en`).
+
+**Detail fixes in this process:**
+- `description`/`headerDescription`/`footerDescription` are now
+  actually rendered via `t()` (they were raw without translation).
+- The temperature display field `title` is forced to a string.
+- The locale `<select>` uses `ref` instead of `value` (webjsx `SimpleAttrs`).
+
+---
+
+## 15. Delete Roles + Protection of the System Roles
+
+**Backend** (`packages/mws/src/new-managers/TabDataAdapter.ts`, route
+`AdminDeleteRole`; registered in `new-managers/index.ts`):
+`PUT /admin/role/delete`, body `{name}`.
+
+- Authorized: the creator (owner) of the role or the `admin` account.
+- **System roles `ADMIN`/`USER`/`ANON` cannot be deleted** → `403`
+  (`"The system role '<name>' cannot be deleted."`).
+- Deletes the role as well as the associated
+  `recipe_permission`/`template_permission`/`bag_permission`
+  (`role_id`) rows (there is no FK cascade in the DB); user memberships
+  disappear via the `_RolesToUsers` cascade.
+
+**Frontend** (`app.tsx`): a red **"Delete role"** button in the edit
+dialog of the Roles tab (with a `confirm()` prompt). The permission
+check (`canDeleteRole`) additionally hides it when the role name
+corresponds to a system role name (`roleNameIsReserved`). For creating
+roles, the create button is also only shown to the logged-in `admin`
+account (the server blocks non-admins in `TabUpserts.ts` anyway —
+otherwise a user could grant themselves privileges by self-assignment).
+
+---
+
+## 16. Wiki Slug: Live Validation + Availability Check
+
+**Goal:** While typing in the slug field (Wiki tab, create/edit), it
+is immediately shown whether the slug has the permitted format and is
+still available — the slug is an important URL component.
+
+**Format:** Only lowercase letters, numbers and hyphens —
+`^[a-z0-9]+(-[a-z0-9]+)*$` (i.e. `mein-wiki`, **never** `mein wiki`).
+The value is intentionally **not** trimmed, so that trailing spaces
+also appear as invalid in the client.
+
+**Client** (`packages/admin-vanilla/src/definition/renders.tsx`,
+`renderSlugLiveValidation`):
+- empty → a notice about the format;
+- invalid format → red warning;
+- valid + **already taken** → red "This name is already taken."
+  (DE: „Dieser Name ist bereits vergeben."; against `itemsByTab.wikis`);
+- valid + available → green "This name is available."
+  (DE: „Dieser Name ist verfügbar.").
+
+When editing, the current slug itself is exempt from the assignment
+check ("saved" comparison). New i18n keys (en+de) and the CSS variable
+`--color-success` (light+dark) were added.
+
+**Server** (`packages/mws/src/new-managers/TabDataAdapter.ts`,
+`RecipeDataAdapter.saveRow`): the same regex checks the slug when
+saving — invalid formats are rejected with a clear message (instead of
+being able to save silently). Uniqueness is still guaranteed by
+`checkExisting`.
+
+**The same availability signal for bag names:** In the Bags tab,
+`renderBagNameLiveValidation`
+(`packages/admin-vanilla/src/definition/renders.tsx`) checks live
+against `itemsByTab.bags` whether the typed name is already taken —
+the same green/red messages as with the slug (the i18n keys are
+reused). When editing, the name itself is exempt from the check. A
+format check is deliberately omitted: bag names are free-form
+identifiers (spaces, umlauts, capitalization allowed — we tested
+"Mein erstes Bag"), since they never appear in URLs. The server still
+enforces uniqueness via `checkExisting` (foreign bags → 403 "Only the
+user who created the bag …").
+
+**The same for the username in the Users tab:**
+`renderUsernameLiveValidation` checks live against `itemsByTab.users`
+(key `username`, server-side uniqueness via `checkExisting` +
+`username @unique`). When editing, the own name is exempt.
+
+Live validation only runs in the real admin editors
+(`liveValidation: true` in `createModalState`) — the login/profile
+forms (`FomController`, `liveValidation: false`) deliberately show
+**no** availability message while typing in the username field.
+
+---
+
+## 17. Wiki Creation as a Dropdown (Instead of Two Buttons)
+
+**Before:** Two separate buttons in the Wiki tab: primary "New Wiki"
+(1-click) + ghost button "Create Wiki" (full form).
+
+**Now:** A dropdown **"Create a Wiki"** (primary button,
+`<details>`/`<summary>` like the existing account menu) with two menu
+items:
+- **"Create 1-Click Wiki"** → quick create (`startNewWiki`, previously
+  "New Wiki");
+- **"Create Defined Wiki"** → full form (`openCreate`, previously
+  "Create Wiki").
+
+The ghost button on the right was removed; for the other tabs
+(Templates/Bags/Roles/Users) it remains unchanged. The dropdown opens
+to the left and never exceeds the window width (`right: 0`,
+`max-width: calc(100vw - 96px)`, no horizontal scrollbar).
+
+---
+
+## 18. Light/Dark Mode with a Toggle
+
+**Files:**
+- `packages/admin-vanilla/src/theme.ts` (new)
+- `packages/admin-vanilla/src/main.tsx` (early theme initialization)
+- `packages/admin-vanilla/src/app.tsx` (toggle button in the header)
+- `packages/admin-vanilla/src/app.inline.css`
+
+**Behavior:** Default = follow the system (`prefers-color-scheme`, no
+`data-theme` attribute → the media queries take effect live). A click on
+the round button (sun/moon icon) next to the language switcher records
+the choice as `data-theme="light"|"dark"` on `<html>` and stores it in
+`localStorage` (`"mws.admin.theme"`). `initializeTheme()` in main.tsx
+applies a stored choice **before the first paint** (no flickering while
+loading).
+
+**CSS:** The light block is now the base (`html { … }`); dark applies
+via `@media (prefers-color-scheme: dark)` to
+`html:not([data-theme="light"])`, and at the end of the file
+`html[data-theme="dark"]` (the attribute selector wins by specificity)
+forces dark explicitly. **New light base color:**
+`--color-surface-page-*` were made warmer — mid tone `#F3E6C5`, top
+`#f7ecd2`, bottom `#ecdab0`.
+
+**Accessibility:** The button carries `aria-label` + `title`
+("Switch to light/dark mode", translated DE/EN).
+
+---
+
+## 19. Bug Fix: Profile Page (`/profile`) Showed No Data
+
+**Problem:** On `https://…/profile` ("User Profile") the fields
+**Username**, **Email** and **Roles** were always empty — not a single
+entry was present in the form.
+
+**Cause:** The profile form was never wired up to server data:
+`ProfileForm.createDraft()` created the draft with empty values
+(`username: ""`, `email: ""`, `roles: []`), and there was nowhere that
+populated these fields from the server data. In addition, the embedded
+`userState` contained `username` and `roles` but **no** `email` — so
+the client could not know the email at all.
+
+**Fix (two places):**
+
+1. **Server** (`packages/mws/src/new-managers/sessions.ts`): The
+   `AuthUser` interface and `parseIncomingRequest()` now also carry the
+   **`email`** (loaded along with the session lookup; anon: `""`). Thus
+   it is available in the `embeddedServerResponse` of every admin page.
+2. **Client** (`packages/admin-vanilla/src/app-profile.tsx`):
+   `createDraft()` now reads the profile data directly from
+   `embeddedServerResponse.userState`:
+   - `username` = `userState.username`,
+   - `email` = `userState.email`,
+   - `roles` = `userState.roles` → now only the role names.
+
+**Verification** (test session of user `Heino` against port 5000):
+
+- `GET /profile` returns `userState` with `"email":"Heino@…
+  das-buddhistische-haus.de"` and the roles of the user ✓
+- UI displays username, email and roles correctly ✓ (confirmed by the
+  user)
+
+---
+
+## 20. Feature: Password Generator for Password Fields
+
+**Where?** Everywhere a **new** password is set:
+
+- **Users tab** (`Set password` / `Reset password`),
+- **Profile page** (`New password`),
+- **Login reset flow** (`New password`).
+
+For pure login and "Current password" fields there is no generator.
+
+**Handling:** Below the input field a **"🎲 Generate password"** button
+and a **length field** appear (8–32, default 16; entries outside 8–32
+are corrected immediately). To its right a display continuously shows
+the **entropy** of the chosen password ("Entropy: 98.07 bit" with 16
+characters) and a **color bar** the password strength (red → yellow →
+green in 5 levels). A click generates a secure random password, which
+
+- is displayed **in plain text on its own line** (with
+  `user-select: all` — selectable by click, for copying/reading off),
+- is automatically transferred into the password field **and** the
+  confirmation field ("Passwords match.").
+
+**Character set "secure + simple":** `A-Z a-z 0-9 !@#$%&*` with a
+guaranteed mix (at least 1 uppercase letter, 1 lowercase letter, 1
+digit, 1 special character each). Generation exclusively via
+`crypto.getRandomValues`.
+
+**Implementation:**
+
+- `packages/admin-vanilla/src/password-generator.tsx` (new): custom
+  element `<mws-password-generator>` (🎲 button) + `generatePassword()`
+  (LOS/"rejection free" random index, Fisher-Yates shuffle) + entropy
+  display (`length × log₂(70)`) + 5-level strength color bar.
+- `FieldDefinition` in `tabs.ts` has a new optional field
+  `passwordGenerator?: string | true` (string = key of the confirmation
+  field that is filled along with it).
+- The `enter-password` renderer (`renders.tsx` `renderTextInputField`)
+  only appends the generator below the field when `passwordGenerator` is
+  set.
+- New i18n keys `Generate password`, `Length`, `Entropy: {value} bit`
+  and `Password strength` (DE: „Passwort generieren", „Länge",
+  „Entropie: {value} bit", „Passwortstärke") — parity now **246/246**.
+- `confirmPassword` / `confirmNewPassword` remain pure client fields
+  (temp/validation); only `password` / `newPassword` go to the server
+  and are hashed there via OPAQUE — no plaintext in the DB.
+
+**Verification:**
+
+- `npx tsc -p tsconfig.json --noEmit` ✓
+- Generator **🎲 button**, entropy display & strength bar always up to
+  date with the length; logic verified by a Node smoke test: 18,000
+  checks (length/character set/guaranteed mix incl. clamping 8/32/
+  fallback) ✓
+- Bundle (`main.js`) contains generator markup,
+  `password|length` texts and `crypto.getRandomValues` logic ✓
+- i18n parity en↔de: 246/246 ✓
+
+---
+
+## 21. Teacher Area: TEACHER Role & `AuthUser.isTeacher`
+
+**File:** `packages/mws/src/new-managers/sessions.ts`,
+`packages/mws/src/new-commands/init-store.ts`
+
+A school operator (principal/`admin`) hires users as teachers by
+assigning them the system role **`TEACHER`** (normally via the Users
+tab or `PUT /admin/save/users`).
+
+- `SessionManager.TeacherRoleName = "TEACHER"`; every session of a user
+  with this role gets `AuthUser.isTeacher = true`.
+- A teacher is therefore a **delegated user manager, not an admin**:
+  they may create, edit and delete their own (invited) students in
+  their Users tab, but they do **not** manage the contents of other
+  teachers and do **not** override the content ACLs. There is
+  deliberately **no** `isAdmin` bypass for teachers.
+- `init-store.ts` idempotently creates the `TEACHER` role as well
+  (`description: "Teacher/team manager (delegated) – isTeacher"`).
+
+**Verification:** A user with the `TEACHER` role → `/admin/load` returns
+`isTeacher: true`; without the role `false`. Teachers see only their own
+students + themselves in the Users tab (see §12/`getList` filter).
+
+---
+
+## 22. Content Separation: Personal Roles (Named After the Username)
+
+**File:** `packages/mws/src/new-managers/TabDataAdapter.ts`
+(`ensurePersonalRole`, called in `AdminCreateWiki`)
+
+**Why is this necessary?** The SET role `TEACHER` is a shared "thing" —
+all teachers share it. If a 1-click wiki received the `TEACHER` role as
+a recipe/bag permission, **all** teachers could see **all** teacher
+wikis (data leak). Therefore each teacher gets an **own, private
+role**:
+
+- `ensurePersonalRole` creates/links exactly one role, named after the
+  **username** (raw, e.g. `Frau Meyer`; slug suffix `-persoenlich` only
+  if the name collides with a reserved system role name — `ADMIN`,
+  `USER`, `ANON`, `TEACHER`, case-insensitive; occupied by a foreign
+  owner → numeric suffix), owner = the user themselves.
+- With the **1-click wiki** (`AdminCreateWiki`, `PUT /admin/wiki`) a
+  teacher assigns **their own** personal role instead of `ADMIN`:
+  - Bag `editions/<owner-id>/<slug>` → `<Benutzername> → C_admin`
+  - Recipe → `<Benutzername> → B_write`
+  - **No** more `USER`/`ANON` `A_read`! A teacher's private wikis are
+    thus readable only by the teacher themselves — regardless of whether
+    logged in or anonymous. Making them public happens deliberately
+    (§26).
+  - The owner of bag/recipe remains the teacher (`owner_user_id`), so
+    that the previous owner/`admin` protection (§11) still applies
+    unchanged.
+- The role guard (§23) prevents a teacher from assigning this role to
+  themselves — it is theirs, they already have it independently via the
+  1-click wiki.
+
+**Verification** (live test against a local instance):
+
+- frau-meyer creates `wiki-frau-meyer-2` → new role `Frau Meyer` (DB),
+  bag/recipe with `Frau Meyer` permissions; frau-meyer opens
+  `/wiki/wiki-frau-meyer-2`: 200 ✓
+- herr-schmidt opens the same wiki: **403**, and the wiki does **not**
+  appear in their admin wiki list ✓
+- Student/anonymous: 403 ✓
+
+---
+
+## 23. Role Guard: Teachers Must Not Assign All Roles
+
+**File:** `packages/mws/src/new-managers/TabDataAdapter.ts`
+(`UserDataAdapter.saveRow`)
+
+A teacher can assign roles to their students via `PUT /admin/save/users`
+— but not every role. The guard blocks:
+
+1. **`ADMIN` and `TEACHER`** — a teacher may neither appoint new admins
+   nor new teachers (otherwise self-promotion security hole, analogous
+   to §11).
+2. **Personal roles of other teachers** — any role whose owner
+   (`owner_user_id`) is a **different** teacher must not be assigned
+   (that would leak other teachers' wikis to the student). The own role
+   (named after the own username) is allowed.
+
+Technically: First `normalizeLineList(data.userRoles)` is checked
+against `["ADMIN","TEACHER"]`; then the selected roles are resolved per
+owner via `prisma.users.findMany` and the owners who themselves carry
+the `TEACHER` role (≠ current user) are marked as forbidden. On
+violation: `403 ACCESS_DENIED` with a clear reason.
+
+**Verification** (herr-schmidt session):
+
+- Create a user with `userRoles: ["USER", "Klasse 2"]` → 200 ✓
+- User with `userRoles` including `Frau Meyer` → 403 ✓
+- User with `userRoles` including `ADMIN`/`TEACHER` → 403 ✓
+
+---
+
+## 24. Admin UI: Foreign Personal Roles Out of the User Dialog
+
+**Files:**
+- `packages/mws/src/new-managers/TabDataAdapter.ts`
+  (`RoleDataAdapter.getList`/`saveRow` → new server field
+  `foreignTeacherRole`)
+- `packages/admin-vanilla/src/definition/tabs.ts`
+  (`RoleAdminRecord` + `roles` field definition, mode `"server"`)
+- `packages/admin-vanilla/src/definition/renders.tsx`
+  (`getLookupOptions`)
+
+**Problem:** The server guard (§23) does block foreign personal roles
+server-side (403 verified), but in the dropdown of the user dialog
+**all** roles appeared — including `Frau Meyer` etc. That was confusing
+and let the teacher infer that the colleague `Frau Meyer` even exists
+(existence leak).
+
+**Fix:** The server marks per role whether it is the personal role of
+**another** teacher:
+
+- `RoleDataAdapter.getList` computes `foreignTeacherRole` via
+  `getTeacherOwnerIdSet` (determines which role owners themselves carry
+  the `TEACHER` role) and compares with the current user.
+- `tabs.ts`: new field `foreignTeacherRole` (type `switch`,
+  `mode: "server"`) on the role record — it does not appear anywhere in
+  the UI, since the Roles tab has no runtime field groups, but it is
+  available in the client record.
+- `getLookupOptions`: **Only** in the `userRoles` field are roles with
+  `foreignTeacherRole: true` hidden for non-admins.
+
+**Important:** The wiki/bag/template permission dropdowns
+(`recipeAdmins`, `recipeUsers`, `bagPermissions`, `templateAdmins`,
+`templateUsers`) still show **all** roles — collaboration (§25) needs
+foreign personal roles there, and the server guard protects against
+misuse.
+
+**Verification** (`/admin/load` responses):
+
+- As herr-schmidt: `Frau Meyer` has `foreignTeacherRole: true`,
+  `Herr Schmidt` `false` ✓
+- As frau-meyer: exactly the other way around ✓
+- The built client (`/main.js`) contains
+  `e.roles.filter(r=>r.foreignTeacherRole)` and applies it only for
+  `userRoles` ✓
+
+**Addition — Visibility in the Admin Lists (`wikis`/`bags`):**
+
+The list filters of `RecipeDataAdapter.getList` and
+`BagDataAdapter.getList` now count only **qualified roles**
+(`visibilityRoleIds`, constant `CORE_ROLE_NAMES =
+["ADMIN","USER","ANON","TEACHER"]`): anyone who can reach a wiki/bag
+only via the shared system roles `USER`/`ANON`/`TEACHER` does **not**
+see it in the admin view. Only personal teacher roles, invited roles
+and class roles create visibility.
+
+**Verification** (live test after `2026-09-16`):
+
+- frau-meyer (roles: `USER`, `TEACHER`, `Frau Meyer`) sees in `wikis`
+  **only** `wiki-frau-meyer` + `wiki-frau-meyer-2` and in `bags` only
+  their own (including the one shared with herr) — `wiki-heino`,
+  `wiki-admin`, `wiki-admin-2` and the demo wikis are **no longer** in
+  the list ✓
+- herr-schmidt (roles: `USER`, `TEACHER`, `Herr Schmidt`) sees in
+  `wikis` only `wiki-herr-schmidt` and in `bags` their own plus the one
+  shared with them, `Test-Bag-1-frau-meyer` ✓
+- Admins keep the unfiltered view (`isAdmin` branch unchanged) ✓
+
+Note: This only affects the **admin view**. Actual read access to
+old/demo wikis with `USER`/`ANON` permission via the wiki URL remains
+for logged-in users (a deliberate decision, see §24).
+
+---
+
+## 25. Collaboration: A Teacher Invites a Teacher into Their Wiki
+
+Because the personal roles are transparent (§24, only the `userRoles`
+filter hides them), a teacher can specifically pull a colleague into a
+shared wiki:
+
+1. herr-schmidt creates their own wiki `wiki-herr-schmidt` via the
+   Wikis tab → own role `Herr Schmidt`.
+2. frau-meyer saves `wiki-frau-meyer-2` and additionally enters
+   `Herr Schmidt`:
+   - **Recipe admins** (`recipeAdmins`, level `B_write`),
+   - **Bag permissions** (`editions/wiki-frau-meyer-2`), level `B_write`
+     (the details likewise via the bag/template permission tables).
+
+**Effect:** herr-schmidt sees `wiki-frau-meyer-2` in their admin wiki
+list and opens `/wiki/wiki-frau-meyer-2` with 200 — so they can
+read/write along. Students and anonymous users: still 403.
+
+**Verification** (live test):
+
+- herr opens a foreign, invited wiki: 200 ✓
+- Student/anonymous on the same wiki: 403 ✓
+- Conversely, schueler-a1 opens herr's wiki (`wiki-herr-schmidt`):
+  403 ✓ (no cross-access)
+
+---
+
+## 26. Student Sharing: Class Roles Grant Read Access
+
+In addition to collaboration, a teacher wiki can be deliberately
+opened for the teacher's **own class** — without becoming public:
+
+1. The principal/`admin` creates class roles (e.g. `Klasse 1`,
+   `Klasse 2`; owner = `admin`).
+2. The teacher assigns their students to these roles (normally via the
+   Users tab, the §23 guard only blocks foreign teacher roles).
+3. In the Wikis dialog they enter the class role under **"Who may read
+   this wiki (A_read)"** (= `recipeUsers`). When saving,
+   `syncRecipePermissionsToBags` automatically mirrors this sharing to
+   the bags of the wiki (§28). A manual second step in the Bags tab is
+   no longer needed. (Existing wikis are healed with a simple re-save.)
+
+**Effect:** Logged-in students of the class read the wiki (200);
+anonymous visitors stay out (403), because no `ANON` permission exists
+anymore. Other classes/foreigners: 403.
+
+**Verification** (live test, schueler-a1 with the password `start123`
+set by frau-meyer + `Klasse 1 → A_read` on `wiki-frau-meyer-2`):
+
+- schueler-a1 opens `wiki-frau-meyer-2`: 200 ✓
+- Anonymous on the same wiki: 403 ✓
+- Collaborator herr-schmidt: 200 ✓ (role remains)
+- schueler-a1 on `wiki-herr-schmidt`: 403 ✓
+
+---
+
+## 27. Bug Fix: `users.email` Nullable (No `""` Collision)
+
+**Files:**
+- `prisma/schema.prisma` (`Users.email String? @unique`)
+- `prisma/migrations/20260916_email_nullable/migration.sql` (new;
+  RedefineTables rebuild of the `users` table, data/FKs preserved,
+  `email` NOT NULL removed)
+- `packages/mws/src/new-managers/TabUpserts.ts`
+  (`UserImportWriter.upsert`: empty email → `null`)
+- `packages/mws/src/new-managers/TabDataAdapter.ts`
+  (`saveRow`/`getList`: DB `null` → `""` in the DataStore response)
+
+**Problem:** `Users.email` was `String @unique` (NOT NULL). A user
+without an email was stored as `""`. The second user without an email
+collided on the unique index → `409`/UNIQUE error when creating.
+
+**Fix:** Empty emails are now stored as **`NULL`**; multiple `NULL`s
+are allowed in the unique index. The two-column migration
+`20260916_email_nullable` rebuilds the user table Prisma-style and is
+applied automatically by the server at startup
+(`packages/mws/src/db/sqlite-adapter.ts`). The client still sees `""`
+(Zod expects `string`), the rest of the code remains unchanged.
+
+**Verification** (live test, herr-schmidt session):
+
+- Create two users **without** email one after the other → both 200 ✓
+- Stored in the DB as `email: null` (not `""`) ✓
+- New `users` table: `email` nullable, `owner_user_id` remains
+  nullable + preserved ✓
+- Test users then removed again via `PUT /admin/user/delete` ✓
+
+---
+
+## 28. Bug/Feature: Deleting Bags (Owner + Admin)
+
+**Files:**
+- `packages/mws/src/new-managers/TabDataAdapter.ts` (new route
+  `AdminDeleteBag`, `PUT /admin/bag/delete`)
+- `packages/admin-vanilla/src/app.tsx` (`deleteBag`, "Delete bag"
+  button in the Bags dialog), `locales/de.ts` + `locales/en.ts`
+- `packages/mws/src/new-managers/index.ts` (route registered)
+
+**Problem:** The Bags tab had **no** deletion — neither a server
+endpoint nor a UI button. A teacher could no longer remove a test bag
+they had created themselves.
+
+**Fix:** New endpoint `PUT /admin/bag/delete` with body `{name}`:
+
+- **Permission:** Only the **owner** (bag owner == logged-in user;
+  teachers may only delete their own) or the site admin `admin`.
+- **Protection:** Bags that are referenced by a **wiki recipe**
+  (`recipeBag`) are not deleted (to prevent breaking a wiki) → 403 with
+  a clear message.
+- Deleting removes `bagPermission` and `tiddlers` rows as well as the
+  bag itself.
+
+In the client the **"Delete bag"** button only appears when editing
+one's own bag (`canDeleteBag`, owner comparison via `ownerUsername`),
+with a German/English confirmation.
+
+**Verification** (live test, frau-meyer session `2026-09-16`):
+
+- Delete an own free test bag → 200 `{deleted:true}`, gone from the DB
+  and from the admin list ✓
+- Foreign bag (`editions/wiki-heino`, owner Heino) → 403 ✓
+- Referenced own bag (`editions/wiki-frau-meyer-2`) → 403
+  ("used by a wiki recipe") ✓
+
+---
+
+## 29. Feature: Recipe permissions automatically applied to the bags
+
+**Files:** `packages/mws/src/new-managers/TabDataAdapter.ts`
+(`syncRecipePermissionsToBags`, called in
+`RecipeDataAdapter.saveRow`)
+
+**Problem:** When opening a wiki, MWS checks both the recipe **and** every bag
+(`RecipeResolver.assertRecipe`). If a teacher enters the class role only in
+`recipeUsers` (recipe `A_read`), the bag permission was missing → schueler
+saw the wiki in the admin list but got a 403 when opening it
+(`BAG_NO_READ_PERMISSION`). The same gap also affected `B_write`
+cooperations.
+
+**Fix:** When a wiki is saved, all bags of the recipe automatically receive
+the permissions that were granted at recipe level:
+
+- `A_read` on the recipe → `A_read` on the bag;
+- `B_write` on the recipe → `B_write` on the bag;
+- Existing higher permissions are kept (the owner's `C_admin` is never
+  downgraded), the sync is a pure upsert ("only raise").
+
+This way the sharing is complete with **one** entry
+(recipe + bags consistent). Existing wikis whose bags are still missing
+heal automatically on the next save.
+
+**Verification** (live test `2026-09-16`, frau-meyer session):
+
+- Before: `editions/wiki-frau-meyer` only had `Frau Meyer → C_admin`;
+  schueler-a1 (roles `Klasse 1`, `USER`) → `/wiki/wiki-frau-meyer` **403**.
+- Re-save of the wiki (recipeUsers `Klasse 1`) → the bag gets
+  `Klasse 1 → A_read` (the owner's `C_admin` remains) ✓
+- schueler-a1 opens `/wiki/wiki-frau-meyer` → **200** ✓
+
+---
+
+## 30. Feature: "Real names" instead of "Recipe" in the admin UI
+
+**Files:** `packages/admin-vanilla/src/definition/tabs.ts`
+(field group titles), `packages/admin-vanilla/src/locales/en.ts` /
+`locales/de.ts`
+
+**Problem:** Internally the wiki permissions are called "Recipe Users" /
+"Recipe Admins" (German "Rezept-User" / "Rezept-Admins"). For teachers
+these terms were confusing and technical.
+
+**Fix:** The two field groups in the wiki settings dialog are now called
+**"Readers" / "Leser"** (who may open the wiki — read access) and
+**"Editors" / "Bearbeiter"** (who may make changes). The server field
+names `recipeUsers`/`recipeAdmins` remain unchanged; only the display was
+renamed.
+
+**Verification:** `npx tsc --noEmit` (admin-vanilla) green; the built
+`public/admin-vanilla/main.js` contains the new keys ("Readers",
+"Leser", "Bearbeiter" …).
+
+---
+
+## 31. Feature: Understandable, translated error messages
+
+**Files:** `packages/admin-vanilla/src/app.tsx`
+(`formatStorageErrorForDisplay`, `renderErrorBanner`,
+`STORAGE_ERROR_REASON_KEYS` …), `app.inline.css` (`.error-banner`),
+`locales/en.ts` / `locales/de.ts`
+
+**Problem:** Errors from the admin API were displayed raw, e.g.
+`{"status":403,"reason":"ACCESS_DENIED","details":{…}}`. That is not
+readable for teachers and was not localized.
+
+**Fix:**
+
+- `formatStorageErrorForDisplay(storageError, t)` now translates known
+  server reasons (`details.reason` / `reason`) via a mapping table into
+  i18n keys (EN/DE). Variable reasons (e.g. "The system role '…' cannot
+  be deleted." or forbidden role assignments) are detected via prefixes;
+  unknown codes get a generic, localized fallback plus the `reason` code.
+- The error display (delete errors in the dialog, storage errors in the
+  modal footer, global `mainStorageError`, new wiki errors) uses a modern
+  `.error-banner` (icon circle in the danger color, rounded surface,
+  optional dismiss button) instead of raw `<pre>` JSON blocks.
+
+**Verification:** `npx tsc --noEmit` (admin-vanilla) green; the server
+reason "This bag is used by a wiki recipe and cannot be deleted on its
+own." comes exactly from `AdminDeleteBag`, the mapping key exists in the
+built `public/admin-vanilla/main.js`; the display in the client is now:
+"This bag is used by a wiki and cannot be deleted."
+
+---
+
+## 32. Feature: Student wiki limit (teacher sets it per student)
+
+**Files:** `prisma/schema.prisma` (`Users.wiki_limit Int?`),
+`prisma/migrations/20260916_wiki_limit/migration.sql`,
+`packages/mws/src/new-managers/sessions.ts` (`AuthUser.wikiLimit`),
+`wiki-contract.ts` (`UpsertUserInput.wikiLimit`), `TabUpserts.ts`
+(`UserImportWriter`), `TabDataAdapter.ts` (`ensurePersonalRole`,
+`AdminCreateWiki`), `new-commands/init-store.ts`,
+`packages/admin-vanilla/src/definition/tabs.ts` (field `wikiLimit`),
+`packages/admin-vanilla/src/app.tsx` (render flags, tab filter,
+create menu, empty state), `locales/en.ts` / `locales/de.ts`
+
+**Problem:** Students could create any number of their own wikis. The
+teacher should be able to set per student how many own wikis that
+student may create (0…unlimited) — and student wikis should be private
+by default (shared wikis via Readers/Editors).
+
+**Fix:**
+
+- New DB field `Users.wiki_limit Int? @default(0)` with migration script
+  (`ALTER TABLE "users" ADD COLUMN "wiki_limit" INTEGER DEFAULT 0;`),
+  Prisma client regenerated.
+- **Limit semantics:** `NULL` = unlimited, `0` = blocked, `N` = at most
+  `N` own wikis. Enforced in `AdminCreateWiki` **only for
+  non-teachers/non-admins**: it counts the own `recipe` rows and responds
+  with 403 and `"Your administrator has not allowed you to create your
+  own wikis."` (at 0) or `"You have reached your limit of {N} own
+  wiki(s)."` (when the limit is reached). Admins and teachers are
+  exempt.
+- `AuthUser` carries `wikiLimit`, the session query selects
+  `wiki_limit`; anonymous users always get 0.
+- In the admin UI, the Users tab shows a number field "Own wiki limit"
+  (empty = unlimited); only teachers/admins see the Users tab.
+- **Privacy:** `AdminCreateWiki` assigns students/teachers a personal
+  role (`ensurePersonalRole`) instead of the system ADMIN role; this way
+  student wikis do not automatically appear for others (including the
+  teacher), visibility arises only via shared Readers/Editors.
+- Instructional controls in the client: the tab filter hides
+  bags/templates for non-admins/teachers; the "Create a wiki" menu is
+  only shown when `canCreateOwnWiki`; empty states explain the block or
+  the reached limit.
+- The admin bootstrap user (init-store) gets `wikiLimit: null`.
+
+**Verification:** Typechecks (root + admin-vanilla) green, `tsup` build
+ok; live test against `dev/wiki/store/database.sqlite`:
+
+- frau-meyer sets "Own wiki limit" for schueler-a1 to `2` → this
+  matches his existing count (2 own wikis); 3rd creation →
+  `403 ACCESS_DENIED` "You have reached your limit of 2 own wiki(s)."
+- Limit set to `0` → creation → `403 …` "Your administrator has not
+  allowed you to create your own wikis."
+- Limit empty (unlimited) → creation → `200`, new
+  `wiki-schueler-a1-3`, then deleted again and the limit reset to `2`.
+- Privacy: frau-meyer does **not** see schueler-a1's wikis in
+  `/admin/load` and gets `403` on `/wiki/wiki-schueler-a1`;
+  schueler-a1 himself reaches his wiki with `200`.
+- The built client contains the new strings
+  (`Own wiki limit`, error texts EN/DE).
+
+---
+
+## 33. Feature: Teacher capability on the role flag instead of the name
+
+**Files:** `prisma/schema.prisma` (`Roles.is_teacher Boolean @default(false)`),
+`prisma/migrations/20260916_roles_is_teacher/migration.sql`,
+`packages/mws/src/new-managers/sessions.ts` (`isTeacher` via the
+`is_teacher` flag), `wiki-contract.ts` (`UpsertRoleInput.isTeacher`),
+`TabUpserts.ts` (`RoleImportWriter`), `TabDataAdapter.ts`
+(`getTeacherOwnerIdSet`, `RoleDataAdapter.saveRow`,
+`UserDataAdapter.saveRow` role protection, `visibilityRoleIds`),
+`new-commands/init-store.ts`,
+`packages/admin-vanilla/src/definition/tabs.ts` (field `isTeacher`,
+`switch`), `packages/admin-vanilla/src/definition/renders.tsx` (role
+selection for non-admins), `locales/en.ts` / `locales/de.ts`
+
+**Problem:** The teacher hierarchy hung on the hard-coded role **name**
+"TEACHER" (`isTeacher` was determined by name comparison). Renaming it
+to e.g. "Gruppenleiter 1" would have immediately stripped all teacher
+rights.
+
+**Fix:**
+
+- New column `Roles.is_teacher Boolean @default(false)`; the migration
+  sets it to `true` for the existing `TEACHER` role.
+- Detection now checks the **flag** on one of the user's roles
+  (`sessions.ts`), no longer the name. This decouples the capability
+  from the name and it **survives any rename**; several group leader
+  roles ("Gruppenleiter 1", "Gruppenleiter 2", …) are also possible.
+- `RoleDataAdapter.saveRow`: `isTeacher` is persisted via
+  `RoleImportWriter` in `update`/`create`; only **admins** may set the
+  flag (403 `"You must be an admin to grant teacher capabilities."`).
+- `UserDataAdapter.saveRow` protection: teachers may not assign a role
+  whose flag is set (instead of blanket-checking the name "TEACHER").
+- `getTeacherOwnerIdSet`/`foreignTeacherRole` detect foreign leader
+  roles via the flag.
+- `visibilityRoleIds` filters teacher capabilities by flag instead of
+  name — even after a rename they do not grant admin list visibility.
+- `getLookupOptions` (client) hides flagged roles in the role selection
+  for non-admins.
+- New UI field "Teacher role" (switch) in the Roles tab; i18n EN/DE.
+
+**Verification:** Typechecks (root + admin-vanilla) green, `tsup` build
+ok, the migration is applied automatically at startup. Live test:
+
+- Admin renames `TEACHER` to "Gruppenleiter 1" → herr-schmidt remains
+  `isTeacher: true` (the session reads the flag); renamed back.
+- Admin creates the new role "Gruppenleiter 2" with the flag and assigns
+  it to schueler-a1 → schueler-a1 (limit 2, 2 existing wikis)
+  immediately gets the teacher exemption and creates another wiki.
+- Non-admin (teacher frau-meyer) cannot set the flag → 403.
+- Test artifacts removed again afterwards (role deleted, role assignment
+  reverted, test wiki deleted, TEACHER unchanged).
+
+---
+
+## 34. Feature: Creators always see their own wikis
+
+**Files:** `packages/mws/src/new-managers/TabDataAdapter.ts`
+(`RecipeDataAdapter.getList`)
+
+**Problem:** A non-admin user only saw their own wikis if a
+"qualified" role (personal/invited/class role) was included in the
+recipe permissions. Seeded wikis (e.g. `buch-vorlage`,
+`dein-tiddlywiki`, `wiki-heino`) have only core roles
+(`A_read → USER/ANON`, `B_write → ADMIN`) — the creator Heino (role
+only "USER") saw his own wiki list displayed empty. For others,
+however, they remained just as invisible.
+
+**Fix:** `RecipeDataAdapter.getList` additionally queries
+`{ owner_user_id: this.user.user_id }` via `OR` for non-admins. This way
+a creator always sees their own wikis — regardless of which roles are
+in the permissions. For other users visibility remains purely
+role-based (private).
+
+**Verification:** Typecheck green, `tsup` build ok, `pm2 restart`. Live
+test: Heino (only "USER") sees his 6 own wikis in the list; frau-meyer
+and schueler-a1 still do **not** see these wikis; frau-meyer/schueler-a1
+still see only their own or shared wikis.
+
+---
+
+## 35. Feature: Teacher roles undeletable + "created by: —"
+
+**Files:** `packages/mws/src/new-managers/TabDataAdapter.ts`
+(`AdminDeleteRole`), dev DB (`roles.owner_user_id` of the TEACHER role)
+
+**Problem:** The TEACHER role (i.e., every teacher role) carried an
+owner ("created by: <User>") and could be deleted by the site admin —
+in contrast to the system roles ADMIN/USER/ANON, which are protected by
+a name check.
+
+**Fix:**
+
+- `AdminDeleteRole` additionally blocks every role with `is_teacher=true`
+  (reason: `"A teacher role cannot be deleted."`). The protection is tied
+  to the **capability flag**, not the name — it survives renaming
+  "TEACHER" to e.g. "Gruppenleiter 1" (consistent with the `is_teacher`
+  feature, §33).
+- The TEACHER role gets `owner_user_id = NULL`, so "created by" shows
+  "—" just like for the system roles and only the site admin can edit
+  it.
+
+**Verification:** Typecheck green, `tsup` build ok, `pm2 restart`
+(online). Live test as admin: `role/delete` on TEACHER → 403 ("A teacher
+role cannot be deleted."); on ADMIN → still 403 (system role);
+temporary role without the flag ("Loeschtest") → created and deleted
+(200). TEACHER record: `owner_user_id IS NULL`, `is_teacher=1`.
+
+---
+
+## 36. Feature: Admin backup (database + keys + config)
+
+**Files:** `packages/mws/src/new-managers/BackupRoutes.ts` (new),
+`packages/mws/src/new-managers/index.ts` (registration),
+`packages/admin-vanilla/src/app.tsx` (admin menu "Backups"),
+`packages/admin-vanilla/src/app.inline.css`,
+`packages/admin-vanilla/src/locales/en.ts` / `de.ts`
+
+**Problem:** There was no way to back up the complete wiki inventory
+(tiddlers, bags, recipes, roles, users). Everything is contained in the
+single SQLite file `store/database.sqlite`; simply copying it during
+operation can be inconsistent because of the WAL.
+
+**Fix:**
+
+- New admin routes `PUT /admin/backup` and `GET /admin/backup/list`
+  (only `isAdmin`, `requestedWithHeader` + referer check).
+- `GET /admin/backup/download?name=<name>` delivers the complete backup
+  as a ZIP (`Content-Disposition: attachment`). The ZIP is built without
+  an extra package using Node `zlib` (CRC32 + optional Deflate). This
+  route deliberately runs **without** `requestedWithHeader` so that a
+  normal `<a download>` link works (protection via `okAdmin` + referer
+  check; the backup name is checked by regex against path traversal).
+- `PUT /admin/backup/delete` (body `{ name }`) deletes a backup.
+- Important: The backup routes are registered in `ApiRoutes` **before**
+  `AdminSave` (`/admin/:op/:tab`), otherwise the generic route
+  intercepts `PUT /admin/backup/delete` (`op`/`tab` validation fails).
+- Snapshot via SQLite `VACUUM INTO` — runs during operation, is
+  consistent and contains the WAL state. Deliberately **outside** a
+  transaction (`VACUUM` is forbidden there), therefore directly via
+  `state.engine`.
+- Target: `backups/mws-<YYYYMMDD-HHMMSSmmm>/` next to `store/` (so in
+  the data instance, not served by the web server). Contains
+  `database.sqlite` as well as — if present — `passwords.key`,
+  `package.json`, `package-lock.json`, `mws*.json` (config) and
+  `tw5-versions.txt`, plus `backup.json` (name, time, files, size).
+- Retention: the newest 10 backups are kept, older ones are deleted.
+- Admin UI: "Backups" dropdown in the header area (admins only) with
+  "Create backup now" and the list of the most recent backups. Each
+  entry is a download link (ZIP) and has a small delete button (with a
+  confirmation prompt).
+
+**Restore:**
+
+1. Stop the server (`pm2 stop MultiWikiServer-wikiwise`).
+2. Move the current `store/` folder aside.
+3. Copy `database.sqlite` from the backup to `store/database.sqlite`
+   (if necessary, additionally restore `passwords.key` and `mws*.json`).
+4. Start the server (`pm2 start MultiWikiServer-wikiwise`).
+
+**Verification:** Typecheck green, `pm2 restart`. Live test as admin:
+backup created → 200, folder contains a valid DB (`PRAGMA
+integrity_check` = ok; same row counts for `Recipe`/`recipe_bag`/
+`recipe_permission`/`users`/`roles` as live), `passwords.key`/
+`package.json`/`tw5-versions.txt` copied; the list shows the backups;
+after 11 backups 10 remain (oldest removed). Download as admin → 200
+(`application/zip`, `unzip -t` error-free, unpacked DB valid); delete
+as admin → 200, folder gone; nonexistent name and path traversal
+(`../../etc`) → 404. Non-admin and no session → 403. Test session and
+own test backup removed after the test.
+
+---
+
+## 37. Feature: Display "X of Y own wikis"
+
+**Files:** `packages/admin-vanilla/src/definition/tabs.ts` (column + field
+`ownWikiUsage`, `UserAdminRecord`),
+`packages/mws/src/new-managers/TabDataAdapter.ts` (`UserDataAdapter`),
+`packages/admin-vanilla/src/app.tsx` (banner in the Wiki tab),
+`packages/admin-vanilla/src/app.inline.css`,
+`packages/admin-vanilla/src/locales/en.ts` / `de.ts`
+
+**Problem:** Although the student wiki limit (§32) is enforced
+server-side, there was nowhere to see how many own wikis you had
+already created and how many are still allowed. Admins/teachers also
+could not recognize at a glance the usage of an individual user.
+
+**Fix:**
+
+- **Banner in the Wiki tab:** For logged-in users without an admin role
+  — thus also teachers — a compact notice appears above the wiki list
+  (`wiki-limit-banner`, smaller font/padding than a normal callout):
+  - with a limit: "You have created X of Y own wikis — Z more are
+    possible." (when the limit is reached, the existing "Limit reached"
+    message; at limit 0, the "not yet allowed" message),
+  - without a limit (and for teachers, for whom the limit does not
+    apply server-side): "You have created X of ∞ own wikis — unlimited
+    additional wikis are possible."
+  Admins see no banner.
+- **Column in the user list:** New server column "Own wikis" with the
+  display `created / limit` (e.g. `1 / 2`). No limit or
+  admins/teachers (exempt from the rule) show `n / ∞`.
+- The counting is done server-side in `UserDataAdapter.getList`
+  directly via `prisma.recipe.owner_user_id` (one `findMany` + map
+  tally), so that teachers also count wikis that are not visible to
+  them in the wiki list. `saveRow` counts analogously via
+  `prisma.recipe.count`, so that the row is updated correctly after
+  saving.
+- `ownWikiUsage` is a pure server field (`mode: "server"`), so it is
+  not editable in the storage form. The exception for admins/teachers
+  is determined, just like in the session logic, via
+  `role_name === "ADMIN"` or `is_teacher`.
+
+**Verification:** Typecheck (server + client) green, server rebuilt
+(`tsup`), `pm2 restart`. Live as admin: `GET /admin/load` returns
+`ownWikiUsage` for every user (student with limit 2 and 1 wiki →
+`1 / 2`, admin/teacher → `n / ∞`). The client bundle contains the
+banner logic (with and without a limit), the new locale texts and the
+compact `wiki-limit-banner` CSS. No test artifacts were created in the
+DB.
+
+---
+
+## 38. Fix: Creators may also edit their own wikis
+
+**Files:** `packages/mws/src/new-managers/RecipeResolver.ts`
+(`assertRecipe`, `canWriteBag`)
+
+**Problem:** Heino (role only "USER") could not edit his own wikis —
+the wiki page reported "You are logged in as Heino (read-only)". Cause:
+The affected wikis (`buch-vorlage`, `dein-tiddlywiki`, …) were created
+when Heino was still an admin. Their bags therefore have only core
+roles (`ADMIN → C_admin`, `USER/ANON → A_read`). After the degradation
+to "USER" only reading remained. §34 had fixed the **visibility** of
+own wikis in the admin panel, but not the **write/read permissions** in
+the resolver that serves the actual wiki page.
+
+**Fix:** The resolver now additionally knows the `owner_user_id` of the
+recipe and the bags and treats the creator like an authorized user:
+
+- `assertRecipe`: If the user is the owner of the recipe or of one of
+  its bags, the role-based read barrier is dropped (own wikis remain
+  readable, even if the roles are changed later).
+- `canWriteBag`: If the user is the owner of the target bag, they may
+  write — regardless of roles. For everyone else the strict role-based
+  check still applies.
+
+**Verification:** Typecheck green, `tsup` build + `pm2 restart`. Live as
+Heino: `GET /recipe/buch-vorlage/status` → `canUserWrite: true`; save a
+test tiddler via `batch/save` → 200, then remove it again via
+`batch/delete` (no leftovers in the `tiddler` table). Cross-check as
+schueler-a1 (foreign wiki): `canUserWrite: false`, `batch/save` → 403
+`BAG_NO_WRITE_PERMISSION`.
+
+---
+
+## 39. Feature: Admin tab "Storage" (storage overview)
+
+**Files:** `packages/mws/src/new-managers/StorageRoutes.ts` (new),
+`packages/mws/src/new-managers/index.ts` (registration),
+`packages/admin-vanilla/src/app.tsx`,
+`packages/admin-vanilla/src/app.inline.css`,
+`packages/admin-vanilla/src/locales/en.ts` / `de.ts`,
+`prisma/schema.prisma` (read-only queries)
+
+**Problem:** There was no place where an admin could see at a glance
+how full the system disk is and how much space each individual
+component of the MultiWikiServer-wikiwise occupies. For operations
+(backups, cleanup, capacity planning) this transparency was completely
+missing.
+
+**Fix:**
+
+- New admin route `GET /admin/storage` (`zodRoute`, `state.okAdmin()`,
+  `securityChecks: { requestedWithHeader: true }`, `state.assertReferer`
+  against its own origin). Registered as `AdminStorage` in
+  `new-managers/index.ts`.
+- Response `StorageInfo` with:
+  - `disk` (`statfsSync(wikiPath)` → `totalBytes`/`usedBytes`/
+    `availableBytes`, usage in percent + traffic light status),
+  - `lastScan` (timestamp of the last collection),
+  - `recordCounts` (Prisma counts for tiddlers/bags/wikis/templates/
+    users),
+  - `categories` (recursive directory scans via `getDirStats`:
+    database, application data, attachments, temporary data, backups,
+    cache, system & configuration — each with files, directories, size,
+    modification date),
+  - `blobs` and `topUsers` (see §40/§41).
+- Admin UI: The new **"Storage"** tab appears to the right of "Users"
+  and is **visible only to admins** (tab button and `loadStorage` check
+  `userState.isAdmin`). Since it is not a CRUD tab (no `TabId`), a
+  synthetic `storageTabDefinition` is used in the frontend; `activeTab`
+  was extended to `TabId | "storage"` and the list panel branch was
+  branched off via an `isStorageTab` ternary.
+- Display (from top to bottom):
+  - **"System disk" / "Disk storage status"** — card with progress bar,
+    traffic light status, "Last scan" and `{free} free`. The earlier
+    heading `System disk` was deliberately renamed resp. separated so
+    that disk space and app usage are not confused.
+  - **"MWS-wikiwise storage usage"** — its own section
+    (`storage-records-section`) with the counts for tiddlers, bags,
+    wikis, templates and users.
+  - **Data overview** — table over the directory categories with the
+    columns path/category/files/directories/total size/modification
+    date.
+  - **Legend** — explains the categories and colors.
+  - **Refresh / Try again** in the section header.
+- All labels are stored bilingually (EN/DE) as i18n keys (among others
+  "Storage"/"Speicher", "System disk"/"System-Festplatte", "Disk storage
+  status"/"Speicherstatus der Festplatte", "MWS-wikiwise storage
+  usage"/"Speicherbelegung MWS-wikiwise").
+
+**Verification:** Typecheck (root + `admin-vanilla`) green, `tsup` build
+ok. Live test against `dev/wiki/store/database.sqlite`: `GET
+/admin/storage` returns valid disk values, counts and categories; the
+new strings and CSS classes are contained in the built client bundle;
+non-admin and session without `X-Requested-With` header → rejected. (A
+complete HTTP end-to-end test as admin was not possible via `curl`
+because of the OPAQUE password, see Operations/Outlook.)
+
+---
+
+## 40. Feature: "Blobs & Files" section in the Storage tab
+
+**Files:** `packages/mws/src/new-managers/StorageRoutes.ts`,
+`packages/admin-vanilla/src/app.tsx`,
+`packages/admin-vanilla/src/app.inline.css`,
+`packages/admin-vanilla/src/locales/en.ts` / `de.ts`
+
+**Background:** MWS does **not** store binary content (images, videos,
+PDFs) **like Rails/ActiveStorage in separate files**, but rather
+**inline as base64 text in the `Tiddler.fields` field** of the SQLite
+database. The old `AttachmentService` (`store/files/<hash>/`) does exist
+in `attachments.ts`, but it is **inactive** (`attachmentsEnabled=false`,
+no `attachment_hash` in the schema, no imports). That is why there was
+previously no display of how much space the actual binary content
+occupies.
+
+**Fix:**
+
+- The `blobs` block of the route classifies binary tiddlers via MIME
+  patterns (`BINARY_TYPE_PATTERNS` = `image/%`, `video/%`, `audio/%`,
+  `application/pdf`, `application/octet-stream`, `font/%`), checked via
+  SQL over `json_extract(fields, '$.type')`. `application/json` and the
+  like do **not** count as a blob.
+- Delivered are: `blobCount`/`blobBytes` (number and byte sum of the
+  binary content), `contentBytes` (`sum(length(fields))` over all
+  tiddlers), `tiddlerCount`, `storeFiles` (files/directories/size/
+  modification date of `store/files/`), `inbox` (`store/inbox/`) and
+  `orphanedStoreFiles` (orphaned files).
+- **Orphan detection:** A directory under `store/files/` is considered
+  valid if it matches a 64-character hex/SHA256 name and contains both
+  `meta.json` and a `data*` file. Everything else (foreign files,
+  incomplete or unreferenced folders) is counted as orphaned.
+- UI: its own section **"Blobs & Files"** (`storage-blobs-section`)
+  with six tiles: **Blobs**, **File store**, **Wiki content**,
+  **File attachments on disk**, **Inbox**, **Orphaned files** (classes
+  `is-blobs`/`is-store`/`is-content`/`is-disk`/`is-inbox`/`is-orphan`).
+  The "Blobs" and "Wiki content" tiles additionally show a note
+  ("{count} files", "in store/files/" etc.).
+
+**Verification:** The SQL logic was tested in isolation via
+`better-sqlite3` against `dev/wiki`: `blobCount 23`, `blobBytes
+7.865.187`, `contentBytes 17.957.395`, `tiddlerCount 1088`. The orphan
+detection was tested in isolation with test folders (3 of 4 correctly
+detected). Typecheck and build green.
+
+---
+
+## 41. Feature: "Storage usage per user (Top 10)"
+
+**Files:** `packages/mws/src/new-managers/StorageRoutes.ts`,
+`packages/admin-vanilla/src/app.tsx`,
+`packages/admin-vanilla/src/app.inline.css`,
+`packages/admin-vanilla/src/locales/en.ts` / `de.ts`
+
+**Problem:** It is unknown which users occupy how much storage —
+important, e.g., to recognize run-away student wikis.
+
+**Fix:**
+
+- The `topUsers` block determines the top 10 via an SQL join
+  `Users → Recipe (owner_user_id) → recipe_bag → Bag → Tiddler`
+  (per user only wikis are counted where he is the owner:
+  `HAVING count(DISTINCT r.id) > 0`; sorting `total_bytes DESC
+  LIMIT 10`). Fields: `username`, `wikiCount`, `wikiContentBytes`,
+  `fileStoreBytes`, `totalBytes`.
+- **Without double counting:** Since the binary content is contained in
+  the tiddler fields, it would otherwise be counted twice. The table
+  therefore states explicitly: **File store** = binary blob bytes,
+  **Total** = all tiddler field bytes of the user, **Wiki content** =
+  Total − File store.
+- UI: its own section **"Storage usage per user (Top 10)"** with the
+  columns **User | Wikis | Wiki content | File store | Total** (classes
+  `storage-user-table`, `storage-user-name`, `storage-user-total`);
+  numeric columns right-aligned, "Total" bold.
+
+**Verification:** SQL logic tested via `better-sqlite3` against
+`dev/wiki` (top user among others Heino: 5 wikis, 17.191.550 B total,
+7.612.135 B blobs, 9.579.415 B wiki content). The generated SQL was
+verified in the built `dist/mws.js` and the UI strings/CSS classes in
+the client bundle. i18n is in sync between EN and DE with **353/353**
+keys. Latest build: `public/admin-vanilla/main-6SOOAJ4R.js`.
+
+---
+
+## 42. Feature: Pinboard – shared "pin a note"
+
+**Goal:** A low-threshold exchange spot for all logged-in users
+(admin, teacher, student). Everyone may pin notes (post-its); visibility
+runs through three target groups (scopes): **GLOBAL** (everyone), **class/role**
+(role), **individual person** (user). The feature is purely UI + API + DB –
+no changes to the TW core, to sync, or to ACLs needed.
+
+### Backend
+
+**Schema** (`prisma/schema.prisma`, migration `20260917_pinboard`):
+
+- `PinboardNote`: `id`, `author_user_id`, `author_name` (snapshot),
+  `scope_type` (`GLOBAL`/`ROLE`/`USER`), `scope_id?`, `body` (max 1700
+  characters, server-side `MAX_BODY` in `PinboardRoutes.ts`), `color`
+  (6 colors), `is_important`, `is_active`,
+  `created_at`/`updated_at`, `expires_at?`
+- `PinboardNoteRead`: `note_id`, `user_id`, `read_at?`,
+  `dismissed_at?` (PK = `(note_id, user_id)`). Only *private*:
+  read receipt for one's own badge, **no** feedback to the author.
+
+**Routes** (`packages/mws/src/new-managers/PinboardRoutes.ts`,
+registered in `new-managers/index.ts`):
+
+| Route | Method | Description |
+|-------|---------|--------------|
+| `/api/pinboard` | GET | List of all visible notes + `unreadCount` + targets |
+| `/api/pinboard/unread-count` | GET | Badge number only (polling every 30 s) |
+| `/api/pinboard/note` | PUT | Create / update (body, color, important, scope, expiration) |
+| `/api/pinboard/note/delete` | PUT | Remove (author, admin, teacher on class boards) |
+| `/api/pinboard/read` | PUT | Toggle `read` / `dismissed` |
+
+**Visibility & moderation** (`canSee`, `canEdit`, `canDelete` in
+`PinboardRoutes.ts`):
+
+- A note is visible if `is_active=true`, it has not expired **and** the
+  target group matches: `GLOBAL` → all logged-in users; `ROLE` → members of
+  that role; `USER` → exactly this person. Authors always see their own
+  notes; admins see everything.
+- Delete/remove: **author** their own, **admin** everything; **teacher**
+  on their class boards (roles they created).
+- **Writing on the global board** only admin/teacher (not students) —
+  otherwise there is a spam risk. Class/person notes may be pinned by anyone.
+
+**Unread badge:** `unreadCount` = visible notes without `read_at` **and**
+without `dismissed_at` for the current user, but **not** own notes.
+Polling in the client every 30 s (`loadPinboardUnread`).
+
+### Frontend
+
+**Component** (`packages/admin-vanilla/src/pinboard.tsx`,
+custom element `<mws-pinboard>`):
+
+- **"Pinboard" tab** in the admin bar (visible for all roles),
+  badge with the number of unread notes.
+- **Cork/felt background** (light: warm beige `#d4b896` with
+  linen texture; dark: dark felt `#2d2218`).
+- **Post-it cards**: stable tilt per ID (`tiltForId`: –3°…+3°);
+  hover straightens it + lifts it (scale 1.02, stronger shadow); tape
+  strip at the top; important notes = red thumbtacks, sorted to the very top.
+- **Preview on the board**: every note shows only the first **130 characters**
+  (`BODY_PREVIEW_CHARS`, cut at a word boundary + "…") — the
+  full text is behind a click in the viewer (see below), the board stays calm
+  and **does not shift when opening** (no more canvas growth).
+- **Wide notes**: from **200 characters** (`BODY_WIDE_CHARS`) the note is
+  displayed twice as wide (`is-wide`: 340 px instead of 220 px,
+  `grid-column: span 2`), so that long previews are more readable.
+- **Colors**: yellow/pink/blue/green/orange/purple (CSS variables, dark mode
+  adapted).
+- **Filter chips**: *All · Unread · Mine*.
+- **Composer** (new/edit): textarea (**1700 characters**, above it a
+  **character counter** `NNN/1700`, red when the limit is reached), color swatches,
+  important checkbox, target group dropdown (only allowed options),
+  optional expiration date. The server-side Zod limit (`<=1700`) is
+  displayed translated ("Too long: at most 1700 characters allowed.").
+- **Viewer modal**: a click on a note opens the full text in a
+  centered modal (`.pinboard-viewer`, colored note look matching the note,
+  `pre-wrap`, scrollable for very long texts, max. 62vh height). Header with
+  author + recipient group ("All"/"For {name}"), meta bar (time,
+  expiration date "Expires on …", "Mine"). Close via ×, "Close" button
+  or a click on the background.
+- **Actions**: per note on hover (small pills) *and* in the viewer modal:
+  mark as read/unread, "Unpin for me" (dismissed),
+  edit (author/admin), remove (author/admin/teacher on class boards).
+  New in the modal: **"Copy to clipboard"** — copies the full text
+  via the Clipboard API (secure context, user gesture) and shows "Copied"
+  feedback with a checkmark icon for 1.6 s; errors appear as a red message.
+- **Filed-away area** (collapsed at the end) for dismissed notes.
+- Fully **i18n** (EN/DE, **57 keys**, parity 57/57).
+
+**Integration** (`packages/admin-vanilla/src/app.tsx`):
+
+- Tab button in the bar (`pinboard`), badge `pinboardUnread`.
+- Renders `<mws-pinboard onUnreadChange={…} />` in the content area.
+- Unread polling every 30 s, live update when a note is opened.
+
+**CSS** (`packages/admin-vanilla/src/app.inline.css`):
+
+- `pinboard-wall` (cork background, dark variant), `pinboard-wall-grid`
+  (responsive masonry-like), `pinboard-note` (card, tilt, hover,
+  colors), `pinboard-note-tape` (tape), `pinboard-note-pin`
+  (thumbtack), `pinboard-note.is-wide` (wide notes), filter chips,
+  composer incl. `pinboard-char-count`/`.is-full`, `.pinboard-viewer`
+  (modal + color variants), actions, empty/filed-away states.
+
+### Migration & data
+
+- `prisma/migrations/20260917_pinboard/migration.sql`:
+  `CREATE TABLE pinboard_note` + `pinboard_note_read` + index
+  `(is_active, scope_type)`. FK `note_id → pinboard_note` (cascade).
+- Prisma client generated without errors (`npx prisma generate`).
+
+### Verification
+
+- `npm run tsc2` → 0 errors.
+- `npm run build` → ESM server (`dist/mws.js`) + client bundle
+  (`public/admin-vanilla/main-*.js` / `*.css`) successful.
+- Manual smoke tests (admin + teacher + student sessions against
+  localhost:5000):
+  - Teacher pins globally → visible to everyone ✓
+  - Student pins in the class (role) → only class members see it ✓
+  - Student pins at a classmate (USER) → only the recipient sees it ✓
+  - Student **cannot** pin globally → 403 `ACCESS_DENIED` ✓
+  - Unread badge counts correctly (not own notes, not dismissed,
+    mark-as-read works) ✓
+  - Important notes (red pin) sort first ✓
+  - Edit/delete rights apply (author/admin/teacher class board) ✓
+  - Expiration date: expired notes disappear from visibility ✓
+  - Preview: >130 characters → truncated teaser with "…" (word boundary);
+    ≥200 characters → note becomes twice as wide (`is-wide`, 340 px) ✓
+  - Viewer modal: a click opens the full text in note look; **the remaining
+    notes do not shift** (no canvas height change) ✓
+  - "Copy to clipboard" returns the full text; brief
+    "Copied" feedback; the error case shows a red message ✓
+  - Character counter: `NNN/1700` red at the limit; 1701 characters → translated
+    Zod message "Too long: at most 1700 characters allowed." ✓
+  - Dark mode look correct (felt, post-it colors adapted) ✓
+  - i18n EN/DE complete (tab label, tooltips, error messages, composer,
+    viewer modal, copy; 57/57) ✓
+  - 30 s polling updates the badge without a reload ✓
+
+---
+
+## 43. Feature: Thumbnail display (wiki previews)
+
+**Goal:** The wiki list in the *Wikis* admin tab shows a
+**thumbnail** (headless screenshot of the real wiki page) for each wiki instead of
+just text columns. A click opens the image large in a modal. The image is rendered
+**per user** — it shows exactly what the logged-in viewer
+would see on the wiki page (including their view and read permissions).
+
+### Backend
+
+**File:** `packages/mws/src/new-managers/WikiThumbnailRoutes.ts` (new),
+route registered in `packages/mws/src/new-managers/index.ts` before the
+general recipe route (`REGEX_WIKI_THUMBNAIL`):
+
+| Route | Method | Description |
+|-------|---------|--------------|
+| `/wiki/<slug>/thumbnail` | GET/HEAD/OPTIONS | PNG of the wiki (640×400) |
+
+- **Access condition:** logged in (`user.isLoggedIn`) **and**
+  `RecipeResolver.assertRecipe` — the same read rights as when opening the
+  wiki itself (anonymous → 403, no rights → 403). Thus the preview is
+  not a side channel for content.
+- **Rendering:** `playwright-core` + Chromium (headless, `--no-sandbox`).
+  The browser path is looked up **once** (and cached) via a
+  fallback chain: `MWS_CHROMIUM_PATH` → `CHROME_PATH` → Playwright browser
+  cache (`~/.cache/ms-playwright`, e.g. including `firefox`/`ffmpeg` after a single
+  `npx playwright install chromium`; new and old directory layouts
+  incl. `chrome-headless-shell`) → `/usr/bin/chromium(-browser)` →
+  `/snap/bin/chromium`. Missing candidates are skipped — only if
+  none exists does the render call report the missing browser.
+  The browser is started lazily and **reused**. It renders the
+  real page `/wiki/<slug>` with **viewport 1280×800** and takes a
+  screenshot after the TiddlyWiki client has booted (networkidle + 2500 ms wait);
+  this is downscaled to **640×400
+  (`object-fit: cover`)** via a helper page (better antialiasing than a
+  native low-res capture). **Concurrency limited:** at most
+  **2** renders run at the same time (each opens its own browser context;
+  `MWS_THUMBNAIL_RENDER_CONCURRENCY`, clamped to 1…8). After a TTL expiry
+  the entire wiki list re-renders on first opening — instead of an unlimited
+  CPU/RAM spike the renders queue up FIFO (verification with
+  limit 1: 12 wiki images requested simultaneously, one after another in ~51 s, all
+  200 `image/png`).
+- **Session context:** the session cookie of the calling user is passed along
+  to the browser context → the image matches their view. The cache
+  is deliberately **shared across users** (one slot per slug): the
+  access check runs server-side in `assertRecipe` (without rights there is
+  no PNG at all), and the thumbnail is content-wise
+  identical for all permitted users — personalized elements are created client-side in the browser and
+  do not appear in the screenshot. Whoever requests first after the TTL expiry
+  thus defines the image for everyone, until invalidation. A real
+  per-user cache (`<slug>.<userId>.png`) would be N×M render slots and would
+  counteract the render limit (see above) — therefore deliberately not.
+- **Cache:** the result is located under `store/thumbnails/<slug>.png` in the
+  data store (outside web delivery). TTL by default **24 h**;
+  resolution: `MWS_THUMBNAIL_TTL_HOURS` (environment variable) →
+  `admin.thumbnailTtlHours` (settings page, §47) → 24 h (`thumbnailTtlMs`
+  in `WikiThumbnailRoutes.ts`). Writing is atomic (`…png.tmp` +
+  `rename`), an in-flight queue prevents parallel duplicate renders for
+  the same path. Response: `image/png`, `Cache-Control: private,
+  max-age=<TTL in s>` (always private per session, value follows the server TTL),
+  plus **`ETag`** (from mtime+size) and **`Last-Modified`**. Conditional
+  requests are answered: `If-None-Match` (also in ETag lists or
+  `*`) and `If-Modified-Since` → **304** without body; the comparison runs at
+  second resolution so that the last-modified round is not
+  missed by sub-second mtimes.
+- **Invalidation (debounced):** after `batch/save`/`batch/delete` on a wiki
+  (`RecipeRoutes.ts` → `invalidateThumbnail`) the cached PNG is only
+  **throttled** deleted: every change resets a timer, and the file
+  is only removed **shortly after the last change** (default **180 s**,
+  `MWS_THUMBNAIL_DEBOUNCE_SECONDS` overridable). Thus the
+  TiddlyWiki autosaves (one `batch/save` per tiddler change) no longer
+  repeatedly destroy the preview while a wiki is being edited — the next image after the
+  timer expires is automatically re-rendered (a short staleness window after
+  the last edit is intentional).
+- **Cleanup:** when a wiki is deleted (`AdminDeleteWiki` — owner **or**
+  site admin), its preview is **immediately** removed (`deleteThumbnail`, also
+  aborts a possibly running debounce timer so that later re-creating
+  the same slug does not lose the fresh PNG). In addition,
+  a **sweep at server start** (`sweepOrphanedThumbnails` on
+  `mws.config.init.after`) removes all files from `store/thumbnails/` that no longer
+  belong to any current recipe (deleted wikis, `.png.tmp` leftovers from
+  crashes) — the orphans left behind earlier are thus removed.
+  The filename is the lossy slug sanitization
+  (`[^a-zA-Z0-9_-] → _`); the sweep therefore builds the valid file set from the
+  **sanitized** slugs of all recipes — a collision can only keep one file,
+  never delete a live one.
+
+### Frontend
+
+**Files:** `packages/admin-vanilla/src/definition/tabs.ts` (column
+  `thumbnailUrl`, makes the first column wider than before),
+  `packages/admin-vanilla/src/definition/store.ts` (URL construction),
+  `packages/admin-vanilla/src/app.tsx` (`renderListCellValue` +
+  preview modal), `packages/admin-vanilla/src/app.inline.css`,
+  `packages/admin-vanilla/src/locales/en.ts` / `de.ts`
+
+- **Column:** `thumbnailUrl` (empty label, width 3) sits directly after
+  `slug`. The value is built **client-side** from the slug
+  (`${pathPrefix}/wiki/<slug>/thumbnail`); **nothing** new comes from the
+  server JSON.
+- **Thumbnail:** `<img class="wiki-thumbnail">` — 128×80, `object-fit: cover`,
+  rounded, `loading="lazy"` + `decoding="async"` (scroll performance),
+  gear/stripe base pattern as long as the image loads, `cursor: zoom-in`.
+- **Modal:** a click on the image (`stopPropagation`, does not open the
+  slug link) → centered `.thumbnail-modal` (`.modal-shell-centered` /
+  `.modal-card`) with header "Thumbnail" / "Wiki preview",
+  `.close-button` (×), a click on the background closes as well; large
+  `.wiki-thumbnail-full` (640×400, `object-fit: cover`,
+  `max-height: calc(100vh - 220px)`).
+- **i18n:** keys `Thumbnail` → "Thumbnail" and `Wiki preview` →
+  "Wiki preview" (EN/DE, parity 1:1).
+
+### Verification
+
+- `npm run tsc2` green; `npm run build` (ESM server + client bundle)
+  successful; route included in `dist/mws.js`.
+- Live test against localhost:5000:
+  - logged in + read access on `wiki-<slug>` → `GET /wiki/<slug>/thumbnail`
+    → 200, `image/png`, edge dimensions 640×400 ✓
+  - anonymous → 403 `ACCESS_DENIED` "User not authenticated" ✓
+  - without read access → 403 (the same barrier as the wiki page itself) ✓
+  - HEAD → 200 without body; OPTIONS → 200 empty ✓
+  - Cache: the second call is served from `store/thumbnails/`, after `batch/save`
+    it is re-rendered ✓
+  - Client: the column appears in the Wikis tab, the modal opens/closes (×,
+    background click) ✓
+
+> **Operational note:** For the first rendering of a wiki, Chromium must be
+> present on the server. Simplest option: one-time
+> `npx playwright install chromium` (places everything in `~/.cache/ms-playwright`,
+> is found automatically by the fallback chain); alternatively a
+> system Chromium (`apt install chromium` or similar) or explicitly
+> `MWS_CHROMIUM_PATH`/`CHROME_PATH`. If no browser is reachable, only
+> **the generation** fails — the wiki data itself is not affected,
+> and a failed render is not cached.
+
+---
+
+## 44. Feature: "My Files" (per-account file upload)
+
+**Goal:** Every logged-in user (admin, teacher, student) manages
+**their own files** in their own tab: upload, download, view
+inline (image, audio, video, PDF, text, Markdown and ODT) and share
+in a targeted way.
+The bytes are stored content-addressed on the hard disk under
+`store/files/<sha256>/` — exactly the layout that the admin tab "Storage"
+(§40) evaluates —, the SQLite tables `user_file`/`user_file_share`
+hold only metadata and recipients. The feature is purely UI + API + DB,
+no changes to the TW core, to sync, or to ACLs.
+
+### Backend
+
+**Files:** `packages/mws/src/new-managers/UserFileRoutes.ts` (new),
+routes registered in `packages/mws/src/new-managers/index.ts`;
+limit specification in `packages/mws/src/ServerState.ts` (default **100 MB**
+per file, overridable via `MWS_USERFILE_SIZE_LIMIT`).
+
+| Route | Method | Description |
+|-------|---------|--------------|
+| `/api/user-files/upload` | PUT | **Stream** the multipart into the inbox, `sha256` while streaming, then adoption into `store/files/<sha256>/`; over the limit → 413, body is discarded |
+| `/api/user-files/list` | GET | Own files (metadata); admins see all, with owner column |
+| `/api/user-files/shared` | GET | "Shared with me": foreign visible files (with owner); empty for admins |
+| `/api/user-files/share-targets` | GET | Permitted recipient options ("All", roles, users) per account type |
+| `/api/user-files/share` | PUT | Replace share scopes (`GLOBAL`/`ROLE`/`USER`), normalized server-side to the allowed options; an empty list ends sharing |
+| `/api/user-files/download` | GET/HEAD | Stream as `attachment` with the correct filename |
+| `/api/user-files/preview` | GET/HEAD | Stream `inline` with `Accept-Ranges: bytes`, range support (206 + `Content-Range`, otherwise 416 `bytes */<size>`) — for seeking in audio/video |
+| `/api/user-files/delete` | PUT | Delete one of your own files (admin: all); the bytes are only removed when no `user_file` row points to the hash anymore |
+
+**Rights matrix** (`shareGrantsVisibility`): owners always see their files,
+admins see everything. Otherwise the account type of the
+**sharer** decides: admin shares reach everyone; teacher shares reach
+admins and members of the selected roles — **other teachers never**;
+student shares reach only specifically selected recipients
+(classmates/teachers). Recipient options (`collectShareTargets`) and
+submitted scopes (`normalizeShareScopes`) are filtered per user,
+inadmissible entries are discarded server-side.
+
+**Storage:** `store/files/<sha256>/data.<ext>` (one data file per
+content hash; extension from a MIME table) + `meta.json`
+(contentHash, filename, type, original name, `user_id`, timestamps). The
+upload streams without a buffer via the inbox; leftovers are cleaned up on
+abort. GET/HEAD paths check the same visibility
+(`fetchAuthorizedFile`) — an unshared file yields 404.
+
+### Frontend
+
+**File:** `packages/admin-vanilla/src/user-files.tsx` (custom element
+`<mws-user-files>`), styles in `app.inline.css`, i18n in
+`locales/en.ts`/`de.ts`.
+
+- **"My Files" tab** in the admin bar; table with name, type,
+  size and timestamp; admins additionally see the owner
+  (owner column). The admin detection (`isAdminView`) checks **both**
+  mount types — `hasAttribute("admin")` (string tag
+  `<mws-user-files admin>`) **or** `props.admin === true` —, since the
+  JSX string tag mount does not populate `props`.
+- **Upload** via ghost button (upload icon) → multipart PUT; afterwards
+  automatic refresh of the list.
+- **Preview modal:** image (its own `<img>`), audio/video with controls
+  (`autoplay`, seek via range requests), PDF in an iframe;
+  **ODT** (`application/vnd.oasis.opendocument.text`, `.odt`) is
+  **client-side** converted to HTML with `odf-kit/reader`
+  (`odtToHtml(bytes, { fragment: true })`) and rendered in a sandboxed
+  iframe (custom element `OdtPreviewDocument`, `srcdoc` as property)
+  with a light/dark look (`mws-light`/`mws-dark`) —
+  `.doc` files deliberately **without** preview (download offered);
+  text files as `<pre>`; **Markdown** (`text/markdown`, `.md`) renders
+  with a lean client-side renderer (`renderMarkdownToJSX`: headings
+  h1–h5, lists, code, block quote, `hr`, inline `**bold**` / `__bold__` /
+  `*italic*` / `_italic_` / `~~strikethrough~~` / `` `code` `` / links). Content
+  is rendered exclusively as **text nodes** (never parsed as HTML)
+  → no XSS; links only `http(s)`/`mailto`.
+- **Download** via `/api/user-files/download` (browser saves the
+  file) — also for "Shared with me" files.
+- **Share** (share icon): selection from `/api/user-files/share-targets`
+  (all/class people), saving via `/api/user-files/share`.
+- **Delete** (trash can icon): only own files (admin: all).
+- Fully **i18n** (DE/EN), light/dark mode (preview areas
+  use `--color-surface-modal`/`--color-surface-field`), icons in the
+  preview header 16×16.
+
+### Migration & data
+
+- `prisma/migrations/20260920120000_user_file` (table `user_file`:
+  `id`, `user_id` (owner, without FK), `filename`, `type`, `extension`,
+  `sha256`, `sizeBytes`, `created_at`/`updated_at`, index on `user_id`)
+- `prisma/migrations/20260920150000_user_file_share` (table
+  `user_file_share`: `file_id` → `user_file` (cascade), `scope_type`,
+  `scope_id`; indices on `file_id` and `(scope_type, scope_id)`)
+
+### Verification
+
+- `npm run tsc2` → 0 errors; `npm run build` → ESM server + client bundle.
+- Live tests against localhost:5000 (admin/teacher/student sessions):
+  - Upload (PUT, multipart) → file in the list + `store/files/` ✓
+  - Download: `attachment` header, browser saves correctly ✓
+  - Preview: image/audio/video/PDF/text/Markdown/ODT; Markdown file renders
+    (e.g. `TiddlyWiki-Setup.md`) structurally correct, no HTML injection ✓
+  - ODT preview: an uploaded `.odt` (filename with spaces) renders
+    in the sandboxed iframe — heading + table appear in the
+    `srcdoc`, the iframe width follows the detail area
+    (`odt-preview-document { width: 100% }`) ✓
+  - Admin owner column: an admin session shows all
+    files in "My Files" with the owner's username (e.g. "Schüler 2"); verified via the
+    string tag mount `<mws-user-files admin>` ✓
+  - Range: `Range: bytes=…` → 206 + `Content-Range`, invalid → 416 ✓
+  - Sharing: entitled recipients see the file, unshared →
+    404; teachers do not see teacher shares of other teachers ✓
+  - Delete removes the row and, as soon as no reference exists,
+    also the bytes ✓
+
+---
+
+## 45. Feature: File upload directly in the wiki (goes to the wiki owner)
+
+**Goal:** Every wiki gets an
+**"Upload file"** button in its toolbar. A click uploads a file to the **file store of
+the wiki owner** (`recipe.owner_user_id`), not that of the
+uploader: for example, if a teacher opens a wiki that belongs to a student/colleague
+and has **write access** there, the file ends up in the owner's
+"My Files". Without a wiki context (no `recipe` parameter)
+the upload stays with the own account as before (§44).
+
+### Frontend
+
+**Files (new):** `plugins/client/tiddlers/upload-file.js`
+(startup module), `plugins/client/tiddlers/status/upload-file-button.tid`
+(button in `$:/tags/PageControls`), `plugins/client/tiddlers/status/icon-upload.tid`;
+texts in `plugins/client/tiddlers/en-US.multids`.
+
+- The button dispatches `tm-upload-file`; the startup module listens at the
+  root widget. Not logged in (`$:/status/IsLoggedIn ≠ yes`) → notice
+  "You must be logged in to upload files".
+- Logged in: hidden `<input type=file multiple>`; each selected
+  file is sent **sequentially** via multipart `PUT` to
+  `api/user-files/upload?recipe=<slug>` (`X-Requested-With:
+  fetch`). The slug comes from `$:/config/multiwikiclient/recipe`.
+- Notifier: own upload → "Uploaded "X" to your files"; foreign wiki →
+  "Uploaded "X" to <Besitzer>'s wiki"; missing write access → "You do
+  not have write access to this wiki"; over the limit → 413 message; otherwise
+  a generic error.
+
+### Backend
+
+**File:** `packages/mws/src/new-managers/UserFileRoutes.ts`
+(route `/api/user-files/upload`, now with `zodQueryKeys: ["recipe"]`).
+
+- Optional query parameter `recipe`: `RecipeResolver.assertRecipe`
+  resolves the wiki; write access applies for **admin**, **wiki owner**,
+  `B_write` on the recipe **or** write access on a writable bag
+  (`RecipeResolver.canWriteBag`). Otherwise **403** with
+  `x-reason: no write access to this wiki`.
+- Target owner = `recipe.owner_user_id` (fallback: uploader). This
+  value ends up in `user_file.user_id` **and** in the `meta.json` of the bytes.
+- Response: `{ file, owner: { user_id, username } }` — the client uses
+  `owner.username` for the notifier wording.
+- Without the `recipe` parameter, behavior is unchanged (file goes to
+  the uploader).
+
+### Verification
+
+- `npm run tsc2` → 0 errors; server bundle rebuilt via `tsup`.
+- E2E (second instance on `:5001`, admin opens `wiki-schuler-2` from
+  "Schüler 2"): a click on "Upload file" → `PUT …/upload?recipe=wiki-schuler-2`
+  → **200**, response `owner.username = "Schüler 2"`; notifier "Uploaded
+  "klassenfoto.txt" to Schüler 2's wiki"; `user_file.user_id` = Schüler 2,
+  bytes under `store/files/<sha256>/`. Test file then removed via
+  `/api/user-files/delete` (row + bytes gone) ✓
+- The running dev server on `:5000` must be restarted after the build
+  (Node holds the old bundle in memory).
+
+---
+
+## 46. Translation: MWS client texts automatically follow the wiki language
+
+### Findings
+
+- All MWS client strings are translatable tiddlers with the title
+  `$:/language/MWS/...`. They are shipped as **shadow tiddlers** by the plugin
+  `$:/plugins/mws/client` and are defined
+  in `plugins/client/tiddlers/en-US.multids` only in English.
+- The core language plugin (`$:/languages/de-DE`) translates exclusively
+  core strings, **not** the `MWS/...` keys. An automatic fallback to
+  `de-DE` therefore does not exist; `$tw.language.getString(title)` only looks up
+  `$:/language/<title>`.
+- A normal wiki tiddler with the same title (`$:/language/MWS/...`)
+  **overrides** the shadow; `$tw.wiki.isShadowTiddler(title)` remains
+  `true` in the process. Thus the translation is purely possible on the data side — without code.
+
+### Automatics (implemented)
+
+`plugins/client/tiddlers/language.js` is a `module-type: startup` module. It
+collects all translated strings at start via
+`[all[shadows+tiddlers]prefix[$:/plugins/mws/client/i18n/]]` (shadows are not
+included in the default `prefix[]` source filter — hence the explicit
+source filter). Each translation file `tiddlers/i18n/<code>.multids` thus creates
+shadow tiddlers `$:/plugins/mws/client/i18n/<code>/<key>`; the code is derived
+from the last `$:/language` path segment (lowercased, `_`→`-`).
+Resolution: first the exact code (`de-DE` → `de-de`), then the primary language
+(`de-DE` → `de`, `zh-Hans`/`zh-CN`/`zh_CN` → `zh`). On a match the
+module writes real tiddlers `$:/language/MWS/<key>` with the translated text; a
+`change` listener on `$tw.wiki` applies the language again as soon as
+`$:/language` arrives or is switched.
+
+Important: when switching to an unsupported language (or English),
+nothing is **deleted** (`deleteTiddler` leaves an empty shell
+`{title, type}` instead of making the shadow visible), rather the English
+text is explicitly written from a start snapshot of the shadows. Real
+tiddlers `$:/language/MWS/...` that already exist at start are considered
+per-wiki overrides and are never touched.
+
+Already shipped: `de`, `ru`, `es`, `fr`, `ja`, `ko`, `zh` (English is supplied
+by the `en-US.multids` shadows as the source file). Another language is added
+by a new file `tiddlers/i18n/<code>.multids` with the same keys.
+The client plugin does not ship a fixed language — each wiki decides
+for itself via its `$:/language` (without `$:/language` it stays English).
+
+So that the injected overrides are not written back to the server via the syncer,
+the sync filter excludes `$:/language/MWS/`:
+`$:/config/SyncFilter` ends with `-[prefix[$:/language/MWS/]]`
+(`plugins/client/tiddlers/syncer/config-sync-filter.tid`).
+
+### String set (23 keys)
+
+`BagInfo/Heading`, `Login/ServiceName`, `SaveWiki/{ButtonCaption,
+ButtonTooltip}`, `Sidebar/ConnectionStatus`, `Syncer/{CopyLogs, LoggedIn,
+LoggedInAs, Login, Logout, ReadOnly, Refresh, RefreshTooltip, SaveSnapshot}`
+as well as `UploadFile/{ButtonCaption, ButtonTooltip, Description, ResultSuccess,
+ResultSuccessToWiki, ResultError, ResultNotLoggedIn, ResultNoWikiWriteAccess,
+ResultTooLarge}`. All eight language files use the same key set
+(verification by script in the test phase). The buttons "Server status",
+"Log in to server/log out", "Refresh", "Snapshot", "Copy
+logs", the login status and the login dialog read their strings via
+`{{$:/language/MWS/...}}` resp. `syncer.getLoginServiceName()` from
+`$:/language/MWS/Login/ServiceName` (`syncer.js`); only
+`GettingStarted.tid` deliberately remains content and is not translated.
+
+### Wiki owner in the button text (`<<owner>>`)
+
+The upload button is no longer neutrally called "Upload file" but names the
+owner: "Upload a file for Schüler 2". For this, the server provides at
+compile time a real config tiddler `$:/config/multiwikiclient/owner` with
+the `username` of the recipe owner (`RecipeIndexSender.ts`,
+`writeFinalTiddlers`; read in `serveWikiIndex`). The MWS client translations
+`UploadFile/{ButtonCaption, ButtonTooltip, Description}` contain the
+placeholder `<<owner>>`.
+
+The placeholder is replaced in `language.js`: when writing the real
+`$:/language/MWS/...` tiddlers, `<<owner>>` is replaced with the owner's name
+(and double spaces are removed if no owner is known, e.g. in the
+docs wiki `mws-docs`). This is necessary because TiddlyWiki does not resolve transclusions
+in attribute values (`tooltip=`, `aria-label=`) as wikitext —
+`<<owner>>` as a macro in a shadow transclusion would remain literal there.
+Since `$:/config/multiwikiclient/owner` only arrives with the server sync,
+`language.js` additionally listens for its change and rewrites the strings.
+
+### Why not via the template?
+
+The obvious approach — a shared `readonlyBags` bag in the template so that
+all wikis inherit it — is **not** possible here:
+
+- `compileRecipeSimpleV1` would indeed copy the `readonlyBags` into every recipe
+  (`TabUpserts.ts:519`), but the `Blank Template` is deliberately
+  immutable: when saving via the admin API, for `isDefault` the
+  existing `definition` is kept and `readonlyBags` is ignored
+  (`TabDataAdapter.ts:546`), dependent recipes are not recompiled.
+- You cannot write into a readonly bag via the wiki API
+  (`RecipeResolver.saveTiddlers` only targets the writable bag,
+  `RecipeResolver.ts:330`).
+- All 17 wikis use this default template; `AdminCreateWiki` uses it
+  fixed (`TabDataAdapter.ts:1419`).
+
+### Discarded: forced German overrides
+
+An earlier approach hardwired German (start tiddler for new wikis via
+`wiki-language-defaults.ts` + `.multids`, plus a one-time import into the
+existing data). This forced German on all wikis and has been replaced by the
+automatics above; `wiki-language-defaults.ts` and `translations/de-DE.multids`
+are removed, as are the tiddlers previously written into the existing data.
+
+---
+
+## 47. Security rework "C" (namespace partitioning C1 + trust boundaries C2 + My Areas C3)
+
+**C1 · Namespace partitioning per owner (squatter protection):**
+
+- A wiki's default bag is now called `editions/<owner-id>/<slug>` instead of
+  `editions/<slug>` (`defaultBagName` in `TabDataAdapter.ts`). Thus
+  the personal namespace is collision-proof: no other user can pre-create
+  the bag that the wiki depends on when saving
+  (previously: a teacher created `editions/<schueler-slug>` → the student received
+  mysterious 403s).
+- **URL stays unchanged** (`/wiki/<slug>`): the namespace ID is
+  only in the internal bag name, not in the public slug. System wikis without
+  an owner (`mws-docs`, `bedienungsanleitung`) keep `editions/<slug>`.
+- `name` remains globally `@unique`; **no** Prisma schema migration
+  is needed (no `@@unique([owner_user_id, name])`, no NULL-owner trap).
+- Migrating the existing data:
+
+  ```
+  node scripts/c1-namespace-migrate.mjs            # dev store
+  node scripts/c1-namespace-migrate.mjs --dry-run  # show only
+  node scripts/c1-namespace-migrate.mjs --db <path>
+  ```
+
+  The script renames personal default bags, rewrites the bag
+  references in all `recipe.definition`/`template.definition` JSONs
+  (bag IDs, tiddlers, permissions and RecipeBag links remain
+  untouched) and is idempotent. It additionally cleans up the old
+  bug owner `"undefined"` (from the §44 era) to `NULL`.
+- Slug renaming follows (`followDefaultBagOnSlugRename`, see §13).
+
+**C2 · Trust boundaries + CSP** (existing state from the rework): classification
+private vs. collaborative (foreign-writable bags), warning in the admin UI,
+CSP header on wiki pages, existence oracle (`404` instead of `403`).
+
+**C3 · "My Areas" UI** (existing state from the rework): grouping
+"My Wikis / Shared with me / Class areas / System" +
+trust label + bag owner in the admin UI.
+
+---
+
+## 47. Admin app: default language and theme for the first load (`settings`)
+
+**Goal:** The operator specifies installation-wide in which language and
+in light or dark the admin app is delivered on the **first** page load
+— and which features are visible to everyone. A visitor's own choice
+(language/theme switcher in the header, `localStorage`) always takes precedence
+for language/theme — the setting is only the fallback.
+
+**Storage (server-side):** keys in the `settings` table, processed in
+`packages/mws/src/new-managers/PrefsRoutes.ts` (`readPrefs`):
+
+| Key | Meaning | Default |
+|-----|-----------|---------|
+| `admin.defaultLocale` | Language on first load | Browser language |
+| `admin.defaultTheme` | Light/dark on first load | System theme |
+| `admin.showPinboard` | Pinboard tab (+ 30 s badge poll) | `true` |
+| `admin.showUserFiles` | "My Files" tab | `true` |
+| `admin.showWikiUpload` | "Upload file" button in the wiki toolbar (§45) | `true` |
+| `admin.showLocaleSelect` | Language dropdown in the header | `true` |
+| `admin.showThumbnails` | Thumbnail column in the wikis list (§43) | `true` |
+| `admin.thumbnailTtlHours` | Thumbnail cache time in hours (§43) | `null` (= 24 h) |
+| `admin.showLanding` | Public start page (`/`) for anonymous visitors (§48) | `true` |
+| `admin.landingMessage` | Welcome text on the public start page (Markdown) | `null` |
+| `admin.landingNews` | News on the public start page (Markdown) | `null` |
+
+Bools are stored as `"true"`/`"false"`; a missing entry
+means `true` (backwards compatibility).
+
+- `GET /api/prefs` — every logged-in user reads the current settings.
+- `PUT /api/prefs` — only `admin` (`state.okAdmin()`), body contains **all**
+  fields: `{ defaultLocale: string|null, defaultTheme: "dark"|"light"|null,
+  showPinboard: boolean|null, …, thumbnailTtlHours: number|null,
+  showLanding: boolean|null, landingMessage: string|null,
+  landingNews: string|null }`; `null`
+  deletes the setting (→ default). `thumbnailTtlHours` is limited to 1..2160
+  (hours), `landingMessage` to 2000 and `landingNews` to 10000
+  characters.
+
+**Dependency:** "Upload files from wikis" (2.1) requires "My
+Files": if `showUserFiles` is off, switch 2.1 on the
+settings page is grayed out (`is-disabled` row, note "Requires
+'My Files'."), and server-side **both** keys are
+evaluated as upload permission (`isWikiUploadEnabled`: `showWikiUpload &&
+showUserFiles`, at the top in `RecipeIndexSender.ts`).
+
+**Delivery before the first paint:** `serveIndex`
+(`services/setupDevServer.ts`) reads the prefs per request and injects them
+twice:
+- as `prefs` in `window.embeddedServerResponse` (used by `i18n.ts`
+  `getCurrentLocale()` and `theme.ts` `getEffectiveTheme()` at start) and
+- as a small object in `window.embeddedServerPreflight` in `index.html` —
+  a tiny inline `<script>` right at the top of the `<head>` sets `data-theme`
+  (+ matching background) from it **before** the CSS takes effect, so that there
+  is no wrong flash of the wrong thing. `initializeTheme()` cleans up the inline
+  background style object again after the app starts.
+
+The admin HTML response goes out with `Cache-Control: no-store` (no
+intermediate caching, no back-forward cache), so that on re-opening
+the current state is always delivered. In addition, the
+settings page fetches the current state on opening (`connectedCallback` → `GET /api/prefs`)
+and sets the selection fields accordingly —
+thus the display always mirrors the actually stored values.
+
+**Resolution order:**
+- Language: `localStorage` (`mws.admin.locale`) → `prefs.defaultLocale` →
+  `navigator.language` → `en`
+- Theme: `localStorage` (`mws.admin.theme`) → `prefs.defaultTheme` →
+  `prefers-color-scheme` (OS)
+
+**UI:** ⚙ button (`settings.svg`) in the header, visible only for admins, opens
+`/settings` (`app-settings.tsx`, route in `main.tsx`). Two selection fields
+(language with "Follow browser language", theme with "Follow system theme") as well as
+a **"Features"** section with six switches (pinboard, My Files,
+upload from wikis, show language selection, thumbnails, public
+start page) + number field "Thumbnail cache time (hours)" (empty = default
+24 h) + two Markdown text fields "Landing welcome message" / "Landing news"
++ save button.
+Non-admins see the page read-only with the note "Only
+administrators …". The feature switches apply installation-wide (a
+personal hiding per user is deliberately not provided — in
+single-user operation the operator is also the user).
+
+**Applying the switches (client):** In `app.tsx`, `featurePref(name)`
+reads the prefs from `embeddedServerResponse.prefs`: the pinboard/files tabs and
+their panels are hidden, the pinboard poll only starts with
+active pinboard, the language `<select>` in the header is omitted, and the
+thumbnail column is filtered out of `listColumns`. In the wiki, the
+"Upload file" button stays hidden server-side: `RecipeIndexSender` writes
+the config tiddler
+`$:/config/multiwikiclient/hide-upload-file` (text `yes`) into the store when
+wiki upload is disabled; `upload-file-button.tid` hides the button via `<$reveal state="..."
+type="nomatch" text="yes">`, and `upload-file.js` then does not register the
+`tm-upload-file` listener at all. New i18n keys (23) in all
+8 languages (section `#region admin settings`).
+
+---
+
+## 48. Feature: Public start page (`/`) for anonymous visitors
+
+**Goal:** Anyone who calls the server without a login no longer lands
+directly on the login form, but on an inviting start page with hero text,
+statistic cards, the list of publicly readable wikis (with
+thumbnails) and — optionally — a welcome text and news block of the
+operator. The login button ("Log in") leads to the familiar form.
+The admin can switch off the start page with a toggle (then the
+previous redirect to `/login` applies again).
+
+### Backend
+
+- **`GET /api/landing`** — public (`securityChecks.requestedWithHeader:
+  false`), no login needed. Returns:
+  - `versions`: `{ mws, tw5[] }` (version corner in the footer),
+  - `stats`: `{ publicWikis, tiddlers, users, online }` — `online` = active
+    sessions with `last_accessed` < 15 min (throttled touch in §sessions),
+  - `wikis`: `[{ slug, displayName, description }]` — **only** wikis whose
+    recipe **and** all bags allow ANON read access
+    (the same filter as the `assertRecipe` read gate; private wikis are
+    not leaked, not even by name). The owner can additionally remove
+    a publicly readable wiki from the start page (§ "Per-wiki visibility"),
+  - `message` / `news`: the prefs `admin.landingMessage` / `admin.landingNews`.
+  - Route registration in `new-managers/index.ts` (`LandingData`).
+  - Implementation: `packages/mws/src/new-managers/LandingRoutes.ts`.
+
+- **Per-wiki visibility on the start page:** per wiki a
+  checkbox in the **wiki editor** (field `landingVisible`, group "Landing page")
+  controls whether a publicly readable wiki is shown to anonymous visitors. The
+  checkbox only appears as long as `ANON` is among the readers (`recipeUsers`)
+  — if that is not the case, a note is rendered instead.
+  No template fork needed: templates are pure start content, the
+  visibility is a pure wiki setting. Saved as
+  `landing.hidden.<recipeId>` = `"true"` in the `settings` table (row
+  missing ⇒ default "show"); written/read in
+  `new-managers/TabDataAdapter.ts` (`saveRow` upsert/delete, `getList`
+  inverts into `landingVisible`, `AdminDeleteWiki` cleans up the row).
+  `GET /api/landing` filters these out of `wikis` and `stats.publicWikis`.
+  The change is persisted with the regular "Save changes" of the
+  editor. A dedicated `/api/landing/wikis` endpoint
+  no longer exists (removed, together with the `/settings` section).
+
+- **Anon thumbnails only from the cache:** `WikiThumbnailRoutes` serves
+  thumbnails for anonymous visitors only from the existing
+  thumbnail `<canvas>` snapshot (`store/thumbnails/<slug>.png`); a
+  server-side **rendering of the wiki for anon is strictly forbidden**
+  (DoS protection). Logged-in users render as before. The recipe check
+  (`assertRecipe`) applies to everyone — a private wiki ⇒ `404` for anon.
+
+- **`last_accessed` touch:** `sessions.ts` now updates `last_accessed`
+  throttled (~5 min) in `parseIncomingRequest`, so that the online counter
+  is correct without writing to the DB on every request.
+
+### Frontend
+
+- **Routing (`main.tsx`):** anonymous + `prefs.showLanding !== false` + path
+  `/` ⇒ `new LandingPage()`. All other paths (and anon with the
+  start page switched off) behave as before (redirect to `/login`).
+- **`app-landing.tsx` (new):** header (branding + theme toggle +
+  language selection + "Log in"), optional welcome `message`, four
+  statistic cards (tiddlers total, public wikis, users, online),
+  section "Public wikis" as a card grid with `image` thumbnails
+  (fallback gradient if there is no image), optional `news` block and a
+  version footer ("MWS {version}" / "TiddlyWiki {version}" + link to the
+  TiddlyWiki docs). Markdown in `message`/`news` is rendered
+  following the `escapeHtml` pattern (headings, lists, block quote, code,
+  links — XSS-safe, since raw HTML output is escaped first).
+  On load it calls `GET /api/landing`; errors ⇒ "The overview could not
+  be loaded."
+- **Settings (§47):** toggle "Show the public landing page" +
+  two text fields "Landing welcome message" / "Landing news" (Markdown,
+  max. 2000 / 10000 characters). Toggle off ⇒ anonymous `/` resolution is dropped.
+  The former section "Public wikis on the landing page" was removed —
+  the per-wiki visibility has moved into the wiki editor (§ "Per-wiki
+  visibility").
+- **i18n:** new keys 21 in all 8 languages (sections `#region admin
+  settings` and `#region landing page`); later −4 settings keys of the
+  per-wiki visibility +3 editor keys ("Landing page", callout, note)
+  and +2 for the `/landing` preview ("Public start page",
+  "Back to the wiki overview"). Current parity: 521 keys.
+- **`/landing` route (see the start page while logged in):** logged-in users land
+  on `/` in the admin app. A separate route `/landing` renders the same
+  public start page for anonymous **and** logged-in visitors. Important:
+  `/api/landing` resolves the ANON role independent of login from the
+  `roles` table (not from `state.user.roles` — a logged-in
+  user does not carry an ANON role, otherwise the list would be empty). In the
+  admin header a globe button "Public start page" appears
+  (only if `showLanding` is active), which opens `/landing` in the same
+  window — exactly the anonymous preview. On the landing page the header shows
+  "Back to the wiki overview" instead of "Log in" for logged-in users.
+
+### Verification
+
+- `GET /api/landing` anonymously: 200 with 8 public wikis, stats (tiddlers
+  1127, 6 users, online 0 without active sessions), versions, `message`/`news`
+  from the prefs.
+- Anonymous `GET /` headless: renders the landing page (stat cards, wiki cards,
+  thumbnails via `/wiki/<slug>/thumbnail`), no redirect to `/login`.
+  Wiki cards open with `target="_blank" rel="noopener noreferrer"`.
+  With `showLanding=false` (via `PUT /api/prefs`) ⇒ `/` redirects again to
+  `/login`; then reset to `true`.
+- `/landing` headless: anonymous ⇒ landing with "Log in" button; logged in
+  (admin session) ⇒ landing with "Back to the wiki overview"; admin
+  header shows the globe link `href="/landing"`, which navigates
+  to the landing page in the same window.
+- Anon thumbnail `/wiki/bedienungsanleitung/thumbnail` ⇒ `200 image/png`
+  (cache only); an arbitrary private wiki ⇒ `404`.
+- Logged-in admin (`/settings` headless): toggle + both text fields
+  visible and operable; `PUT`/`GET`/DB rows for the 3 new keys
+  verified (`null` deletes the row), values afterwards reset to the
+  initial state.
+- Per-wiki visibility (wiki editor, admin headless): "Landing page"-
+  toggle only when `ANON` is among readers; OFF + save ⇒ `settings` row
+  `landing.hidden.<recipeId>`=`"true"` and `GET /api/landing` shows 7
+  (wiki + counter gone), ON + save ⇒ row disappears, 8. Private
+  wiki without ANON ⇒ callout instead of the toggle. `/settings` without the old section.
+- `tsc` (admin-vanilla) + `tsc2` (root) green; locale parity 521/521.
+
+---
+
+## Unchecked-in starter configuration (local, gitignored)
+
+```json
+[
+  {
+    "host": "0.0.0.0",
+    "port": "5000"
+  }
+]
+```
+
+> Note: Port 8080, the default port, is already in use on the server by Apache2
+> (Ubuntu default page), hence port 5000.
+
+## Privacy / Datenschutz
+
+- **No external fonts/assets:** The admin interface loads neither Google
+  Fonts nor Material Icons fonts from third-party servers. The icons are
+  embedded SVGs (`@material-symbols/svg-400`); the Roboto variable font
+  (latin/latin-ext, normal/italic) is served locally from
+  `packages/admin-vanilla/public/fonts/` (→ `/fonts/*.woff2`). This
+  eliminates, for example, the Google Fonts-dependent cookie notice.
+  Roboto is licensed under the **SIL Open Font License 1.1**; the license
+  is included as `OFL.txt` alongside
+  `packages/admin-vanilla/public/fonts/` (unmodified use, no Reserved Font
+  Names affected).
+- **Cookie notice (consent banner, category-based):** A notice fades in at
+  the bottom of the screen. Categories: `essential` (session cookie
+  `session`, technically required, always on), `preferences` (stored locally
+  in `localStorage`: design/language, always on) and `external` (third-party
+  services such as Google Fonts — **off by default**, loaded only after
+  separate consent). Buttons: "Accept all cookies", "Necessary cookies only"
+  and "Cookie settings" (detail panel with toggles). The state is stored as a
+  versioned object in `localStorage` (`mws-cookie-consent`,
+  `{version:"v2",…}`); the old `v1` assumption is migrated conservatively
+  (external=false, no asking again). Implementation: `consent.ts` (central
+  API: `getConsent`, `hasConsent`, `setExternalConsent`, `onConsentChange`,
+  `applyExternalStylesheet` as the future integration point for external
+  resources), `cookie-consent.tsx` + `.cookie-consent` in
+  `app.inline.css`, included globally in `main.tsx` (landing page, login,
+  admin app). Consent can be changed at any time:
+  `openCookieConsent(true)` in `cookie-consent.tsx` reopens the banner
+  directly on the settings panel; reachable via "Cookie settings" in the
+  footer of the start page — the same footer was also carried over into the
+  admin view (for this reason, the former cookie icon button in the admin
+  header was dropped). In addition, the embedded server response now
+  provides `mwsVersion` for the version display in the footer.
+- **Legal notice (own page, no modal):** For live operations, the app
+  provides a public page under `/legal-notice` (equally available to
+  anonymous and logged-in visitors). The content is a single Markdown
+  textarea in the admin "settings" (`admin.legalNotice`), deliberately
+  **one** for all languages — whoever needs it enters the text in their own
+  language. It is rendered with the same escaped mini-markdown as the
+  welcome/news text: raw HTML tags (`<b>`, `<center>`, …) appear as literal
+  text and are never injected as active elements (defense-in-depth). The page
+  header shows the "Back to wiki overview" button for everyone. The
+  on/off toggle `admin.showLegalNotice` (default: on, also during install
+  seeding): when disabled, the "Legal notice" links disappear from the
+  footers of the start page and the admin app, the `GET /api/legal-notice`
+  API returns `content: null`, and a direct call to `/legal-notice` falls
+  back to login/overview. Implementation: `legal-notice.tsx`
+  (component + `.legal-notice-card` in `app.inline.css`),
+  `LegalNoticeRoute` in `LandingRoutes.ts`, `admin.legalNotice`/
+  `admin.showLegalNotice` in `PrefsRoutes.ts`, text + toggle in
+  `app-settings.tsx`, "Legal notice" link in `app-landing.tsx` and
+  `app.tsx`.
+
+---
+
+## Operations / Outlook
+
+- Start via `npm start` (`scripts.mjs` → `tsup` + `mws.dev.mjs`), in
+  production operations via `pm2 startup`.
+- Default login after `init-store`: `admin` / `1234` (password thereafter
+
+---
+
+# 🇩🇪 CHANGELOG – MultiWikiServer-wikiwise
 
 Dokumentation der Änderungen am MultiWikiServer-wikiwise-Fork von heino17.
 Dieses Log erzählt die Entwicklungsgeschichte in umgekehrter
@@ -2604,8 +5219,6 @@ bisherige Redirect nach `/login`).
 
 ## Betrieb / Ausblick
 
-- Lokal: `http://192.168.1.47:5000`
-- Extern: `https://tiddly.publicvm.de` → Apache-Reverse-Proxy → Port 5000
 - Start über `npm start` (`scripts.mjs` → `tsup` + `mws.dev.mjs`), im
   produktiven Betrieb per `pm2 startup`.
 - Standard-Login nach `init-store`: `admin` / `1234` (Passwort danach
