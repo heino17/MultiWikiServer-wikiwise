@@ -8,6 +8,7 @@ import { AuthUser } from "@tiddlywiki/mws/src/new-managers/sessions";
 import { SendError } from "@tiddlywiki/server";
 import { ProfileForm } from "./app-profile";
 import { SettingsForm } from "./app-settings";
+import { LegalNoticePage } from "./legal-notice";
 import { initializeTheme } from "./theme";
 import { CookieConsent } from "./cookie-consent";
 
@@ -43,6 +44,7 @@ declare global {
       landingNews: string | null;
       landingNewsStyle: string;
       showCookieConsent: boolean;
+      legalNotice: string | null;
     };
   }
 }
@@ -91,6 +93,11 @@ function setup() {
     // visitors and logged-in users alike: the header link "Public start page"
     // opens it in a new tab, showing exactly what anonymous visitors see.
     document.body.appendChild(new LandingPage());
+  }
+  else if (location.pathname === pathPrefix + "/legal-notice") {
+    // The public legal-notice ("Impressum") page. Works for anonymous and
+    // logged-in users alike; its content is edited on the Settings page.
+    document.body.appendChild(new LegalNoticePage());
   }
   else if (!embeddedServerResponse.userState.isLoggedIn) {
     location.pathname = pathPrefix + "/login";

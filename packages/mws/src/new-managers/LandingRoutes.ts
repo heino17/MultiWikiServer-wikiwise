@@ -138,3 +138,22 @@ export const LandingData = zodRoute({
     };
   },
 });
+
+/** Public legal-notice ("Impressum") content for the dedicated page. */
+export const LegalNoticeRoute = zodRoute({
+  method: ["GET"],
+  path: "/api/legal-notice",
+  bodyFormat: "ignore",
+  securityChecks: { requestedWithHeader: false },
+  zodPathParams: z => ({}),
+  inner: async (state) => {
+    state.asserted = true;
+    const rows = await state.engine.settings.findMany({
+      select: { key: true, value: true },
+    });
+    const map = new Map(rows.map((row) => [row.key, row.value]));
+    return {
+      content: map.get(PREF_KEYS.legalNotice)?.trim() || null,
+    };
+  },
+});

@@ -185,11 +185,11 @@ textarea {
 	position: relative;
 	z-index: 1;
 	display: grid;
-	grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr);
+	grid-template-columns: minmax(0, 0.7fr) minmax(280px, 1fr);
 	gap: 24px;
-	padding: 28px;
+	padding: 10px;
 	margin-top: -10px;
-	border-radius: 28px;
+	border-radius: 15px;
 	background-color: var(--color-surface-panel);
 	background-image: url("./fish2.svg");
 	background-position: center;
@@ -4296,8 +4296,8 @@ odt-preview-document {
 	justify-content: space-between;
 	align-items: flex-start;
 	gap: 24px;
-	padding: 28px;
-	border-radius: 28px;
+	padding: 10px;
+	border-radius: 15px;
 	border: 1px solid var(--color-border-soft);
 	box-shadow: 0 18px 40px var(--color-shadow-card);
 	background-color: var(--color-surface-panel);
@@ -4336,8 +4336,7 @@ odt-preview-document {
 
 .landing-tagline {
 	margin: 0;
-	margin-top: -10px;
-	margin-bottom: -20px;
+	margin-top: -15px;
 	max-width: 56ch;
 	font-size: 0.85rem;
 }
@@ -4601,6 +4600,16 @@ odt-preview-document {
 
 .landing-news.is-danger .landing-section-title {
 	color: var(--color-danger);
+}
+
+.legal-notice-card {
+	display: grid;
+	gap: 14px;
+	padding: 28px;
+	border: 1px solid var(--color-border-soft);
+	border-radius: 24px;
+	background-color: var(--color-surface-panel);
+	box-shadow: 0 18px 40px var(--color-shadow-card);
 }
 
 .landing-news-dismiss {

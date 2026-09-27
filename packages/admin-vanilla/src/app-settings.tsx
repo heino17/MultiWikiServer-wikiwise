@@ -60,6 +60,8 @@ export class SettingsForm extends JSXElement {
 
   @state() accessor landingNewsStyle = embeddedServerResponse.prefs?.landingNewsStyle ?? "neutral";
 
+  @state() accessor legalNotice = embeddedServerResponse.prefs?.legalNotice ?? "";
+
   @state() accessor isSubmitting = false;
   @state() accessor message = "";
   @state() accessor error = "";
@@ -91,6 +93,7 @@ export class SettingsForm extends JSXElement {
       if (typeof prefs.landingNews === "string") this.landingNews = prefs.landingNews;
       if (typeof prefs.landingNewsStyle === "string") this.landingNewsStyle = prefs.landingNewsStyle;
       if (typeof prefs.showCookieConsent === "boolean") this.showCookieConsent = prefs.showCookieConsent;
+      if (typeof prefs.legalNotice === "string") this.legalNotice = prefs.legalNotice;
       if (!this.showUserFiles) this.showWikiUpload = false;
     } catch {
       // keep the embedded values
@@ -125,6 +128,7 @@ export class SettingsForm extends JSXElement {
           landingNews: this.landingNews.trim() || null,
           landingNewsStyle: this.landingNewsStyle,
           showCookieConsent: this.showCookieConsent,
+          legalNotice: this.legalNotice.trim() || null,
         }),
       });
       // Saved — head back to the overview right away. The "Close" button
@@ -146,6 +150,8 @@ export class SettingsForm extends JSXElement {
   private readonly onLoginPuzzleChange = (checked: boolean) => { this.touched = true; this.showLoginPuzzle = checked; };
 
   private readonly onCookieConsentChange = (checked: boolean) => { this.touched = true; this.showCookieConsent = checked; };
+
+  private readonly onLegalNoticeChange = (value: string) => { this.touched = true; this.legalNotice = value; };
 
   private readonly onLandingChange = (checked: boolean) => { this.touched = true; this.showLanding = checked; };
 
@@ -421,6 +427,21 @@ export class SettingsForm extends JSXElement {
                       ))}
                     </select>
                   </span>
+                </div>
+
+                <div class="settings-toggle-row">
+                  <span class="settings-toggle-copy">
+                    <strong>{t("Legal notice")}</strong>
+                    <p>{t("The Impressum text published on the public page. Markdown is supported.")}</p>
+                  </span>
+                  <textarea
+                    class="field-textarea settings-textarea"
+                    rows="6"
+                    placeholder={t("The Impressum text published on the public page. Markdown is supported.")}
+                    disabled={!this.isAdmin}
+                    ref={(element) => { if (element && element.value !== this.legalNotice) element.value = this.legalNotice; }}
+                    oninput={(event) => this.onLegalNoticeChange((event.target as HTMLTextAreaElement).value)}
+                  ></textarea>
                 </div>
               </div>
             </div>
