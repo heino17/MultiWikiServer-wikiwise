@@ -117,7 +117,7 @@ state.assertReferer(["/login", "/profile"]);
 **Problem:** `generateSessionSignature()` used
 `window.crypto.subtle.digest("SHA-256", …)`. `crypto.subtle` only exists
 in a *secure context* — that is, HTTPS or `localhost`. Over
-`http://192.168.1.47:5000` the password change therefore failed:
+`http://192.168.x.x:5000` the password change therefore failed:
 
 ```
 can't access property "digest", window.crypto.subtle is undefined
@@ -2732,7 +2732,7 @@ state.assertReferer(["/login", "/profile"]);
 **Problem:** `generateSessionSignature()` nutzte
 `window.crypto.subtle.digest("SHA-256", …)`. `crypto.subtle` existiert
 nur in einem *secure context* — also HTTPS oder `localhost`. Über
-`http://192.168.1.47:5000` schlug die Passwort-Änderung daher fehl:
+`http://192.168.x.x:5000` schlug die Passwort-Änderung daher fehl:
 
 ```
 can't access property "digest", window.crypto.subtle is undefined
