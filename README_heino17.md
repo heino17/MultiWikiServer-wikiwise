@@ -2577,6 +2577,26 @@ bisherige Redirect nach `/login`).
   auch in die Verwaltungsansicht übernommen (dafür entfiel der frühere
   Cookie-Icon-Button im Verwaltungs-Header). Dazu liefert die embedded
   Server-Response nun `mwsVersion` für die Versionsanzeige im Footer.
+- **Impressum (eigene Seite, kein Modal):** Für den Live-Betrieb liefert
+  die App eine öffentliche Seite unter `/legal-notice` (anonyme und
+  eingeloggte Besucher gleichermaßen). Der Inhalt ist eine einzige
+  Markdown-Textarea in den admin-„Einstellungen" (`admin.legalNotice`),
+  bewusst **eine** für alle Sprachen — wer es braucht, trägt den Text in
+  seiner Sprache ein. Gerendert wird mit demselben escaped Mini-Markdown
+  wie Willkommens-/News-Text: rohe HTML-Tags (`<b>`, `<center>`, …)
+  erscheinen als Literaltext und werden nie als aktive Elemente
+  injiziert (Defense-in-depth). Der Kopf der Seite zeigt für alle den
+  Button „Zurück zur Wiki-Übersicht". Ein-/Ausschalter
+  `admin.showLegalNotice` (Standard: an, auch im Install-Seeding):
+  deaktiviert verschwinden die Links „Impressum" aus den Footers der
+  Startseite und der Verwaltung, die API `GET /api/legal-notice`
+  liefert `content: null`, und ein direkter Aufruf von `/legal-notice`
+  fällt auf Login/Übersicht zurück. Umsetzung: `legal-notice.tsx`
+  (Komponente + `.legal-notice-card` in `app.inline.css`),
+  `LegalNoticeRoute` in `LandingRoutes.ts`, `admin.legalNotice`/
+  `admin.showLegalNotice` in `PrefsRoutes.ts`, Text + Schalter in
+  `app-settings.tsx`, Link „Impressum" in `app-landing.tsx` und
+  `app.tsx`.
 
 ---
 

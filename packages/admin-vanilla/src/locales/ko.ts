@@ -533,6 +533,8 @@ export const koStrings: Record<string, string> = {
   "The Impressum text published on the public page. Markdown is supported.": "공개 페이지에 게시되는 법적 고지(임프레섬) 텍스트입니다. Markdown을 지원합니다.",
   "No legal notice has been published yet.": "아직 법적 고지가 게시되지 않았습니다.",
   "Back to the start page": "시작 페이지로 돌아가기",
+  "Show the legal notice": "법적 고지 표시",
+  "Show or hide the Impressum page and the links to it in the footers.": "법적 고지 페이지와 바닥글의 링크를 표시하거나 숨깁니다.",
   "A visitor's own language or theme choice always wins. Feature switches apply to everyone.": "방문자가 직접 선택한 언어 또는 테마가 항상 우선합니다. 기능 스위치는 모든 사용자에게 적용됩니다.",
   "Show the public landing page": "공개 랜딩 페이지 표시",
   "Anonymous visitors get an overview with statistics and the public wikis instead of the login form.": "익명 방문자는 로그인 양식 대신 통계와 공개 위키 개요를 봅니다.",

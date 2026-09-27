@@ -152,6 +152,7 @@ export const LegalNoticeRoute = zodRoute({
       select: { key: true, value: true },
     });
     const map = new Map(rows.map((row) => [row.key, row.value]));
+    if (map.get(PREF_KEYS.showLegalNotice) === "false") return { content: null };
     return {
       content: map.get(PREF_KEYS.legalNotice)?.trim() || null,
     };

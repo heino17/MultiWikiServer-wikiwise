@@ -45,6 +45,7 @@ declare global {
       landingNewsStyle: string;
       showCookieConsent: boolean;
       legalNotice: string | null;
+      showLegalNotice: boolean;
     };
   }
 }
@@ -94,9 +95,12 @@ function setup() {
     // opens it in a new tab, showing exactly what anonymous visitors see.
     document.body.appendChild(new LandingPage());
   }
-  else if (location.pathname === pathPrefix + "/legal-notice") {
+  else if (location.pathname === pathPrefix + "/legal-notice"
+    && (embeddedServerResponse.prefs?.showLegalNotice ?? true)) {
     // The public legal-notice ("Impressum") page. Works for anonymous and
     // logged-in users alike; its content is edited on the Settings page.
+    // Disabled via admin.showLegalNotice → the normal routing applies and
+    // a direct visit falls through to overview/login.
     document.body.appendChild(new LegalNoticePage());
   }
   else if (!embeddedServerResponse.userState.isLoggedIn) {

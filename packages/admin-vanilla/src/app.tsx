@@ -2378,7 +2378,9 @@ export class App extends JSXElement {
         <footer class="landing-footer admin-footer">
           <span>{t("MWS-wikiwise {version}", { version: embeddedServerResponse.mwsVersion ?? "" })} · {t("TiddlyWiki {version}", { version: embeddedServerResponse.tw5Versions.slice(-1)[0] ?? "" })}</span>
           <a href={pathPrefix + "/tw5/" + (embeddedServerResponse.tw5Versions.slice(-1)[0] ?? "")}>{t("TiddlyWiki docs")}</a>
-          <a href={pathPrefix + "/legal-notice"}>{t("Legal notice")}</a>
+          {(embeddedServerResponse.prefs?.showLegalNotice ?? true) ? (
+            <a href={pathPrefix + "/legal-notice"}>{t("Legal notice")}</a>
+          ) : null}
           {featurePref("showCookieConsent") ? (
             <button class="landing-footer-action" type="button" onclick={() => openCookieConsent(true)}>
               {t("Cookie settings")}

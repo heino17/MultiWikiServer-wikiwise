@@ -310,7 +310,9 @@ export class LandingPage extends JSXElement {
         <footer class="landing-footer">
           <span>{t("MWS-wikiwise {version}", { version: this.data?.versions.mws ?? "" })} · {t("TiddlyWiki {version}", { version: currentTw5 ?? "" })}</span>
           <a href={pathPrefix + "/tw5/" + (currentTw5 ?? "")}>{t("TiddlyWiki docs")}</a>
-          <a href={pathPrefix + "/legal-notice"}>{t("Legal notice")}</a>
+          {(embeddedServerResponse.prefs?.showLegalNotice ?? true) ? (
+            <a href={pathPrefix + "/legal-notice"}>{t("Legal notice")}</a>
+          ) : null}
           {this.data?.showCookieConsent !== false ? (
             <button class="landing-footer-action" type="button" onclick={() => openCookieConsent(true)}>
               {t("Cookie settings")}
