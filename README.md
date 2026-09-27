@@ -37,11 +37,34 @@ Highlights only – the full story, with file names, code and background, lives 
 
 > ⚠️ **The package `@tiddlywiki/mws` on npm is the upstream project, not this fork.**
 > `npm init @tiddlywiki/mws@latest` installs upstream MultiWikiServer – without any of
-> the features listed above. This fork will be published as `@mws/wikiwise`; until then
-> it is installed from the repository.
+> the features listed above. This fork is distributed as a GitHub release, not on npm.
 
-Clone the fork, install it and start it. `npm install` builds the server bundle, so
-there is no separate build step:
+### Recommended: install the release package
+
+Every release contains a ready-to-install package. Download it, install it into a
+folder of your choice, and nothing has to be compiled:
+
+- `mkdir my-folder && cd my-folder`
+- `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.3.0/mws-wikiwise-0.3.0.tgz`
+- `npx mws update-tiddlywiki`
+- `npx mws init-store`
+- `npx mws listen --listener` – serves on <http://localhost:8080/>
+
+The download is an ordinary npm package, so `npm` resolves and installs all
+dependencies for you. Verify it before you trust it:
+
+```
+sha256sum mws-wikiwise-0.3.0.tgz
+```
+
+The expected checksum is printed in the release notes. A mismatch means the file
+was changed in transit – delete it and download again.
+
+### From the repository
+
+This is what you want if you plan to change the code, or if you always want the
+current state instead of a fixed release. `npm install` builds the server bundle,
+so there is no separate build step:
 
 - `git clone https://github.com/heino17/MultiWikiServer-wikiwise.git`
 - `cd MultiWikiServer-wikiwise`
@@ -221,11 +244,35 @@ Nur Highlights – die vollständige Geschichte mit Dateinamen, Code und Hinterg
 
 > ⚠️ **Das Paket `@tiddlywiki/mws` auf npm ist das Upstream-Projekt, nicht dieser Fork.**
 > `npm init @tiddlywiki/mws@latest` installiert das originale MultiWikiServer – ohne eine
-> einzige der oben genannten Funktionen. Dieser Fork wird als `@mws/wikiwise` auf npm
-> erscheinen; bis dahin wird er aus dem Repository installiert.
+> einzige der oben genannten Funktionen. Dieser Fork wird als GitHub-Release verteilt,
+> nicht über npm.
 
-Fork auschecken, installieren, starten. `npm install` baut das Server-Bundle mit, ein
-zusätzlicher Build-Schritt ist nicht nötig:
+### Empfohlen: das Release-Paket installieren
+
+Jedes Release enthält ein fertiges Paket. Herunterladen, in einen Ordner deiner Wahl
+installieren – kompilieren musst du nichts:
+
+- `mkdir mein-ordner && cd mein-ordner`
+- `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.3.0/mws-wikiwise-0.3.0.tgz`
+- `npx mws update-tiddlywiki`
+- `npx mws init-store`
+- `npx mws listen --listener` – liefert auf <http://localhost:8080/>
+
+Der Download ist ein ganz normales npm-Paket, `npm` löst also alle Abhängigkeiten für
+dich auf. Prüfe die Datei, bevor du ihr vertraust:
+
+```
+sha256sum mws-wikiwise-0.3.0.tgz
+```
+
+Die erwartete Prüfsumme steht in den Release-Notizen. Bei Abweichung wurde die Datei
+unterwegs verändert – löschen und erneut herunterladen.
+
+### Aus dem Repository
+
+Das ist die richtige Wahl, wenn du den Code ändern willst oder immer den aktuellen
+Stand statt eines festen Releases brauchst. `npm install` baut das Server-Bundle mit,
+ein zusätzlicher Build-Schritt ist nicht nötig:
 
 - `git clone https://github.com/heino17/MultiWikiServer-wikiwise.git`
 - `cd MultiWikiServer-wikiwise`
@@ -236,8 +283,8 @@ Für einen eigenen Datenordner, unabhängig vom Entwicklungs-Wiki, einmal ein Pa
 und in einen neuen Ordner installieren:
 
 - `npm pack` – erzeugt `mws-wikiwise-0.3.0.tgz`
-- `mkdir my-folder && cp create-package/files/* my-folder/`
-- `cd my-folder && npm install ../mws-wikiwise-0.3.0.tgz`
+- `mkdir mein-ordner && cp create-package/files/* mein-ordner/`
+- `cd mein-ordner && npm install ../mws-wikiwise-0.3.0.tgz`
 - `npx mws update-tiddlywiki`
 - `npx mws init-store`
 - `npx mws listen --listener` – liefert auf <http://localhost:8080/>

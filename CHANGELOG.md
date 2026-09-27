@@ -2793,6 +2793,51 @@ Fresh clone, fresh instance, with the renamed package:
 
 ---
 
+## 52. Repo: distribution as a GitHub release instead of the npm registry
+
+**Goal:** §51 left one question open: how does anyone get this fork without a
+working `npm publish`. The answer is that they do not need one.
+
+### Why not the registry
+
+- Publishing to npm requires an npm account, and npm requires a second factor
+  for publishing. That is a real obstacle for the maintainer here, and it is
+  worth being explicit about it instead of pretending it is a non-issue.
+- The name is decided by npm rules and availability, not by us:
+  `@mws-wikiwise` is not a legal package name at all (`EINVALIDPACKAGENAME`,
+  because npm only accepts `@scope/name` or a plain name), and the scope `mws`
+  is **already taken** on npm – the profile exists with zero packages, while a
+  non-existent name answers 404. So `@mws/wikiwise` would only be publishable
+  if the owner of `mws` added us as a member.
+- The one-liner `npm init <name>@latest` cannot be reproduced without the
+  registry. `npm init` with a path or URL fails with `EUNSUPPORTED` ("Unrecognized
+  initializer"), so there is no `npm init`-style shortcut for a plain repository
+  either.
+- Conclusion: the package stays named `@mws/wikiwise` for its own identity
+  (it is what `require`s resolve to, what the tarball manifest says and what the
+  instance's `package.json` lists), but it is not published. `create-package`
+  is accordingly documented as unusable until the registry exists.
+
+### What replaces it
+
+- **Every release carries a ready-to-install package.**
+  `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.3.0/mws-wikiwise-0.3.0.tgz`
+  works because npm installs any HTTPS tarball – verified against a GitHub
+  tarball, which npm unpacked and resolved with all dependencies, `better-sqlite3`
+  included. No account, no second factor, and the version is pinned in the URL.
+- The package contains the built `dist/mws.js`, so nothing has to be compiled.
+  A clone still builds it through `npm install`, because `prepare` runs
+  `build:pack` and `dist/` is gitignored.
+- `README.md` (both languages), `README_features.md` (both languages) and
+  `editions/mws-docs/tiddlers/Installation.md` now lead with the release
+  route, keep the clone route as the alternative for people who want to change
+  the code or track the current state, and explain the `sha256sum` check. The
+  expected checksum is part of the release notes.
+- The release itself is created by hand in the GitHub UI; `gh` is not available
+  in this environment, so the tag and the asset upload are manual steps.
+
+---
+
 ## Unchecked-in starter configuration (local, gitignored)
 
 ```json
@@ -5673,6 +5718,56 @@ Frischer Clone, frische Instanz, mit dem umbenannten Paket:
   `npm install @tiddlywiki/mws@0.0` laesst sich nicht auf den Fork-Namen
   umschreiben, weil es keine 0.0.x-Veröffentlichung des Forks gibt – daher
   bewusst unverändert.
+
+---
+
+## 52. Repo: Verteilung als GitHub-Release statt über die npm-Registry
+
+**Ziel:** §51 ließ eine Frage offen: Wie bekommt jemand diesen Fork ohne
+funktionierendes `npm publish`? Die Antwort: gar nicht nötig.
+
+### Warum nicht die Registry
+
+- Fürs Publizieren auf npm braucht man ein npm-Konto, und npm verlangt fürs
+  Publizieren einen zweiten Faktor. Das ist für die Maintainerin hier ein
+  echtes Hindernis, und das gehört ehrlich benannt statt als nebensächliches
+  Problem behandelt.
+- Den Namen legen npm-Regeln und Verfügbarkeit fest, nicht wir:
+  `@mws-wikiwise` ist überhaupt kein gültiger Paketname
+  (`EINVALIDPACKAGENAME`, weil npm nur `@scope/name` oder einen einfachen
+  Namen akzeptiert), und die Scope `mws` ist auf npm **bereits vergeben** – das
+  Profil existiert mit null Paketen, während ein nicht existierender Name 404
+  liefert. `@mws/wikiwise` wäre also nur publizierbar, wenn der Inhaber von `mws`
+  uns als Mitglied aufnimmt.
+- Die Einzeiler-Form `npm init <name>@latest` lässt sich ohne Registry nicht
+  nachbauen. `npm init` mit Pfad oder URL scheitert an `EUNSUPPORTED`
+  ("Unrecognized initializer"), es gibt also auch für ein reines Repository
+  keinen `npm init`-Kurzbefehl.
+- Fazit: Das Paket behält den Namen `@mws/wikiwise` für seine eigene Identität
+  (daran lösen `require`s auf, so steht es im Tarball-Manifest und so steht es
+  in der `package.json` der Instanz), wird aber nicht veröffentlicht.
+  `create-package` ist entsprechend als unbrauchbar dokumentiert, solange es die
+  Registry nicht gibt.
+
+### Was an ihre Stelle tritt
+
+- **Jedes Release enthält ein fertiges Paket.**
+  `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.3.0/mws-wikiwise-0.3.0.tgz`
+  funktioniert, weil npm jedes HTTPS-Tarball installiert – geprüft an einem
+  GitHub-Tarball, das npm entpackt und mit allen Abhängigkeiten aufgelöst hat,
+  `better-sqlite3` eingeschlossen. Ohne Konto, ohne zweiten Faktor, und die
+  Version steckt fest in der URL.
+- Das Paket enthält das fertige `dist/mws.js`, es muss also nichts kompiliert
+  werden. Ein Clone baut es weiterhin über `npm install`, weil `prepare`
+  `build:pack` ausführt und `dist/` in `.gitignore` steht.
+- `README.md` (beide Sprachen), `README_features.md` (beide Sprachen) und
+  `editions/mws-docs/tiddlers/Installation.md` führen jetzt mit dem
+  Release-Weg, behalten den Clone-Weg als Alternative für alle, die den Code
+  ändern oder den aktuellen Stand verfolgen wollen, und erklären die
+  `sha256sum`-Prüfung. Die erwartete Prüfsumme steht in den Release-Notizen.
+- Das Release wird von Hand in der GitHub-Oberfläche angelegt; `gh` steht in
+  dieser Umgebung nicht zur Verfügung, Tag und Asset-Upload sind also manuelle
+  Schritte.
 
 ---
 
