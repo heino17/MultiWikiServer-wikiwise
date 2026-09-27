@@ -1,5 +1,6 @@
 import { dist_require_resolve, dist_resolve } from "@tiddlywiki/server";
 import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
+import { existsSync } from "fs";
 import { resolve } from "path";
 import { LoadWikiFolderCommand } from "./load-wiki-folder";
 import { RoleImportWriter, TemplateImportWriter, UserImportWriter } from "../new-managers";
@@ -79,6 +80,10 @@ export class InitStoreCommand extends BaseCommand {
 		console.log("Default user created with username 'admin' and password '1234'. Please change this password after logging in.");
 
 		const runner = async (path: string, bagName: string, bagDesc: string, recName: string, recDesc: string, recUsers: string[] = []) => {
+			if (!existsSync(path)) {
+				console.log(`Skipping ${recName}: the wiki folder ${path} is not part of this installation.`);
+				return;
+			}
 			const command = new LoadWikiFolderCommand([path!], {
 				"bag-relative-root": [dist_resolve("..")],
 				"bag-description": [bagDesc],

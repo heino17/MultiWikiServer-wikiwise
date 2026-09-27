@@ -24,6 +24,8 @@
   ],
   "files": [
     "dist",
+    "editions/bedienungsanleitung/tiddlers",
+    "editions/bedienungsanleitung/tiddlywiki.info",
     "editions/mws-docs",
     "plugins",
     "prisma",
@@ -43,6 +45,8 @@
     "tsc2": "tsc -p tsconfig.json --noEmit",
     "tsc-client": "cd packages/react-admin && npm run tsc",
     "build": "node scripts/scripts.mjs build",
+    "build:pack": "node scripts/scripts.mjs build:pack",
+    "prepare": "node scripts/scripts.mjs build:pack",
     "build:client": "cd plugins/client && npm run build:opaque && tsc",
     "prisma:gen": "cd tools && npm run prisma:gen",
     "prisma:mig": "cd tools && npm run prisma:mig",

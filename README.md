@@ -35,11 +35,28 @@ Highlights only – the full story, with file names, code and background, lives 
 
 ## 🚀 How to run
 
-The init command creates a new folder and installs what you need to get started. You can name "my-folder" whatever you want. 
+> ⚠️ **The package `@tiddlywiki/mws` on npm is the upstream project, not this fork.**
+> `npm init @tiddlywiki/mws@latest` installs upstream MultiWikiServer – without any of
+> the features listed above. This fork is not published on npm under a name of its own,
+> so it is installed from the repository.
 
-- `npm init @tiddlywiki/mws@latest my-folder`
-- `cd my-folder`
-- `npx mws listen --listener`
+Clone the fork, install it and start it. `npm install` builds the server bundle, so
+there is no separate build step:
+
+- `git clone https://github.com/heino17/MultiWikiServer-wikiwise.git`
+- `cd MultiWikiServer-wikiwise`
+- `npm install`
+- `npm start` – serves the development wiki on <http://localhost:5000/dev/>
+
+For your own data folder, independent of the development wiki, build a package once
+and install it into a new folder:
+
+- `npm pack` – creates `tiddlywiki-mws-0.1.0.tgz`
+- `mkdir my-folder && cp create-package/files/* my-folder/`
+- `cd my-folder && npm install ../tiddlywiki-mws-0.1.0.tgz`
+- `npx mws update-tiddlywiki`
+- `npx mws init-store`
+- `npx mws listen --listener` – serves on <http://localhost:8080/>
 
 You can run `npx mws help` to get more information about the commands. 
 
@@ -202,11 +219,28 @@ Nur Highlights – die vollständige Geschichte mit Dateinamen, Code und Hinterg
 
 ## 🚀 So startest du es
 
-Der Init-Befehl legt einen neuen Ordner an und installiert alles, was du für den Einstieg brauchst. Den Namen „my-folder" kannst du frei wählen.
+> ⚠️ **Das Paket `@tiddlywiki/mws` auf npm ist das Upstream-Projekt, nicht dieser Fork.**
+> `npm init @tiddlywiki/mws@latest` installiert das originale MultiWikiServer – ohne eine
+> einzige der oben genannten Funktionen. Dieser Fork ist nicht unter einem eigenen Namen
+> auf npm veröffentlicht, er wird aus dem Repository installiert.
 
-- `npm init @tiddlywiki/mws@latest my-folder`
-- `cd my-folder`
-- `npx mws listen --listener`
+Fork auschecken, installieren, starten. `npm install` baut das Server-Bundle mit, ein
+zusätzlicher Build-Schritt ist nicht nötig:
+
+- `git clone https://github.com/heino17/MultiWikiServer-wikiwise.git`
+- `cd MultiWikiServer-wikiwise`
+- `npm install`
+- `npm start` – liefert das Entwicklungs-Wiki auf <http://localhost:5000/dev/>
+
+Für einen eigenen Datenordner, unabhängig vom Entwicklungs-Wiki, einmal ein Paket bauen
+und in einen neuen Ordner installieren:
+
+- `npm pack` – erzeugt `tiddlywiki-mws-0.1.0.tgz`
+- `mkdir my-folder && cp create-package/files/* my-folder/`
+- `cd my-folder && npm install ../tiddlywiki-mws-0.1.0.tgz`
+- `npx mws update-tiddlywiki`
+- `npx mws init-store`
+- `npx mws listen --listener` – liefert auf <http://localhost:8080/>
 
 Mit `npx mws help` bekommst du mehr Informationen zu den Befehlen.
 

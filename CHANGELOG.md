@@ -2600,6 +2600,116 @@ the wrong product, refused to start, or lost data.
 
 ---
 
+## 50. Fix: the fork could not be installed at all
+
+**Goal:** The README told everyone to run `npm init @tiddlywiki/mws@latest my-folder`.
+That command does not install this fork — and after checking what it actually produces,
+two bugs turned up that made a fresh installation impossible in the first place.
+
+### Finding: the quick start installed upstream
+
+- `npm view @tiddlywiki/mws version repository.url` returns
+  `0.2.5` and `git+https://github.com/TiddlyWiki/MultiWikiServer.git`, i.e. the
+  **upstream** package. This fork is not on npm, and under the same name it
+  never can be: the root `package.json` is also called `@tiddlywiki/mws`.
+- A test run of the documented command created a working instance — with
+  upstream's two migrations (`20260708160259_init`, `20260731035054_rb_pk`)
+  and without a single fork feature. In the two bundles, the string `ANON`
+  (fork, §4) occurs 15 times in the fork and **0** times in upstream 0.2.5.
+- The mechanism is in npm itself: `npm init <pkg>` rewrites the name to
+  `create-<pkg>` (`npm/lib/commands/init.js:117`), so the command actually runs
+  `@tiddlywiki/create-mws`, whose `create.js:44` installs
+  `@tiddlywiki/mws@latest` from the registry. The fork can publish neither
+  name, so there is no one-liner install until it publishes under a name of
+  its own. `create-package/` is not part of the published package anyway
+  (not in `files`).
+
+### Bug 1: a fresh database could not be initialized
+
+`npx mws init-store` on an empty store died with
+`DriverAdapterError: ColumnNotFound` while applying
+`20260916_email_nullable`: that migration rebuilds the `users` table and
+selects `owner_user_id`, but the official init migration
+`20260708160259_init` never creates the column. Databases that existed
+before the fork's first migration already had it, which is why this only
+appeared on new installations.
+
+- New migration `prisma/migrations/20260915_owner_user_id/migration.sql`
+  adds the column to all five tables that use it: `users`, `roles`, `bag`,
+  `recipe`, `template`. Plain nullable `TEXT`, no index, no foreign key,
+  exactly as in `schema.prisma`.
+- A column-by-column comparison of the migrated fresh database against
+  `schema.prisma` now finds no difference; before the fix, five columns
+  were missing.
+
+### Bug 2: `init-store` crashed on the second wiki
+
+`init-store` loads two wikis (`init-store.ts:96` and `:103`): the
+documentation and the fork's own `editions/bedienungsanleitung`. The latter
+was not in the `files` array of `package.json`, so in an installed package
+the folder does not exist, `loadWikiFolder` returns no bags, and
+`load-wiki-folder.ts:168` fails with
+`TypeError: Cannot read properties of undefined (reading 'bagName')`.
+
+- `files` now contains `editions/bedienungsanleitung/tiddlers` and
+  `editions/bedienungsanleitung/tiddlywiki.info`. The 2.5 MB
+  `output/index.html` build artifact stays out of the package.
+- The runner in `init-store.ts` skips a wiki folder that is not part of the
+  installation and says so, instead of crashing the whole command.
+
+### Packaging: `prepare`
+
+Installing the fork from a git URL or packing it produced a package
+without `dist`, because `/dist` is gitignored and there was no `prepare`
+script — the server bundle simply was missing.
+
+- New script `prepare` → `node scripts/scripts.mjs build:pack`, which
+  installs the `tools` dependencies if needed and runs the normal build.
+  It is skipped when `dist/mws.js` already exists, so a `npm install` in a
+  working copy stays fast. `npm run build` rebuilds on demand.
+- `ci.yml` is unaffected: it builds the documentation edition with
+  TiddlyWiki 5 and never runs `npm install` in the repository root.
+
+### Documentation
+
+- `README.md` (both languages), `README_features.md` (both languages) and
+  `editions/mws-docs/tiddlers/Installation.md` now describe the fork's own
+  path: `git clone` → `npm install` → `npm start` for the development wiki,
+  and `npm pack` plus a tarball install for a separate data folder. Each
+  place carries the same warning that `@tiddlywiki/mws` on npm is upstream.
+
+### Verification
+
+All of it on a fresh clone and a fresh instance, not on an existing store:
+
+- `git clone` → `npm install` → `prepare` builds `dist/mws.js` (2.04 MB),
+  exit 0.
+- `npm pack` → `tiddlywiki-mws-0.1.0.tgz`; the tarball contains the 55
+  files of `editions/bedienungsanleitung` and `repository.url` points to
+  the fork.
+- Instance: `npm install <tarball>`, `npx mws update-tiddlywiki`,
+  `npx mws init-store` → exit 0, all 9 migrations applied (including the
+  fork's `pinboard`, `user_file` and `roles_is_teacher`), admin user
+  created, both wikis loaded.
+- `npx mws listen --listener` → `/`, `/admin` and
+  `/wiki/bedienungsanleitung` answer 200; `GET /api/landing` reports
+  `publicWikis: 1` with the manual, so the public start page of §48 lists
+  it for anonymous visitors.
+- Before the two fixes the same sequence ended in
+  `ColumnNotFound` and then in the `bagName` TypeError.
+
+### Still open
+
+- The local `main` is **72 commits ahead of `origin/main`**: none of the
+  fork's work is on GitHub yet, so `npm install github:heino17/…` would
+  install the fork without its features.
+- For a real one-liner, the fork has to publish the server package and a
+  matching `create-*` package under a name it owns. That needs a decision
+  about the name and npm access; `create-package/create.js:44` still
+  hardcodes `@tiddlywiki/mws@latest` and has to follow that decision.
+
+---
+
 ## Unchecked-in starter configuration (local, gitignored)
 
 ```json
@@ -5275,6 +5385,125 @@ Daten verliert.
   keine der entfernten Dateien, das Packaging ist unverändert.
 - `ci.yml` und `.github/scripts/build-mws-site.sh` unberührt; die
   native Installation aus der README ist nicht betroffen.
+
+---
+
+## 50. Fix: Der Fork war überhaupt nicht installierbar
+
+**Ziel:** Die README ließ alle `npm init @tiddlywiki/mws@latest my-folder`
+ausführen. Dieser Befehl installiert nicht den Fork – und bei der Prüfung,
+was er tatsächlich erzeugt, kamen zwei Fehler zum Vorschein, die eine
+Neuinstallation von vornherein unmöglich machten.
+
+### Befund: Der Schnellstart installierte das Upstream
+
+- `npm view @tiddlywiki/mws version repository.url` liefert
+  `0.2.5` und `git+https://github.com/TiddlyWiki/MultiWikiServer.git`, also
+  das **Upstream**-Paket. Dieser Fork ist nicht auf npm, und unter
+  demselben Namen kann er es auch nie sein: Die Root-`package.json` heißt
+  ebenfalls `@tiddlywiki/mws`.
+- Ein Testlauf des dokumentierten Befehls erzeugte eine funktionierende
+  Instanz – mit den zwei Upstream-Migrationen (`20260708160259_init`,
+  `20260731035054_rb_pk`) und ohne ein einziges Fork-Feature. In den beiden
+  Bundles kommt die Zeichenkette `ANON` (Fork, §4) 15-mal im Fork und
+  **0-mal** in Upstream 0.2.5 vor.
+- Der Mechanismus steckt in npm selbst: `npm init <pkg>` schreibt den
+  Namen zu `create-<pkg>` um (`npm/lib/commands/init.js:117`), der Befehl
+  führt also `@tiddlywiki/create-mws` aus, und dessen `create.js:44`
+  installiert `@tiddlywiki/mws@latest` aus der Registry. Der Fork kann
+  keinen der beiden Namen veröffentlichen, es gibt also bis zu einer
+  Veröffentlichung unter eigenem Namen keine Ein-Zeilen-Installation.
+  `create-package/` ist ohnehin nicht Teil des veröffentlichten Pakets
+  (steht nicht in `files`).
+
+### Fehler 1: Eine frische Datenbank war nicht initialisierbar
+
+`npx mws init-store` auf einem leeren Store brach mit
+`DriverAdapterError: ColumnNotFound` beim Anwenden von
+`20260916_email_nullable` ab: Diese Migration baut die Tabelle `users` neu
+und selektiert `owner_user_id`, doch die offizielle Init-Migration
+`20260708160259_init` legt die Spalte nie an. Datenbanken, die es vor der
+ersten Fork-Migration gab, hatten die Spalte bereits – deshalb fiel der
+Fehler nur bei Neuinstallationen auf.
+
+- Neue Migration `prisma/migrations/20260915_owner_user_id/migration.sql`
+  ergänzt die Spalte in allen fünf Tabellen, die sie verwenden: `users`,
+  `roles`, `bag`, `recipe`, `template`. Einfache nullable `TEXT`-Spalten,
+  kein Index, kein Fremdschlüssel, genau wie in `schema.prisma`.
+- Ein Spalten-für-Spalten-Vergleich der migrierten frischen Datenbank
+  gegen `schema.prisma` findet jetzt keinen Unterschied mehr; vor dem Fix
+  fehlten fünf Spalten.
+
+### Fehler 2: `init-store` stürzte beim zweiten Wiki ab
+
+`init-store` lädt zwei Wikis (`init-store.ts:96` und `:103`): die
+Dokumentation und das fork-eigene `editions/bedienungsanleitung`. Letzteres
+stand nicht im `files`-Array der `package.json`, im installierten Paket
+existiert der Ordner also nicht, `loadWikiFolder` liefert keine Bags, und
+`load-wiki-folder.ts:168` scheitert mit
+`TypeError: Cannot read properties of undefined (reading 'bagName')`.
+
+- `files` enthält jetzt `editions/bedienungsanleitung/tiddlers` und
+  `editions/bedienungsanleitung/tiddlywiki.info`. Das 2,5 MB große
+  Build-Artefakt `output/index.html` bleibt außen vor.
+- Der Runner in `init-store.ts` überspringt einen Wiki-Ordner, der nicht
+  zur Installation gehört, und sagt das, statt den ganzen Befehl
+  abstürzen zu lassen.
+
+### Packaging: `prepare`
+
+Eine Installation des Forks über eine Git-URL oder das Packen erzeugte ein
+Paket ohne `dist`, denn `/dist` steht in `.gitignore` und es gab kein
+`prepare`-Skript – das Server-Bundle fehlte schlicht.
+
+- Neues Skript `prepare` → `node scripts/scripts.mjs build:pack`, das bei
+  Bedarf die `tools`-Abhängigkeiten installiert und den normalen Build
+  ausführt. Es wird übersprungen, wenn `dist/mws.js` schon existiert, damit
+  ein `npm install` im Arbeitsverzeichnis schnell bleibt. `npm run build`
+  baut auf Bedarf neu.
+- `ci.yml` ist nicht betroffen: Es baut die Dokumentations-Edition mit
+  TiddlyWiki 5 und führt im Repository-Root kein `npm install` aus.
+
+### Dokumentation
+
+- `README.md` (beide Sprachen), `README_features.md` (beide Sprachen) und
+  `editions/mws-docs/tiddlers/Installation.md` beschreiben jetzt den Weg
+  des Forks: `git clone` → `npm install` → `npm start` für das
+  Entwicklungs-Wiki, und `npm pack` plus Tarball-Installation für einen
+  eigenen Datenordner. An jeder Stelle steht derselbe Hinweis, dass
+  `@tiddlywiki/mws` auf npm das Upstream ist.
+
+### Verifikation
+
+Alles auf einem frischen Clone und einer frischen Instanz, nicht auf einem
+bestehenden Store:
+
+- `git clone` → `npm install` → `prepare` baut `dist/mws.js` (2,04 MB),
+  Exit 0.
+- `npm pack` → `tiddlywiki-mws-0.1.0.tgz`; das Tarball enthält die 55
+  Dateien von `editions/bedienungsanleitung`, und `repository.url` zeigt auf
+  den Fork.
+- Instanz: `npm install <tarball>`, `npx mws update-tiddlywiki`,
+  `npx mws init-store` → Exit 0, alle 9 Migrationen angewandt (inklusive der
+  Fork-Migrationen `pinboard`, `user_file` und `roles_is_teacher`),
+  Admin-Nutzer angelegt, beide Wikis geladen.
+- `npx mws listen --listener` → `/`, `/admin` und
+  `/wiki/bedienungsanleitung` antworten mit 200; `GET /api/landing`
+  meldet `publicWikis: 1` mit der Anleitung, die öffentliche Startseite aus
+  §48 listet sie also für anonyme Besucher.
+- Vor den beiden Fixes endete dieselbe Folge in `ColumnNotFound` und
+  danach im `bagName`-TypeError.
+
+### Weiterhin offen
+
+- Das lokale `main` liegt **72 Commits vor `origin/main`**: Keine Arbeit des
+  Forks ist bisher auf GitHub, `npm install github:heino17/…` würde also den
+  Fork ohne seine Funktionen installieren.
+- Für eine echte Ein-Zeilen-Installation muss der Fork das Server-Paket und
+  ein passendes `create-*`-Paket unter einem eigenen Namen veröffentlichen.
+  Das erfordert eine Namensentscheidung und npm-Zugang;
+  `create-package/create.js:44` verdrahtet weiterhin
+  `@tiddlywiki/mws@latest` und muss dieser Entscheidung folgen.
 
 ---
 
