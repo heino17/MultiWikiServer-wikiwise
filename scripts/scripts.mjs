@@ -32,6 +32,15 @@ async function runner(arg) {
       await run(BIN, { CLIENT_BUILD: "1" });
       await run(TSUP, { BUILD_ENV: "runtime" });
       break;
+    case "build:pack":
+      if (existsSync("dist/mws.js")) {
+        console.log("dist/mws.js is present, skipping the build. Run `npm run build` to rebuild.");
+        break;
+      }
+      if (!existsSync("tools/node_modules"))
+        await run("cd tools && npm i", {});
+      await runner("build");
+      break;
     case "prisma:generate": {
       await run("prisma validate", {});
       await run("prisma format", {});
