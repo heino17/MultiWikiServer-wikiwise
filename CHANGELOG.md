@@ -2536,6 +2536,70 @@ previous redirect to `/login` applies again).
 
 ---
 
+## 49. Repo: Docker support removed
+
+**Goal:** This fork is not shipped as a container. The Docker files were
+therefore dead weight — and, as an audit showed, not merely unused: four
+independent defects meant that a Docker deployment would have delivered
+the wrong product, refused to start, or lost data.
+
+### Findings
+
+- **The image ran upstream, not the fork.** `Dockerfile:6` installed
+  `npm install @tiddlywiki/mws@latest -g` — the *upstream* package name —
+  while the comment above it claimed "(wikiwise fork)". No image for this
+  fork was ever published either: `.github/workflows/ghcr.yml:18` gated
+  the publish job on `github.repository ==
+  'TiddlyWiki/MultiWikiServer'`, so in
+  `heino17/MultiWikiServer-wikiwise` it never ran.
+- **`DOCKER.md` pointed at upstream as well.** Its quick start pulled
+  compose file and Dockerfile via `curl` from
+  `raw.githubusercontent.com/TiddlyWiki/MultiWikiServer/main/…`, so
+  following the documentation produced upstream MWS without a single
+  fork feature.
+- **Both compose files refused to start.** `ENTRYPOINT ["mws"]` combined
+  with `command: ["npx", "mws", "listen", …]` results in
+  `mws npx mws listen …`; `runCLI.ts:42` takes the command name from
+  `process.argv[2]`, so the process exits with `Command "npx" not
+  found` (reproduced locally). `docker run` with the image's own CMD
+  worked, `docker compose up` never did.
+- **The mounts lost data.** Only `/data/store` was persisted, but
+  backups are written to `backups/<timestamp>/` *next to* `store`
+  (`BackupRoutes.ts:29-31`), and `passwords.key` lives in the instance
+  root (`startup.ts:89`). In volume mode the backups stayed in the
+  container layer, in directory mode they never appeared on the host at
+  all; both are gone after `down`, recreate or update. `passwords.key`
+  is lost the same way, which invalidates every user password.
+- **Thumbnails cannot work in the image.** `findChromium()` searches
+  `MWS_CHROMIUM_PATH`, `CHROME_PATH`, the Playwright cache,
+  `/usr/bin/chromium(-browser)` and `/snap/bin/chromium`;
+  `node:24-alpine` ships no browser, so every wiki thumbnail request
+  fails.
+- Two documentation errors on top: `DOCKER.md:194` claimed Node 22
+  Alpine while the image is `node:24-alpine`, and `ghcr.yml:57` passed
+  `build-args: MWS_VERSION=…` although the Dockerfile declares no `ARG`
+  of that name. `DOCKER.md:58` noted itself that files and page were
+  written by GitHub Copilot and untested by anyone who knows Docker.
+
+### Removed
+
+- `Dockerfile`, `docker-compose.volume.yml`,
+  `docker-compose.directory.yml`
+- `DOCKER.md`
+- `.github/workflows/ghcr.yml`
+
+### Verification
+
+- After the removal, no reference to `docker` or `ghcr` remains in any
+  own file; the Docker block was self-contained, nothing else pointed at
+  it.
+- The `files` array in `package.json` (contents of the npm package)
+  never contained any of the removed files, so packaging is unchanged.
+- `ci.yml` and `.github/scripts/build-mws-site.sh` untouched; the native
+  installation from the README is unaffected.
+
+---
+
 ## Unchecked-in starter configuration (local, gitignored)
 
 ```json
@@ -5144,6 +5208,73 @@ bisherige Redirect nach `/login`).
   (Wiki + Zähler weg), AN + speichern ⇒ Zeile verschwindet, 8. Privates
   Wiki ohne ANON ⇒ Callout statt Schalter. `/settings` ohne den alten Bereich.
 - `tsc` (admin-vanilla) + `tsc2` (Root) grün; Locale-Parität 521/521.
+
+---
+
+## 49. Repo: Docker-Support entfernt
+
+**Ziel:** Dieser Fork wird nicht als Container ausgeliefert. Die
+Docker-Dateien waren damit tote Last — und laut Prüfung nicht bloß
+ungenutzt: vier unabhängige Defekte hätten dafür gesorgt, dass eine
+Docker-Installation das falsche Produkt liefert, gar nicht startet oder
+Daten verliert.
+
+### Befunde
+
+- **Das Image lief das Upstream, nicht den Fork.** `Dockerfile:6`
+  installierte `npm install @tiddlywiki/mws@latest -g` — den
+  *Upstream*-Paketnamen —, während der Kommentar darüber
+  "(wikiwise fork)" behauptete. Ein Image für diesen Fork wurde
+  ohnehin nie veröffentlicht: `.github/workflows/ghcr.yml:18` knüpfte
+  den Publish-Job an `github.repository ==
+  'TiddlyWiki/MultiWikiServer'`, lief in
+  `heino17/MultiWikiServer-wikiwise` also nie.
+- **Auch `DOCKER.md` zeigte auf das Upstream.** Der Quick-Start holte
+  Compose-Datei und Dockerfile per `curl` aus
+  `raw.githubusercontent.com/TiddlyWiki/MultiWikiServer/main/…` — wer
+  der Doku folgte, bekam Upstream-MWS ohne ein einziges Fork-Feature.
+- **Beide Compose-Dateien verweigerten den Start.** `ENTRYPOINT ["mws"]`
+  zusammen mit `command: ["npx", "mws", "listen", …]` ergibt
+  `mws npx mws listen …`; `runCLI.ts:42` liest den Befehlsnamen aus
+  `process.argv[2]`, der Prozess beendet sich mit `Command "npx" not
+  found` (lokal reproduziert). `docker run` mit dem CMD des Images
+  funktionierte, `docker compose up` nie.
+- **Die Mounts verloren Daten.** Persistiert wurde nur `/data/store`,
+  Backups landen aber in `backups/<timestamp>/` *neben* `store`
+  (`BackupRoutes.ts:29-31`), und `passwords.key` liegt im
+  Instanz-Wurzelverzeichnis (`startup.ts:89`). Im Volume-Modus landeten
+  die Backups im Container-Layer, im Directory-Modus tauchten sie
+  überhaupt nicht auf dem Host auf; beides ist nach `down`, Neuerzeugung
+  oder Update weg. `passwords.key` geht genauso verloren, womit jedes
+  Nutzerpasswort unbrauchbar wird.
+- **Thumbnails können im Image nicht funktionieren.** `findChromium()`
+  durchsucht `MWS_CHROMIUM_PATH`, `CHROME_PATH`, den Playwright-Cache,
+  `/usr/bin/chromium(-browser)` und `/snap/bin/chromium`;
+  `node:24-alpine` bringt keinen Browser mit, jede
+  Wiki-Vorschau-Anfrage schlägt fehl.
+- Dazu zwei Doku-Fehler: `DOCKER.md:194` behauptete Node 22 Alpine, das
+  Image ist `node:24-alpine`, und `ghcr.yml:57` übergab
+  `build-args: MWS_VERSION=…`, obwohl das Dockerfile kein `ARG` dieses
+  Namens deklariert. `DOCKER.md:58` vermerkte selbst, dass Dateien und
+  Seite von GitHub Copilot geschrieben und von niemandem getestet
+  wurden, der Docker kennt.
+
+### Entfernt
+
+- `Dockerfile`, `docker-compose.volume.yml`,
+  `docker-compose.directory.yml`
+- `DOCKER.md`
+- `.github/workflows/ghcr.yml`
+
+### Verifikation
+
+- Nach der Entfernung keine Referenz auf `docker` oder `ghcr` in
+  eigenen Dateien mehr; der Docker-Block war geschlossen, nichts anderes
+  zeigte darauf.
+- Das `files`-Array in `package.json` (Inhalt des npm-Pakets) enthielt
+  keine der entfernten Dateien, das Packaging ist unverändert.
+- `ci.yml` und `.github/scripts/build-mws-site.sh` unberührt; die
+  native Installation aus der README ist nicht betroffen.
 
 ---
 
