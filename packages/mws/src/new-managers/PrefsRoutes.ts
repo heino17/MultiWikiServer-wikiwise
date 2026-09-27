@@ -23,6 +23,7 @@ export const PREF_KEYS = {
   landingNews: "admin.landingNews",
   landingNewsStyle: "admin.landingNewsStyle",
   showCookieConsent: "admin.showCookieConsent",
+  legalNotice: "admin.legalNotice",
 } as const;
 
 /** Background-color variants for the landing news block. */
@@ -59,6 +60,8 @@ export interface ServerPrefs {
   landingNewsStyle: LandingNewsStyle;
   /** Show the cookie-consent banner to visitors on their first visit. */
   showCookieConsent: boolean;
+  /** Impressum / legal-notice text published on the public page (markdown). */
+  legalNotice: string | null;
 }
 
 const validThemes = new Set<string>(THEMES);
@@ -88,6 +91,10 @@ export const INSTALL_DEFAULTS: { key: string; value: string }[] = [
   },
   { key: PREF_KEYS.landingNewsStyle, value: "neutral" },
   { key: PREF_KEYS.showCookieConsent, value: "true" },
+  {
+    key: PREF_KEYS.legalNotice,
+    value: "## Legal notice\n\n**Your company**  \nStreet 10, 12345 City, Country  \nE-Mail: office@example.com · Phone: +49 123 456 7890\n\nRegistered office / commercial register:  \nValue-added tax identification number:",
+  },
 ];
 
 /** Writes the install defaults for every pref key without a row yet. Keeps any
@@ -140,6 +147,7 @@ export async function readPrefs(prisma: PrismaTxnClient): Promise<ServerPrefs> {
     landingNews: map.get(PREF_KEYS.landingNews)?.trim() || null,
     landingNewsStyle: newsStyle(map.get(PREF_KEYS.landingNewsStyle)),
     showCookieConsent: boolPref(map, PREF_KEYS.showCookieConsent, true),
+    legalNotice: map.get(PREF_KEYS.legalNotice)?.trim() || null,
   };
 }
 
@@ -178,6 +186,7 @@ export const AdminPrefsPut = zodRoute({
     landingNews: z.string().max(10000).nullable(),
     landingNewsStyle: z.enum(LANDING_NEWS_STYLES).nullable(),
     showCookieConsent: z.boolean().nullable(),
+    legalNotice: z.string().max(20000).nullable(),
   }),
   inner: async (state) => {
     state.assertReferer(["/"]);
@@ -199,6 +208,7 @@ export const AdminPrefsPut = zodRoute({
       landingNews,
       landingNewsStyle,
       showCookieConsent,
+      legalNotice,
     } = state.data;
     const entries: { key: string; value: string }[] = [];
     if (defaultLocale) entries.push({ key: PREF_KEYS.locale, value: defaultLocale });
@@ -215,6 +225,7 @@ export const AdminPrefsPut = zodRoute({
     if (landingNews != null) entries.push({ key: PREF_KEYS.landingNews, value: landingNews.trim() });
     if (landingNewsStyle != null) entries.push({ key: PREF_KEYS.landingNewsStyle, value: landingNewsStyle });
     if (showCookieConsent != null) entries.push({ key: PREF_KEYS.showCookieConsent, value: showCookieConsent ? "true" : "false" });
+    if (legalNotice != null) entries.push({ key: PREF_KEYS.legalNotice, value: legalNotice.trim() });
 
     await state.$transaction(async (prisma) => {
       const keepKeys = new Set(entries.map((entry) => entry.key));
