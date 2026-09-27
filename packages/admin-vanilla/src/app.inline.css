@@ -4283,6 +4283,7 @@ odt-preview-document {
 .landing-shell {
 	min-height: 100vh;
 	display: grid;
+	align-content: start;
 	gap: 24px;
 	padding: 18px 32px 18px;
 	background:
@@ -4696,7 +4697,7 @@ odt-preview-document {
 	margin-top: 12px;
 	padding-top: 18px;
 	border-top: 1px solid var(--color-border-soft);
-	font-size: 0.69rem;
+	font-size: 0.77rem;
 	color: var(--color-text-soft);
 }
 
