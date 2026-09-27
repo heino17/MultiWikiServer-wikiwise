@@ -14,9 +14,24 @@ Multiple users, multiple wikis for TiddlyWiki.
 - SQLite database managed with Prisma.
 - Password-based login.
 
-> Before you put real data in, please read [Security between users](#security-between-users) and [Backups](#also-this-is-a-database-please-make-backups).
+> Before you put real data in, please read [Security between users](#security-between-users) and [Backups](#backups).
 
-## How to run
+## ✨ What this fork adds
+
+Highlights only – the full story, with file names, code and background, lives in the [CHANGELOG](CHANGELOG.md).
+
+- 🏫 **A teacher area for school operation.** A school operator creates teachers, and each teacher manages **only their own class** – walled off from colleagues by personal roles and a server-side role guard, while class roles hand students targeted read access and cooperation by invitation stays possible. (§21–§27)
+- 📚 **Wikis you can actually manage.** Create a wiki with a single click (or from a full form), rename slug and display name, delete, get live validation of every name, and see "real names" instead of "recipe" in the UI. (§10–§13, §17, §30)
+- 🌍 **8 languages.** The whole admin app – and the wiki client, which follows the wiki's language automatically. With 500+ translated keys and a language switcher in the header. (§14, §46)
+- 🏠 **A public start page for anonymous visitors.** Hero area, statistic cards, wiki cards with preview images, an operator welcome text, a news block and a version footer – instead of a login form. (§48)
+- 📌 **A pinboard.** Shared post-its for all logged-in users, addressed globally, to a class or to one person, with important notes pinned to the top, an unread badge and moderation. (§42)
+- 🗂️ **My Files.** Every account uploads its own files, previews them in the browser (image, audio, video, PDF, text, Markdown, ODT) and shares them selectively – admin shares reach everyone, teacher shares their class. (§44, §45)
+- 🖼️ **Real wiki thumbnails.** Headless screenshots of each wiki, per user view, 24 h cache, automatically swept when a wiki is deleted. (§43)
+- 💾 **Storage transparency and one-click backups.** An admin tab that separates system disk status from MWS usage, reports blobs & files, orphaned files and the top-10 storage users – plus a consistent ZIP backup of database, keys and config. (§36, §39–§41)
+- ⚙️ **Settings that cover the whole operation.** Default language and theme for the first load, feature switches, the cookie notice and the legal notice page. (§47)
+- 🔐 **Security rework.** Owner protection for wikis, bags, templates, roles and users, per-owner bag namespaces against name squatting, `CSP` headers and no existence oracle. Anonymous read access is now an explicit `ANON` role. (§4, §15, §47)
+
+## 🚀 How to run
 
 The init command creates a new folder and installs what you need to get started. You can name "my-folder" whatever you want. 
 
@@ -34,7 +49,7 @@ The initial user created on first run has the username `admin` and password `123
 
 If you run into trouble, or need help figuring something out, feel free to [start a discussion](https://github.com/heino17/MultiWikiServer-wikiwise/discussions). If you know what's wrong, you can also open an issue.
 
-## Flexible and Extendible
+## 🧩 Flexible and Extendible
 
 - Plugins can add routes and hooks.
 - Abstractions everywhere, allowing flexibility.
@@ -49,7 +64,7 @@ several of the sharpest edges of the original. Access control is still
 design. So MWS is a good fit for classrooms, teams and hobby wikis – and the
 wrong tool for secrets that must stay strictly compartmentalized.
 
-### Hardened in this fork
+### 🛡️ Hardened in this fork
 
 - **A save can no longer pull in someone else's bag.** Creating or saving a
   recipe/template requires read access – write access for write targets – on
@@ -79,7 +94,7 @@ wrong tool for secrets that must stay strictly compartmentalized.
   checks and the `X-Requested-With` header, and passwords are stored as OPAQUE
   (aPAKE) hashes, never in plaintext.
 
-### Still open by design
+### ⚠️ Still open by design
 
 - **Granularity is one bag.** Anyone who can read a bag can read every tiddler
   in it, and anyone who can write it can write every tiddler in it. There is no
@@ -93,11 +108,11 @@ wrong tool for secrets that must stay strictly compartmentalized.
 In practice: hand out the smallest rights that get the job done, run a real
 instance behind HTTPS, and take backups.
 
-## Also, this is a database, please make backups
+## 🗄️ Also, this is a database, please make backups
 
 Databases try very hard to be perfect, and data bugs are rare. But that doesn't mean things can't go wrong. Backups are pretty important. 
 
-## Updates
+## 🔄 Updates
 
 _Always, always, always save a backup of your store folder before updating._
 
@@ -106,7 +121,7 @@ _Always, always, always save a backup of your store folder before updating._
 
 If there are any database changes, MWS should pick them up and apply them on startup. The changes are generated by prisma's builtin migration and are supposed to preserve data, but backups are still highly recommended.
 
-## Backups
+## 💾 Backups
 
 It is recommended to backup your entire data folder, not just the `store` folder, with a few exceptions. 
 
@@ -124,7 +139,7 @@ So essentially, the paths you need to backup are:
 - `/tw5/versions.txt`
 - `/passwords.key` (or save it separately)
 
-## Development
+## 🛠️ Development
 
 The development data folder is `/dev/wiki`.
 
