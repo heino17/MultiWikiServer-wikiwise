@@ -2862,13 +2862,22 @@ Error: The wiki path package.json file is not named '@tiddlywiki/mws-instance'.
 
 ### The fix, without touching the runtime
 
-- One more command turns npm's file into the data folder manifest and keeps the
+- Two commands turn npm's file into the data folder manifest and keep the
   dependency entry, so `npm ls` and later updates still know where the server
   came from:
-  `npm pkg set name="@tiddlywiki/mws-instance" private=true version=0.2.0 --json`
-- `--json` is not decoration. `npm pkg set private=true` stores the **string**
-  `"true"`, and `packages/mws/src/index.ts:83` compares against the boolean
-  `true`, so the server would abort with the `PACKAGE_JSON_PRIVATE` message.
+  ```
+  npm pkg set private=true --json
+  npm pkg set name="@tiddlywiki/mws-instance" version=0.2.0
+  ```
+- They have to be two commands, and the split is not cosmetic. `npm pkg set`
+  stores values as strings, so `private=true` would produce the **string**
+  `"true"` while `packages/mws/src/index.ts:83` compares against the boolean
+  `true` – the server aborts with the `PACKAGE_JSON_PRIVATE` message. The flag
+  `--json` fixes the boolean, but it makes npm parse **every** value as JSON, and
+  `@tiddlywiki/mws-instance` is not valid JSON:
+  `npm error Unexpected token '@', "@tiddlywik"... is not valid JSON`.
+  So the boolean goes in its own `--json` command, and the name and version in a
+  second one without it.
 - `README.md` (both languages), `README_features.md` (both languages) and
   `editions/mws-docs/tiddlers/Installation.md` now carry the command and
   explain why it exists. The release notes were corrected in place as well.
@@ -2880,7 +2889,7 @@ Taken from the release page, not from a local build:
 1. `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.3.0/mws-wikiwise-0.3.0.tgz`
    → exit 0, `@mws/wikiwise@0.3.0` in `node_modules`
 2. the downloaded file's `sha256sum` equals the one in the release notes
-3. `npm pkg set …` → `name`, `private` and `version` correct, dependency kept
+3. both `npm pkg set` commands → `name`, `private` and `version` correct, dependency kept
 4. `npx mws update-tiddlywiki` → exit 0
 5. `npx mws init-store` → exit 0, both wikis loaded, admin `1234`
 6. `npx mws listen --listener` → `/`, `/admin` and `/wiki/bedienungsanleitung`
@@ -5846,14 +5855,22 @@ Error: The wiki path package.json file is not named '@tiddlywiki/mws-instance'.
 
 ### Die Lösung, ohne Eingriff in die Laufzeit
 
-- Ein weiterer Befehl macht aus der Datei von npm das Manifest des
-  Datenordners und behält den Dependency-Eintrag, damit `npm ls` und spätere
-  Updates weiter wissen, woher der Server kam:
-  `npm pkg set name="@tiddlywiki/mws-instance" private=true version=0.2.0 --json`
-- `--json` ist keine Dekoration. `npm pkg set private=true` speichert den
-  **String** `"true"`, und `packages/mws/src/index.ts:83` vergleicht mit dem
-  Boolean `true` – der Server bricht dann mit der Meldung
-  `PACKAGE_JSON_PRIVATE` ab.
+- Zwei Befehle machen aus der Datei von npm das Manifest des Datenordners und
+  behalten den Dependency-Eintrag, damit `npm ls` und spätere Updates weiter
+  wissen, woher der Server kam:
+  ```
+  npm pkg set private=true --json
+  npm pkg set name="@tiddlywiki/mws-instance" version=0.2.0
+  ```
+- Es müssen zwei Befehle sein, und die Trennung ist nicht kosmetisch. `npm pkg
+  set` speichert Werte als Strings, aus `private=true` würde also der **String**
+  `"true"`, während `packages/mws/src/index.ts:83` mit dem Boolean `true`
+  vergleicht – der Server bricht mit `PACKAGE_JSON_PRIVATE` ab. Das Flag
+  `--json` erzeugt den Boolean, lässt npm aber **alle** Werte als JSON parsen,
+  und `@tiddlywiki/mws-instance` ist kein gültiges JSON:
+  `npm error Unexpected token '@', "@tiddlywik"... is not valid JSON`.
+  Der Boolean kommt also in seinen eigenen `--json`-Befehl, Name und Version in
+  einen zweiten ohne das Flag.
 - `README.md` (beide Sprachen), `README_features.md` (beide Sprachen) und
   `editions/mws-docs/tiddlers/Installation.md` enthalten den Befehl jetzt und
   erklären, warum es ihn gibt. Die Release-Notizen wurden ebenfalls berichtigt.
@@ -5866,8 +5883,8 @@ Von der Release-Seite geholt, nicht aus einem lokalen Build:
    → Exit 0, `@mws/wikiwise@0.3.0` in `node_modules`
 2. Die `sha256sum` der heruntergeladenen Datei entspricht der in den
    Release-Notizen
-3. `npm pkg set …` → `name`, `private` und `version` korrekt, Abhaengigkeit
-   erhalten
+3. beide `npm pkg set`-Befehle → `name`, `private` und `version` korrekt,
+   Abhaengigkeit erhalten
 4. `npx mws update-tiddlywiki` → Exit 0
 5. `npx mws init-store` → Exit 0, beide Wikis geladen, Admin `1234`
 6. `npx mws listen --listener` → `/`, `/admin` und `/wiki/bedienungsanleitung`
