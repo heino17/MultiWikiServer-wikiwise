@@ -5,10 +5,11 @@ These instructions require minimal knowledge of the terminal and require NodeJS 
 - Recommended: install the finished package from a release. Download the `.tgz` from the [[releases page|https://github.com/heino17/MultiWikiServer-wikiwise/releases]], then:
 <<.copy-code-to-clipboard """mkdir "new_folder_name" && cd "new_folder_name" """>>
 <<.copy-code-to-clipboard """npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.3.0/mws-wikiwise-0.3.0.tgz """>>
+<<.copy-code-to-clipboard """npm pkg set name=\"@tiddlywiki/mws-instance\" private=true version=0.2.0 --json """">>
 <<.copy-code-to-clipboard """npx mws update-tiddlywiki """>>
 <<.copy-code-to-clipboard """npx mws init-store """>>
 <<.copy-code-to-clipboard """npx mws listen --listener """>>
-- Visit [[http://localhost:8080/]] in a browser on the same computer. When you have finished using MWS, stop the server with <kbd>ctrl-C</kbd>. The download is an ordinary npm package, so `npm` installs all dependencies. Compare its `sha256sum` with the checksum in the release notes before you use it.
+- Visit [[http://localhost:8080/]] in a browser on the same computer. When you have finished using MWS, stop the server with <kbd>ctrl-C</kbd>. The download is an ordinary npm package, so `npm` installs all dependencies. Compare its `sha256sum` with the checksum in the release notes before you use it. The `npm pkg set` line is mandatory: MWS refuses to start unless the `package.json` in the data folder is named `@tiddlywiki/mws-instance`, is marked `private` and carries a `0.2.x` version – that file is what keeps your tiddlers out of a public registry. Without `--json`, `private` becomes the string `"true"`, which the check rejects.
 
 - Alternative: get the fork and install it. The install also builds the server bundle, so there is no separate build step. 
 <<.copy-code-to-clipboard """git clone https://github.com/heino17/MultiWikiServer-wikiwise.git """>>
