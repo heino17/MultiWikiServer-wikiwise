@@ -5892,6 +5892,77 @@ Von der Release-Seite geholt, nicht aus einem lokalen Build:
 
 ---
 
+## 54. `npx mws init-data-folder` ersetzt den `npm pkg set`-Umweg
+
+**Ziel:** §53 hat den Release-Weg mit einem Umweg dokumentiert, der nur
+deshalb funktioniert, weil `npm pkg set` an einem nicht-JSON-fähigen Wert
+scheitert. Zwei Befehle, davon einer mit `--json` und einer ohne, sind genau
+die Art Stolperstein, die in einer Anleitung für Erstinstallationen nicht
+gehört. Der Schritt gehört in das Werkzeug, das die Regel ohnehin kennt.
+
+### Was geändert wurde
+
+- Neues Kommando `npx mws init-data-folder`
+  (`packages/mws/src/new-commands/init-data-folder.ts`), das die
+  `package.json` des Datenordners schreibt. Quelle ist bewusst
+  `create-package/files/package.json` – dieselbe Datei, die das Create-Paket
+  kopiert und der `npm pack`-Weg verwendet, inzwischen als einziger Ort im
+  Paket (`package.json` → `files`).
+- Es schreibt genau die drei Felder, an denen die Startprüfung scheitert
+  (`name`, `private`, `version`) und übernimmt das `start`-Skript. Bestehende
+  `dependencies` und eigene Skripte des Ordners bleiben erhalten.
+- Der Befehl darf in einem Ordner ohne Server laufen: Er ist von der
+  Datenordner-Prüfung ausgenommen (`packages/mws/src/index.ts`) und läuft vor
+  dem Zugriff auf `passwords.key` und Datenbank (`startup.ts`). Erst dadurch
+  kann er in dem Ordner überhaupt etwas anlegen.
+- **Datenordner-Mantel bleibt `@tiddlywiki/mws-instance`, Version `0.2.0`** –
+  unverändert, weil die Startprüfung weiterhin genau darauf besteht.
+
+### Sicherheitsverhalten
+
+Der Befehl überschreibt nichts blind:
+
+- `package.json` fehlt → wird aus der Vorlage angelegt.
+- Vorhandene Datei ist bereits ein gültiges Instanz-Manifest → Meldung, keine
+  Änderung (idempotent, auch im laufenden Betrieb unbedenklich).
+- Datei ist kein gültiges JSON → Abbruch mit Exit 1, Datei bleibt unverändert.
+- Datei trägt einen anderen, bewusst gewählten Namen (z. B. aus `npm init -y`,
+  wo npm den Ordnernamen nimmt) → **kein** Überschreiben, Exit 1 mit Hinweis.
+  Wer den Namen loswerden will, benennt die Datei vorher selbst um.
+
+Der letzte Fall ist Absicht: Ein fremder Paketname in einem Ordner, in dem
+MWS später installiert wird, ist kein Versehen, sondern eine Entscheidung des
+Nutzers, und die darf der Installer nicht stillschweigend kippen.
+
+### Doku
+
+`README.md` (EN/DE), `README_features.md` (EN/DE),
+`editions/mws-docs/tiddlers/Installation.md` und `create-package/README.md`
+nennen jetzt `npx mws init-data-folder` statt der beiden `npm pkg set`-Zeilen
+und verlinken das Asset von 0.3.1. §53 bleibt als Historie stehen, wie der
+Umweg aussah und warum er nötig war.
+
+### Getestet
+
+Frische Installation aus dem lokal gebauten 0.3.1-Tarball:
+
+1. `npm install <tgz>` → `npx mws init-data-folder` → `name`, `private: true`,
+   `version: 0.2.0` und `start`-Skript korrekt, Abhängigkeit erhalten
+2. zweiter Aufruf → unverändert (idempotent)
+3. kaputtes JSON → Exit 1, Datei byte-identisch
+4. absichtlich benanntes `package.json` → Exit 1, Datei byte-identisch
+5. echte Instanz aus `tests/` → Meldung „is already a data folder", Prüfsumme
+   von `store/` und `passwords.key` unverändert
+6. danach `update-tiddlywiki` → `init-store` → `listen`: `/`, `/admin` und
+   `/wiki/bedienungsanleitung` antworten mit 200, `GET /api/landing` meldet
+   `"mws": "0.3.1"`
+7. **Regression des Schutzes:** In einem Ordner mit falscher oder fehlender
+   `package.json` verweigern `update-tiddlywiki`, `init-store` und `listen`
+   weiterhin den Start – der neue Befehl hat die Prüfung nicht aufgeweicht
+8. `npx mws help` führt `init-data-folder` mit Beschreibung
+
+---
+
 ## Nicht eingecheckte Start-Konfiguration (lokal, gitignored)
 
 ```json

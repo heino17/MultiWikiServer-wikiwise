@@ -1,4 +1,5 @@
 export * from "./listen";
+export * from "./init-data-folder";
 export * from "./init-store";
 export * from "./load-wiki-folder";
 export * from "./rename-personal-roles";

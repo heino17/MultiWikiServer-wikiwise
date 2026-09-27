@@ -44,6 +44,9 @@ serverEvents.on("cli.execute.before", async (name, params, options, instance) =>
     instance.wikiPath = wikiPath;
     return;
   }
+  // This command creates the data folder manifest, so it must run before there
+  // is a data folder. Like update-tiddlywiki it needs no MWS environment.
+  if (name === "init-data-folder") return;
 
 
 

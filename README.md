@@ -45,28 +45,25 @@ Every release contains a ready-to-install package. Download it, install it into 
 folder of your choice, and nothing has to be compiled:
 
 - `mkdir my-folder && cd my-folder`
-- `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.3.0/mws-wikiwise-0.3.0.tgz`
-- - `npm pkg set private=true --json`
-- `npm pkg set name="@tiddlywiki/mws-instance" version=0.2.0`
+- `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.3.1/mws-wikiwise-0.3.1.tgz`
+- `npx mws init-data-folder`
 - `npx mws update-tiddlywiki`
 - `npx mws init-store`
 - `npx mws listen --listener` – serves on <http://localhost:8080/>
 
-Those two lines are not optional. MWS insists on a data folder whose
+`npx mws init-data-folder` is not optional. MWS insists on a data folder whose
 `package.json` is named `@tiddlywiki/mws-instance`, is marked `private` and
 carries a `0.2.x` version – it refuses to start otherwise, because that file is
 what keeps your tiddlers out of a public registry. `npm install <url>` in an
-empty folder writes a `package.json` named after the folder, so `npm pkg set`
-corrects exactly those three fields and keeps the dependency entry. The two
-commands are separate on purpose: `--json` makes npm parse **every** value as
-JSON, so it turns `private` into the boolean `true` but chokes on
-`@tiddlywiki/mws-instance`, which is not valid JSON.
+empty folder writes a `package.json` named after the folder, so the command
+corrects exactly those three fields, keeps the dependencies npm wrote, and
+refuses to overwrite a name that somebody chose on purpose.
 
 The download is an ordinary npm package, so `npm` resolves and installs all
 dependencies for you. Verify it before you trust it:
 
 ```
-sha256sum mws-wikiwise-0.3.0.tgz
+sha256sum mws-wikiwise-0.3.1.tgz
 ```
 
 The expected checksum is printed in the release notes. A mismatch means the file
@@ -86,9 +83,9 @@ so there is no separate build step:
 For your own data folder, independent of the development wiki, build a package once
 and install it into a new folder:
 
-- `npm pack` – creates `mws-wikiwise-0.3.0.tgz`
+- `npm pack` – creates `mws-wikiwise-0.3.1.tgz`
 - `mkdir my-folder && cp create-package/files/* my-folder/`
-- `cd my-folder && npm install ../mws-wikiwise-0.3.0.tgz`
+- `cd my-folder && npm install ../mws-wikiwise-0.3.1.tgz`
 - `npx mws update-tiddlywiki`
 - `npx mws init-store`
 - `npx mws listen --listener` – serves on <http://localhost:8080/>
@@ -265,28 +262,26 @@ Jedes Release enthält ein fertiges Paket. Herunterladen, in einen Ordner deiner
 installieren – kompilieren musst du nichts:
 
 - `mkdir mein-ordner && cd mein-ordner`
-- `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.3.0/mws-wikiwise-0.3.0.tgz`
-- - `npm pkg set private=true --json`
-- `npm pkg set name="@tiddlywiki/mws-instance" version=0.2.0`
+- `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.3.1/mws-wikiwise-0.3.1.tgz`
+- `npx mws init-data-folder`
 - `npx mws update-tiddlywiki`
 - `npx mws init-store`
 - `npx mws listen --listener` – liefert auf <http://localhost:8080/>
 
-Diese zwei Zeilen sind nicht optional. MWS besteht auf einem Datenordner, dessen
-`package.json` `@tiddlywiki/mws-instance` heißt, als `private` markiert ist und
-eine `0.2.x`-Version trägt – sonst startet der Server nicht, denn genau diese
-Datei hält deine Tiddler aus einer öffentlichen Registry heraus. `npm install
-<url>` in einem leeren Ordner schreibt eine `package.json` mit dem Ordnernamen,
-also korrigiert `npm pkg set` genau diese drei Felder und behält den
-Dependency-Eintrag. Die zwei Befehle sind absicht getrennt: `--json` lässt npm
-**alle** Werte als JSON parsen, macht also aus `private` den Boolean `true`,
-scheitert aber an `@tiddlywiki/mws-instance`, weil das kein gültiges JSON ist.
+`npx mws init-data-folder` ist nicht optional. MWS besteht auf einem Datenordner,
+dessen `package.json` `@tiddlywiki/mws-instance` heißt, als `private` markiert
+ist und eine `0.2.x`-Version trägt – sonst startet der Server nicht, denn genau
+diese Datei hält deine Tiddler aus einer öffentlichen Registry heraus.
+`npm install <url>` in einem leeren Ordner schreibt eine `package.json` mit dem
+Ordnernamen, also korrigiert der Befehl genau diese drei Felder, behält die von
+npm geschriebenen Abhängigkeiten und weigert sich, einen absichtlich gewählten
+Namen zu überschreiben.
 
 Der Download ist ein ganz normales npm-Paket, `npm` löst also alle Abhängigkeiten für
 dich auf. Prüfe die Datei, bevor du ihr vertraust:
 
 ```
-sha256sum mws-wikiwise-0.3.0.tgz
+sha256sum mws-wikiwise-0.3.1.tgz
 ```
 
 Die erwartete Prüfsumme steht in den Release-Notizen. Bei Abweichung wurde die Datei
@@ -306,9 +301,9 @@ ein zusätzlicher Build-Schritt ist nicht nötig:
 Für einen eigenen Datenordner, unabhängig vom Entwicklungs-Wiki, einmal ein Paket bauen
 und in einen neuen Ordner installieren:
 
-- `npm pack` – erzeugt `mws-wikiwise-0.3.0.tgz`
+- `npm pack` – erzeugt `mws-wikiwise-0.3.1.tgz`
 - `mkdir mein-ordner && cp create-package/files/* mein-ordner/`
-- `cd mein-ordner && npm install ../mws-wikiwise-0.3.0.tgz`
+- `cd mein-ordner && npm install ../mws-wikiwise-0.3.1.tgz`
 - `npx mws update-tiddlywiki`
 - `npx mws init-store`
 - `npx mws listen --listener` – liefert auf <http://localhost:8080/>

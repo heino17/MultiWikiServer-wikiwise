@@ -73,7 +73,14 @@ Markers used below:
   "Security Boundaries". Remaining known gaps: no HSTS/X-Frame-Options, no CORS,
   and the referer check is provisional
 - ✅ make sure the getting started doc is correct — README "How to run" and
-  README_features.md
+  README_features.md; the release route is `npx mws init-data-folder` since
+  [§54](CHANGELOG.md), which replaced the two `npm pkg set` commands of
+  [§53](CHANGELOG.md)
+- ✅ the documented release installation was executed as written on a real
+  machine for 0.3.0 ([§53](CHANGELOG.md)) and again for 0.3.1 with the new
+  command ([§54](CHANGELOG.md)) — downloaded asset, checksum, init, store and
+  server all checked, including that the data-folder guard still refuses to
+  start in a wrong folder
 - ✗ put site restrictions in a file — still unclear what belongs into it
 - ✗ sell people on contributing to the project — CONTRIBUTING.md is four lines and
   only points at the upstream CLA
