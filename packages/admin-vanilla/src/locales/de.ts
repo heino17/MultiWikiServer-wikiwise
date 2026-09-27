@@ -557,7 +557,7 @@ export const deStrings: Record<string, string> = {
   "Anonymous visitors get an overview with statistics and the public wikis instead of the login form.": "Anonyme Besucher sehen einen Überblick mit Statistiken und den öffentlichen Wikis statt des Login-Formulars.",
   "Landing welcome message": "Begrüßungstext der Startseite",
   "A welcome text on the public page. Markdown is supported.": "Ein Willkommenstext auf der öffentlichen Seite. Markdown wird unterstützt.",
-  "Landing news": "Neuigkeiten der Startseite",
+  "Landing news": "News-Block der Startseite",
   "Landing page": "Startseite",
   "Only wikis you have made publicly readable (ANON in Readers) can appear on the landing page.": "Nur Wikis, die du öffentlich lesbar gemacht hast (ANON unter den Lesern), können auf der Startseite erscheinen.",
   "Show this publicly readable wiki on the start page for visitors without an account.": "Zeigt dieses öffentlich lesbare Wiki auf der Startseite für Besucher ohne Konto.",
