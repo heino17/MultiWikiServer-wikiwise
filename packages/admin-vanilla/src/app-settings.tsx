@@ -1,5 +1,7 @@
 import { addstyles, customElement, JSXElement, state } from "@tiddlywiki/jsx-lit";
 import css from "./app.inline.css";
+import closeIcon from "@material-symbols/svg-400/outlined/close.svg";
+import { MaterialSymbol } from "./material-symbol";
 import { localeLabels, supportedLocales, t } from "./i18n";
 
 async function apiJson(path: string, init?: RequestInit): Promise<any> {
@@ -191,10 +193,13 @@ export class SettingsForm extends JSXElement {
     return (
       <div class="admin-shell">
         <section class="modal-card" aria-label={t("Settings")} style="max-width: 34rem; margin: 0 auto; width: 100%;">
-          <header class="login-card-header">
+          <header class="login-card-header settings-card-header">
             <div class="login-card-title">
               <h3>{t("Settings")}</h3>
               <p class="login-card-copy">{t("Choose the language and theme every visitor sees on their first load.")}</p>
+            </div>
+            <div class="close-button settings-close-button" onclick={this.onCancel} aria-label={t("Close")}>
+              <MaterialSymbol icon={closeIcon} />
             </div>
           </header>
 
