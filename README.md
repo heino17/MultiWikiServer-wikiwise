@@ -1,4 +1,4 @@
-# MultiWikiServer-wikiwise
+# 🇺🇸 MultiWikiServer-wikiwise
 
 <a href="https://www.paypal.com/donate/?hosted_button_id=BVDDREGEU2ZEA">
   <img src="https://github.com/user-attachments/assets/6467378f-26fd-40ff-b60e-b8d62555c08a" width="20" />
@@ -14,7 +14,7 @@ Multiple users, multiple wikis for TiddlyWiki.
 - SQLite database managed with Prisma.
 - Password-based login.
 
-> Before you put real data in, please read [Security between users](#security-between-users) and [Backups](#backups).
+> Before you put real data in, please read [Security between users](#security-between-users) and the **Backups** section.
 
 ## ✨ What this fork adds
 
@@ -156,3 +156,135 @@ If you want to work on the project, or just try out the latest changes,
 The development wiki will be active at http://localhost:8080/
 
 You can change the listeners as explained in the mws.dev.mjs file.
+
+---
+
+# 🇩🇪 MultiWikiServer-wikiwise
+
+<a href="https://www.paypal.com/donate/?hosted_button_id=BVDDREGEU2ZEA">
+  <img src="https://github.com/user-attachments/assets/6467378f-26fd-40ff-b60e-b8d62555c08a" width="20" />
+Donate an den MultiWikiServer-Gründer Arlen Beiler via PayPal, um die Entwicklung zu unterstützen
+</a>
+
+---
+
+Mehrere Nutzer, mehrere Wikis für TiddlyWiki.
+
+- Bag-&-Recipe-System zum Speichern von Tiddlern.
+- Nutzer- und Rollenverwaltung mit ACL.
+- SQLite-Datenbank, verwaltet mit Prisma.
+- Passwortbasierte Anmeldung.
+
+> Bevor Du echte Daten reinlädst, lies bitte [Sicherheit zwischen Nutzern](#sicherheit-zwischen-nutzern) und den Abschnitt **Backups**.
+
+## ✨ Was dieser Fork hinzufügt
+
+Nur Highlights – die vollständige Geschichte mit Dateinamen, Code und Hintergrund steht im [CHANGELOG](CHANGELOG.md).
+
+- 🏫 **Ein Lehrer-Bereich für den Schulbetrieb.** Ein Schulbetreiber legt Lehrer an, und jeder Lehrer verwaltet **nur seine eigene Klasse** – von den Kollegen abgetrennt durch persönliche Rollen und einen serverseitigen Rollen-Guard, während Klassenrollen Schülern gezielten Lesezugriff geben und eine Kooperation per Einladung möglich bleibt. (§21–§27)
+- 📚 **Wikis, die man wirklich verwalten kann.** Ein Wiki mit einem Klick anlegen (oder aus einem Vollformular), Slug und Anzeigename umbenennen, löschen, jeden Namen live prüfen lassen – und in der Oberfläche „Klarnamen" statt „Recipe" sehen. (§10–§13, §17, §30)
+- 🌍 **8 Sprachen.** Die komplette Admin-App – und der Wiki-Client, der automatisch der Wiki-Sprache folgt. Mit über 500 übersetzten Keys und einem Sprachumschalter in der Kopfzeile. (§14, §46)
+- 🏠 **Eine öffentliche Startseite für anonyme Besucher.** Hero-Bereich, Statistik-Kacheln, Wiki-Karten mit Vorschaubildern, ein Willkommenstext des Betreibers, ein News-Block und ein Versions-Footer – statt eines Login-Formulars. (§48)
+- 📌 **Eine Pinnwand.** Gemeinsame Zettel für alle angemeldeten Nutzer: global, an eine Klasse oder an eine einzelne Person adressiert, mit wichtigen Zetteln oben, Ungelesen-Badge und Moderation. (§42)
+- 🗂️ **Meine Dateien.** Jedes Konto lädt eigene Dateien hoch, zeigt sie im Browser an (Bild, Audio, Video, PDF, Text, Markdown, ODT) und teilt sie gezielt – Admin-Freigaben erreichen alle, Lehrer-Freigaben ihre Klasse. (§44, §45)
+- 🖼️ **Echte Wiki-Vorschaubilder.** Screenshots der Wikis aus einem Headless-Browser, pro User-Sicht, 24-h-Cache, werden beim Löschen eines Wikis automatisch mit aufgeräumt. (§43)
+- 💾 **Speicher-Transparenz und Backups per Klick.** Ein Admin-Tab, der System-Festplatte und MWS-Belegung trennt, Blobs & Dateien, verwaiste Dateien und die Top-10-Speichernutzer meldet – plus ein konsistentes ZIP-Backup von Datenbank, Schlüsseln und Config. (§36, §39–§41)
+- ⚙️ **Einstellungen für den gesamten Betrieb.** Standard-Sprache und -Theme fürs erste Laden, Feature-Schalter, der Cookie-Hinweis und die Impressum-Seite. (§47)
+- 🔐 **Security-Umbau.** Owner-Schutz für Wikis, Bags, Templates, Rollen und Nutzer, Bag-Namespaces pro Owner gegen Namens-Squatting, `CSP`-Header und kein Existenz-Orakel. Anonyme Lesezugriffe sind jetzt eine explizite `ANON`-Rolle. (§4, §15, §47)
+
+## 🚀 So startest du es
+
+Der Init-Befehl legt einen neuen Ordner an und installiert alles, was du für den Einstieg brauchst. Den Namen „my-folder" kannst du frei wählen.
+
+- `npm init @tiddlywiki/mws@latest my-folder`
+- `cd my-folder`
+- `npx mws listen --listener`
+
+Mit `npx mws help` bekommst du mehr Informationen zu den Befehlen.
+
+- Der Server läuft auf Port `8080`. Standardmäßig nutzt er kein HTTPS, aber du kannst es über Key und Cert aktivieren.
+- Es wird eine `passwords.key` erstellt, die das Master-Salt für die Passwörter enthält. Ändert sich diese Datei, sind alle Passwörter unbrauchbar und müssen neu gesetzt werden.
+- Deine Datenbank liegt im Ordner `store`. Alle Dateien im Ordner `store` sind Datendateien, keine temporären Dateien und keine Lock-Dateien! Niemals löschen!
+
+Der beim ersten Start angelegte Nutzer hat den Benutzernamen `admin` und das Passwort `1234`.
+
+Wenn du Probleme hast oder nicht weiterkommst, leg gerne eine [Diskussion](https://github.com/heino17/MultiWikiServer-wikiwise/discussions) an. Wenn du weißt, was nicht stimmt, kannst du auch ein Issue eröffnen.
+
+## 🧩 Flexibel und erweiterbar
+
+- Plugins können Routen und Hooks ergänzen.
+- Überall Abstraktionen, das erlaubt Flexibilität.
+- Der Quellcode ist vollständig typisiert und gut navigierbar.
+- Admin-Endpunkte lassen sich auch über die CLI aufrufen.
+
+## Sicherheit zwischen Nutzern
+
+Die Datenbankstruktur und die Speicherschicht sind solide, und dieser Fork hat mehrere der schärfsten Kanten des Originals geschlossen. Die Zugriffskontrolle ist weiterhin **bag-basiert** und nicht pro Tiddler, und privilegierte Rollen sind mächtig. MWS passt also gut zu Klassenzimmern, Teams und Hobby-Wikis – und ist das falsche Werkzeug für Geheimnisse, die strikt getrennt bleiben müssen.
+
+### 🛡️ In diesem Fork gehärtet
+
+- **Ein Speichern kann nicht mehr den Bag eines anderen mitreißen.** Beim Anlegen oder Speichern eines Rezepts/Templates wird für jeden referenzierten Bag Lesezugriff benötigt – bei Schreibzielen Schreibzugriff. Ein Verweis auf `editions/<jemand-anderes>` legt dir dieses Wiki weder offen noch gibt er dir Rechte, die du nicht selbst hast.
+- **Ein Wiki zu lesen schaltet nicht mehr alle seine Bags frei.** Über den Zugriff auf den Inhalt eines Wikis entscheidet Bag für Bag, statt „ein einziger Bag öffnet das ganze Wiki".
+- **Anonymer Lesezugriff ist explizit.** Er wird über die `ANON`-Rolle am Wiki-Rezept und seinen Bags vergeben; alles andere bleibt unsichtbar.
+- **Bag-Namespaces sind pro Owner partitioniert.** Der Standard-Bag eines Wikis liegt unter `editions/<owner-id>/<slug>`, sodass niemand den Bag vorab anlegen kann, in den das Wiki speichert – der Bug, der Schülern früher rätselhafte 403er bescherte. Die öffentliche URL `/wiki/<slug>` bleibt unverändert.
+- **Kein Existenz-Orakel.** Bags, die du nicht sehen darfst, antworten mit `404` statt `403`, sodass fremde Bag-Namen nicht über Statuscodes durchsickern. Wiki-Seiten werden mit einem `CSP`-Header ausgeliefert.
+- **Rechte lassen sich nicht beiläufig vergeben.** Die Systemrollen `ADMIN`/`USER`/`ANON` können nicht gelöscht werden, und nur das `admin`-Konto darf Rollen anlegen – über die API gibt es keine Selbstbeförderung.
+- **Lehrer sind in einer Sandbox.** Ein Schulbetreiber legt Lehrer an; jeder Lehrer verwaltet **nur seine eigene Klasse** über eine persönliche Rolle, darf weder `ADMIN`, `TEACHER` noch die Rolle eines anderen Lehrers vergeben und kann die Wikis eines Kollegen nicht sehen oder öffnen, solange er nicht ausdrücklich eingeladen wurde. Ein serverseitiger Rollen-Guard erzwingt all das, nicht nur die Oberfläche.
+- **Schreibpfade werden geprüft.** Admin- und Schreib-Endpunkte erzwingen Referer-/CSRF-Prüfungen und den `X-Requested-With`-Header, und Passwörter werden als OPAQUE-(aPAKE-)Hashes gespeichert, niemals im Klartext.
+
+### ⚠️ Von Haus aus offen
+
+- **Die Granularität ist ein Bag.** Wer einen Bag lesen darf, liest alle Tiddler darin; wer ihn schreiben darf, schreibt alle Tiddler darin. Es gibt keine Beschränkung pro Tiddler oder pro Feld, ein Leck ist pro Bag also binär.
+- **Privilegierte Rollen sehen viel.** Admins und Lehrer können konstruktionsbedingt einen großen Teil der Installation lesen und neu zuweisen; das Rollen- und Nutzersystem ist für die gesamte Installation gemeinsam.
+- **Nicht als Tresor benutzen.** Wenn Du Vertraulichkeit pro Tiddler oder eine harte Mandantentrennung brauchst, ist MWS die falsche Wahl.
+
+In der Praxis: Verteile so wenig Rechte wie nötig, betreibe eine echte Instanz hinter HTTPS und mach Sicherungskopien.
+
+## 🗄️ Das hier ist eine Datenbank, bitte mach Backups
+
+Datenbanken bemühen sich sehr, perfekt zu sein, und Datenfehler sind selten. Das bedeutet aber nicht, dass nichts schiefgehen kann. Backups sind ziemlich wichtig.
+
+## 🔄 Updates
+
+_Immer, immer, immer sichere deinen Store-Ordner, bevor du aktualisierst._
+
+- Mit `npm update` bringst du MWS auf die neueste Version.
+- Mit `npx mws update-tiddlywiki` bringst du TiddlyWiki auf die neueste Version.
+
+Gibt es Änderungen an der Datenbank, sollte MWS sie beim Start übernehmen. Die Änderungen werden aus Prisms eingebauter Migration erzeugt und sollen die Daten erhalten, aber Backups werden dringend empfohlen.
+
+## 💾 Backups
+
+Es wird empfohlen, den kompletten Datenordner zu sichern, nicht nur den Ordner `store` – mit ein paar Ausnahmen.
+
+- Du musst *immer* den *kompletten* Ordner `store` sichern. Lösche niemals Dateien im Ordner `store`. Alle Dateien im Ordner `store` sind Datendateien!
+- `passwords.key` kann gesichert werden, aber da sie sich nie ändert, kannst du auch einfach eine Kopie an einem sichereren Ort getrennt von deinen normalen Backups aufbewahren.
+- Du solltest `package.json` und `package-lock.json` sichern.
+- Der Ordner `node_modules` kann ignoriert werden. `npm ci` installiert den Ordner `node_modules` anhand von `package-lock.json` neu.
+- Der Ordner `cache` (neben dem Ordner `store`) wird bei jedem Start von MWS erzeugt, ist also nur Ballast. Du kannst ihn immer ignorieren.
+- Aus dem Ordner `tw5` muss nur die Datei `tw5/versions.txt` gesichert werden.
+
+Im Wesentlichen sind das die Pfade, die du sichern musst:
+- `/package.json`
+- `/package-lock.json`
+- `/store`
+- `/tw5/versions.txt`
+- `/passwords.key` (oder separat aufbewahren)
+
+## 🛠️ Entwicklung
+
+Der Entwicklungs-Datenordner ist `/dev/wiki`.
+
+Wenn du am Projekt arbeiten oder einfach die neuesten Änderungen ausprobieren möchtest:
+
+- `git clone https://github.com/heino17/MultiWikiServer-wikiwise`
+- `cd MultiWikiServer-wikiwise`
+- `npm install` or `npm run install-android`
+- `npm run certs` - wenn du https willst (nur unix)
+- `npm start update-tiddlywiki` - Lädt die neueste TiddlyWiki-Version herunter
+- `npm start init-store` - Legt den Nutzer `admin` an und importiert die Standard-Wikis.
+- `npm start` - führt jedes Mal den Build aus, aber das geht sehr schnell.
+
+Das Entwicklungs-Wiki ist aktiv unter http://localhost:8080/
+
+Du kannst die Listener ändern, wie es in der Datei mws.dev.mjs erklärt wird.
