@@ -1,6 +1,7 @@
 {
   "name": "@tiddlywiki/jsx-lit",
   "private": true,
+  "license": "BSD-3-Clause",
   "module": "src/index.ts",
   "main": "src/index.ts",
   "exports": {

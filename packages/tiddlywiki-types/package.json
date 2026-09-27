@@ -1,5 +1,6 @@
 {
   "name": "@types/tiddlywiki",
+  "license": "BSD-3-Clause",
   "description": "TiddlyWiki Definitely Typed (sort of)",
   "private": true
 }
