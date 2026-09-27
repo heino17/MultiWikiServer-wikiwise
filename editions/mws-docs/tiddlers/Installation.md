@@ -1,11 +1,20 @@
 These instructions require minimal knowledge of the terminal and require NodeJS to be installed.
 
-> **Note for the wikiwise fork:** the package `@tiddlywiki/mws` on npm is the *upstream* project. `npm init @tiddlywiki/mws@latest` therefore installs upstream MultiWikiServer without any fork feature. This fork will be published as `@mws/wikiwise`; until then it is installed from its repository.
+> **Note for the wikiwise fork:** the package `@tiddlywiki/mws` on npm is the *upstream* project. `npm init @tiddlywiki/mws@latest` therefore installs upstream MultiWikiServer without any fork feature. This fork is distributed as a GitHub release, not on npm.
 
-- Get the fork and install it. The install also builds the server bundle, so there is no separate build step. 
+- Recommended: install the finished package from a release. Download the `.tgz` from the [[releases page|https://github.com/heino17/MultiWikiServer-wikiwise/releases]], then:
+<<.copy-code-to-clipboard """mkdir "new_folder_name" && cd "new_folder_name" """>>
+<<.copy-code-to-clipboard """npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.3.0/mws-wikiwise-0.3.0.tgz """>>
+<<.copy-code-to-clipboard """npx mws update-tiddlywiki """>>
+<<.copy-code-to-clipboard """npx mws init-store """>>
+<<.copy-code-to-clipboard """npx mws listen --listener """>>
+- Visit [[http://localhost:8080/]] in a browser on the same computer. When you have finished using MWS, stop the server with <kbd>ctrl-C</kbd>. The download is an ordinary npm package, so `npm` installs all dependencies. Compare its `sha256sum` with the checksum in the release notes before you use it.
+
+- Alternative: get the fork and install it. The install also builds the server bundle, so there is no separate build step. 
 <<.copy-code-to-clipboard """git clone https://github.com/heino17/MultiWikiServer-wikiwise.git """>>
 <<.copy-code-to-clipboard """cd MultiWikiServer-wikiwise """>>
 <<.copy-code-to-clipboard """npm install """>>
+<<.copy-code-to-clipboard """npm start """>>
 - Start the development wiki and visit [[http://localhost:5000/dev/]] in a browser on the same computer. When you have finished using MWS, stop the server with <kbd>ctrl-C</kbd>. 
 - For your own data folder, independent of the development wiki, build a package once and install it into a new folder. Notice that the second word is `pack` instead of `install`. 
 <<.copy-code-to-clipboard """npm pack """>>

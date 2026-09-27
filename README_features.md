@@ -9,7 +9,9 @@ Standard-Sprache und Standard-Theme fürs erste Laden stellt der Betreiber in de
 
 ## Nutzung
 
-> ⚠️ `@tiddlywiki/mws` auf npm ist das **Upstream**-Projekt. `npm init @tiddlywiki/mws@latest` installiert nicht diesen Fork. Dieser Fork wird als `@mws/wikiwise` auf npm erscheinen; bis dahin wird er aus dem Repository installiert.
+> ⚠️ `@tiddlywiki/mws` auf npm ist das **Upstream**-Projekt. `npm init @tiddlywiki/mws@latest` installiert nicht diesen Fork. Dieser Fork wird als GitHub-Release verteilt, nicht über npm.
+>
+> **Schnellster Weg:** `mkdir mein-ordner && cd mein-ordner && npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.3.0/mws-wikiwise-0.3.0.tgz`, dann `npx mws update-tiddlywiki`, `npx mws init-store`, `npx mws listen --listener`.
 
 1. Repository holen und installieren: `git clone https://github.com/heino17/MultiWikiServer-wikiwise.git && cd MultiWikiServer-wikiwise && npm install`
 2. Entwicklungs-Wiki starten: `npm start` → Port `5000` unter `/dev/`
@@ -136,7 +138,9 @@ The operator sets the default language and theme for the very first load in "Set
 
 ## **Usage**
 
-> ⚠️ `@tiddlywiki/mws` on npm is the **upstream** project. `npm init @tiddlywiki/mws@latest` does not install this fork. This fork will be published as `@mws/wikiwise`; until then it is installed from the repository.
+> ⚠️ `@tiddlywiki/mws` on npm is the **upstream** project. `npm init @tiddlywiki/mws@latest` does not install this fork. This fork is distributed as a GitHub release, not on npm.
+>
+> **Fastest route:** `mkdir my-folder && cd my-folder && npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.3.0/mws-wikiwise-0.3.0.tgz`, then `npx mws update-tiddlywiki`, `npx mws init-store`, `npx mws listen --listener`.
 
 1. Get and install the repository: `git clone https://github.com/heino17/MultiWikiServer-wikiwise.git && cd MultiWikiServer-wikiwise && npm install`
 2. Start the development wiki: `npm start` → port `5000` under `/dev/`
