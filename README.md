@@ -14,56 +14,7 @@ Multiple users, multiple wikis for TiddlyWiki.
 - SQLite database managed with Prisma.
 - Password-based login.
 
-## Flexible and Extendible
-
-- Plugins can add routes and hooks.
-- Abstractions everywhere, allowing flexibility.
-- The source code is fully typed and easy to navigate.
-- Admin endpoints can also be called from the CLI.
-
-Most of these features are still in development.
-
-## Here's a sneak peak at the new UI that's coming
-
-### Dark Mode
-
-<img width="800" alt="dark mode" src="https://github.com/user-attachments/assets/d2c8177a-e504-4bff-999d-4b260467ac2e" />
-
-### Light Mode
-
-<img width="800" alt="light mode" src="https://github.com/user-attachments/assets/301cb61c-1f39-4d4f-8f4a-8ecd5306c084" />
-
-## Warning: Security between users is still a dumpster fire.
-
-**While the database structure is reliable, the security mechanism is more like swiss cheese.**
-
-**Do not use it to protect feelings or intellectual property.**
-
-**There are plenty of ways for anyone with write access to get around the security restrictions.**
-
-Two of the biggest holes have been closed in this fork:
-
-- A recipe/template save can no longer drag in a foreign bag: the editor needs
-  read access (or, for write targets, write access) on every referenced bag.
-  Referencing `editions/<someone-else>` no longer exposes that wiki to you or
-  grants write access you do not hold yourself.
-- Reading a wiki no longer uses a shortcut where owning any single bag inside
-  it unlocked every other bag of that wiki: read access is decided bag by bag.
-
-What is still fundamentally open:
-
-- Anyone who can read a bag can read all tiddlers in it; anyone who can write a
-  bag can write all tiddlers in it. There is no per-tiddler or per-field
-  restriction, so a leak is binary per bag.
-- Bag names follow guessable patterns (`editions/<username>`) and plain
-  enumeration of existing names is possible. Whatever a bag ID reveals is
-  guarded only by the access lists you configure, not by obscurity.
-- Users with elevated roles (teachers, admins) can read and reassign a lot by
-  design; the role/user system is shared across the whole installation.
-
-## Also, this is a database, please make backups
-
-Databases try very hard to be perfect, and data bugs are rare. But that doesn't mean things can't go wrong. Backups are pretty important. 
+> Before you put real data in, please read [Security between users](#security-between-users) and [Backups](#also-this-is-a-database-please-make-backups).
 
 ## How to run
 
@@ -83,15 +34,72 @@ The initial user created on first run has the username `admin` and password `123
 
 If you run into trouble, or need help figuring something out, feel free to [start a discussion](https://github.com/heino17/MultiWikiServer-wikiwise/discussions). If you know what's wrong, you can also open an issue.
 
+## Flexible and Extendible
+
+- Plugins can add routes and hooks.
+- Abstractions everywhere, allowing flexibility.
+- The source code is fully typed and easy to navigate.
+- Admin endpoints can also be called from the CLI.
+
+## Security between users
+
+The database structure and the storage layer are solid, and this fork has closed
+several of the sharpest edges of the original. Access control is still
+**bag-based** rather than per tiddler, and privileged roles are powerful by
+design. So MWS is a good fit for classrooms, teams and hobby wikis – and the
+wrong tool for secrets that must stay strictly compartmentalized.
+
+### Hardened in this fork
+
+- **A save can no longer pull in someone else's bag.** Creating or saving a
+  recipe/template requires read access – write access for write targets – on
+  every bag it references. Referencing `editions/<someone-else>` neither exposes
+  that wiki to you nor grants access you don't hold yourself.
+- **Reading a wiki no longer unlocks all of its bags.** Access to a wiki's
+  contents is decided bag by bag, instead of "owning any single bag opened the
+  whole wiki".
+- **Anonymous read access is explicit.** It is granted by the `ANON` role on the
+  wiki recipe and its bags; everything else stays invisible.
+- **Bag namespaces are partitioned per owner.** A wiki's default bag lives at
+  `editions/<owner-id>/<slug>`, so nobody can pre-create the bag a wiki saves
+  into – the bug that used to hand students mysterious 403s. The public URL
+  `/wiki/<slug>` stays unchanged.
+- **No existence oracle.** Bags you may not see answer `404` instead of `403`,
+  so foreign bag names don't leak through status codes. Wiki pages are served
+  with a `CSP` header.
+- **Privileges can't be handed out casually.** The system roles
+  `ADMIN`/`USER`/`ANON` cannot be deleted, and only the `admin` account can
+  create roles – there is no self-promotion through the API.
+- **Teachers are sandboxed.** A school operator creates teachers; each teacher
+  manages **only their own class** through a personal role, cannot grant
+  `ADMIN`, `TEACHER` or another teacher's role, and cannot see or open a
+  colleague's wikis unless explicitly invited. A server-side role guard
+  enforces all of this, not just the UI.
+- **Write paths are checked.** Admin and write endpoints enforce referer/CSRF
+  checks and the `X-Requested-With` header, and passwords are stored as OPAQUE
+  (aPAKE) hashes, never in plaintext.
+
+### Still open by design
+
+- **Granularity is one bag.** Anyone who can read a bag can read every tiddler
+  in it, and anyone who can write it can write every tiddler in it. There is no
+  per-tiddler or per-field restriction, so a leak is binary per bag.
+- **Privileged roles see a lot.** Admins and teachers can read and reassign a
+  large part of the installation by design; the role and user system is shared
+  installation-wide.
+- **Don't use it as a vault.** If you need per-tiddler confidentiality or hard
+  tenant isolation, MWS is the wrong choice.
+
+In practice: hand out the smallest rights that get the job done, run a real
+instance behind HTTPS, and take backups.
+
+## Also, this is a database, please make backups
+
+Databases try very hard to be perfect, and data bugs are rare. But that doesn't mean things can't go wrong. Backups are pretty important. 
+
 ## Updates
 
-Within 0.x versions, please do NOT use `npm install` to update your instance from one minor version to the next.
-
-To update between 0.x versions, open each wiki and click the cloud status icon, then click "save snapshot for offline use". You can then create a new instance and import your wikis via the browser. 
-
 _Always, always, always save a backup of your store folder before updating._
-
-### Starting with 0.2
 
 - You can update to the latest version of MWS using `npm update`. 
 - You can update to the latest version of tiddywiki using `npx mws update-tiddlywiki`. 
@@ -118,7 +126,7 @@ So essentially, the paths you need to backup are:
 
 ## Development
 
-In 0.2, the development data folder is `/dev/wiki`.
+The development data folder is `/dev/wiki`.
 
 If you want to work on the project, or just try out the latest changes,
 
