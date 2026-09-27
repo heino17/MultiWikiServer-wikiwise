@@ -2838,6 +2838,56 @@ working `npm publish`. The answer is that they do not need one.
 
 ---
 
+## 53. Fix: the release installation needs one more command
+
+**Goal:** §52 documented the release route as four commands. Following it
+exactly, in a fresh empty folder, the server refused to start:
+
+```
+Error: The wiki path package.json file is not named '@tiddlywiki/mws-instance'.
+```
+
+### What happened
+
+- `npm install <tarball-url>` in an empty folder makes npm write a
+  `package.json` – and it names it after the folder, not after the data
+  folder template. MWS requires that file to be named
+  `@tiddlywiki/mws-instance`, to be `private: true` and to carry a `0.2.x`
+  version, and it checks this on every start (`packages/mws/src/index.ts:66-81`).
+  The check is deliberate: that file is what keeps the tiddlers of a data
+  folder out of a public registry, so the server refuses rather than guessing.
+- The create package normally copies that template, which is why the clone and
+  `npm pack` routes never hit this: both start from `create-package/files`.
+  A route that begins with `npm install` has no such step.
+
+### The fix, without touching the runtime
+
+- One more command turns npm's file into the data folder manifest and keeps the
+  dependency entry, so `npm ls` and later updates still know where the server
+  came from:
+  `npm pkg set name="@tiddlywiki/mws-instance" private=true version=0.2.0 --json`
+- `--json` is not decoration. `npm pkg set private=true` stores the **string**
+  `"true"`, and `packages/mws/src/index.ts:83` compares against the boolean
+  `true`, so the server would abort with the `PACKAGE_JSON_PRIVATE` message.
+- `README.md` (both languages), `README_features.md` (both languages) and
+  `editions/mws-docs/tiddlers/Installation.md` now carry the command and
+  explain why it exists. The release notes were corrected in place as well.
+
+### Verified against the published release
+
+Taken from the release page, not from a local build:
+
+1. `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.3.0/mws-wikiwise-0.3.0.tgz`
+   → exit 0, `@mws/wikiwise@0.3.0` in `node_modules`
+2. the downloaded file's `sha256sum` equals the one in the release notes
+3. `npm pkg set …` → `name`, `private` and `version` correct, dependency kept
+4. `npx mws update-tiddlywiki` → exit 0
+5. `npx mws init-store` → exit 0, both wikis loaded, admin `1234`
+6. `npx mws listen --listener` → `/`, `/admin` and `/wiki/bedienungsanleitung`
+   answer 200, `GET /api/landing` reports `"mws": "0.3.0"`
+
+---
+
 ## Unchecked-in starter configuration (local, gitignored)
 
 ```json
@@ -5768,6 +5818,60 @@ funktionierendes `npm publish`? Die Antwort: gar nicht nötig.
 - Das Release wird von Hand in der GitHub-Oberfläche angelegt; `gh` steht in
   dieser Umgebung nicht zur Verfügung, Tag und Asset-Upload sind also manuelle
   Schritte.
+
+---
+
+## 53. Fix: Die Release-Installation braucht einen Befehl mehr
+
+**Ziel:** §52 hat den Release-Weg mit vier Befehlen beschrieben. Genau so
+ausgeführt, in einem frischen leeren Ordner, verweigerte der Server den Start:
+
+```
+Error: The wiki path package.json file is not named '@tiddlywiki/mws-instance'.
+```
+
+### Was passiert ist
+
+- `npm install <tarball-url>` in einem leeren Ordner lässt npm eine
+  `package.json` schreiben – und benennt sie nach dem Ordner, nicht nach der
+  Vorlage des Datenordners. MWS verlangt aber, dass diese Datei
+  `@tiddlywiki/mws-instance` heißt, `private: true` ist und eine `0.2.x`-Version
+  trägt, und prüft das bei jedem Start (`packages/mws/src/index.ts:66-81`). Die
+  Prüfung ist Absicht: Genau diese Datei hält die Tiddler eines Datenordners aus
+  einer öffentlichen Registry heraus, also verweigert der Server, statt zu raten.
+- Das Create-Paket kopiert diese Vorlage normalerweise – deshalb laufen der
+  Clone-Weg und der `npm pack`-Weg nie in dieses Problem: beide starten bei
+  `create-package/files`. Ein Weg, der mit `npm install` beginnt, hat diesen
+  Schritt nicht.
+
+### Die Lösung, ohne Eingriff in die Laufzeit
+
+- Ein weiterer Befehl macht aus der Datei von npm das Manifest des
+  Datenordners und behält den Dependency-Eintrag, damit `npm ls` und spätere
+  Updates weiter wissen, woher der Server kam:
+  `npm pkg set name="@tiddlywiki/mws-instance" private=true version=0.2.0 --json`
+- `--json` ist keine Dekoration. `npm pkg set private=true` speichert den
+  **String** `"true"`, und `packages/mws/src/index.ts:83` vergleicht mit dem
+  Boolean `true` – der Server bricht dann mit der Meldung
+  `PACKAGE_JSON_PRIVATE` ab.
+- `README.md` (beide Sprachen), `README_features.md` (beide Sprachen) und
+  `editions/mws-docs/tiddlers/Installation.md` enthalten den Befehl jetzt und
+  erklären, warum es ihn gibt. Die Release-Notizen wurden ebenfalls berichtigt.
+
+### Am veroeffentlichten Release geprueft
+
+Von der Release-Seite geholt, nicht aus einem lokalen Build:
+
+1. `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.3.0/mws-wikiwise-0.3.0.tgz`
+   → Exit 0, `@mws/wikiwise@0.3.0` in `node_modules`
+2. Die `sha256sum` der heruntergeladenen Datei entspricht der in den
+   Release-Notizen
+3. `npm pkg set …` → `name`, `private` und `version` korrekt, Abhaengigkeit
+   erhalten
+4. `npx mws update-tiddlywiki` → Exit 0
+5. `npx mws init-store` → Exit 0, beide Wikis geladen, Admin `1234`
+6. `npx mws listen --listener` → `/`, `/admin` und `/wiki/bedienungsanleitung`
+   antworten mit 200, `GET /api/landing` meldet `"mws": "0.3.0"`
 
 ---
 
