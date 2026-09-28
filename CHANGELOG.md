@@ -7302,6 +7302,27 @@ Adresse auf <http://localhost:8080/> korrigiert.
 
 ---
 
+## 67. Dependency-Reinigung: hono auf 4.13.10, in-Range-Reparaturen
+
+`npm audit` meldete u. a. hono-Advisories (CORS-ReDoS, `memo()`-SSR-Datenleck,
+Proxy-Helper, Language-Middleware, `parseBody()`, Query-Parser) — hono 4.12.27
+war exakt gepinnt in `@tiddlywiki/server` und als `"*"` in `@mws/wikiwise`
+aufgelöst, daher kein Fix möglich. In-Range bereinigt:
+
+- `packages/mws/package.json: "hono": "*"` → `"hono": "^4.13.10"`, und
+  `packages/server/package.json: "hono": "4.12.27"` → `"hono": "^4.13.10"`.
+  hono ist der Core-Router des serverseitigen TW-Servers (`new Hono<HonoEnv>()`,
+  `@hono/node-server`, `serve-static`); 4.13.10 behebt alle gelisteten Advisories.
+- `npm audit fix` zog zusätzlich in-Range: `@hono/node-server` 2.0.8 → 2.1.1
+  (WS-Handshake-DoS), `uuid` 11.1.0 → 11.1.1, `picomatch` 2.3.1 → 2.3.2,
+  `micromatch` 3.1.3 → 3.2.3.
+- **Verifiziert:** E2E (17 Checks, Login/Upload/wiki-file/wiki-files/Recipe-Gate)
+  gegen eine frische Instanz mit dem neu gebauten `dist/mws.js` → **ALL PASS**.
+- **Verbleibend:** nur `esbuild`/`html-jsx` (moderate, reines Build-Dev-Tooling,
+  nicht im Server-Paket; Fix nur per Breaking-Change `html-jsx@0.3.7`).
+
+---
+
 ## Nicht eingecheckte Start-Konfiguration (lokal, gitignored)
 
 ```json
