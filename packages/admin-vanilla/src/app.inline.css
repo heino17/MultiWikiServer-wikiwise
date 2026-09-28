@@ -163,6 +163,14 @@ textarea {
 
 .admin-shell {
 	min-height: 100vh;
+	/* Same as the start page: flex column, so the footer can take the slack
+	   of a short tab with margin-top: auto and sit at the bottom of the
+	   viewport instead of floating right behind a two-line list. No gap here
+	   on purpose - the vertical rhythm of the admin is built from the
+	   margin-top of each section, a gap would add up with those. The modals
+	   in between are position: fixed and therefore out of the flex flow. */
+	display: flex;
+	flex-direction: column;
 	padding: 32px;
 	background:
 		radial-gradient(circle at top left, var(--color-decor-top-left) 0, transparent 30vw),
@@ -4769,8 +4777,16 @@ odt-preview-document {
 	text-decoration: none;
 }
 
+/* auto takes up the slack of a short tab. The fixed 28px gap lives on the
+   predecessor instead of here: auto swallows a margin on its own element once
+   the page overflows, but never the margin of the element above. Which section
+   that is depends on the active tab, so it is addressed via :has(). */
 .admin-shell > .landing-footer.admin-footer {
-	margin-top: 28px;
+	margin-top: auto;
+}
+
+.admin-shell > :has(+ .admin-footer) {
+	margin-bottom: 28px;
 }
 
 @media (max-width: 720px) {
