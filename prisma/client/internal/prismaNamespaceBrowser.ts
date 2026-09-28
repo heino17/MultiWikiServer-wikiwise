@@ -271,6 +271,7 @@ export type PinboardNotePositionScalarFieldEnum = (typeof PinboardNotePositionSc
 export const UserFileScalarFieldEnum = {
   id: 'id',
   user_id: 'user_id',
+  recipe_id: 'recipe_id',
   filename: 'filename',
   type: 'type',
   extension: 'extension',

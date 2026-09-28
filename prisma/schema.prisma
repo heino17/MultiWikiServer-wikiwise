@@ -288,6 +288,11 @@ model UserFile {
   id         String          @id @default(uuid(7))
   /// user_id of the owner. No FK (auth module).
   user_id    String
+  /// Recipe.id (uuid, not the slug) of the wiki this file was uploaded to;
+  /// files uploaded from inside a wiki are visible to that wiki's readers.
+  /// No FK declared here, mirroring user_id. NULL = personal file (account's
+  /// "Meine Dateien").
+  recipe_id  String?
   /// Original file name as shown to the owner.
   filename   String
   /// MIME type of the file.
@@ -303,6 +308,7 @@ model UserFile {
   shares     UserFileShare[]
 
   @@index([user_id])
+  @@index([recipe_id])
   @@map("user_file")
 }
 
