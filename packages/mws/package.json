@@ -19,6 +19,6 @@
   },
   "peerDependencies": {
     "@remix-run/headers": "*",
-    "hono": "*"
+    "hono": "^4.13.10"
   }
 }
