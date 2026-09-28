@@ -4746,7 +4746,7 @@ odt-preview-document {
 	flex: 0 0 auto;
 	font-size: 0.85em;
 	line-height: 1;
-	transform: translateY(calc(0.06em - 5px));
+	transform: translateY(calc(0.06em - 2px));
 }
 
 .landing-footer a {
