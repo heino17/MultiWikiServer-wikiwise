@@ -23,3 +23,11 @@ UploadFile/ResultError: Error al subir “<<filename>>”
 UploadFile/ResultNotLoggedIn: Debes iniciar sesión para subir archivos
 UploadFile/ResultNoWikiWriteAccess: No tienes permiso de escritura en este wiki
 UploadFile/ResultTooLarge: “<<filename>>” es demasiado grande (máximo <<max>> MB)
+WikiFiles/ButtonCaption: Archivos de este wiki
+WikiFiles/ButtonTooltip: Mostrar los archivos subidos a este wiki
+WikiFiles/Description: Mostrar los archivos subidos a este wiki
+WikiFiles/Missing: Todavía no se han subido archivos a este wiki.
+WikiFiles/Error: No se pudieron cargar los archivos de este wiki.
+WikiFiles/NotLoggedIn: Debes iniciar sesión para ver los archivos de este wiki.
+UploadFile/SnippetImage: Pega esto en un tiddler para insertar la imagen:
+UploadFile/SnippetFile: Pega esto en un tiddler para enlazar el archivo:

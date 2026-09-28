@@ -23,3 +23,11 @@ UploadFile/ResultError: 「<<filename>>」のアップロードに失敗しま�
 UploadFile/ResultNotLoggedIn: ファイルをアップロードするにはログインが必要です
 UploadFile/ResultNoWikiWriteAccess: このWikiへの書き込み権限がありません
 UploadFile/ResultTooLarge: 「<<filename>>」は大きすぎます（最大<<max>>MB）
+WikiFiles/ButtonCaption: このWikiのファイル
+WikiFiles/ButtonTooltip: このWikiにアップロードしたファイルを表示
+WikiFiles/Description: このWikiにアップロードしたファイルを表示
+WikiFiles/Missing: このWikiにはまだファイルがアップロードされていません。
+WikiFiles/Error: このWikiのファイルを読み込めませんでした。
+WikiFiles/NotLoggedIn: このWikiのファイルを見るにはログインが必要です。
+UploadFile/SnippetImage: 画像を埋め込むには、これをティドラーに貼り付けます：
+UploadFile/SnippetFile: ファイルへのリンクには、これをティドラーに貼り付けます：

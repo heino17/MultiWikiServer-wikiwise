@@ -18,7 +18,11 @@ var CONFIG_HOST_TIDDLER = "$:/config/multiwikiclient/host",
 	CONFIG_HIDE_UPLOAD_TIDDLER = "$:/config/multiwikiclient/hide-upload-file",
 	DEFAULT_HOST_TIDDLER = "$protocol$//$host$/",
 	UPLOAD_PATH = "api/user-files/upload",
-	INPUT_ID = "mws-upload-file-input";
+	WIKIFILE_PATH = "api/user-files/wiki-file",
+	WIKIFILES_PATH = "api/user-files/wiki-files",
+	INPUT_ID = "mws-upload-file-input",
+	UPLOAD_RESULT_TIDDLER = "$:/state/mws/UploadResult",
+	WIKIFILES_TIDDLER = "$:/state/mws/WikiFiles";
 
 exports.startup = function() {
 	if(!$tw.browser || !($tw.rootWidget && $tw.wiki)) {
@@ -30,6 +34,9 @@ exports.startup = function() {
 	}
 	$tw.rootWidget.addEventListener("tm-upload-file",function() {
 		openFilePicker();
+	});
+	$tw.rootWidget.addEventListener("tm-mws-wiki-files",function() {
+		showWikiFiles();
 	});
 };
 
@@ -86,7 +93,7 @@ function uploadFiles(host,recipe,files) {
 			if(err) {
 				notifyUploadError(file,err);
 			} else {
-				notifyUploadSuccess(res);
+				notifyUploadSuccess(res,recipe);
 			}
 			uploadNext();
 		});
@@ -115,6 +122,8 @@ function uploadFile(host,recipe,file,done) {
 		} catch(e) {}
 		if(xhr.status >= 200 && xhr.status < 300) {
 			done(null,{
+				id: result && result.file && result.file.id ? result.file.id : null,
+				type: result && result.file && result.file.type ? result.file.type : "",
 				filename: result && result.file && result.file.filename ? result.file.filename : filename,
 				owner: result && result.owner ? result.owner.username : null
 			});
@@ -138,7 +147,11 @@ function uploadFile(host,recipe,file,done) {
 	xhr.send(formData);
 }
 
-function notifyUploadSuccess(res) {
+function notifyUploadSuccess(res,recipe) {
+	if(res.id && recipe) {
+		showUploadSnippet(res,recipe);
+		return;
+	}
 	var username = res.owner,
 		currentUser = $tw.wiki.getTiddlerText("$:/status/UserName","");
 	if(username && username !== currentUser) {
@@ -150,6 +163,85 @@ function notifyUploadSuccess(res) {
 			variables: { filename: res.filename }
 		});
 	}
+}
+
+function isImageType(type) {
+	return typeof type === "string" && type.indexOf("image/") === 0;
+}
+
+/** The ready-to-paste reference for a wiki file: [img[…]] for images
+ *  (rendered inline), [ext[…]] as a link for everything else. */
+function wikiFileSnippet(file,recipe) {
+	var url = WIKIFILE_PATH + "?recipe=" + encodeURIComponent(recipe) + "&id=" + encodeURIComponent(file.id);
+	return isImageType(file.type) ? "[img[" + url + "]]" : "[ext[" + url + "]]";
+}
+
+function showUploadSnippet(res,recipe) {
+	var snippet = wikiFileSnippet(res,recipe),
+		heading = $tw.wiki.getTiddlerText(
+			isImageType(res.type)
+				? "$:/language/MWS/UploadFile/SnippetImage"
+				: "$:/language/MWS/UploadFile/SnippetFile",
+			snippet);
+	$tw.wiki.addTiddler({
+		title: UPLOAD_RESULT_TIDDLER,
+		type: "text/vnd.tiddlywiki",
+		text: "# " + $tw.wiki.getTiddlerText("$:/language/MWS/WikiFiles/ButtonCaption","Files in this wiki") + "\n\n" +
+			heading + "\n\n````\n" + snippet + "\n````\n"
+	});
+	$tw.rootWidget.dispatchEvent({ type: "tm-modal", param: UPLOAD_RESULT_TIDDLER });
+}
+
+function showWikiFiles() {
+	if($tw.wiki.getTiddlerText("$:/status/IsLoggedIn") !== "yes") {
+		$tw.notifier.display("$:/language/MWS/WikiFiles/NotLoggedIn");
+		return;
+	}
+	var recipe = getRecipe();
+	if(!recipe) {
+		return;
+	}
+	var xhr = new XMLHttpRequest(),
+		url = getHost() + WIKIFILES_PATH + "?recipe=" + encodeURIComponent(recipe);
+	xhr.open("GET",url,true);
+	xhr.setRequestHeader("x-requested-with","fetch");
+	xhr.setRequestHeader("accept","application/json");
+	xhr.onreadystatechange = function() {
+		if(xhr.readyState !== 4) {
+			return;
+		}
+		var result = null;
+		try {
+			result = JSON.parse(xhr.responseText);
+		} catch(e) {}
+		if(xhr.status >= 200 && xhr.status < 300 && result && Array.isArray(result.files)) {
+			renderWikiFiles(result.files,recipe);
+		} else {
+			$tw.notifier.display("$:/language/MWS/WikiFiles/Error");
+		}
+	};
+	xhr.onerror = function() {
+		$tw.notifier.display("$:/language/MWS/WikiFiles/Error");
+	};
+	xhr.send();
+}
+
+function renderWikiFiles(files,recipe) {
+	var entries = files.map(function(file) {
+		var path = WIKIFILE_PATH + "?recipe=" + encodeURIComponent(recipe) + "&id=" + encodeURIComponent(file.id),
+			snippet = wikiFileSnippet(file,recipe),
+			media = isImageType(file.type) ? "[img[" + path + "]]" : "[ext[" + path + "]]";
+		return "* " + media + "\n" +
+			"**" + file.filename + "**\nsnippet: ``" + snippet + "``\n";
+	}).join("\n");
+	var body = "# " + $tw.wiki.getTiddlerText("$:/language/MWS/WikiFiles/ButtonCaption","Files in this wiki") + "\n\n" +
+		(entries || $tw.wiki.getTiddlerText("$:/language/MWS/WikiFiles/Missing","No files yet."));
+	$tw.wiki.addTiddler({
+		title: WIKIFILES_TIDDLER,
+		type: "text/vnd.tiddlywiki",
+		text: body
+	});
+	$tw.rootWidget.dispatchEvent({ type: "tm-modal", param: WIKIFILES_TIDDLER });
 }
 
 function notifyUploadError(file,err) {

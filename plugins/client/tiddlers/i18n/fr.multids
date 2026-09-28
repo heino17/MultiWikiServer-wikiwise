@@ -23,3 +23,11 @@ UploadFile/ResultError: Échec du téléversement de « <<filename>> »
 UploadFile/ResultNotLoggedIn: Vous devez être connecté pour téléverser des fichiers
 UploadFile/ResultNoWikiWriteAccess: Vous n’avez pas les droits d’écriture sur ce wiki
 UploadFile/ResultTooLarge: « <<filename>> » est trop volumineux (maximum <<max>> Mo)
+WikiFiles/ButtonCaption: Fichiers de ce wiki
+WikiFiles/ButtonTooltip: Afficher les fichiers téléversés dans ce wiki
+WikiFiles/Description: Afficher les fichiers téléversés dans ce wiki
+WikiFiles/Missing: Aucun fichier n'a encore été téléversé dans ce wiki.
+WikiFiles/Error: Les fichiers de ce wiki n'ont pas pu être chargés.
+WikiFiles/NotLoggedIn: Vous devez être connecté·e pour voir les fichiers de ce wiki.
+UploadFile/SnippetImage: Collez ceci dans un tiddler pour intégrer l'image :
+UploadFile/SnippetFile: Collez ceci dans un tiddler pour créer un lien vers le fichier :

@@ -23,3 +23,11 @@ UploadFile/ResultError: ‘<<filename>>’ 업로드에 실패했습니다
 UploadFile/ResultNotLoggedIn: 파일을 업로드하려면 로그인해야 합니다
 UploadFile/ResultNoWikiWriteAccess: 이 위키에 대한 쓰기 권한이 없습니다
 UploadFile/ResultTooLarge: ‘<<filename>>’ 파일이 너무 큽니다 (최대 <<max>>MB)
+WikiFiles/ButtonCaption: 이 위키의 파일
+WikiFiles/ButtonTooltip: 이 위키에 업로드된 파일 보기
+WikiFiles/Description: 이 위키에 업로드된 파일 보기
+WikiFiles/Missing: 아직 이 위키에 업로드된 파일이 없습니다.
+WikiFiles/Error: 이 위키의 파일을 불러올 수 없습니다.
+WikiFiles/NotLoggedIn: 이 위키의 파일을 보려면 로그인해야 합니다.
+UploadFile/SnippetImage: 이미지를 삽입하려면 이를 티들러에 붙여넣으세요:
+UploadFile/SnippetFile: 파일에 연결하려면 이를 티들러에 붙여넣으세요:

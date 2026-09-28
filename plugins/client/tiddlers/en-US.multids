@@ -23,3 +23,11 @@ UploadFile/ResultError: Upload of “<<filename>>” failed
 UploadFile/ResultNotLoggedIn: You must be logged in to upload files
 UploadFile/ResultNoWikiWriteAccess: You do not have write access to this wiki
 UploadFile/ResultTooLarge: “<<filename>>” is too large (maximum <<max>> MB)
+WikiFiles/ButtonCaption: Files in this wiki
+WikiFiles/ButtonTooltip: Show the files uploaded to this wiki
+WikiFiles/Description: Show the files uploaded to this wiki
+WikiFiles/Missing: No files have been uploaded to this wiki yet.
+WikiFiles/Error: The files of this wiki could not be loaded.
+WikiFiles/NotLoggedIn: You must be logged in to view the files of this wiki.
+UploadFile/SnippetImage: Paste this into a tiddler to embed the image:
+UploadFile/SnippetFile: Paste this into a tiddler to link to the file:

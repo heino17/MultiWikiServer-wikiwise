@@ -1,0 +1,16 @@
+title: $:/plugins/mws/client/wiki-files-button
+tags: $:/tags/PageControls
+caption: {{$:/plugins/mws/client/icon/folder}} {{$:/language/MWS/WikiFiles/ButtonCaption}}
+description: {{$:/language/MWS/WikiFiles/Description}}
+tooltip: {{$:/language/MWS/WikiFiles/ButtonTooltip}}
+
+\whitespace trim
+<$button class=<<tv-config-toolbar-class>> tooltip={{$:/language/MWS/WikiFiles/ButtonTooltip}} aria-label={{$:/language/MWS/WikiFiles/ButtonCaption}}>
+<$action-sendmessage $message="tm-mws-wiki-files"/>
+<%if [<tv-config-toolbar-icons>match[yes]] %>
+{{$:/plugins/mws/client/icon/folder}}
+<%endif%>
+<%if [<tv-config-toolbar-text>match[yes]] %>
+<span class="tc-btn-text"><$text text={{$:/language/MWS/WikiFiles/ButtonCaption}}/></span>
+<%endif%>
+</$button>

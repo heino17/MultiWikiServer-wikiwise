@@ -23,3 +23,11 @@ UploadFile/ResultError: Не удалось загрузить «<<filename>>»
 UploadFile/ResultNotLoggedIn: Чтобы загружать файлы, нужно войти в систему
 UploadFile/ResultNoWikiWriteAccess: У вас нет прав на запись в это вики
 UploadFile/ResultTooLarge: «<<filename>>» слишком большой (максимум <<max>> МБ)
+WikiFiles/ButtonCaption: Файлы этого вики
+WikiFiles/ButtonTooltip: Показать файлы, загруженные в этот вики
+WikiFiles/Description: Показать файлы, загруженные в этот вики
+WikiFiles/Missing: В этот вики ещё не загружено ни одного файла.
+WikiFiles/Error: Не удалось загрузить файлы этого вики.
+WikiFiles/NotLoggedIn: Чтобы видеть файлы этого вики, нужно войти в систему.
+UploadFile/SnippetImage: Вставьте это в тиддлер, чтобы встроить изображение:
+UploadFile/SnippetFile: Вставьте это в тиддлер, чтобы создать ссылку на файл:
