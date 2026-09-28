@@ -1933,6 +1933,10 @@ export class App extends JSXElement {
                 </div>
               </details>
             ) : null}
+            {/* Storage brings its own refresh button. The display-only tabs
+                (pinboard, files) are synthetic definitions without records and
+                carry an empty createLabel - they get no create button at all,
+                their panels already contain what they need. */}
             {isStorageTab ? (
               <button
                 class="ghost-button"
@@ -1940,7 +1944,7 @@ export class App extends JSXElement {
                 onclick={() => void this.loadStorage()}
                 disabled={this.storageLoading}
               >{this.storageLoading ? t("Scanning…") : t("Refresh")}</button>
-            ) : currentTab.id !== "wikis" && (currentTab.id !== "roles" || embeddedServerResponse.userState.username === "admin") ? (
+            ) : currentTab.id !== "wikis" && !!getCreateLabel(currentTab) && (currentTab.id !== "roles" || embeddedServerResponse.userState.username === "admin") ? (
               <button
                 class="ghost-button"
                 type="button"

@@ -6303,6 +6303,48 @@ Sprache.
 
 ---
 
+## 60. Fix: Leerer Button im Kopfbereich von „Pinboard" und „Meine Dateien"
+
+**Ziel:** In den Tabs *Pinboard* und *Meine Dateien* stand ganz rechts im
+Kopfbereich ein leerer Button (28 × 20 px) – ohne Beschriftung, ohne Tooltip und
+ohne erkennbare Funktion.
+
+### Was passiert ist
+
+- Der Kopfbereich rendert für jeden Tab einen „Anlegen"-Button, ausgenommen
+  `wikis` (und `roles` bei Nicht-Admins). Die Beschriftung liefert
+  `getCreateLabel(currentTab)`.
+- *Pinboard* und *Meine Dateien* sind reine Anzeige-Tabs ohne Datensätze. Sie
+  werden über synthetische Definitionen
+  (`pinboardTabDefinition`, `userFilesTabDefinition`) beschrieben und tragen
+  deshalb **bewusst** ein leeres `createLabel: ""`.
+- Die Bedingung prüfte allein die Tab-ID, nicht die Beschriftung. Ergebnis: ein
+  Button ohne Text – sichtbar blieben nur die Innenabstände, also 28 × 20 px.
+  Ein Klick rief `openCreate("pinboard"/"files")` auf und damit ins Leere.
+- Betroffen waren **beide** Tabs, nicht nur einer. *Storage* war nicht
+  betroffen, weil dieser Tab schon einen eigenen Zweig mit „Refresh" besitzt.
+- Für Nutzer war das nur ein leerer Fleck am rechten Rand: keine Fehlermeldung,
+  keine Folge – aber sichtbar falsch.
+
+### Die Lösung
+
+- Die Bedingung verlangt zusätzlich eine **nichtleere** Anlegen-Beschriftung
+  (`!!getCreateLabel(currentTab)`). Damit erhalten alle Anzeige-Tabs automatisch
+  keinen Button, auch künftige – sie müssen nicht einzeln ausgeschlossen werden.
+- Es geht keine Funktion verloren: *Meine Dateien* hat die Dropzone mit
+  Dateiauswahl und „Refresh" im Panel, *Pinboard* die Notiz-Erstellung.
+
+### Getestet
+
+- Alle acht Tabs nacheinander angeklickt und die Aktionsleiste ausgelesen:
+  *Wikis* behält seine beiden Dropdowns (Backups, Create a wiki) und keine
+  nackten Buttons, *Templates* „Create template", *Bags* „Create bag",
+  *Roles* „Create role", *Users* „Create user", *Storage* „Refresh" –
+  alle unverändert. *Pinboard* und *Meine Dateien*: kein Button mehr, die
+  `.user-files-dropzone` ist weiterhin vorhanden. Keine JS-Fehler.
+
+---
+
 ## Nicht eingecheckte Start-Konfiguration (lokal, gitignored)
 
 ```json
