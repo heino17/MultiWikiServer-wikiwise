@@ -17,7 +17,7 @@ import { AdminBackup, AdminBackupList, AdminBackupDownload, AdminBackupDelete } 
 import { AdminStorage } from "./StorageRoutes";
 import { AdminStorageCleanup } from "./StorageCleanupRoutes";
 import { PinboardDeleteNote, PinboardList, PinboardMarkRead, PinboardSaveNote, PinboardSavePosition, PinboardUnreadCount } from "./PinboardRoutes";
-import { UserFileDelete, UserFileDownload, UserFileList, UserFilePreview, UserFileShareTargets, UserFileShareUpdate, UserFileSharedList, UserFileUpload } from "./UserFileRoutes";
+import { UserFileDelete, UserFileDownload, UserFileList, UserFilePreview, UserFileShareTargets, UserFileShareUpdate, UserFileSharedList, UserFileUpload, UserFileWikiFile, UserFileWikiFiles } from "./UserFileRoutes";
 import { serveWikiThumbnail } from "./WikiThumbnailRoutes";
 import { RecipeStatus, RecipeStoreJS, RecipeStoreJSON, RecipeUpdates, TiddlerBatch, TiddlerList } from "./RecipeRoutes";
 import { AdminPrefsGet, AdminPrefsPut } from "./PrefsRoutes";
@@ -193,6 +193,8 @@ const ApiRoutes = {
   UserFileShareTargets,
   UserFileSharedList,
   UserFileShareUpdate,
+  UserFileWikiFile,
+  UserFileWikiFiles,
 };
 interface ClientRoutes {
   AdminLoad: ClientRoute<typeof AdminLoad>;
@@ -224,6 +226,8 @@ interface ClientRoutes {
   UserFileShareTargets: ClientRoute<typeof UserFileShareTargets>;
   UserFileSharedList: ClientRoute<typeof UserFileSharedList>;
   UserFileShareUpdate: ClientRoute<typeof UserFileShareUpdate>;
+  UserFileWikiFile: ClientRoute<typeof UserFileWikiFile>;
+  UserFileWikiFiles: ClientRoute<typeof UserFileWikiFiles>;
   TiddlerBatch: ClientRoute<typeof TiddlerBatch>;
   TiddlerList: ClientRoute<typeof TiddlerList>;
   RecipeStatus: ClientRoute<typeof RecipeStatus>;

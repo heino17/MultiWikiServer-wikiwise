@@ -39,6 +39,7 @@ export type UserFileSumAggregateOutputType = {
 export type UserFileMinAggregateOutputType = {
   id: string | null
   user_id: string | null
+  recipe_id: string | null
   filename: string | null
   type: string | null
   extension: string | null
@@ -51,6 +52,7 @@ export type UserFileMinAggregateOutputType = {
 export type UserFileMaxAggregateOutputType = {
   id: string | null
   user_id: string | null
+  recipe_id: string | null
   filename: string | null
   type: string | null
   extension: string | null
@@ -63,6 +65,7 @@ export type UserFileMaxAggregateOutputType = {
 export type UserFileCountAggregateOutputType = {
   id: number
   user_id: number
+  recipe_id: number
   filename: number
   type: number
   extension: number
@@ -85,6 +88,7 @@ export type UserFileSumAggregateInputType = {
 export type UserFileMinAggregateInputType = {
   id?: true
   user_id?: true
+  recipe_id?: true
   filename?: true
   type?: true
   extension?: true
@@ -97,6 +101,7 @@ export type UserFileMinAggregateInputType = {
 export type UserFileMaxAggregateInputType = {
   id?: true
   user_id?: true
+  recipe_id?: true
   filename?: true
   type?: true
   extension?: true
@@ -109,6 +114,7 @@ export type UserFileMaxAggregateInputType = {
 export type UserFileCountAggregateInputType = {
   id?: true
   user_id?: true
+  recipe_id?: true
   filename?: true
   type?: true
   extension?: true
@@ -208,6 +214,7 @@ export type UserFileGroupByArgs<ExtArgs extends runtime.Types.Extensions.Interna
 export type UserFileGroupByOutputType = {
   id: string
   user_id: string
+  recipe_id: string | null
   filename: string
   type: string
   extension: string
@@ -243,6 +250,7 @@ export type UserFileWhereInput = {
   NOT?: Prisma.UserFileWhereInput | Prisma.UserFileWhereInput[]
   id?: Prisma.StringFilter<"UserFile"> | string
   user_id?: Prisma.StringFilter<"UserFile"> | string
+  recipe_id?: Prisma.StringNullableFilter<"UserFile"> | string | null
   filename?: Prisma.StringFilter<"UserFile"> | string
   type?: Prisma.StringFilter<"UserFile"> | string
   extension?: Prisma.StringFilter<"UserFile"> | string
@@ -256,6 +264,7 @@ export type UserFileWhereInput = {
 export type UserFileOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   user_id?: Prisma.SortOrder
+  recipe_id?: Prisma.SortOrderInput | Prisma.SortOrder
   filename?: Prisma.SortOrder
   type?: Prisma.SortOrder
   extension?: Prisma.SortOrder
@@ -272,6 +281,7 @@ export type UserFileWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.UserFileWhereInput[]
   NOT?: Prisma.UserFileWhereInput | Prisma.UserFileWhereInput[]
   user_id?: Prisma.StringFilter<"UserFile"> | string
+  recipe_id?: Prisma.StringNullableFilter<"UserFile"> | string | null
   filename?: Prisma.StringFilter<"UserFile"> | string
   type?: Prisma.StringFilter<"UserFile"> | string
   extension?: Prisma.StringFilter<"UserFile"> | string
@@ -285,6 +295,7 @@ export type UserFileWhereUniqueInput = Prisma.AtLeast<{
 export type UserFileOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   user_id?: Prisma.SortOrder
+  recipe_id?: Prisma.SortOrderInput | Prisma.SortOrder
   filename?: Prisma.SortOrder
   type?: Prisma.SortOrder
   extension?: Prisma.SortOrder
@@ -305,6 +316,7 @@ export type UserFileScalarWhereWithAggregatesInput = {
   NOT?: Prisma.UserFileScalarWhereWithAggregatesInput | Prisma.UserFileScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"UserFile"> | string
   user_id?: Prisma.StringWithAggregatesFilter<"UserFile"> | string
+  recipe_id?: Prisma.StringNullableWithAggregatesFilter<"UserFile"> | string | null
   filename?: Prisma.StringWithAggregatesFilter<"UserFile"> | string
   type?: Prisma.StringWithAggregatesFilter<"UserFile"> | string
   extension?: Prisma.StringWithAggregatesFilter<"UserFile"> | string
@@ -317,6 +329,7 @@ export type UserFileScalarWhereWithAggregatesInput = {
 export type UserFileCreateInput = {
   id?: string
   user_id: string
+  recipe_id?: string | null
   filename: string
   type: string
   extension: string
@@ -330,6 +343,7 @@ export type UserFileCreateInput = {
 export type UserFileUncheckedCreateInput = {
   id?: string
   user_id: string
+  recipe_id?: string | null
   filename: string
   type: string
   extension: string
@@ -343,6 +357,7 @@ export type UserFileUncheckedCreateInput = {
 export type UserFileUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   user_id?: Prisma.StringFieldUpdateOperationsInput | string
+  recipe_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   filename?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.StringFieldUpdateOperationsInput | string
   extension?: Prisma.StringFieldUpdateOperationsInput | string
@@ -356,6 +371,7 @@ export type UserFileUpdateInput = {
 export type UserFileUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   user_id?: Prisma.StringFieldUpdateOperationsInput | string
+  recipe_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   filename?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.StringFieldUpdateOperationsInput | string
   extension?: Prisma.StringFieldUpdateOperationsInput | string
@@ -369,6 +385,7 @@ export type UserFileUncheckedUpdateInput = {
 export type UserFileCreateManyInput = {
   id?: string
   user_id: string
+  recipe_id?: string | null
   filename: string
   type: string
   extension: string
@@ -381,6 +398,7 @@ export type UserFileCreateManyInput = {
 export type UserFileUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   user_id?: Prisma.StringFieldUpdateOperationsInput | string
+  recipe_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   filename?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.StringFieldUpdateOperationsInput | string
   extension?: Prisma.StringFieldUpdateOperationsInput | string
@@ -393,6 +411,7 @@ export type UserFileUpdateManyMutationInput = {
 export type UserFileUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   user_id?: Prisma.StringFieldUpdateOperationsInput | string
+  recipe_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   filename?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.StringFieldUpdateOperationsInput | string
   extension?: Prisma.StringFieldUpdateOperationsInput | string
@@ -405,6 +424,7 @@ export type UserFileUncheckedUpdateManyInput = {
 export type UserFileCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   user_id?: Prisma.SortOrder
+  recipe_id?: Prisma.SortOrder
   filename?: Prisma.SortOrder
   type?: Prisma.SortOrder
   extension?: Prisma.SortOrder
@@ -421,6 +441,7 @@ export type UserFileAvgOrderByAggregateInput = {
 export type UserFileMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   user_id?: Prisma.SortOrder
+  recipe_id?: Prisma.SortOrder
   filename?: Prisma.SortOrder
   type?: Prisma.SortOrder
   extension?: Prisma.SortOrder
@@ -433,6 +454,7 @@ export type UserFileMaxOrderByAggregateInput = {
 export type UserFileMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   user_id?: Prisma.SortOrder
+  recipe_id?: Prisma.SortOrder
   filename?: Prisma.SortOrder
   type?: Prisma.SortOrder
   extension?: Prisma.SortOrder
@@ -468,6 +490,7 @@ export type UserFileUpdateOneRequiredWithoutSharesNestedInput = {
 export type UserFileCreateWithoutSharesInput = {
   id?: string
   user_id: string
+  recipe_id?: string | null
   filename: string
   type: string
   extension: string
@@ -480,6 +503,7 @@ export type UserFileCreateWithoutSharesInput = {
 export type UserFileUncheckedCreateWithoutSharesInput = {
   id?: string
   user_id: string
+  recipe_id?: string | null
   filename: string
   type: string
   extension: string
@@ -508,6 +532,7 @@ export type UserFileUpdateToOneWithWhereWithoutSharesInput = {
 export type UserFileUpdateWithoutSharesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   user_id?: Prisma.StringFieldUpdateOperationsInput | string
+  recipe_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   filename?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.StringFieldUpdateOperationsInput | string
   extension?: Prisma.StringFieldUpdateOperationsInput | string
@@ -520,6 +545,7 @@ export type UserFileUpdateWithoutSharesInput = {
 export type UserFileUncheckedUpdateWithoutSharesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   user_id?: Prisma.StringFieldUpdateOperationsInput | string
+  recipe_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   filename?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.StringFieldUpdateOperationsInput | string
   extension?: Prisma.StringFieldUpdateOperationsInput | string
@@ -563,6 +589,7 @@ export type UserFileCountOutputTypeCountSharesArgs<ExtArgs extends runtime.Types
 export type UserFileSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   user_id?: boolean
+  recipe_id?: boolean
   filename?: boolean
   type?: boolean
   extension?: boolean
@@ -577,6 +604,7 @@ export type UserFileSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
 export type UserFileSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   user_id?: boolean
+  recipe_id?: boolean
   filename?: boolean
   type?: boolean
   extension?: boolean
@@ -589,6 +617,7 @@ export type UserFileSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
 export type UserFileSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   user_id?: boolean
+  recipe_id?: boolean
   filename?: boolean
   type?: boolean
   extension?: boolean
@@ -601,6 +630,7 @@ export type UserFileSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
 export type UserFileSelectScalar = {
   id?: boolean
   user_id?: boolean
+  recipe_id?: boolean
   filename?: boolean
   type?: boolean
   extension?: boolean
@@ -610,7 +640,7 @@ export type UserFileSelectScalar = {
   updated_at?: boolean
 }
 
-export type UserFileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "user_id" | "filename" | "type" | "extension" | "sha256" | "sizeBytes" | "created_at" | "updated_at", ExtArgs["result"]["userFile"]>
+export type UserFileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "user_id" | "recipe_id" | "filename" | "type" | "extension" | "sha256" | "sizeBytes" | "created_at" | "updated_at", ExtArgs["result"]["userFile"]>
 export type UserFileInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   shares?: boolean | Prisma.UserFile$sharesArgs<ExtArgs>
   _count?: boolean | Prisma.UserFileCountOutputTypeDefaultArgs<ExtArgs>
@@ -629,6 +659,12 @@ export type $UserFilePayload<ExtArgs extends runtime.Types.Extensions.InternalAr
      * user_id of the owner. No FK (auth module).
      */
     user_id: string
+    /**
+     * recipe_slug (via Recipe id) this file was uploaded to; files uploaded
+     * from inside a wiki are visible to that wiki's readers. No FK declared
+     * here, mirroring user_id. NULL = personal file (account's "Meine Dateien").
+     */
+    recipe_id: string | null
     /**
      * Original file name as shown to the owner.
      */
@@ -1077,6 +1113,7 @@ export interface Prisma__UserFileClient<T, Null = never, ExtArgs extends runtime
 export interface UserFileFieldRefs {
   readonly id: Prisma.FieldRef<"UserFile", 'String'>
   readonly user_id: Prisma.FieldRef<"UserFile", 'String'>
+  readonly recipe_id: Prisma.FieldRef<"UserFile", 'String'>
   readonly filename: Prisma.FieldRef<"UserFile", 'String'>
   readonly type: Prisma.FieldRef<"UserFile", 'String'>
   readonly extension: Prisma.FieldRef<"UserFile", 'String'>

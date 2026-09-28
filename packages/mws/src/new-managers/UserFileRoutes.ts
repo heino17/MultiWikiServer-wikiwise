@@ -363,6 +363,68 @@ function mapFile(row: any): UserFileRow {
   };
 }
 
+/** Stream a stored file inline (images, audio, video, PDFs, plain text) with
+ *  byte ranges so media controls can seek and scrubbing works. Used by the
+ *  personal preview and the wiki-file routes. */
+async function streamInline(
+  state: {
+    headers: { get: (name: string) => string | null };
+    sendStream: any;
+    sendEmpty: any;
+  },
+  base: {
+    contentType: { mediaType: string };
+    contentDisposition: string;
+    acceptRanges: string;
+    cacheControl: string;
+  },
+  dataPath: string,
+  size: number,
+) {
+  const rangeHeader = String(state.headers.get("range") ?? "");
+  const rangeMatch = /^bytes=(\d+)-(\d*)$/.exec(rangeHeader)
+    ?? (/^bytes=(\d+)-$/.exec(rangeHeader))
+    ?? (/^bytes=-(\d+)$/.exec(rangeHeader));
+  if (rangeMatch) {
+    const full = rangeHeader.startsWith("bytes=-");
+    const start = full ? Math.max(0, size - parseInt(rangeMatch[1], 10)) : parseInt(rangeMatch[1], 10);
+    const end = full || rangeMatch[2] === "" ? size - 1 : Math.min(parseInt(rangeMatch[2], 10), size - 1);
+    if (rangeMatch[1] === "" || start < size) {
+      const from = Math.min(start, size - 1);
+      if (from <= end) {
+        return state.sendStream(206, {
+          ...base,
+          contentLength: end - from + 1,
+          contentRange: `bytes ${from}-${end}/${size}`,
+        }, createReadStream(dataPath, { start: from, end }));
+      }
+    }
+  }
+  if (rangeHeader !== "" && rangeHeader !== "bytes=*")
+    return state.sendEmpty(416, { contentRange: `bytes */${size}` });
+
+  return state.sendStream(200, {
+    ...base,
+    contentLength: size,
+  }, createReadStream(dataPath));
+}
+
+/** The stored file with the given id, but only when it was uploaded to the
+ *  given wiki (recipe). Files stay private to uploaded-to wikis only. */
+async function fetchRecipeFile(
+  state: { $transaction: any; config: any },
+  recipeId: string,
+  id: string,
+): Promise<{ row: any; stored: { dataPath: string } } | null> {
+  const row = await state.$transaction(async (prisma: any) =>
+    await prisma.userFile.findFirst({ where: { id, recipe_id: recipeId } })
+  );
+  if (!row || !HASH_RE.test(row.sha256)) return null;
+  const stored = storedFile(state.config.storePath as string, row.sha256);
+  if (!stored) return null;
+  return { row, stored };
+}
+
 /** Multipart upload of a single file. Streams to the inbox, hashes while
  *  streaming, then adopts the bytes into the content-addressed store. */
 export const UserFileUpload = zodRoute({
@@ -382,8 +444,11 @@ export const UserFileUpload = zodRoute({
     // (uploads from the account's own area) the file stays with the uploader.
     const recipeSlug = state.query.get("recipe");
     let owner = { user_id: state.user.user_id, username: state.user.username };
+    // The wiki (Recipe.id) this file was uploaded to; wiki readers may see it.
+    let recipeId: string | undefined;
     if (recipeSlug) {
       const recipe = await RecipeResolver.assertRecipe({ state, recipe_slug: recipeSlug });
+      recipeId = recipe.id;
       const resolver = new RecipeResolver(recipe, null, state.user);
       const canWrite = state.user.isAdmin
         || recipe.owner_user_id === state.user.user_id
@@ -513,6 +578,7 @@ export const UserFileUpload = zodRoute({
           extension: extension.replace(/^\./, ""),
           sha256: hash,
           sizeBytes: length,
+          recipe_id: recipeId ?? null,
         },
       });
     });
@@ -729,39 +795,78 @@ export const UserFilePreview = zodRoute({
     const size = statSync(stored.dataPath).size;
     const contentDisposition =
       `inline; filename*="UTF-8''${encodeURIComponent(row.filename)}"; filename="${encodeURIComponent(row.filename).replace(/"/g, "%22")}"`;
-    const base = {
+    return streamInline(state, {
       contentType: { mediaType: row.type },
       contentDisposition,
       acceptRanges: "bytes",
       cacheControl: "private, max-age=60",
-    };
+    }, stored.dataPath, size);
+  }
+});
 
-    const rangeHeader = String(state.headers.get("range") ?? "");
-    const rangeMatch = /^bytes=(\d+)-(\d*)$/.exec(rangeHeader)
-      ?? (/^bytes=(\d+)-$/.exec(rangeHeader))
-      ?? (/^bytes=-(\d+)$/.exec(rangeHeader));
-    if (rangeMatch) {
-      const full = rangeHeader.startsWith("bytes=-");
-      const start = full ? Math.max(0, size - parseInt(rangeMatch[1], 10)) : parseInt(rangeMatch[1], 10);
-      const end = full || rangeMatch[2] === "" ? size - 1 : Math.min(parseInt(rangeMatch[2], 10), size - 1);
-      if (rangeMatch[1] === "" || start < size) {
-        const from = Math.min(start, size - 1);
-        if (from <= end) {
-          return state.sendStream(206, {
-            ...base,
-            contentLength: end - from + 1,
-            contentRange: `bytes ${from}-${end}/${size}`,
-          }, createReadStream(stored.dataPath, { start: from, end }));
-        }
-      }
-    }
-    if (rangeHeader !== "" && rangeHeader !== "bytes=*")
-      return state.sendEmpty(416, { contentRange: `bytes */${size}` });
+/** A file uploaded to a wiki, streamed inline (images, audio, video, ...).
+ *  Visible to exactly the users who may open the wiki: the same read gate as
+ *  the wiki page (`RecipeResolver.assertRecipe`), so guests with read access
+ *  see the content while unrelated users get the very same 404/403 as for the
+ *  wiki itself. Only files uploaded to that wiki are reachable here.
+ *  In contrast to the personal preview there is no `okUser` on purpose:
+ *  anonymous readers of a public wiki may load its files too. */
+export const UserFileWikiFile = zodRoute({
+  method: ["GET", "HEAD"],
+  path: "/api/user-files/wiki-file",
+  bodyFormat: "ignore",
+  securityChecks: { requestedWithHeader: true },
+  zodPathParams: z => ({}),
+  zodQueryKeys: ["recipe", "id"],
+  inner: async (state) => {
+    state.assertReferer(["/", "/wiki"]);
 
-    return state.sendStream(200, {
-      ...base,
-      contentLength: size,
-    }, createReadStream(stored.dataPath));
+    const recipeSlug = state.query.get("recipe") ?? "";
+    const id = state.query.get("id") ?? "";
+    const recipe = await RecipeResolver.assertRecipe({ state, recipe_slug: recipeSlug });
+    state.asserted = true;
+
+    const file = await fetchRecipeFile(state, recipe.id, id);
+    if (!file)
+      throw state.sendEmpty(404, { "x-reason": "Unknown file" });
+
+    const { row, stored } = file;
+    const size = statSync(stored.dataPath).size;
+    const contentDisposition =
+      `inline; filename*="UTF-8''${encodeURIComponent(row.filename)}"; filename="${encodeURIComponent(row.filename).replace(/"/g, "%22")}"`;
+    return streamInline(state, {
+      contentType: { mediaType: row.type },
+      contentDisposition,
+      acceptRanges: "bytes",
+      cacheControl: "private, max-age=60",
+    }, stored.dataPath, size);
+  }
+});
+
+/** The files uploaded to a wiki, for the wiki's file viewer. Same read gate
+ *  and scope as `UserFileWikiFile`. */
+export const UserFileWikiFiles = zodRoute({
+  method: ["GET"],
+  path: "/api/user-files/wiki-files",
+  bodyFormat: "ignore",
+  securityChecks: { requestedWithHeader: true },
+  zodPathParams: z => ({}),
+  zodQueryKeys: ["recipe"],
+  inner: async (state) => {
+    state.assertReferer(["/", "/wiki"]);
+
+    const recipeSlug = state.query.get("recipe") ?? "";
+    const recipe = await RecipeResolver.assertRecipe({ state, recipe_slug: recipeSlug });
+    state.asserted = true;
+
+    const files = await state.$transaction(async (prisma) =>
+      await prisma.userFile.findMany({
+        where: { recipe_id: recipe.id },
+        orderBy: { created_at: "desc" },
+        include: { shares: { select: { scope_type: true, scope_id: true } } },
+      })
+    );
+    return { files: files.map(mapFile) };
   }
 });
 
