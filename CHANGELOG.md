@@ -7260,6 +7260,29 @@ technisch fehlte aber die Zuordnung.
   wie die Wiki-Seite selbst (hier `200`, weil die Wiki ANON-Leserecht hat),
   unbekanntes `recipe` → `404` (kein Existenz-Orakel).
 
+### Nachtrag: URL-Auflösung im Wiki-Client repariert
+
+Im Browser-Test (Wiki `wiki-frau-meyer`, Bild `TAvatar2.jpg`) zeigte das
+Verzeichnis-Modal kein Bild, und das eingefügte Snippet lud die Datei als
+`http://localhost:5000/wiki/api/user-files/…` → `400 NO_ROUTE_MATCHED`. Der
+Grund: Das Snippet begann mit `api/user-files/…` (ohne führenden Slash), und
+TiddlyWiki löst relative URLs gegen die Wiki-Seiten-URL `/wiki/<slug>` auf —
+daraus wurde `/wiki/api/…`. Außerdem war `[ext[…]]` gar kein TW-Makro (es gibt
+kein Core-Makro `ext`), Nicht-Bilder wären als Literal gerendert worden.
+
+**Fix (`plugins/client/tiddlers/upload-file.js`):**
+
+- Neuer Helper `wikiFileUrl()` baut die URL absolut über dieselbe Host-Quelle
+  wie die XHRs (`getHost()`, d. h. `$:/config/multiwikiclient/host`) →
+  `[img[http://host/api/user-files/wiki-file?recipe=…&id=…]]` löst unabhängig
+  von der Wiki-Basis-URL korrekt auf (Modal-Vorschau und einfügbarer Schnipsel
+  nutzen beide denselben Pfad).
+- Nicht-Bilder bekommen statt des toten `[ext[…]]` einen echten Wiki-Link
+  `[[Dateiname|url]]` (Sonderzeichen `]`/`|` im Namen werden entfernt).
+- Da der Dev-Server die Client-Tiddler beim Start aus `plugins/client/tiddlers/`
+  einliest (Plugin-Cache `mws/<version>/client`), greift der Fix nach einem
+  Neustart des Dev-Servers.
+
 ---
 
 ## Nicht eingecheckte Start-Konfiguration (lokal, gitignored)
