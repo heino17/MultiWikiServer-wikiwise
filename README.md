@@ -78,7 +78,13 @@ so there is no separate build step:
 - `git clone https://github.com/heino17/MultiWikiServer-wikiwise.git`
 - `cd MultiWikiServer-wikiwise`
 - `npm install`
-- `npm start` – serves the development wiki on <http://localhost:5000/dev/>
+- `npm start update-tiddlywiki` – creates `dev/wiki/tw5/<version>` (TiddlyWiki 5.4.1)
+- `npm start init-store` – creates `dev/wiki/store/`: migrations, the `admin` user, and the default wikis
+- `npm start` – serves the development wiki on <http://localhost:8080/>
+
+`dev/` is not committed to git, so a fresh clone has no data folder yet — the two
+`npm start <command>` steps above initialize it (there is also a `dev/mws.dev.json`
+listener config if you want a different port/prefix, see `mws.dev.mjs`).
 
 For your own data folder, independent of the development wiki, build a package once
 and install it into a new folder:
@@ -296,7 +302,14 @@ ein zusätzlicher Build-Schritt ist nicht nötig:
 - `git clone https://github.com/heino17/MultiWikiServer-wikiwise.git`
 - `cd MultiWikiServer-wikiwise`
 - `npm install`
-- `npm start` – liefert das Entwicklungs-Wiki auf <http://localhost:5000/dev/>
+- `npm start update-tiddlywiki` – legt `dev/wiki/tw5/<version>` an (TiddlyWiki 5.4.1)
+- `npm start init-store` – legt `dev/wiki/store/` an: Migrationen, den Nutzer `admin` und die Standard-Wikis
+- `npm start` – liefert das Entwicklungs-Wiki auf <http://localhost:8080/>
+
+`dev/` ist nicht in Git eingecheckt, ein frischer Klon hat also noch keinen
+Datenordner – die beiden `npm start <befehl>`-Schritte oben legen ihn an (eine
+Listener-Konfiguration für anderen Port/Präfix ist in `dev/mws.dev.json` möglich,
+Erklärung in `mws.dev.mjs`).
 
 Für einen eigenen Datenordner, unabhängig vom Entwicklungs-Wiki, einmal ein Paket bauen
 und in einen neuen Ordner installieren:
