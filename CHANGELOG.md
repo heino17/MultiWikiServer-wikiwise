@@ -2895,6 +2895,459 @@ Taken from the release page, not from a local build:
 6. `npx mws listen --listener` → `/`, `/admin` and `/wiki/bedienungsanleitung`
    answer 200, `GET /api/landing` reports `"mws": "0.3.0"`
 
+## 54. `npx mws init-data-folder` replaces the `npm pkg set` detour
+
+**Goal:** §53 documented the release route with a detour that only works
+because `npm pkg set` fails on a value that is not JSON-capable. Two commands,
+one with `--json` and one without, are exactly the kind of stumbling block that
+does not belong in an installation guide for first-time users. The step belongs
+in the tool that knows the rule anyway.
+
+### What changed
+
+- New command `npx mws init-data-folder`
+  (`packages/mws/src/new-commands/init-data-folder.ts`) that writes the data
+  folder's `package.json`. The source is deliberately
+  `create-package/files/package.json` – the same file the create package copies
+  and the `npm pack` route uses, now the only such place in the package
+  (`package.json` → `files`).
+- It writes exactly the three fields the start check fails on (`name`,
+  `private`, `version`) and takes over the `start` script. Existing
+  `dependencies` and the folder's own scripts are preserved.
+- The command may run in a folder without a server: it is exempt from the data
+  folder check (`packages/mws/src/index.ts`) and runs before the access to
+  `passwords.key` and the database (`startup.ts`). Only that way it can create
+  anything in the folder at all.
+- **The data folder coat stays `@tiddlywiki/mws-instance`, version `0.2.0`** –
+  unchanged, because the start check still insists on exactly that.
+
+### Safety behaviour
+
+The command does not blindly overwrite anything:
+
+- `package.json` missing → created from the template.
+- Existing file is already a valid instance manifest → message, no change
+  (idempotent, and harmless even in a running system).
+- File is not valid JSON → abort with exit 1, file unchanged.
+- File carries a different, deliberately chosen name (e.g. from `npm init -y`,
+  where npm takes the folder name) → **no** overwrite, exit 1 with a hint. If
+  you want to get rid of the name, rename the file yourself beforehand.
+
+The last case is deliberate: a foreign package name in a folder where MWS will
+later be installed is not a mistake but a decision of the user, and the
+installer must not silently overturn it.
+
+### Docs
+
+`README.md` (EN/DE), `README_features.md` (EN/DE),
+`editions/mws-docs/tiddlers/Installation.md` and `create-package/README.md`
+now name `npx mws init-data-folder` instead of the two `npm pkg set` lines and
+link the 0.3.1 asset. §53 stays as history, how the detour looked and why it
+was needed.
+
+### Tested
+
+Fresh installation from the locally built 0.3.1 tarball:
+
+1. `npm install <tgz>` → `npx mws init-data-folder` → `name`, `private: true`,
+   `version: 0.2.0` and `start` script correct, dependency kept
+2. second call → unchanged (idempotent)
+3. broken JSON → exit 1, file byte-identical
+4. deliberately named `package.json` → exit 1, file byte-identical
+5. real instance from `tests/` → message "is already a data folder", checksum
+   of `store/` and `passwords.key` unchanged
+6. then `update-tiddlywiki` → `init-store` → `listen`: `/`, `/admin` and
+   `/wiki/bedienungsanleitung` answer 200, `GET /api/landing` reports
+   `"mws": "0.3.1"`
+7. **Regression of the protection:** In a folder with a wrong or missing
+   `package.json`, `update-tiddlywiki`, `init-store` and `listen` still refuse
+   to start – the new command has not loosened the check
+8. `npx mws help` lists `init-data-folder` with a description
+
+---
+
+## 55. Fix: a dead Chromium blocked all wiki previews for good
+
+**Goal:** After the installation from the 0.3.1 release, a real installation
+reported:
+
+```
+GET /wiki/wiki-admin/thumbnail browser.newContext: Target page, context or browser has been closed
+    at renderThumbnail (.../WikiThumbnailRoutes.ts:282:19)
+```
+
+The admin list afterwards showed a preview image for **no** wiki at all, and
+the server had to be restarted before any was produced again.
+
+### What happened
+
+- Chromium is started on first demand and then kept in a module-global
+  `browserPromise` (`packages/mws/src/new-managers/WikiThumbnailRoutes.ts`,
+  line 193 before this change). The cached object was **never** checked again.
+- Playwright considers a browser object valid even when the process behind it
+  has long ended. Only `isConnected()` tells the truth. If Chromium dies – a
+  crash, the OOM killer, a `kill` from outside – then every further
+  `browser.newContext()` on that object throws
+  `Target page, context or browser has been closed`.
+- `getBrowser()` only caught **start** errors (`browserPromise = null`), not the
+  death of an already started browser. Result: a single crash poisons the
+  cache, and every later preview fails identically until the server restarts.
+  The correction was therefore ineffective.
+
+### The solution
+
+- `startBrowser()` checks `isConnected()` before every hand-off and restarts
+  Chromium if it is no longer alive. A started but meanwhile dead browser is
+  never reused.
+- The starts run through a promise chain. Without it, two preview requests
+  arriving in parallel would each start a Chromium and leave the second one
+  permanently ownerless in the background.
+- If the browser dies **during** the render, there is exactly one retry with a
+  fresh browser instead of a permanently broken preview.
+- A render that keeps failing is no longer a request error. The route answers
+  like for a wiki without a preview with `404` and writes an understandable
+  line to the log, instead of throwing a Playwright error object. In the wiki
+  list a placeholder appears, the wiki itself is unaffected.
+
+### Tested
+
+On the running server, with login and a real admin list. The test was: render
+once, kill all Chromium processes of the server with SIGKILL, clear the preview
+cache, reload.
+
+| Run | before (0.3.1) | after |
+| --- | --- | --- |
+| 1, fresh | `200 image/png`, 2 files | `200 image/png`, 2 files |
+| 2, Chromium was dead | `500 application/json`, 0 files | `200 image/png`, 2 files |
+| 3 | `500 application/json`, 0 files | `200 image/png`, 2 files |
+
+Counter-test with the unchanged 0.3.1 bundle on the same test: the `500` error
+with an identical stack trace persists permanently, the preview folder stays
+empty. The Chromium call itself is not the problem – start, page output and
+screenshot work flawlessly on the same machine, it is solely the reuse of the
+dead browser.
+
+---
+
+## 56. Fix: databases from before the 27.09. no longer refuse to start
+
+**Goal:** `npm start` aborts as soon as a wiki is used that was created
+**before** the 27.09. – including the development wiki in the repository:
+
+```
+New migrations found [ '20260915_owner_user_id' ]
+Applying migration 20260915_owner_user_id
+SqliteError: duplicate column name: owner_user_id
+    at Database.exec (node_modules/better-sqlite3/lib/methods/wrappers.js:9:14)
+```
+
+### What happened
+
+- §50 (commit `2190cfa`, 27.09.) added the migration `20260915_owner_user_id`
+  so that **fresh** databases get the five `owner_user_id` columns. SQLite can
+  only add columns with `ALTER TABLE ... ADD COLUMN` and knows no
+  `ADD COLUMN IF NOT EXISTS`. Running it again is therefore impossible.
+- Databases from **before** the 27.09. already have these columns, because they
+  belonged to the schema back then. The entry in `_prisma_migrations` is
+  naturally missing – the migration did not even exist at that time.
+- On the first start after the update it therefore counts as pending, the
+  `ALTER TABLE` runs again, and SQLite aborts with `duplicate column name`. The
+  migration loop ends at the first error, it stays at this one error: **every**
+  further start fails identically, the wiki is no longer reachable and the
+  database can only be repaired by hand.
+- Every installation created before the 27.09. is affected, not just
+  development wikis. Fresh installations are unremarkable – that is why the
+  error did not show up when testing with fresh data folders. For the version
+  sequence 0.3.0 to 0.3.2 this is a start-preventing error.
+- The special case was already known for `20260916_email_nullable` and was
+  caught by hand there (`owner_user_id` … "it already exists on live databases
+  and is carried over as-is"). But that only covered the `users` table, the
+  other four tables remained unprotected.
+
+### The solution
+
+- `packages/mws/src/db/sqlite-adapter.ts` analyses the script of a pending
+  migration before running it. If it consists exclusively of
+  `ALTER TABLE … ADD COLUMN` statements, every column is checked against the
+  actual schema via `PRAGMA table_info`.
+- If **all** columns are already present, the DDL is dropped. The migration is
+  booked as applied with an explanatory log line: the schema is exactly what
+  the migration wanted to create, only the log entry is missing.
+- The detection path only applies in the proven case. If even one column is
+  missing (fresh database), or if the script does more than add columns
+  (rebuild a table, copy data, create indexes), the migration runs unchanged.
+  `parseAddedColumns` then returns `null` and the script is executed as before –
+  checked against all ten migrations, two of which are recognised as pure
+  column migrations (`20260915_owner_user_id`, `20260916_wiki_limit`).
+- On the development wiki the log line reads:
+
+  ```
+  New migrations found [ '20260915_owner_user_id' ]
+  Skipping the schema change of migration 20260915_owner_user_id, this
+  database already has users.owner_user_id, roles.owner_user_id,
+  bag.owner_user_id, recipe.owner_user_id, template.owner_user_id
+  Migrations applied [ '20260915_owner_user_id' ]
+  ```
+
+### Tested
+
+- **Old stock, exactly the reported case:** The development wiki aborted with
+  `SqliteError: duplicate column name: owner_user_id` before the fix. After the
+  fix the server starts, books the migration and returns `/api/landing` with
+  `200`. 9 rows before, 10 rows after in `_prisma_migrations`,
+  `PRAGMA integrity_check` = `ok`, users (6), bags (14), recipes (14) and
+  templates (1) unchanged.
+- **Counter-test, no data loss:** Before the test run a backup of the database
+  via the SQLite backup API (9 migrations, 6 users, `integrity_check` `ok`),
+  then a comparison of the row counts.
+- **Fresh database, counter-test:** Complete new installation from the 0.3.3
+  package following the create-package flow (`npm install` →
+  `update-tiddlywiki` → `init-store`) in an empty folder. There the columns are
+  missing, so the migration runs **unchanged** – the log line reads
+  `Applying migration …` throughout, not a single `Skipping` line. Result: all
+  five columns present, 10 rows in `_prisma_migrations`, `integrity_check`
+  `ok`. Subsequent start on port 5099: `/api/landing` reports `mws: 0.3.3`, 1
+  wiki, 54 tiddlers, 1 user, no error message. That way the usual path of a
+  new installation is untouched.
+- **Detection, synthetic:** `parseAddedColumns` consistently returns `null` for
+  `ADD COLUMN` + `CREATE TABLE`, `ADD COLUMN` + `INSERT`, pure `CREATE TABLE`, a
+  pure comment script and an empty script, and returns the column for an
+  `ADD COLUMN` script with and without a trailing semicolon.
+
+---
+
+## 57. Fix: the language menu on the start page lay half under the content
+
+**Goal:** On the start page `/` the language menu in the header was cut off at
+the bottom: the expandable part was painted over by the content area, the lower
+language options were no longer clickable.
+
+### What happened
+
+- The header `.landing-header` uses `backdrop-filter: blur(12px)`.
+  `backdrop-filter` – like `filter`, `transform` or `opacity` below 1 – creates
+  an **own stacking context**. A `z-index` inside the header therefore only
+  still applies within that container and no longer raises the element against
+  the rest of the document.
+- The header itself had no own `z-index` and therefore lay on level 0. The news
+  box `.landing-news` that follows it directly in the DOM painted over it.
+  Measured: 180 × 168 px overlap; `elementFromPoint()` in the middle of the
+  menu hit the heading `h2.landing-section-title`, not the menu.
+- All language options in the lower third were affected, independently of the
+  chosen language and without any JavaScript involvement – pure layering of
+  levels.
+- The pattern was already solved correctly in the admin area: `.hero-panel`
+  carries `position: relative; z-index: 1`. The login page has no language
+  menu, there is nothing to correct there.
+
+### The solution
+
+- `.landing-header` in `packages/admin-vanilla/src/app.inline.css` gets
+  `position: relative; z-index: 1`. That puts the header above the news box,
+  and the `z-index` of the language options works as intended again – both
+  needed only the one comment.
+
+### Tested
+
+- **Measurement before/after:** Before, `.landing-news` overlapped the language
+  menu over an area of 180 × 168 px, all three measuring points in the menu
+  area hit content elements underneath. After, all three measuring points lie on
+  the dropdown or on a language option, the overlap is gone.
+- **Both pages with the header checked:** Start page `/` and legal notice page,
+  each with the menu expanded in the German and English version.
+
+---
+
+## 58. Fix: the default writable bag follows the slug on a rename again
+
+**Goal:** If the slug of a wiki is changed in the admin, the derived writable
+bag `editions/<owner-id>/<slug>` no longer follows the new slug. The wiki
+afterwards still points to the old bag name – the slug is renamed, but the
+default bag keeps the old slug in its name forever.
+
+### What happened
+
+- The coupling was recorded in two places independently of each other, and the
+  two places knew different naming schemes:
+  - The admin client (`syncDefaultBagOnSlugChange` in
+    `packages/admin-vanilla/src/definition/renders.tsx`) built the new name
+    while typing as `editions/<slug>` – **without** the owner part.
+  - The server (`followDefaultBagOnSlugRename` in
+    `packages/mws/src/new-managers/TabDataAdapter.ts`) only renamed the bag if
+    the **submitted** target row already contained the new derived name.
+- Since the owner notation was introduced, the actual target value is
+  `editions/<owner-id>/<slug>` however. The client comparison
+  `editions/<slug>` therefore never matched, the target field stayed unchanged
+  – and with it the condition of the server (`old name !== new name`) never
+  matched either. The bag rename was silently ineffective for all wikis with
+  owner namespacing, thus for practically every wiki.
+- No test existed for this: neither for `followDefaultBagOnSlugRename` nor for
+  `defaultBagName`.
+
+### The solution
+
+- **One source of truth, on the server.** The naming convention now only exists
+  in `defaultBagName(ownerUserId, slug)`. The client helper and its call are
+  gone; the target field no longer follows the slug while typing. That is
+  deliberate: the client does not know the owner ID, and after saving the server
+  writes the corrected value back into the same field anyway.
+- **The server follows the slug if the field still carries the old name.**
+  `followDefaultBagOnSlugRename` derives both names from `defaultBagName` and
+  treats a target value that equals the old *or* the new derived name as
+  "follow the slug" – even if the client did not touch the field at all. A
+  target value that is neither the old nor the new derived name was chosen
+  deliberately and stays untouched.
+- **The function returns the rows to be saved** instead of only renaming the
+  bag. `authoredDefinition`, the compiled recipe-bag assignment, the mirroring
+  of the display name and the answer to the admin thereby use the same name.
+  Before, the saved definition could point to a renamed bag that no longer
+  existed under that name.
+- **Unchanged protection conditions:** No rename on a name conflict (the
+  existing bag keeps its name), on a missing old bag or if the bag is still used
+  by other recipes. The check for slug uniqueness still runs before the rename in
+  the same transaction, a rejected slug therefore takes the bag rename with it.
+- **The bag is renamed in place** (`bag.update`), not newly created: `bag_id`,
+  tiddlers and permissions are preserved.
+
+### Tested
+
+- **The core case, without touching the target field:** Wiki created, slug
+  changed to `…-umbenannt` and saved, without touching the target field. Result
+  checked in the database: definition points to
+  `editions/<owner>/…-umbenannt`, the bag exists under the new name with the
+  **same** `bag_id` as before (`01a0e74a-…` → `01a0e74a-…`), the 3 tiddlers
+  are unchanged in the same bag, `recipe_bag` refers to the new name, the old
+  name is free.
+- **Deliberate foreign bag:** A wiki was deliberately pointed at the bag of
+  another wiki and then renamed. The target value stays saved unchanged, the bag
+  of the other wiki keeps name and ID, and no additional bag arises from the
+  field.
+- **No target row:** Saving completely without a row with an empty prefix
+  changes nothing – none is invented, the bag stays unnamed.
+- **Interface, Chromium against the fresh test installation:** Slug field
+  changed, the target field visibly does **not** follow along, after saving the
+  value caught up by the server stands in the field, after reloading it stands
+  in the wiki. No JS errors on the admin page.
+- For the test, `admin.showLoginPuzzle` was switched off in the throwaway
+  installation, because the emoji puzzle of the login does not allow an
+  automated click; the server logic is unaffected by that.
+
+---
+
+## 59. Fix: the plugin library could not be opened in any wiki
+
+**Goal:** In every wiki, no plugin library could be opened under *Settings →
+Plugins → "Get more plugins"*. Firefox reported
+
+```
+Error loading plugin library: https://tiddlywiki.com/library/v5.4.1/index.html
+```
+
+Chromium stayed silent. That way **no** plugin could be installed – and no
+language either.
+
+### What happened
+
+- TiddlyWiki loads the library in a **hidden cross-origin iframe**
+  (`$:/core/modules/startup/browser-messaging.js`) and talks to it via
+  `postMessage`. The download of a plugin (`tm-load-plugin-from-library`) also
+  runs through the same frame.
+- MWS sends a strict CSP with `frame-src 'self'` for wiki pages
+  (`buildCspPolicy` in `packages/mws/src/new-managers/RecipeResolver.ts`).
+  Exactly this one directive blocks the access to the library. This is not a
+  network problem: `https://tiddlywiki.com/library/v5.4.1/index.html`
+  answers with HTTP 200.
+- The way out would be `cspAllow` per wiki, extending `frame-src`. In the
+  development environment it was set nowhere (0 of 13 wikis), and in the admin
+  form there is **no input field** for it – the exception was therefore neither
+  set nor reachable.
+- **Two different symptoms, one cause:** Firefox fires `onerror` on a frame
+  blocked by CSP, the core makes an alert with the mentioned message from it.
+  Chromium instead fires `load`, the status stays "loaded", the library stays
+  empty – **without any message**. The silent case is the more unpleasant one,
+  because it does not stand out as an error.
+
+### The solution
+
+- `frame-src` contains `https://tiddlywiki.com` as a fixed entry (constant
+  `PLUGIN_LIBRARY_ORIGIN` in
+  `packages/mws/src/new-managers/RecipeResolver.ts`). That way the library
+  works in every wiki without intervention.
+- This is a **deliberate deviation** from the strict standard and applies to all
+  wikis, not only those whose admin decided it. Rationale: language packs and
+  plugins should be available without an extra step, and the embedded page is
+  TiddlyWiki's own library – it can only send messages to the parent frame and
+  cannot execute a script in the wiki origin. A self-hosted library URL
+  (`$:/config/PluginLibrary/URL` set differently) still has to be listed per
+  wiki in `cspAllow`; the list is appended behind it. Script sources remain
+  unchanged at `same-origin`.
+- The comment at the function continues to describe the progressive basic idea
+  and names the exception including the rationale, so that it can later be
+  removed deliberately.
+
+### Tested
+
+- **Before, on the same wiki, both browsers:** Firefox delivers the CSP message
+  ("blocked the loading of a resource (frame-src)") **and** the alert with a
+  message verbatim as in the report, status stays "loading", 0 entries.
+  Chromium reports the same violation but shows no alert (status "loaded", 0
+  entries) – exactly the silent error.
+- **After, with an empty `cspAllow`:** header `frame-src 'self'
+  https://tiddlywiki.com`, no CSP violations, status "loaded", **105 library
+  entries of which 34 are language packs** – identical in Chromium and in
+  Firefox.
+- **Also the download path:** `$:/languages/de-DE` requested from the library,
+  the language pack arrives completely (182 498 characters of JSON, type
+  `application/json`), as well as a regular plugin
+  (`$:/plugins/tiddlywiki/async`). That way the reported path – installing a
+  language – is fully checked.
+- Checked on the fresh throwaway installation with an empty `cspAllow`, i.e.
+  exactly the state of all 13 wikis of the development environment.
+
+---
+
+## 60. Fix: empty button in the panel header of "Pinboard" and "My files"
+
+**Goal:** In the tabs *Pinboard* and *My files* there was an empty button at
+the far right of the header (28 × 20 px) – without label, without tooltip and
+without any recognisable function.
+
+### What happened
+
+- The header renders a "create" button for every tab, except for `wikis` (and
+  `roles` for non-admins). The label comes from `getCreateLabel(currentTab)`.
+- *Pinboard* and *My files* are display-only tabs without records. They are
+  described via synthetic definitions (`pinboardTabDefinition`,
+  `userFilesTabDefinition`) and therefore deliberately carry an empty
+  `createLabel: ""`.
+- The condition checked only the tab ID, not the label. Result: a button
+  without text – only the inner distances remained visible, i.e. 28 × 20 px. A
+  click called `openCreate("pinboard"/"files")` and thus into the void.
+- **Both** tabs were affected, not only one. *Storage* was not affected,
+  because that tab already has its own branch with "Refresh".
+- For users this was only an empty spot at the right edge: no error message, no
+  consequence – but visibly wrong.
+
+### The solution
+
+- The condition now additionally requires a **non-empty** create label
+  (`!!getCreateLabel(currentTab)`). That way all display-only tabs
+  automatically get no button, including future ones – they do not have to be
+  excluded individually.
+- No function is lost: *My files* has the dropzone with file picker and
+  "Refresh" in the panel, *Pinboard* the note creation.
+
+### Tested
+
+- All eight tabs clicked through one after the other and the action bar read
+  out: *Wikis* keeps its two dropdowns (Backups, Create a wiki) and no bare
+  buttons, *Templates* "Create template", *Bags* "Create bag", *Roles* "Create
+  role", *Users* "Create user", *Storage* "Refresh" – all unchanged. *Pinboard*
+  and *My files*: no button any more, the `.user-files-dropzone` is still
+  present. No JS errors.
+
+---
+
 ---
 
 ## Unchecked-in starter configuration (local, gitignored)
