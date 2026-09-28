@@ -7248,8 +7248,17 @@ technisch fehlte aber die Zuordnung.
 - Migration wird vom `SqliteAdapter` beim Start automatisch angewendet
   („Applying migration 20260928_user_file_recipe"); Spalte + Index
   `user_file_recipe_id_idx` per `PRAGMA table_info` verifiziert.
-- Die End-to-End-Browserprüfung (Upload im Wiki, `[img]`-Rendering, Gast-Sicht
-  mit Leserecht) wird nach Abschluss des Features ergänzt.
+- **End-to-End gegen eine frische Instanz** (Port 5099, mit eingebauter `dist/`):
+  Login über das echte OPAQUE-Protokoll (`@serenity-kit/opaque`, `/login/1` +
+  `/login/2`), dann `PUT /api/user-files/upload?recipe=bedienungsanleitung` mit
+  einem Test-PNG. Verifiziert: `200` mit `id/type/sizeBytes`; in der DB steht
+  `user_file.recipe_id` exakt auf der Recipe-Id des Wikis; `GET
+  /api/user-files/wiki-files?recipe=…` listet die Datei; `GET
+  /api/user-files/wiki-file?recipe=…&id=…` liefert `200 image/png` mit
+  byteidentischem Inhalt und mit `Range: bytes=0-9` → `206` + `Content-Range:
+  bytes 0-9/70`. Gate: anonym liefert die Datei-Route exakt den gleichen Status
+  wie die Wiki-Seite selbst (hier `200`, weil die Wiki ANON-Leserecht hat),
+  unbekanntes `recipe` → `404` (kein Existenz-Orakel).
 
 ---
 
