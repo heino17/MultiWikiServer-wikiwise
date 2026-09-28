@@ -70,6 +70,7 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
 - **Freigaben nach Kontotyp:** Admin-Freigaben erreichen alle, Lehrer-Freigaben ihre Klassen (nie andere Lehrer), Schüler-Freigaben nur konkret gewählte Empfänger; nicht geteilte Dateien → 404
 - Audio/Video mit **Range-Support** (Suchen/Seeken), Markdown und ODT-Vorschau werden clientseitig **ohne HTML-Parsing** (XSS-sicher) gerendert
 - **„Upload file" direkt im Wiki:** die Wiki-Werkzeugleiste lädt Dateien in den Dateispeicher des **Wiki-Besitzers** – auch wenn man als Gast/Lehrer im fremden Wiki schreibt
+- **Wiki-Dateien einbinden:** Nach dem Upload zeigt ein Fenster den fertigen TiddlyWiki-Code (`[img[...]]` für Bilder, `[ext[...]]` sonst); der Ordner-Button „Dateien in diesem Wiki" listet alle Wiki-Dateien mit Vorschau. Sichtbarkeit = **Wiki-Leserecht** (keine separate Freigabe nötig); persönliche Dateien bleiben privat
 
 ### Wiki-Vorschau (Thumbnails)
 
