@@ -23,3 +23,11 @@ UploadFile/ResultError: “<<filename>>”上传失败
 UploadFile/ResultNotLoggedIn: 你必须登录才能上传文件
 UploadFile/ResultNoWikiWriteAccess: 你对此 Wiki 没有写入权限
 UploadFile/ResultTooLarge: “<<filename>>”太大（最大 <<max>> MB）
+WikiFiles/ButtonCaption: 此 Wiki 的文件
+WikiFiles/ButtonTooltip: 显示上传到此 Wiki 的文件
+WikiFiles/Description: 显示上传到此 Wiki 的文件
+WikiFiles/Missing: 此 Wiki 中还没有上传任何文件。
+WikiFiles/Error: 无法加载此 Wiki 的文件。
+WikiFiles/NotLoggedIn: 您必须登录才能查看此 Wiki 的文件。
+UploadFile/SnippetImage: 将此粘贴到便签中以嵌入图片：
+UploadFile/SnippetFile: 将此粘贴到便签中以链接到该文件：

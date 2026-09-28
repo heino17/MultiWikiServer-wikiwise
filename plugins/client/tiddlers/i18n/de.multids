@@ -23,3 +23,11 @@ UploadFile/ResultError: Hochladen von „<<filename>>“ fehlgeschlagen
 UploadFile/ResultNotLoggedIn: Du musst angemeldet sein, um Dateien hochzuladen
 UploadFile/ResultNoWikiWriteAccess: Du hast keine Schreibberechtigung in diesem Wiki
 UploadFile/ResultTooLarge: „<<filename>>“ ist zu groß (maximal <<max>> MB)
+WikiFiles/ButtonCaption: Dateien in diesem Wiki
+WikiFiles/ButtonTooltip: Die in dieses Wiki hochgeladenen Dateien anzeigen
+WikiFiles/Description: Die in dieses Wiki hochgeladenen Dateien anzeigen
+WikiFiles/Missing: Noch keine Dateien in dieses Wiki hochgeladen.
+WikiFiles/Error: Die Dateien dieses Wikis konnten nicht geladen werden.
+WikiFiles/NotLoggedIn: Du musst angemeldet sein, um die Dateien dieses Wikis anzusehen.
+UploadFile/SnippetImage: Füge dies in einen Tiddler ein, um das Bild einzubetten:
+UploadFile/SnippetFile: Füge dies in einen Tiddler ein, um auf die Datei zu verlinken:
