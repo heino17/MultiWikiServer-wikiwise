@@ -3412,12 +3412,14 @@ it, without touching the entry itself.
 - `aria-hidden="true"`: the heart is decoration. Screen readers keep reading
   only the version, not "red heart".
 - CSS: `flex: 0 0 auto`, `font-size: 0.85em`, `line-height: 1` and
-  `translateY(calc(0.06em - 5px))`. Emoji visibly sit too high in small text
-  and are drawn slightly too large; both are corrected that way. The lift of
-  5 px is deliberately in `px` and not in `em`, so that it is exactly 5 px
+  `translateY(calc(0.06em - 2px))`. Emoji visibly sit too high in small text
+  and are drawn slightly too large; both are corrected that way. The lift is
+  deliberately in `px` and not in `em`, so that it stays the same
   independently of the font size. `0.06em` is the base correction so the heart
-  does not fall out of the line entirely – measured a shift of −4.372 px, which
-  is exactly the 5 px plus 0.63 px of base correction.
+  does not fall out of the line entirely. First implemented with 5 px, then
+  adjusted down to 2 px after looking at it in the running system – measured
+  `matrix(1, 0, 0, 1, 0, -1.37168)`, i.e. 2 px plus 0.63 px of base
+  correction.
 - Added to **all three** footers: start page (`app-landing.tsx`), admin app
   (`app.tsx`, `.admin-footer`) and legal notice (`legal-notice.tsx`). The
   legal-notice footer previously had no version line; it was added with the
@@ -3430,22 +3432,76 @@ it, without touching the entry itself.
 - **DOM:** exactly one heart span, content only the heart
   (`U+2764 U+FE0F`), 13 × 10 px, `aria-hidden="true"`. The version line still
   reads `MWS-wikiwise 0.3.3 · TiddlyWiki 5.4.1` – in every language.
-- **Alignment:** the heart now sits 5 px above the top edge of the text and
-  5 px above its bottom edge, so it sticks out at the top instead of hanging
-  below the line. The footer height stays 33 px as before, no additional wrap,
-  `transform: matrix(1, 0, 0, 1, 0, -4.37168)`. Before: top edge 2 px above
-  the text, bottom edge flush.
+- **Alignment:** the heart sticks 1 px above the top edge of the text and
+  2 px above its bottom edge. The footer height stays 33 px as before, no
+  additional wrap.
 - **Legal notice:** The footer now carries `❤️`, the version line and "Back to
   the start page" – 4 entries instead of 3 before. Checked there in seven
-  languages as well: heart consistently 10 px high at y = 1046, text
-  identical.
+  languages as well: heart consistently 10 px high, text identical.
 - **Seven languages** (en, de, fr, es, ko, ru, zh-cn) clicked through: the heart
-  is 13 × 10 px everywhere, always flush with the version line, the text
-  identical. No JS errors.
+  is 13 × 10 px everywhere, the text identical. No JS errors.
 - **Bundle check:** the delivered `main.js` contains all three heart spans
   with `children:"❤️"` – the builder kept the pair correctly as an
   escape sequence and did not turn it into the text variant without
   variation selector.
+
+## 63. The footer now sits at the bottom in all admin tabs as well
+
+**Goal:** The footer sticks to the bottom of the screen on the start page, but
+in the admin app it sat right behind the content. On a tab with two entries
+like "Pinboard" (0 notes) that looked like half a page: the footer with version
+line, version link, legal notice and cookie button stood after 350 px of
+content in the middle of the screen, with 335 px of nothing below it.
+
+### The solution
+
+- `.admin-shell` is now a flex column (`display: flex; flex-direction: column`)
+  like `.landing-shell`. The footer gets `margin-top: auto` and thus takes up
+  the slack of a short tab. Deliberately **no** `gap` on the container: the
+  vertical rhythm of the admin so far comes from the `margin-top` of the
+  individual sections (hero −17 px, tab strip 24 px, section header 26 px), a
+  `gap` would add up to those and falsify all distances. The modals in between
+  are `position: fixed` and therefore out of the flex flow.
+- **The fixed 28 px gap now lives on the predecessor instead of on the footer**
+  – `.admin-shell > :has(+ .admin-footer) { margin-bottom: 28px; }`. Reason:
+  `margin-top: auto` swallows its own margin once the page overflows – on long
+  tabs the gap would have been gone. The margin of the element *above* the
+  footer is not affected by that. Since a different element sits directly in
+  front of the footer depending on the active tab, it is addressed via
+  `:has()`; the pseudo class is already in use anyway with
+  `body:has(.modal-shell[open])`.
+- The `margin-bottom` of the section header (16 px) is thereby raised to 28 px
+  where it sits directly in front of the footer. The result is the same gap as
+  on tabs with content – before it was 44 px there.
+
+### Tested
+
+All eight tabs clicked through in the browser (Wikis, Templates, Bags, Roles,
+Users, Storage, Pinboard, My files), measured before and after each:
+
+| Tab | before: footer above the edge | after: footer above the edge | gap above it |
+| --- | --- | --- | --- |
+| Wikis | 402 px | **32 px** | 398 px |
+| Templates | 600 px | **32 px** | 596 px |
+| Bags | 554 px | **32 px** | 550 px |
+| Roles | 461 px | **32 px** | 457 px |
+| Users | 600 px | **32 px** | 596 px |
+| Storage | −710 px | −710 px | **28 px** |
+| Pinboard | 335 px | **32 px** | 331 px |
+| My files | 368 px | **32 px** | 364 px |
+
+- **Storage** is the only tab whose content runs past the screen (1822 px of
+  page content at a window height of 1080 px). There the footer naturally stays
+  below the fold, and the fixed gap of 28 px is retained – exactly the case
+  that would have broken with a pure `margin-top: auto` solution.
+- **32 px** is the bottom padding of `.admin-shell`, so the footer sticks to
+  the content edge and not to the window edge. On the start page it
+  correspondingly is 18 px. Footer height in all tabs 33 px as before.
+- **Narrow windows** 1920 / 1280 / 900 / 420 px: no horizontal overflow at any
+  width. At 420 px the content runs past the screen, the footer stands below it
+  as expected and wraps to two lines (47 px high).
+- **Start page and legal notice** unchanged: footer 18 px above the edge, 33 px
+  high, heart present. No JS errors.
 
 ---
 
@@ -6959,12 +7015,14 @@ Eintrag selbst anzutasten.
 - `aria-hidden="true"`: Das Herz ist Dekoration. Vorlese-Software liest
   weiterhin nur die Versionsangabe, nicht „rotes Herz“.
 - CSS: `flex: 0 0 auto`, `font-size: 0.85em`, `line-height: 1` und
-  `translateY(calc(0.06em - 5px))`. Emoji sitzen in kleiner Schrift sichtbar zu
+  `translateY(calc(0.06em - 2px))`. Emoji sitzen in kleiner Schrift sichtbar zu
   hoch und werden etwas zu groß gezeichnet; beides wird so korrigiert. Die
-  Höhenkorrektur von 5 px steht bewusst in `px` und nicht in `em`, damit sie
-  unabhängig von der Schriftgröße genau 5 px beträgt. `0.06em` ist dabei die
-  Grundkorrektur, damit das Herz nicht ganz aus dem Satz fällt – gemessen
-  −4,372 px Verschiebung, das sind exakt die 5 px plus 0,63 px Grundkorrektur.
+  Höhenkorrektur steht bewusst in `px` und nicht in `em`, damit sie
+  unabhängig von der Schriftgröße immer dieselbe bleibt. `0.06em` ist die
+  Grundkorrektur, damit das Herz nicht ganz aus dem Satz fällt. Zuerst mit
+  5 px umgesetzt, nach Ansicht im laufenden Betrieb auf 2 px nachjustiert –
+  gemessen `matrix(1, 0, 0, 1, 0, -1.37168)`, also 2 px plus 0,63 px
+  Grundkorrektur.
 - Eingetragen in **alle drei** Footer: Startseite (`app-landing.tsx`),
   Verwaltung (`app.tsx`, `.admin-footer`) und Impressum (`legal-notice.tsx`).
   Der Impressums-Footer hatte zuvor keine Versionszeile; sie wurde mit
@@ -6978,22 +7036,78 @@ Eintrag selbst anzutasten.
   (`U+2764 U+FE0F`), 13 × 10 px, `aria-hidden="true"`. Die Versionszeile
   lautet unverändert `MWS-wikiwise 0.3.3 · TiddlyWiki 5.4.1` – in allen
   Sprachfassungen.
-- **Ausrichtung:** Das Herz sitzt jetzt 5 px höher als die Text-Oberkante und
-  5 px höher als die Text-Unterkante, es ragt also oben heraus, statt unten
-  aus der Zeile zu hängen. Die Footerhöhe bleibt 33 px wie vorher, kein
-  zusätzlicher Umbruch, `transform: matrix(1, 0, 0, 1, 0, -4.37168)`.
-  Vorher: Oberkante 2 px über dem Text, Unterkante bündig.
+- **Ausrichtung:** Das Herz ragt 1 px über die Text-Oberkante und 2 px über
+  die Text-Unterkante. Die Footerhöhe bleibt 33 px wie vorher, kein
+  zusätzlicher Umbruch.
 - **Impressum:** Der Footer führt nun `❤️`, die Versionszeile und
   „Zurück zur Startseite" – 4 Einträge statt vorher 3. Auch dort in sieben
-  Sprachen geprüft: Herz durchgehend 10 px hoch an y = 1046, Text
-  identisch.
+  Sprachen geprüft: Herz durchgehend 10 px hoch, Text identisch.
 - **Sieben Sprachen** (en, de, fr, es, ko, ru, zh-cn) durchgeklickt: Das Herz
-  ist überall 13 × 10 px, immer fluchtend zur Versionszeile, der Text
-  identisch. Keine JS-Fehler.
+  ist überall 13 × 10 px, der Text identisch. Keine JS-Fehler.
 - **Bundle-Kontrolle:** Das ausgelieferte `main.js` enthält alle drei
   Herz-Spans mit `children:"❤️"` – der Builder hat das Paar
   korrekt als Escape-Sequenz erhalten und nicht die textförmige Variante
   ohne Variation-Selector daraus gemacht.
+
+## 63. Der Footer sitzt auch in allen Admin-Tabs am unteren Rand
+
+**Ziel:** Der Footer klebt auf der Startseite am unteren Bildschirmrand, in der
+Verwaltung stand er dagegen direkt hinter dem Inhalt. Auf einem Tab mit zwei
+Einträgen wie „Pinboard" (0 Notizen) schaute das aus wie eine halbe Seite: Der
+Fuß mit Versionszeile, Versionslink, Impressum und Cookie-Knopf stand nach
+350 px Inhalt mitten auf der Seite, darunter 335 px nichts.
+
+### Die Lösung
+
+- `.admin-shell` ist jetzt wie `.landing-shell` eine Flex-Spalte
+  (`display: flex; flex-direction: column`). Der Footer bekommt
+  `margin-top: auto` und nimmt damit den Leerraum eines kurzen Tabs auf.
+  Bewusst **kein** `gap` auf dem Container: Der vertikale Rhythmus der
+  Verwaltung entsteht bisher aus dem `margin-top` der einzelnen Sektionen
+  (Hero −17 px, Tab-Leiste 24 px, Abschnittskopf 26 px), ein `gap` würde sich
+  darauf addieren und alle Abstände verfälschen. Die Modals dazwischen sind
+  `position: fixed` und damit aus dem Flex-Fluss heraus.
+- **Der feste Abstand von 28 px liegt jetzt auf dem Vorgänger statt am
+  Footer** – `.admin-shell > :has(+ .admin-footer) { margin-bottom: 28px; }`.
+  Grund: `margin-top: auto` schluckt einen eigenen Außenabstand, sobald die
+  Seite überläuft – bei langen Tabs wäre der Abstand auf 0 weggefallen. Der
+  Außenabstand des Elements *über* dem Footer wird davon nicht berührt. Da je
+  nach Tab ein anderes Element direkt vor dem Footer steht, wird er über
+  `:has()` adressiert; die Pseudo-Klasse ist mit `body:has(.modal-shell[open])`
+  ohnehin schon im Einsatz.
+- `margin-bottom` des Abschnittskopfes (16 px) wird dabei auf 28 px erhöht, wo
+  er direkt vor dem Footer steht. Ergebnis ist derselbe Abstand wie auf den
+  Tabs mit Inhalt – vorher waren es dort 44 px.
+
+### Getestet
+
+Alle acht Tabs im Browser durchgeklickt (Wikis, Templates, Bags, Roles, Users,
+Storage, Pinboard, Meine Dateien), jeweils vorher und nachher gemessen:
+
+| Tab | vorher: Footer über dem Rand | nachher: Footer über dem Rand | Abstand darüber |
+| --- | --- | --- | --- |
+| Wikis | 402 px | **32 px** | 398 px |
+| Templates | 600 px | **32 px** | 596 px |
+| Bags | 554 px | **32 px** | 550 px |
+| Roles | 461 px | **32 px** | 457 px |
+| Users | 600 px | **32 px** | 596 px |
+| Storage | −710 px | −710 px | **28 px** |
+| Pinboard | 335 px | **32 px** | 331 px |
+| Meine Dateien | 368 px | **32 px** | 364 px |
+
+- **Storage** ist der einzige Tab, dessen Inhalt über den Bildschirm hinausragt
+  (1822 px Seiteninhalt bei 1080 px Fensterhöhe). Dort bleibt der Footer
+  naturgemäß unterhalb der Falz, und der feste Abstand von 28 px bleibt
+  erhalten – genau der Fall, an dem eine reine `margin-top: auto`-Lösung
+  kaputtgegangen wäre.
+- **32 px** ist der untere Innenabstand von `.admin-shell`; der Footer klebt
+  also am Content-Rand und nicht direkt am Fensterrand. Auf der Startseite sind
+  es entsprechend 18 px. Footerhöhe in allen Tabs 33 px wie vorher.
+- **Schmale Fenster** 1920 / 1280 / 900 / 420 px: kein horizontaler Überlauf in
+  allen Breiten. Bei 420 px ragt der Inhalt über den Bildschirm, der Footer
+  steht erwartungsgemäß darunter und bricht auf zwei Zeilen um (47 px hoch).
+- **Startseite und Impressum** unverändert: Footer 18 px über dem Rand, 33 px
+  hoch, Herz vorhanden. Keine JS-Fehler.
 
 ---
 
