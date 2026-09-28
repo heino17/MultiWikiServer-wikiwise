@@ -85,6 +85,15 @@ Markers used below:
   not just against a healthy run ([§55](CHANGELOG.md)) — a long-lived server
   has to survive the death of its Chromium, and it is checked by killing it
   while the server keeps running
+- ✅ an upgrade from an existing database works, not just a fresh install
+  ([§56](CHANGELOG.md)) — the first attempt at that failed in the worst
+  possible way: every database created before the column migration existed was
+  permanently unbootable, and only fresh test folders had been used to check
+  the migrations. Both directions are now covered: the old development wiki
+  skips the schema change and records the migration, a fresh install applies
+  it. More column migrations are likely to come, so a check of the pending
+  migration list against a real old database belongs into the release check
+  from now on
 - ✗ put site restrictions in a file — still unclear what belongs into it
 - ✗ sell people on contributing to the project — CONTRIBUTING.md is four lines and
   only points at the upstream CLA

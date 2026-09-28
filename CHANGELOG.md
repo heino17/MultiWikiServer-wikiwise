@@ -6028,6 +6028,95 @@ fehlerfrei, es ist allein die Wiederverwendung des toten Browsers.
 
 ---
 
+## 56. Fix: Datenbanken von vor dem 27.09. starten nicht mehr
+
+**Ziel:** `npm start` bricht ab, sobald ein Wiki benutzt wird, das **vor** dem
+27.09. angelegt wurde – inklusive des Entwicklungs-Wikis im Repository:
+
+```
+New migrations found [ '20260915_owner_user_id' ]
+Applying migration 20260915_owner_user_id
+SqliteError: duplicate column name: owner_user_id
+    at Database.exec (node_modules/better-sqlite3/lib/methods/wrappers.js:9:14)
+```
+
+### Was passiert ist
+
+- §50 (Commit `2190cfa`, 27.09.) hat die Migration `20260915_owner_user_id`
+  ergänzt, damit **frische** Datenbanken die fünf `owner_user_id`-Spalten
+  bekommen. SQLite kann Spalten nur mit `ALTER TABLE ... ADD COLUMN` hinzufügen
+  und kennt kein `ADD COLUMN IF NOT EXISTS`. Ein erneutes Ausführen ist damit
+  unmöglich.
+- Datenbanken von **vor** dem 27.09. haben diese Spalten bereits, weil sie dort
+  seit jeher zum Schema gehören. Der Eintrag in `_prisma_migrations` fehlt
+  naturgemäß – die Migration existierte zu dem Zeitpunkt noch gar nicht.
+- Beim ersten Start nach dem Update gilt sie deshalb als ausstehend, das
+  `ALTER TABLE` läuft erneut, und SQLite bricht mit `duplicate column name` ab.
+  Die Migrationsschleife endet beim ersten Fehler, es bleibt bei diesem einen
+  Fehler: **jeder** weitere Start scheitert identisch, das Wiki ist nicht mehr
+  erreichbar und die Datenbank lässt sich nur von Hand reparieren.
+- Betroffen ist jede Installation, die vor dem 27.09. angelegt wurde, nicht nur
+  Entwicklungs-Wikis. Frische Installationen sind unauffällig – deshalb fiel der
+  Fehler beim Testen mit frischen Datenordnern nicht auf. Für die Versionsfolge
+  0.3.0 bis 0.3.2 ist das ein startverhindernder Fehler.
+- Der Sonderfall war bei `20260916_email_nullable` bereits bekannt und dort per
+  Hand abgefangen worden (`owner_user_id` … „it already exists on live
+  databases and is carried over as-is"). Das galt aber nur für die
+  `users`-Tabelle, die übrigen vier Tabellen blieben ungeschützt.
+
+### Die Lösung
+
+- `packages/mws/src/db/sqlite-adapter.ts` analysiert vor dem Ausführen einer
+  ausstehenden Migration deren Skript. Besteht es ausschließlich aus
+  `ALTER TABLE … ADD COLUMN`-Anweisungen, wird jede Spalte per
+  `PRAGMA table_info` gegen das tatsächliche Schema geprüft.
+- Sind **alle** Spalten bereits vorhanden, entfällt das DDL. Die Migration wird
+  mit einer erklärenden Logzeile als angewandt verbucht: Das Schema ist genau
+  das, was die Migration herstellen wollte, es fehlt nur der Protokolleintrag.
+- Der Erkennungspfad greift ausschließlich im belegten Fall. Fehlt auch nur eine
+  Spalte (frische Datenbank), oder macht das Skript mehr als Spalten hinzufügen
+  (Tabelle neu bauen, Daten kopieren, Indizes anlegen), läuft die Migration
+  unverändert. `parseAddedColumns` liefert dann `null` und das Skript wird
+  wie zuvor ausgeführt – geprüft an allen zehn Migrationen, davon zwei als
+  reine Spalten-Migration erkannt (`20260915_owner_user_id`,
+  `20260916_wiki_limit`).
+- Am Entwicklungs-Wiki lautet die Logzeile:
+
+  ```
+  New migrations found [ '20260915_owner_user_id' ]
+  Skipping the schema change of migration 20260915_owner_user_id, this
+  database already has users.owner_user_id, roles.owner_user_id,
+  bag.owner_user_id, recipe.owner_user_id, template.owner_user_id
+  Migrations applied [ '20260915_owner_user_id' ]
+  ```
+
+### Getestet
+
+- **Altbestand, exakt der gemeldete Fall:** Entwicklungs-Wiki vor dem Fix mit
+  `SqliteError: duplicate column name: owner_user_id` abgebrochen. Nach dem Fix
+  startet der Server, verbucht die Migration und liefert `/api/landing` mit
+  `200`. Vorher 9, nachher 10 Zeilen in `_prisma_migrations`,
+  `PRAGMA integrity_check` = `ok`, Nutzer (6), Bags (14), Recipes (14) und
+  Templates (1) unverändert.
+- **Gegenprobe, kein Datenverlust:** Vor dem Testlauf Sicherung der Datenbank
+  über die SQLite-Backup-API (9 Migrationen, 6 Nutzer, `integrity_check` `ok`),
+  danach Abgleich der Zeilenzahlen.
+- **Frische Datenbank, Gegenprobe:** Komplette Neuinstallation aus dem
+  0.3.3-Paket nach/create-package-Ablauf (`npm install` → `update-tiddlywiki` →
+  `init-store`) auf einem leeren Ordner. Dort fehlen die Spalten, also läuft die
+  Migration **unverändert** – die Logzeile lautet durchgehend `Applying
+  migration …`, keine einzige `Skipping`-Zeile. Ergebnis: alle fünf Spalten
+  vorhanden, 10 Zeilen in `_prisma_migrations`, `integrity_check` `ok`.
+  anschließender Start auf Port 5099: `/api/landing` meldet `mws: 0.3.3`, 1 Wiki,
+  54 Tiddler, 1 Nutzer, keine Fehlermeldung. Damit ist der übliche Weg einer
+  Neuinstallation unberührt.
+- **Erkennung, synthetisch:** `parseAddedColumns` gibt für
+  `ADD COLUMN` + `CREATE TABLE`, `ADD COLUMN` + `INSERT`, reines `CREATE TABLE`,
+  ein reines Kommentar-Skript und ein leeres Skript konsequent `null` zurück,
+  für ein `ADD COLUMN`-Skript mit und ohne abschließendem Semikolon die Spalte.
+
+---
+
 ## Nicht eingecheckte Start-Konfiguration (lokal, gitignored)
 
 ```json
