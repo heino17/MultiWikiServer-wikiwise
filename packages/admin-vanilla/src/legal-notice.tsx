@@ -95,6 +95,8 @@ export class LegalNoticePage extends JSXElement {
         )}
 
         <footer class="landing-footer">
+          <span class="landing-footer-heart" aria-hidden="true">{"❤️"}</span>
+          <span>{t("MWS-wikiwise {version}", { version: embeddedServerResponse.mwsVersion ?? "" })} · {t("TiddlyWiki {version}", { version: embeddedServerResponse.tw5Versions.slice(-1)[0] ?? "" })}</span>
           <a href={pathPrefix + "/"}>{t("Back to the start page")}</a>
           {(embeddedServerResponse.prefs?.showLegalNotice ?? true) ? (
             <a href={pathPrefix + "/legal-notice"}>{t("Legal notice")}</a>
