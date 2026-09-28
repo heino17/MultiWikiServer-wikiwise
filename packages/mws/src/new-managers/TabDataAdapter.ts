@@ -156,29 +156,44 @@ export function defaultBagName(ownerUserId: string | null | undefined, slug: str
  * target name already exists or the bag is still shared with other recipes,
  * the bag row is renamed in place so the compiled recipe connects to it and
  * existing tiddlers/permissions keep their bag_id.
+ *
+ * The admin UI deliberately does not rewrite the target field while the slug
+ * is being typed: it cannot know the owner-namespaced convention, and that
+ * convention is defined in exactly one place, here. A target still holding the
+ * old slug therefore counts as "follow the slug", while a target that is
+ * neither the old nor the new derived name was chosen on purpose and is left
+ * alone. Returns the rows to store - the followed name if the bag was renamed,
+ * the submitted rows otherwise.
  */
 async function followDefaultBagOnSlugRename(
   prisma: PrismaTxnClient,
   prior: { id: string; slug: string; owner_user_id: string | null; definition: PrismaJson.Recipe_definition | null },
   data: DataSave["wikis"][number],
-) {
-  const oldDefaultBag = prior.definition?.writablePrefixBags?.find((row) => row.prefix === "")?.bagName;
-  if (!oldDefaultBag) return;
-  const newDefaultBag = data.writablePrefixBags.find((row) => row.prefix === "")?.bagName;
-  if (!newDefaultBag || oldDefaultBag === newDefaultBag) return;
+): Promise<readonly WritablePrefixRow[]> {
+  const rows = data.writablePrefixBags;
+  // Only the derived convention is followed, and only when the stored
+  // definition confirms that this wiki's default write target was that bag.
+  const derivedOld = defaultBagName(prior.owner_user_id, prior.slug);
+  const storedDefault = prior.definition?.writablePrefixBags?.find((row) => row.prefix === "")?.bagName;
+  if (storedDefault !== derivedOld) return rows;
+  const derivedNew = defaultBagName(prior.owner_user_id, data.slug);
+  if (derivedOld === derivedNew) return rows;
+  const target = rows.find((row) => row.prefix === "");
+  if (!target) return rows;
+  if (target.bagName !== derivedOld && target.bagName !== derivedNew) return rows;
 
-  // only follow the derived "editions/<owner>/<slug>" convention
-  if (oldDefaultBag !== defaultBagName(prior.owner_user_id, prior.slug) || newDefaultBag !== defaultBagName(prior.owner_user_id, data.slug)) return;
-
-  const oldBag = await prisma.bag.findUnique({ where: { name: oldDefaultBag }, select: { id: true } });
-  if (!oldBag) return;
+  const oldBag = await prisma.bag.findUnique({ where: { name: derivedOld }, select: { id: true } });
+  if (!oldBag) return rows;
   // target already exists: prefer connecting to it over stealing its name
-  const clash = await prisma.bag.findUnique({ where: { name: newDefaultBag }, select: { id: true } });
-  if (clash) return;
+  const clash = await prisma.bag.findUnique({ where: { name: derivedNew }, select: { id: true } });
+  if (clash) return rows;
   const sharedByOthers = await prisma.recipeBag.count({ where: { bag_id: oldBag.id, recipe_id: { not: prior.id } } });
-  if (sharedByOthers > 0) return;
+  if (sharedByOthers > 0) return rows;
 
-  await prisma.bag.update({ where: { id: oldBag.id }, data: { name: newDefaultBag } });
+  await prisma.bag.update({ where: { id: oldBag.id }, data: { name: derivedNew } });
+  // Only a completed rename may move the target: otherwise the wiki would
+  // point at a bag name that no longer exists.
+  return rows.map((row) => row.prefix === "" ? { ...row, bagName: derivedNew } : row);
 }
 
 /**
@@ -355,23 +370,27 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
         })
       : null;
 
-    const authoredDefinition: PrismaJson.Recipe_definition = {
-      displayName: data.displayName,
-      description: data.description,
-      readonlyBags: normalizeLineList(data.readonlyBags),
-      writablePrefixBags: normalizePrefixRows(data.writablePrefixBags),
-      plugins: normalizeLineList(data.plugins),
-      cspAllow: normalizeLineList(data.cspAllow ?? []),
-    };
-
     await importer.checkExisting(data.id, data.slug, this.user);
 
     // When the slug is renamed, the derived default write target
     // "editions/<owner>/<old-slug>" follows along to
     // "editions/<owner>/<new-slug>", so the compiled recipe can connect to
-    // it and existing tiddlers keep their data.
-    if (priorRecipe && priorRecipe.slug !== data.slug)
-      await followDefaultBagOnSlugRename(prisma, priorRecipe, data);
+    // it and existing tiddlers keep their data. The bag row is renamed in
+    // place, so bag_id, its tiddlers and its permissions survive. The stored
+    // definition has to carry the followed name, hence the rows are resolved
+    // before the definition is assembled.
+    const writablePrefixBags = priorRecipe && priorRecipe.slug !== data.slug
+      ? await followDefaultBagOnSlugRename(prisma, priorRecipe, data)
+      : data.writablePrefixBags;
+
+    const authoredDefinition: PrismaJson.Recipe_definition = {
+      displayName: data.displayName,
+      description: data.description,
+      readonlyBags: normalizeLineList(data.readonlyBags),
+      writablePrefixBags: normalizePrefixRows(writablePrefixBags),
+      plugins: normalizeLineList(data.plugins),
+      cspAllow: normalizeLineList(data.cspAllow ?? []),
+    };
 
     const { bags, plugins } = importer.compileRecipeSimpleV1(
       authoredDefinition,
@@ -429,10 +448,12 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
     // Runs on every save of an existing wiki: it also heals tiddlers that were
     // left behind by edits made before this save flow existed.
     if (priorRecipe) {
-      const defaultBagName = data.writablePrefixBags.find((row) => row.prefix === "")?.bagName
+      // the followed name, not the submitted one: a renamed bag kept its id
+      // but no longer answers to the old name
+      const targetDefaultBag = writablePrefixBags.find((row) => row.prefix === "")?.bagName
         ?? bags.find((e) => e.isWritable && e.prefix === "")?.bagName;
-      if (defaultBagName)
-        await mirrorDisplayNameIntoStarterTiddlers(prisma, new IdString(id), defaultBagName, data.displayName);
+      if (targetDefaultBag)
+        await mirrorDisplayNameIntoStarterTiddlers(prisma, new IdString(id), targetDefaultBag, data.displayName);
     }
 
     // Persist whether the wiki should appear on the public landing page. The

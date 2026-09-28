@@ -163,27 +163,6 @@ function renderSearchableInput({ id, currentValue, placeholder, options, onInput
   );
 }
 
-/**
- * Keeps the derived default bag (the empty-prefix write target "editions/<slug>")
- * in sync while the wiki slug is being edited: any authored writablePrefixBags row
- * that still points at "editions/<old-slug>" follows the new slug value.
- */
-function syncDefaultBagOnSlugChange(ctx: FieldEditorContext, nextSlug: string) {
-  const { field, value, fieldState, onDraftChange } = ctx;
-  if (field.key !== "slug" || fieldState.tabId !== "wikis") return;
-  const oldSlug = String(value ?? "");
-  if (!oldSlug || oldSlug === nextSlug) return;
-  const draft = fieldState.draft as Partial<WikiAdminRecord>;
-  const rows = draft.writablePrefixBags;
-  if (!Array.isArray(rows)) return;
-  const oldBag = `editions/${oldSlug}`;
-  const newBag = `editions/${nextSlug}`;
-  const nextRows = rows.map((row) => (row.bagName === oldBag ? { ...row, bagName: newBag } : row));
-  if (nextRows.some((row, index) => row.bagName !== rows[index].bagName)) {
-    onDraftChange("writablePrefixBags", nextRows);
-  }
-}
-
 const SLUG_FORMAT_HINT_KEY = "Use lowercase letters, numbers and hyphens, e.g. mein-wiki.";
 const SLUG_FORMAT_REGEX = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
@@ -276,9 +255,7 @@ function renderTextInputField(ctx: FieldEditorContext, type: "text" | "number" |
     <input id={inputId} class="field-input" type={type} value={value} ref={(element) => {
       if (element.value !== value) element.value = value;
     }} disabled={disabled} oninput={(event) => {
-      const nextValue = (event.currentTarget as HTMLInputElement).value;
-      syncDefaultBagOnSlugChange(ctx, nextValue);
-      onDraftChange(field.key, nextValue);
+      onDraftChange(field.key, (event.currentTarget as HTMLInputElement).value);
     }} />
     {renderSlugLiveValidation(ctx)}
     {renderBagNameLiveValidation(ctx)}

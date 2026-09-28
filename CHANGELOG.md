@@ -6117,6 +6117,126 @@ SqliteError: duplicate column name: owner_user_id
 
 ---
 
+## 57. Fix: Das Sprachmenü der Startseite lag halb unter dem Inhalt
+
+**Ziel:** Auf der Startseite `/` war das Sprachmenü im Kopfbereich unten
+angeschnitten: Der aufklappbare Teil wurde vom Inhaltsbereich übermalt, die
+unteren Sprachoptionen waren nicht mehr klickbar.
+
+### Was passiert ist
+
+- Der Kopfbereich `.landing-header` nutzt `backdrop-filter: blur(12px)`.
+  `backdrop-filter` – wie `filter`, `transform` oder `opacity` unter 1 – erzeugt
+  einen **eigenen Stacking Context**. Ein `z-index` innerhalb des Kopfbereichs
+  gilt damit nur noch innerhalb dieses Containers und hebt das Element nicht mehr
+  gegenüber dem restlichen Dokument an.
+- Der Kopfbereich selbst hatte kein eigenes `z-index` und lag deshalb auf Ebene
+  0. Die direkt folgende News-Box `.landing-news` steht im DOM danach und
+  übermalte ihn. Gemessen: 180 × 168 px Überlappung; `elementFromPoint()` in der
+  Mitte des Menüs traf den Titel `h2.landing-section-title`, nicht das Menü.
+- Betroffen waren alle Sprachoptionen im unteren Drittel, unabhängig von der
+  gewählten Sprache und ohne JavaScript-Beteiligung – reines Stapeln von Ebenen.
+- Das Muster war im Adminbereich bereits richtig gelöst: `.hero-panel` führt
+  `position: relative; z-index: 1`. Die Anmeldeseite hat kein Sprachmenü, dort
+  gibt es nichts zu korrigieren.
+
+### Die Lösung
+
+- `.landing-header` in `packages/admin-vanilla/src/app.inline.css` bekommt
+  `position: relative; z-index: 1`. Damit liegt der Kopfbereich über der
+  News-Box, und das `z-index` der Sprachoptionen wirkt wieder wie gedacht –
+  beides innerhalb des einen Kommentars benötigt wurde.
+
+### Getestet
+
+- **Messung vorher/nachher:** Vorher überlappte `.landing-news` das
+  Sprachmenü auf einer Fläche von 180 × 168 px, alle drei Messpunkte im
+  Menübereich trafen Inhaltselemente darunter. Nachher lagen alle drei
+  Messpunkte auf dem Dropdown oder auf einer Sprachoption, die Überlappung ist
+  weg.
+- **Beide Seiten mit dem Kopfbereich geprüft:** Startseite `/` und Impressums-
+  Seite, jeweils aufgeklapptes Menü in deutscher und englischer Fassung.
+
+---
+
+## 58. Fix: Der Standard-Schreib-Bag folgt dem Slug beim Umbenennen wieder
+
+**Ziel:** Wird im Admin der Slug eines Wikis geändert, folgt der abgeleitete
+Schreib-Bag `editions/<owner-id>/<slug>` dem neuen Slug nicht mehr. Das Wiki
+zeigt danach weiterhin auf den alten Bag-Namen – der Slug wird zwar umbenannt,
+der Standard-Bag behält aber für immer den alten Slug im Namen.
+
+### Was passiert ist
+
+- Die Kopplung war an zwei Stellen unabhängig voneinander hinterlegt, und die
+  beiden Stellen kannten unterschiedliche Namensschemata:
+  - Der Admin-Client (`syncDefaultBagOnSlugChange` in
+    `packages/admin-vanilla/src/definition/renders.tsx`) baute den neuen Namen
+    beim Tippen als `editions/<slug>` – **ohne** den Owner-Anteil.
+  - Der Server (`followDefaultBagOnSlugRename` in
+    `packages/mws/src/new-managers/TabDataAdapter.ts`) benannte den Bag nur um,
+    wenn die **eingereichte** Zielzeile bereits den neuen abgeleiteten Namen
+    enthielt.
+- Seit die Owner-Schreibweise eingeführt ist, lautet der tatsächliche Zielwert
+  aber `editions/<owner-id>/<slug>`. Der Client-Vergleich
+  `editions/<slug>` traf deshalb nie zu, das Zielfeld blieb unverändert – und
+  damit auch die Bedingung des Servers (`alter Name !== neuer Name`) nie zu.
+  Der Bag-Rename war für alle Wikis mit Owner-Namespacing, also für praktisch
+  jedes Wiki, still wirkungslos.
+- Ein Test dazu existierte nicht: weder für `followDefaultBagOnSlugRename` noch
+  für `defaultBagName`.
+
+### Die Lösung
+
+- **Eine Quelle der Wahrheit, auf dem Server.** Die Namenskonvention steht nur
+  noch in `defaultBagName(ownerUserId, slug)`. Der Client-Helfer und sein Aufruf
+  sind entfallen; das Zielfeld folgt dem Slug beim Tippen nicht mehr. Das ist
+  Absicht: der Client kennt die Owner-ID nicht, und nach dem Speichern schreibt
+  der Server den korrigierten Wert ohnehin in dasselbe Feld zurück.
+- **Der Server folgt dem Slug, wenn das Feld den alten Namen noch trägt.**
+  `followDefaultBagOnSlugRename` leitet beide Namen aus `defaultBagName` ab und
+  behandelt einen Zielwert, der dem alten *oder* dem neuen abgeleiteten Namen
+  entspricht, als „folge dem Slug“ – auch wenn der Client das Feld gar nicht
+  angefasst hat. Ein Zielwert, der weder der alte noch der neue abgeleitete Name
+  ist, wurde bewusst gewählt und bleibt unangetastet.
+- **Die Funktion liefert die zu speichernden Zeilen zurück** statt nur den Bag
+  umzubenennen. `authoredDefinition`, die kompilierte Rezept-Bag-Zuordnung, das
+  Spiegeln des Anzeigenamens und die Antwort an den Admin verwenden damit
+  denselben Namen. Vorher konnte die gespeicherte Definition auf einen
+  umbenannten Bag zeigen, den es unter diesem Namen nicht mehr gab.
+- **Unveränderte Schutzbedingungen:** Kein Rename bei Namenskonflikt (der
+  vorhandene Bag behält seinen Namen), bei fehlendem altem Bag oder wenn der Bag
+  noch von anderen Rezepten benutzt wird. Die Prüfung der Slug-Eindeutigkeit
+  läuft weiterhin vor dem Rename in derselben Transaktion, ein abgelehnter
+  Slug nimmt den Bag-Rename also mit zurück.
+- **Der Bag wird an Ort und Stelle umbenannt** (`bag.update`), nicht neu
+  angelegt: `bag_id`, Tiddler und Berechtigungen bleiben erhalten.
+
+### Getestet
+
+- **Der Kernfall, ohne Eingriff am Zielfeld:** Wiki angelegt, Slug auf
+  `…-umbenannt` geändert und gespeichert, ohne das Zielfeld anzufassen. Ergebnis
+  in der Datenbank geprüft: Definition zeigt auf
+  `editions/<owner>/…-umbenannt`, der Bag existiert unter dem neuen Namen mit
+  **derselben** `bag_id` wie vorher (`01a0e74a-…` → `01a0e74a-…`), die 3
+  Tiddler sind unverändert im selben Bag, `recipe_bag` verweist auf den neuen
+  Namen, der alte Name ist frei.
+- **Bewusstes Fremd-Bag:** Ein Wiki wurde auf den Bag eines anderen Wikis
+  gezielt und anschließend umbenannt. Der Zielwert bleibt unverändert gespeichert,
+  der Bag des anderen Wikis behält Name und ID, und es entsteht kein zusätzlicher
+  Bag aus dem Feld.
+- **Keine Zielzeile:** Speichern ganz ohne Zeile mit leerem Präfix ändert nichts –
+  es wird keine erfunden, der Bag bleibt unbenannt.
+- **Oberfläche, Chromium gegen die frische Testinstallation:** Slug-Feld
+  geändert, das Zielfeld zieht sichtbar **nicht** mit, nach dem Speichern steht
+  der vom Server nachgezogene Wert im Feld, nach dem Neuladen steht er im
+  Wiki. Keine JS-Fehler auf der Admin-Seite.
+- Für den Test wurde in der Wegwerf-Installation `admin.showLoginPuzzle`
+  abgeschaltet, weil das Emoji-Rätsel der Anmeldung keinen automatisierten
+  Klick zulässt; die Serverlogik ist davon unberührt.
+
+---
+
 ## Nicht eingecheckte Start-Konfiguration (lokal, gitignored)
 
 ```json
