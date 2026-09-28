@@ -7286,6 +7286,22 @@ kein Core-Makro `ext`), Nicht-Bilder wären als Literal gerendert worden.
 
 ---
 
+## 66. README: Quick-Start „Aus dem Repository" um Initialisierungsschritte ergänzt
+
+Nach `git clone` + `npm install` + `npm start` auf einem frischen Klon blieb der
+Server mit `Error: You need to run update-tiddlywiki first` hängen, weil `dev/`
+gitignored ist und der Klon daher weder `dev/wiki/tw5/<version>` noch
+`dev/wiki/store/` enthält — die Schritte standen nur im Development-Abschnitt,
+der Quick-Start ließ sie aus. Außerdem zeigte der Quick-Start auf
+`localhost:5000/dev/`, was nur mit einer lokalen `dev/mws.dev.json` gilt; ein
+frischer Klon lauscht ohne diese Datei auf Port `8080`.
+
+**Fix (`README.md`, EN und DE):** Quick-Start um `npm start update-tiddlywiki`
+und `npm start init-store` ergänzt, mit Hinweis, dass `dev/` nicht in Git liegt;
+Adresse auf <http://localhost:8080/> korrigiert.
+
+---
+
 ## Nicht eingecheckte Start-Konfiguration (lokal, gitignored)
 
 ```json
