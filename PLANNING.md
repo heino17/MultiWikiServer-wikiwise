@@ -81,6 +81,10 @@ Markers used below:
   command ([§54](CHANGELOG.md)) — downloaded asset, checksum, init, store and
   server all checked, including that the data-folder guard still refuses to
   start in a wrong folder
+- ✅ the wiki previews were verified against a crash of the headless browser,
+  not just against a healthy run ([§55](CHANGELOG.md)) — a long-lived server
+  has to survive the death of its Chromium, and it is checked by killing it
+  while the server keeps running
 - ✗ put site restrictions in a file — still unclear what belongs into it
 - ✗ sell people on contributing to the project — CONTRIBUTING.md is four lines and
   only points at the upstream CLA

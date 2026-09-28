@@ -190,11 +190,23 @@ async function thumbnailTtlMs(state: ServerRequest): Promise<number> {
   return 24 * 60 * 60 * 1000;
 }
 
-let browserPromise: ReturnType<typeof chromium.launch> | null = null;
+type ThumbnailBrowser = Awaited<ReturnType<typeof chromium.launch>>;
 
-function getBrowser() {
-  if (!browserPromise) {
-    browserPromise = chromium.launch({
+let browser: ThumbnailBrowser | null = null;
+// Serializes startBrowser() so that two thumbnail requests arriving together
+// share one Chromium instead of racing to launch a second one.
+let browserQueue: Promise<unknown> = Promise.resolve();
+
+/** Hand out a live Chromium, launching or relaunching as needed. */
+function startBrowser(): Promise<ThumbnailBrowser> {
+  const result = browserQueue.then(async () => {
+    // A browser that has crashed is still a perfectly good object as far as
+    // Playwright is concerned: isConnected() reports the truth, while every
+    // newContext() on the dead one fails with "Target page, context or browser
+    // has been closed". So the cached browser is only reused while it is alive.
+    if (browser && browser.isConnected()) return browser;
+    browser = null;
+    const launched = await chromium.launch({
       executablePath: chromiumExecutable(),
       headless: true,
       args: [
@@ -205,11 +217,14 @@ function getBrowser() {
         "--disable-extensions",
       ],
     }).catch((error: unknown) => {
-      browserPromise = null;
+      browser = null;
       throw error;
     });
-  }
-  return browserPromise;
+    browser = launched;
+    return launched;
+  });
+  browserQueue = result.catch(() => { });
+  return result;
 }
 
 const inFlight = new Map<string, Promise<void>>();
@@ -278,30 +293,41 @@ async function renderThumbnail(state: ServerRequest, slug: string, outPath: stri
   const origin = `${state.assumeHTTPS ? "https" : "http"}://${state.host}`;
   const pageUrl = `${origin}${state.pathPrefix}/wiki/${encodeURIComponent(slug)}`;
 
-  const browser = await getBrowser();
-  const context = await browser.newContext({ viewport: VIEWPORT });
-  try {
-    if (state.user.sessionId) {
-      await context.addCookies([{
-        name: "session",
-        value: state.user.sessionId,
-        domain: state.host.split(":")[0],
-        path: state.pathPrefix ? state.pathPrefix + "/" : "/",
-        httpOnly: true,
-        sameSite: "Strict",
-      }]);
+  // Chromium can die while the server keeps running (crash, OOM kill, someone
+  // killing the process). That is worth one invisible retry with a fresh
+  // browser, not a permanently broken preview.
+  for (let attempt = 0; ; attempt++) {
+    const browser = await startBrowser();
+    try {
+      const context = await browser.newContext({ viewport: VIEWPORT });
+      try {
+        if (state.user.sessionId) {
+          await context.addCookies([{
+            name: "session",
+            value: state.user.sessionId,
+            domain: state.host.split(":")[0],
+            path: state.pathPrefix ? state.pathPrefix + "/" : "/",
+            httpOnly: true,
+            sameSite: "Strict",
+          }]);
+        }
+        const page = await context.newPage();
+        await page.goto(pageUrl, { waitUntil: "networkidle", timeout: 60000 });
+        // let the TiddlyWiki client finish booting and do its initial paint
+        await page.waitForTimeout(2500);
+        const shot = await page.screenshot({ type: "png" });
+        const resized = await downscalePng(context, shot, THUMB_WIDTH, THUMB_HEIGHT);
+        const tmpPath = outPath + ".tmp";
+        await writeFile(tmpPath, resized);
+        await rename(tmpPath, outPath);
+      } finally {
+        await context.close().catch(() => {});
+      }
+      return;
+    } catch (error) {
+      if (browser.isConnected() || attempt > 0) throw error;
+      console.warn(`Chromium died while rendering the thumbnail of "${slug}", retrying with a fresh browser.`);
     }
-    const page = await context.newPage();
-    await page.goto(pageUrl, { waitUntil: "networkidle", timeout: 60000 });
-    // let the TiddlyWiki client finish booting and do its initial paint
-    await page.waitForTimeout(2500);
-    const shot = await page.screenshot({ type: "png" });
-    const resized = await downscalePng(context, shot, THUMB_WIDTH, THUMB_HEIGHT);
-    const tmpPath = outPath + ".tmp";
-    await writeFile(tmpPath, resized);
-    await rename(tmpPath, outPath);
-  } finally {
-    await context.close().catch(() => {});
   }
 }
 
@@ -326,7 +352,13 @@ export async function serveWikiThumbnail(state: ServerRequest) {
     // Anonymous visitors never trigger a headless browser render, so the
     // public landing page cannot be abused to run up CPU/RAM.
     if (!cached || Date.now() - cached.mtimeMs > ttlMs) {
-      await queue(outPath, () => withRenderSlot(() => renderThumbnail(state, recipe_slug, outPath)));
+      // A failed render is not a failed request: the wiki is still there, only
+      // its preview is missing. Falling through answers 404, which is the path
+      // the list already handles for a wiki without a cached picture.
+      await queue(outPath, () => withRenderSlot(() => renderThumbnail(state, recipe_slug, outPath)))
+        .catch((error: unknown) => {
+          console.warn(`Could not render the thumbnail of "${recipe_slug}": ${(error as Error).message.split("\n")[0]}`);
+        });
     }
   }
 
