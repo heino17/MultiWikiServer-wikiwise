@@ -57,6 +57,23 @@ const READ_LEVELS = ["A_read", "B_write", "C_admin"] as const;
 const WRITE_LEVELS = ["B_write", "C_admin"] as const;
 
 /**
+ * Origin of the official TiddlyWiki plugin library, allowed in `frame-src` for
+ * every wiki. TiddlyWiki loads it in a hidden cross-origin iframe
+ * (`$:/core/modules/startup/browser-messaging.js`) to list the available
+ * plugins and to download them, so without this origin the Settings -> Plugins
+ * -> "Get more plugins" button cannot work at all - in Firefox it reports
+ * "Error loading plugin library", in Chromium it fails silently.
+ *
+ * This is a deliberate exception to the strict same-origin default: it applies
+ * to all wikis, not just the ones whose owner asked for it. The framed page is
+ * TiddlyWiki's own library, it can only post messages back to the parent and
+ * cannot run script in the wiki's origin. A self-hosted plugin library (a
+ * different `$:/config/PluginLibrary/URL`) still has to be listed per wiki in
+ * `cspAllow`, which is appended after this entry.
+ */
+const PLUGIN_LIBRARY_ORIGIN = "https://tiddlywiki.com";
+
+/**
  * Progressive Content-Security-Policy for wiki pages. Starts from a strict
  * same-origin policy and appends the recipe's `cspAllow` entries to the
  * directives that legitimately need external sources (images, media, frames,
@@ -71,7 +88,7 @@ function buildCspPolicy(cspAllow: readonly string[]): string {
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data:${add("img-src")}`,
     `media-src 'self'${add("media-src")}`,
-    `frame-src 'self'${add("frame-src")}`,
+    `frame-src 'self' ${PLUGIN_LIBRARY_ORIGIN}${add("frame-src")}`,
     `connect-src 'self'${add("connect-src")}`,
     "font-src 'self' data:",
     "object-src 'none'",

@@ -6237,6 +6237,72 @@ der Standard-Bag behält aber für immer den alten Slug im Namen.
 
 ---
 
+## 59. Fix: Die Plugin-Bibliothek ließ sich in keinem Wiki öffnen
+
+**Ziel:** In jedem Wiki ist unter *Einstellungen → Plugins → „Get more
+plugins“* keine Plugin-Bibliothek zu öffnen gewesen. Firefox meldete
+`Error loading plugin library: https://tiddlywiki.com/library/v5.4.1/index.html`,
+Chromium blieb stumm. Damit ließ sich **kein** Plugin installieren – auch keine
+Sprache.
+
+### Was passiert ist
+
+- TiddlyWiki lädt die Bibliothek in einem **versteckten Cross-Origin-iframe**
+  (`$:/core/modules/startup/browser-messaging.js`) und handelt über
+  `postMessage` mit ihm. Auch der Download eines Plugins
+  (`tm-load-plugin-from-library`) läuft über dieselbe Frame.
+- MWS sendet für Wiki-Seiten eine strenge CSP mit `frame-src 'self'`
+  (`buildCspPolicy` in `packages/mws/src/new-managers/RecipeResolver.ts`).
+  Genau diese eine Direktive blockiert den Zugriff auf die Bibliothek. Das ist
+  kein Netzwerkproblem: `https://tiddlywiki.com/library/v5.4.1/index.html`
+  antwortet mit HTTP 200.
+- Der Ausweg wäre `cspAllow` pro Wiki, das `frame-src` erweitert. In der
+  Entwicklungsumgebung war er nirgends gesetzt (0 von 13 Wikis), und im
+  Admin-Formular gibt es **kein Eingabefeld** dafür – die Ausnahme war also
+  weder gesetzt noch erreichbar.
+- **Zwei verschiedene Symptome, eine Ursache:** Firefox feuert bei einer per CSP
+  blockierten Frame `onerror`, der Kern macht daraus den Alert mit der
+  genannten Meldung. Chromium feuert stattdessen `load`, der Status bleibt
+  „loaded“, die Bibliothek bleibt leer – **ohne jede Meldung**. Der stille Fall
+  ist der unangenehmere, weil er nicht als Fehler auffällt.
+
+### Die Lösung
+
+- `frame-src` enthält fest `https://tiddlywiki.com`
+  (Konstante `PLUGIN_LIBRARY_ORIGIN` in `packages/mws/src/new-managers/RecipeResolver.ts`).
+  Damit funktioniert die Bibliothek in jedem Wiki ohne Eingriff.
+- Das ist eine **bewusste Abweichung** vom strengen Standard und gilt für alle
+  Wikis, nicht nur für die, deren Admin es entschieden hat. Begründung:
+  Sprachpakete und Plugins sollen ohne Zusatzschritt verfügbar sein, und die
+  eingebettete Seite ist TiddlyWikis eigene Bibliothek – sie kann nur Nachrichten
+  an den Elternframe senden und im Wiki-Ursprung kein Skript ausführen. Ein
+  selbst gehostetes Bibliotheks-URL (`$:/config/PluginLibrary/URL` anders
+  gesetzt) muss weiterhin pro Wiki in `cspAllow` stehen; die Liste wird
+  dahinter angehängt. Skript-Quellen bleiben unverändert auf `same-origin`.
+- Der Kommentar an der Funktion beschreibt die progressive Grundidee weiter und
+  benennt die Ausnahme samt Begründung, damit sie später bewusst entfernt
+  werden kann.
+
+### Getestet
+
+- **Vorher, am selben Wiki, beide Browser:** Firefox liefert die CSP-Meldung
+  („blocked the loading of a resource (frame-src)“) **und** den Alarm mit
+  wortgleicher Meldung wie im Gemeldeten, Status bleibt „loading“, 0 Einträge.
+  Chromium meldet denselben Verstoß, zeigt aber keinen Alarm (Status „loaded“,
+  0 Einträge) – exakt der stille Fehler.
+- **Nachher, mit leerem `cspAllow`:** Header `frame-src 'self'
+  https://tiddlywiki.com`, keine CSP-Verstöße, Status „loaded“, **105
+  Bibliothekseinträge davon 34 Sprachpakete** – in Chromium und in Firefox
+  identisch.
+- **Auch der Downloadpfad:** `$:/languages/de-DE` aus der Bibliothek angefordert,
+  das Sprachpaket kommt vollständig an (182 498 Zeichen JSON, Typ
+  `application/json`), ebenso ein reguläres Plugin (`$:/plugins/tiddlywiki/async`).
+  Damit ist der gemeldete Weg – Sprache installieren – vollständig geprüft.
+- Geprüft wurde auf der frischen Wegwerf-Installation mit leerem `cspAllow`,
+  also genau dem Zustand aller 13 Wikis der Entwicklungsumgebung.
+
+---
+
 ## Nicht eingecheckte Start-Konfiguration (lokal, gitignored)
 
 ```json
