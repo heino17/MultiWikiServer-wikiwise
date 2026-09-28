@@ -3411,29 +3411,41 @@ it, without touching the entry itself.
   files stay untouched.
 - `aria-hidden="true"`: the heart is decoration. Screen readers keep reading
   only the version, not "red heart".
-- CSS: `flex: 0 0 auto`, `font-size: 0.85em`, `line-height: 1` and a
-  `translateY(0.06em)`. Emoji visibly sit too high in small text and are drawn
-  slightly too large; both are pulled back onto the baseline of the neighbouring
-  entry instead of widening the line.
-- Added to the footer of the start page (`app-landing.tsx`) and to the one of
-  the admin app (`app.tsx`, `.admin-footer`). The footer of the legal notice
-  (`legal-notice.tsx`) has **no** version line – a heart without a counterpart
-  would be pointless there, so it was left unchanged.
+- CSS: `flex: 0 0 auto`, `font-size: 0.85em`, `line-height: 1` and
+  `translateY(calc(0.06em - 5px))`. Emoji visibly sit too high in small text
+  and are drawn slightly too large; both are corrected that way. The lift of
+  5 px is deliberately in `px` and not in `em`, so that it is exactly 5 px
+  independently of the font size. `0.06em` is the base correction so the heart
+  does not fall out of the line entirely – measured a shift of −4.372 px, which
+  is exactly the 5 px plus 0.63 px of base correction.
+- Added to **all three** footers: start page (`app-landing.tsx`), admin app
+  (`app.tsx`, `.admin-footer`) and legal notice (`legal-notice.tsx`). The
+  legal-notice footer previously had no version line; it was added with the
+  heart in front of it. The source is `embeddedServerResponse` (`mwsVersion`
+  and `tw5Versions`), which the page already receives – no additional request
+  was needed.
 
 ### Tested
 
 - **DOM:** exactly one heart span, content only the heart
   (`U+2764 U+FE0F`), 13 × 10 px, `aria-hidden="true"`. The version line still
   reads `MWS-wikiwise 0.3.3 · TiddlyWiki 5.4.1` – in every language.
-- **Alignment:** baseline difference between heart and text 0 px, the footer
-  height stays 33 px as before. No additional wrap.
+- **Alignment:** the heart now sits 5 px above the top edge of the text and
+  5 px above its bottom edge, so it sticks out at the top instead of hanging
+  below the line. The footer height stays 33 px as before, no additional wrap,
+  `transform: matrix(1, 0, 0, 1, 0, -4.37168)`. Before: top edge 2 px above
+  the text, bottom edge flush.
+- **Legal notice:** The footer now carries `❤️`, the version line and "Back to
+  the start page" – 4 entries instead of 3 before. Checked there in seven
+  languages as well: heart consistently 10 px high at y = 1046, text
+  identical.
 - **Seven languages** (en, de, fr, es, ko, ru, zh-cn) clicked through: the heart
   is 13 × 10 px everywhere, always flush with the version line, the text
   identical. No JS errors.
-- **Bundle check:** the delivered `main.js` contains both footers with
-  `children:"❤️"` – the builder kept the pair correctly as an escape
-  sequence and did not turn it into the text variant without variation
-  selector.
+- **Bundle check:** the delivered `main.js` contains all three heart spans
+  with `children:"❤️"` – the builder kept the pair correctly as an
+  escape sequence and did not turn it into the text variant without
+  variation selector.
 
 ---
 
@@ -6946,14 +6958,19 @@ Eintrag selbst anzutasten.
   So bleiben alle Sprachdateien unberührt.
 - `aria-hidden="true"`: Das Herz ist Dekoration. Vorlese-Software liest
   weiterhin nur die Versionsangabe, nicht „rotes Herz“.
-- CSS: `flex: 0 0 auto`, `font-size: 0.85em`, `line-height: 1` und ein
-  `translateY(0.06em)`. Emoji sitzen in kleiner Schrift sichtbar zu hoch und
-  werden etwas zu groß gezeichnet; beides wird so auf die Grundlinie des
-  Nachbareintrags zurückgeholt, statt die Zeile zu verbreitern.
-- Eingetragen in den Footer der Startseite (`app-landing.tsx`) und den der
-  Verwaltung (`app.tsx`, `.admin-footer`). Der Footer des Impressums
-  (`legal-notice.tsx`) hat **keine** Versionszeile – dort wäre ein Herz ohne
-  Gegenstück sinnlos, deshalb blieb er unverändert.
+- CSS: `flex: 0 0 auto`, `font-size: 0.85em`, `line-height: 1` und
+  `translateY(calc(0.06em - 5px))`. Emoji sitzen in kleiner Schrift sichtbar zu
+  hoch und werden etwas zu groß gezeichnet; beides wird so korrigiert. Die
+  Höhenkorrektur von 5 px steht bewusst in `px` und nicht in `em`, damit sie
+  unabhängig von der Schriftgröße genau 5 px beträgt. `0.06em` ist dabei die
+  Grundkorrektur, damit das Herz nicht ganz aus dem Satz fällt – gemessen
+  −4,372 px Verschiebung, das sind exakt die 5 px plus 0,63 px Grundkorrektur.
+- Eingetragen in **alle drei** Footer: Startseite (`app-landing.tsx`),
+  Verwaltung (`app.tsx`, `.admin-footer`) und Impressum (`legal-notice.tsx`).
+  Der Impressums-Footer hatte zuvor keine Versionszeile; sie wurde mit
+  Herz davor ergänzt. Quelle ist `embeddedServerResponse` (`mwsVersion` und
+  `tw5Versions`), die die Seite ohnehin schon mitbringt – es war kein
+  zusätzlicher Abruf nötig.
 
 ### Getestet
 
@@ -6961,15 +6978,22 @@ Eintrag selbst anzutasten.
   (`U+2764 U+FE0F`), 13 × 10 px, `aria-hidden="true"`. Die Versionszeile
   lautet unverändert `MWS-wikiwise 0.3.3 · TiddlyWiki 5.4.1` – in allen
   Sprachfassungen.
-- **Ausrichtung:** Grundlinien-Differenz zwischen Herz und Text 0 px, die
-  Footerhöhe bleibt 33 px wie vorher. Kein zusätzlicher Umbruch.
+- **Ausrichtung:** Das Herz sitzt jetzt 5 px höher als die Text-Oberkante und
+  5 px höher als die Text-Unterkante, es ragt also oben heraus, statt unten
+  aus der Zeile zu hängen. Die Footerhöhe bleibt 33 px wie vorher, kein
+  zusätzlicher Umbruch, `transform: matrix(1, 0, 0, 1, 0, -4.37168)`.
+  Vorher: Oberkante 2 px über dem Text, Unterkante bündig.
+- **Impressum:** Der Footer führt nun `❤️`, die Versionszeile und
+  „Zurück zur Startseite" – 4 Einträge statt vorher 3. Auch dort in sieben
+  Sprachen geprüft: Herz durchgehend 10 px hoch an y = 1046, Text
+  identisch.
 - **Sieben Sprachen** (en, de, fr, es, ko, ru, zh-cn) durchgeklickt: Das Herz
   ist überall 13 × 10 px, immer fluchtend zur Versionszeile, der Text
   identisch. Keine JS-Fehler.
-- **Bundle-Kontrolle:** Das ausgelieferte `main.js` enthält beide Footers mit
-  `children:"❤️"` – der Builder hat das Paar korrekt als
-  Escape-Sequenz erhalten und nicht die textförmige Variante ohne
-  Variation-Selector daraus gemacht.
+- **Bundle-Kontrolle:** Das ausgelieferte `main.js` enthält alle drei
+  Herz-Spans mit `children:"❤️"` – der Builder hat das Paar
+  korrekt als Escape-Sequenz erhalten und nicht die textförmige Variante
+  ohne Variation-Selector daraus gemacht.
 
 ---
 
