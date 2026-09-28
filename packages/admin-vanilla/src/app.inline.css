@@ -4718,11 +4718,6 @@ odt-preview-document {
 	/* takes up the slack of a short page. Once the content overflows, auto
 	   resolves to 0 and the 24px gap of .landing-shell remains as the spacing. */
 	margin-top: auto;
-	/* shrink to the entries instead of stretching the rule across the whole
-	   page. Without this the border-top drew a line of 1856px while the text
-	   occupied 425px of it. */
-	width: fit-content;
-	max-width: 100%;
 }
 
 .landing-footer {
