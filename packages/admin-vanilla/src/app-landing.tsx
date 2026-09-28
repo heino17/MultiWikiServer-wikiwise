@@ -308,6 +308,7 @@ export class LandingPage extends JSXElement {
         )}
 
         <footer class="landing-footer">
+          <span class="landing-footer-heart" aria-hidden="true">{"❤️"}</span>
           <span>{t("MWS-wikiwise {version}", { version: this.data?.versions.mws ?? "" })} · {t("TiddlyWiki {version}", { version: currentTw5 ?? "" })}</span>
           <a href={pathPrefix + "/tw5/" + (currentTw5 ?? "")}>{t("TiddlyWiki docs")}</a>
           {(embeddedServerResponse.prefs?.showLegalNotice ?? true) ? (

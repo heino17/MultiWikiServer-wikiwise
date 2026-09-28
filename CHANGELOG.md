@@ -3395,6 +3395,46 @@ width.
 
 ---
 
+## 62. Cosmetic: a heart in front of the version line in the footer
+
+**Goal:** The footer started with the sober line
+`MWS-wikiwise 0.3.3 · TiddlyWiki 5.4.1`. What was wanted was a ❤️ in front of
+it, without touching the entry itself.
+
+### The solution
+
+- The heart is an **own `<span class="landing-footer-heart">`** directly before
+  the version line, not part of it. Reason: the text comes from the
+  translation key `MWS-wikiwise {version}`, which exists in all locale files.
+  An emoji in the key would have to be adjusted in every language – and would
+  still not be translatable, because it is not text. That way all language
+  files stay untouched.
+- `aria-hidden="true"`: the heart is decoration. Screen readers keep reading
+  only the version, not "red heart".
+- CSS: `flex: 0 0 auto`, `font-size: 0.85em`, `line-height: 1` and a
+  `translateY(0.06em)`. Emoji visibly sit too high in small text and are drawn
+  slightly too large; both are pulled back onto the baseline of the neighbouring
+  entry instead of widening the line.
+- Added to the footer of the start page (`app-landing.tsx`) and to the one of
+  the admin app (`app.tsx`, `.admin-footer`). The footer of the legal notice
+  (`legal-notice.tsx`) has **no** version line – a heart without a counterpart
+  would be pointless there, so it was left unchanged.
+
+### Tested
+
+- **DOM:** exactly one heart span, content only the heart
+  (`U+2764 U+FE0F`), 13 × 10 px, `aria-hidden="true"`. The version line still
+  reads `MWS-wikiwise 0.3.3 · TiddlyWiki 5.4.1` – in every language.
+- **Alignment:** baseline difference between heart and text 0 px, the footer
+  height stays 33 px as before. No additional wrap.
+- **Seven languages** (en, de, fr, es, ko, ru, zh-cn) clicked through: the heart
+  is 13 × 10 px everywhere, always flush with the version line, the text
+  identical. No JS errors.
+- **Bundle check:** the delivered `main.js` contains both footers with
+  `children:"❤️"` – the builder kept the pair correctly as an escape
+  sequence and did not turn it into the text variant without variation
+  selector.
+
 ---
 
 ## Unchecked-in starter configuration (local, gitignored)
@@ -6889,6 +6929,47 @@ behalten.
   getroffen. Keine JS-Fehler.
 
 ---
+
+## 62. Kosmetik: ein Herz vor der Versionszeile im Footer
+
+**Ziel:** Der Footer begann mit der nüchternen Zeile
+`MWS-wikiwise 0.3.3 · TiddlyWiki 5.4.1`. Gewünscht war ein ❤️ davor, ohne den
+Eintrag selbst anzutasten.
+
+### Die Lösung
+
+- Das Herz ist ein **eigener `<span class="landing-footer-heart">`** direkt vor
+  der Versionszeile, nicht Teil von ihr. Grund: Der Text entsteht aus dem
+  Übersetzungsschlüssel `MWS-wikiwise {version}`, der in allen Locale-Dateien
+  steht. Ein Emoji im Schlüssel hätte in jeder Sprache angepasst werden
+  müssen – und wäre trotzdem nicht übersetzbar gewesen, weil es kein Text ist.
+  So bleiben alle Sprachdateien unberührt.
+- `aria-hidden="true"`: Das Herz ist Dekoration. Vorlese-Software liest
+  weiterhin nur die Versionsangabe, nicht „rotes Herz“.
+- CSS: `flex: 0 0 auto`, `font-size: 0.85em`, `line-height: 1` und ein
+  `translateY(0.06em)`. Emoji sitzen in kleiner Schrift sichtbar zu hoch und
+  werden etwas zu groß gezeichnet; beides wird so auf die Grundlinie des
+  Nachbareintrags zurückgeholt, statt die Zeile zu verbreitern.
+- Eingetragen in den Footer der Startseite (`app-landing.tsx`) und den der
+  Verwaltung (`app.tsx`, `.admin-footer`). Der Footer des Impressums
+  (`legal-notice.tsx`) hat **keine** Versionszeile – dort wäre ein Herz ohne
+  Gegenstück sinnlos, deshalb blieb er unverändert.
+
+### Getestet
+
+- **DOM:** Genau ein Herz-Span, Inhalt ausschließlich das Herz
+  (`U+2764 U+FE0F`), 13 × 10 px, `aria-hidden="true"`. Die Versionszeile
+  lautet unverändert `MWS-wikiwise 0.3.3 · TiddlyWiki 5.4.1` – in allen
+  Sprachfassungen.
+- **Ausrichtung:** Grundlinien-Differenz zwischen Herz und Text 0 px, die
+  Footerhöhe bleibt 33 px wie vorher. Kein zusätzlicher Umbruch.
+- **Sieben Sprachen** (en, de, fr, es, ko, ru, zh-cn) durchgeklickt: Das Herz
+  ist überall 13 × 10 px, immer fluchtend zur Versionszeile, der Text
+  identisch. Keine JS-Fehler.
+- **Bundle-Kontrolle:** Das ausgelieferte `main.js` enthält beide Footers mit
+  `children:"❤️"` – der Builder hat das Paar korrekt als
+  Escape-Sequenz erhalten und nicht die textförmige Variante ohne
+  Variation-Selector daraus gemacht.
 
 ---
 
