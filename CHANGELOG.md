@@ -7272,11 +7272,12 @@ kein Core-Makro `ext`), Nicht-Bilder wären als Literal gerendert worden.
 
 **Fix (`plugins/client/tiddlers/upload-file.js`):**
 
-- Neuer Helper `wikiFileUrl()` baut die URL absolut über dieselbe Host-Quelle
-  wie die XHRs (`getHost()`, d. h. `$:/config/multiwikiclient/host`) →
-  `[img[http://host/api/user-files/wiki-file?recipe=…&id=…]]` löst unabhängig
-  von der Wiki-Basis-URL korrekt auf (Modal-Vorschau und einfügbarer Schnipsel
-  nutzen beide denselben Pfad).
+- Neuer Helper `wikiFileUrl()` liefert die **domain-independent** URL
+  `/api/user-files/wiki-file?recipe=…&id=…` (führender Slash statt Host):
+  TiddlyWiki löst sie gegen den aktuellen Ursprung auf, es wird also keine
+  Host/Port in den Tiddler gebacken und das Snippet überlebt einen Server-
+  Adresswechsel. Die XHR-Pfade (Upload, Verzeichnis-Liste) nutzen weiter
+  `getHost()`/`$:/config/multiwikiclient/host`.
 - Nicht-Bilder bekommen statt des toten `[ext[…]]` einen echten Wiki-Link
   `[[Dateiname|url]]` (Sonderzeichen `]`/`|` im Namen werden entfernt).
 - Da der Dev-Server die Client-Tiddler beim Start aus `plugins/client/tiddlers/`

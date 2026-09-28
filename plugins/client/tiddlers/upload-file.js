@@ -169,11 +169,13 @@ function isImageType(type) {
 	return typeof type === "string" && type.indexOf("image/") === 0;
 }
 
-/** Absolute URL of a wiki file, based on the same host the XHRs use. The
- *  wiki lives under /wiki/<slug>, so a relative "api/..." would resolve to
- *  /wiki/api/... inside a tiddler — never a working request. */
+/** Domain-independent URL of a wiki file. The wiki page itself lives under
+ *  /wiki/<slug>, so a relative "api/..." would resolve to /wiki/api/... inside
+ *  a tiddler — never a working request. The leading slash keeps the URL on the
+ *  current origin: no host/port is baked in, so the snippet survives a change
+ *  of server address. */
 function wikiFileUrl(recipe,id) {
-	return getHost() + WIKIFILE_PATH + "?recipe=" + encodeURIComponent(recipe) + "&id=" + encodeURIComponent(id);
+	return "/" + WIKIFILE_PATH + "?recipe=" + encodeURIComponent(recipe) + "&id=" + encodeURIComponent(id);
 }
 
 /** The ready-to-paste reference for a wiki file: [img[…]] for images
