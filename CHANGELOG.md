@@ -66,6 +66,14 @@ Personalized bag namespaces against name squatting (C1), wiki
 classification + CSP headers + existence oracle (C2), and the structured
 "My Areas" UI with trust labels (C3).
 
+Wiki-uploaded files can now be **embedded in the wiki itself** (§65):
+After the upload, the wiki shows the ready-to-paste TiddlyWiki code
+(`[img[...]]` for images, `[ext[...]]` for everything else), and a
+"Files in this wiki" button lists all files of the wiki with preview
+and copyable code. Wiki files are visible to whoever may open the wiki
+(read access) — no separate share is required; personal "My files"
+stay private.
+
 ---
 
 ## 1. Missing dependency: `escape-string-regexp`
@@ -7188,6 +7196,60 @@ Emoji-Rätsel) im Browser geprüft:
   (y = 1049), der Link sitzt 1048–1062 px in der Akzentfarbe
   `rgb(227, 201, 131)` mit Unterstreichung wie die übrigen Footer-Links.
 - Keine JS-Fehler.
+
+---
+
+## 65. In ein Wiki hochgeladene Dateien einbinden („Dateien in diesem Wiki")
+
+**Ziel:** Dateien, die über die Wiki-Werkzeugleiste hochgeladen werden, sollen
+sich direkt im Wiki nutzen lassen — Bilder als Bild, andere Dateien als Link —
+ohne dass das Wiki einen „Ordner" kennen muss oder eine separate Freigabe
+nötig wäre. Die Doku behauptete das schon länger (`Datei-in-einem-Wiki-verwenden`),
+technisch fehlte aber die Zuordnung.
+
+### Die Lösung
+
+**Server (Schritte 1–4, Commit `5b68a69`):**
+
+- `user_file.recipe_id` (Recipe-id, nullable, mit Index) via Prisma-Schema +
+  Migration `20260928_user_file_recipe`. `NULL` = persönliche Datei.
+- Der Upload mit `?recipe=<slug>` schreibt ab jetzt diese `recipe_id`
+  (`UserFileUpload`); Uploads aus „Meine Dateien" bleiben `NULL`.
+- Neue Routen, beide mit `assertReferer(["/", "/wiki"])`:
+  - `GET/HEAD /api/user-files/wiki-file?recipe=<slug>&id=<id>` — streamt die
+    Datei **inline** (Bilder/Audio/Video/PDF/…) mit **Range-Support**
+    (Suchen/Seeken). Die Range-Logik von `UserFilePreview` wurde dafür in den
+    gemeinsamen Helper `streamInline` extrahiert und von beiden Routen genutzt.
+  - `GET /api/user-files/wiki-files?recipe=<slug>` — die Liste aller Dateien
+    des Wikis (fürs Verzeichnis-Modal).
+- **Sichtbarkeit = Wiki-Leserecht:** Beide Routen nutzen dasselbe Read-Gate wie
+  die Wiki-Seite selbst (`RecipeResolver.assertRecipe`). Wer das Wiki öffnen
+  darf, sieht die Dateien — bewusst **ohne `okUser`**, damit auch anonyme Leser
+  eines öffentlichen Wikis die Inhalte laden. Nutzer ohne Beziehung zum Wiki
+  bekommen exakt das gleiche 404 wie fürs Wiki selbst (kein Existenz-Orakel).
+  Nur Dateien, die tatsächlich in *dieses* Wiki hochgeladen wurden
+  (`recipe_id`-Match), sind erreichbar; persönliche Dateien bleiben privat.
+
+**Client (Schritt 5, Commit `1d1379a`):**
+
+- Nach einem Upload **im Wiki** öffnet sich ein Modal mit dem fertigen
+  TiddlyWiki-Code zum Einfügen: `[img[…]]` bei Bildern, `[ext[…]]` sonst.
+  (Persönliche Uploads bekommen weiter nur die Erfolgsnotiz.)
+- Neuer Werkzeugleisten-Button **„Dateien in diesem Wiki"** (Ordner-Icon,
+  `$:/tags/PageControls`, `tm-mws-wiki-files`): lädt `/api/user-files/wiki-files`
+  und zeigt je Datei Vorschau (`[img]`/`[ext]`), Dateinamen und das kopierbare
+  Code-Schnipsel in einem Modal.
+- Die Upload-Antwort reicht nun `id` und `type` durch; 8 neue i18n-Strings in
+  allen 8 Sprachen.
+
+### Getestet
+
+- `tsc2` und Client-`tsc` fehlerfrei; Server- und Client-Bundle bauen.
+- Migration wird vom `SqliteAdapter` beim Start automatisch angewendet
+  („Applying migration 20260928_user_file_recipe"); Spalte + Index
+  `user_file_recipe_id_idx` per `PRAGMA table_info` verifiziert.
+- Die End-to-End-Browserprüfung (Upload im Wiki, `[img]`-Rendering, Gast-Sicht
+  mit Leserecht) wird nach Abschluss des Features ergänzt.
 
 ---
 

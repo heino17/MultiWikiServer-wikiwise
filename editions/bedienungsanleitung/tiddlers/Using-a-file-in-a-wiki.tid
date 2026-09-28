@@ -7,6 +7,8 @@ EN: **Using a file in a wiki** · DE: [[Datei in einem Wiki verwenden]] · [[Sta
 # Using a file in a wiki
 
 - **Upload in the wiki:** while editing a wiki you can upload the file directly there — it is stored with the wiki owner.
+- **Toolbar:** the upload button loads the file into the wiki owner's file store. Afterwards a window shows the finished code for your tiddler: images as `[img[...]]`, all other files as `[ext[...]]`. Paste the code into any tiddler to display the file.
+- **Files in this wiki:** the folder button in the toolbar opens a list of all files of the wiki with preview, download link and copyable code.
 - **Wiki owners (teacher/admin):** files uploaded to your own wikis are permanently available to that wiki.
-- Images are shown as images, other files as download links.
+- **Visibility:** anyone who may open the wiki (read access) can see its files; no separate share is needed. Personal files from "My files" stay private and are not affected.
 - Guests with read access see the content but cannot add files.
