@@ -4737,6 +4737,17 @@ odt-preview-document {
 	min-width: 0;
 }
 
+/* The heart in front of the version line. It is its own span so the version
+   text stays a plain translatable string. Emoji sit high next to small text
+   and are drawn a touch larger, so both are pulled back onto the baseline of
+   the neighbouring entry instead of pushing the line apart. */
+.landing-footer-heart {
+	flex: 0 0 auto;
+	font-size: 0.85em;
+	line-height: 1;
+	transform: translateY(0.06em);
+}
+
 .landing-footer a {
 	color: var(--color-accent-heading);
 }

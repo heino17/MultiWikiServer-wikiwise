@@ -2380,6 +2380,7 @@ export class App extends JSXElement {
           </div>
         ) : null}
         <footer class="landing-footer admin-footer">
+          <span class="landing-footer-heart" aria-hidden="true">{"❤️"}</span>
           <span>{t("MWS-wikiwise {version}", { version: embeddedServerResponse.mwsVersion ?? "" })} · {t("TiddlyWiki {version}", { version: embeddedServerResponse.tw5Versions.slice(-1)[0] ?? "" })}</span>
           <a href={pathPrefix + "/tw5/" + (embeddedServerResponse.tw5Versions.slice(-1)[0] ?? "")}>{t("TiddlyWiki docs")}</a>
           {(embeddedServerResponse.prefs?.showLegalNotice ?? true) ? (
