@@ -2381,7 +2381,7 @@ export class App extends JSXElement {
         ) : null}
         <footer class="landing-footer admin-footer">
           <span class="landing-footer-heart" aria-hidden="true">{"❤️"}</span>
-          <span>{t("MWS-wikiwise {version}", { version: embeddedServerResponse.mwsVersion ?? "" })} · {t("TiddlyWiki {version}", { version: embeddedServerResponse.tw5Versions.slice(-1)[0] ?? "" })}</span>
+          <span><a href="https://github.com/heino17/MultiWikiServer-wikiwise" target="_blank" rel="noreferrer">{t("MWS-wikiwise {version}", { version: embeddedServerResponse.mwsVersion ?? "" })}</a> · {t("TiddlyWiki {version}", { version: embeddedServerResponse.tw5Versions.slice(-1)[0] ?? "" })}</span>
           <a href={pathPrefix + "/tw5/" + (embeddedServerResponse.tw5Versions.slice(-1)[0] ?? "")}>{t("TiddlyWiki docs")}</a>
           {(embeddedServerResponse.prefs?.showLegalNotice ?? true) ? (
             <a href={pathPrefix + "/legal-notice"}>{t("Legal notice")}</a>

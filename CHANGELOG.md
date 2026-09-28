@@ -3503,6 +3503,46 @@ Users, Storage, Pinboard, My files), measured before and after each:
 - **Start page and legal notice** unchanged: footer 18 px above the edge, 33 px
   high, heart present. No JS errors.
 
+## 64. "MWS-wikiwise 0.3.3" in the footer linked
+
+**Goal:** The product name with version number in the three footers (start
+page, admin app, legal notice) should point to the project GitHub repository.
+
+### The solution
+
+- Instead of a separate constants module, the URL is entered as a hard literal
+  in the three files – that matches the project style, there are no URL
+  constants so far.
+- **Only the product name** becomes the link, not the TiddlyWiki part:
+  `MWS-wikiwise 0.3.3` (linked) · `TiddlyWiki 5.4.1` (plain). The link sits
+  around the first `t()` call of the version span. The translations stay
+  untouched because the link is made in JSX – the key value itself remains
+  plain text.
+- `target="_blank" rel="noreferrer"` like for all external links of the app
+  (TiddlyWiki docs link, preview, wiki links). The Content-Security-Policy
+  does not apply here: it only concerns the embedded wiki page
+  (RecipeResolver) and contains no `navigate-to` – navigation to a new tab is
+  not blocked.
+- Visually the link automatically uses the `.landing-footer a` style (accent
+  colour + underline), identical to the footer links "TiddlyWiki docs" and
+  "Legal notice". No CSS change needed.
+
+### Tested
+
+All three footers checked in the browser via a fresh test instance (with login
+including the emoji puzzle):
+
+- **Start page** (public): link text exactly `MWS-wikiwise 0.3.3`,
+  `href` exactly `https://github.com/heino17/MultiWikiServer-wikiwise`,
+  `target="_blank"`, `rel="noreferrer"`.
+- **Legal notice** (public): identical.
+- **Admin app** (logged in): identical; the version span stays complete
+  `MWS-wikiwise 0.3.3 · TiddlyWiki 5.4.1`.
+- **No wrap:** footer height still 33 px, heart position unchanged (y = 1049),
+  the link sits at 1048–1062 px in the accent colour `rgb(227, 201, 131)` with
+  underline like the other footer links.
+- No JS errors.
+
 ---
 
 ## Unchecked-in starter configuration (local, gitignored)
@@ -7108,6 +7148,46 @@ Storage, Pinboard, Meine Dateien), jeweils vorher und nachher gemessen:
   steht erwartungsgemäß darunter und bricht auf zwei Zeilen um (47 px hoch).
 - **Startseite und Impressum** unverändert: Footer 18 px über dem Rand, 33 px
   hoch, Herz vorhanden. Keine JS-Fehler.
+
+## 64. „MWS-wikiwise 0.3.3" im Footer verlinkt
+
+**Ziel:** Der Produktname mit Versionsnummer in den drei Footern (Startseite,
+Verwaltung, Impressum) soll auf das Projekt-GitHub-Repository zeigen.
+
+### Die Lösung
+
+- Statt eines eigenen Konstanten-Moduls ist die URL als hartes Literal in den
+  drei Dateien eingetragen – das entspricht dem Projektstil, es gibt bisher
+  keine URL-Konstanten.
+- **Nur der Produktname** wird zum Link, nicht die TiddlyWiki-Angabe:
+  `MWS-wikiwise 0.3.3` (verlinkt) · `TiddlyWiki 5.4.1` (unverlinkt). Der Link
+  sitzt also um den ersten `t()`-Aufruf des Versions-Spans. Die Übersetzungen
+  bleiben unberührt, weil in JSX verlinkt wird – der Schlüsselwert selbst
+  bleibt reiner Text.
+- `target="_blank" rel="noreferrer"` wie bei allen externen Links der App
+  (TiddlyWiki-Doku-Link, Vorschau, Wiki-Links). Die Content-Security-Policy
+  greift hier nicht: Sie betrifft nur die eingebettete Wiki-Seite
+  (RecipeResolver) und enthält kein `navigate-to` – eine Navigation in einen
+  neuen Tab wird nicht blockiert.
+- Optisch benutzt der Link automatisch das `.landing-footer a`-Stil (Akzentfarbe
+  + Unterstreichung), identisch zu den Fußzeilen-Links „TiddlyWiki-Dokumentation"
+  und „Impressum". Keine CSS-Änderung nötig.
+
+### Getestet
+
+Alle drei Footers über eine frische Testinstanz (mit Login inklusive
+Emoji-Rätsel) im Browser geprüft:
+
+- **Startseite** (öffentlich): Link-Text exakt `MWS-wikiwise 0.3.3`,
+  `href` exakt `https://github.com/heino17/MultiWikiServer-wikiwise`,
+  `target="_blank"`, `rel="noreferrer"`.
+- **Impressum** (öffentlich): identisch.
+- **Verwaltung** (angemeldet): identisch; der Versions-Span bleibt vollständig
+  `MWS-wikiwise 0.3.3 · TiddlyWiki 5.4.1`.
+- **Kein Umbruch:** Footerhöhe weiterhin 33 px, Herzposition unverändert
+  (y = 1049), der Link sitzt 1048–1062 px in der Akzentfarbe
+  `rgb(227, 201, 131)` mit Unterstreichung wie die übrigen Footer-Links.
+- Keine JS-Fehler.
 
 ---
 
