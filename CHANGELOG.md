@@ -3348,11 +3348,11 @@ without any recognisable function.
 
 ---
 
-## 61. Fix: the footer of the start page floated mid-page and was too wide
+## 61. Fix: the footer of the start page floated mid-page
 
 **Goal:** On the start page `/` the footer sat about 187 px above the bottom
-edge at 1920 × 1080, with a horizontal rule across the full page width – even
-though its entries occupy 425 px in total.
+edge at 1920 × 1080. It should stick to the bottom while keeping its full
+width.
 
 ### What happened
 
@@ -3363,8 +3363,9 @@ though its entries occupy 425 px in total.
   not taken up by the footer.
 - Measured at 1920 × 1080: shell 1080 px, footer from y = 860, 33 px high,
   187 px of space to the bottom edge.
-- The too-wide rule came from `border-top` on a flex container that takes the
-  full width via `align-items: stretch`: 1856 px of line for 425 px of text.
+- The full width is not the problem, it is intended: the footer is a block
+  with a `border-top` that takes the inner width of the shell via
+  `align-items: stretch` (1920 px minus 2 × 32 px padding = 1856 px).
 
 ### The solution
 
@@ -3372,19 +3373,22 @@ though its entries occupy 425 px in total.
   child `.landing-footer` gets `margin-top: auto` and takes up the free space.
   That works independently of how many sections there are – unlike a fixed
   `grid-template-rows`.
-- `width: fit-content; max-width: 100%` lets the rule and the box shrink to the
-  actual width of the entries.
+- The width stays untouched: `align-self` remains `auto`, deliberately **no**
+  `width: fit-content` was set.
 
 ### Tested
 
 - **Before/after at 1920 × 1080:** footer from y = 860 to y = 1029, space to
-  the bottom edge 187 → 18 px (exactly the `padding` of the shell), width
-  1856 → 425 px, no more empty space on the right.
+  the bottom edge 187 → 18 px (exactly the `padding` of the shell). The width
+  stays 1856 px, the margin on the left as on the right 32 px.
 - **Eight window sizes checked,** measured rather than assumed: 1920 × 1080,
   1440 × 900, 1024 × 768, 800 × 600, 390 × 844, 1920 × 420 and 1000 × 360 on
   `/landing` as well as 1920 × 1080 on `/legal-notice`. In **no** case a
   horizontal scrollbar; on a page that fits, the space is exactly 18 px, on
   overflow the footer correctly lies below the fold and the page scrolls.
+  **Full width verified in all seven cases:** the footer measures exactly the
+  inner width of the shell, 32 px of margin on the left as on the right, no
+  `max-width`.
 - **No regressions:** `.landing-header` keeps its `z-index: 1`, the language
   menu (§57) is still not painted over – 0 px overlap with the news box, all 8
   options hit at their position by `elementFromPoint`. No JS errors.
@@ -6839,11 +6843,11 @@ ohne erkennbare Funktion.
   alle unverändert. *Pinboard* und *Meine Dateien*: kein Button mehr, die
   `.user-files-dropzone` ist weiterhin vorhanden. Keine JS-Fehler.
 
-## 61. Fix: Der Footer der Startseite stand in der Luft und war zu breit
+## 61. Fix: Der Footer der Startseite stand in der Luft
 
 **Ziel:** Auf der Startseite `/` stand der Footer bei 1920 × 1080 rund 187 px
-über dem unteren Rand, mit einer waagerechten Trennlinie über die volle
-Seitenbreite – obwohl die Einträge zusammen nur 425 px einnahmen.
+über dem unteren Rand. Er sollte unten kleben und dabei seine volle Breite
+behalten.
 
 ### Was passiert ist
 
@@ -6854,9 +6858,9 @@ Seitenbreite – obwohl die Einträge zusammen nur 425 px einnahmen.
   dieser Freiraum nicht vom Footer aufgefüllt wurde.
 - Gemessen bei 1920 × 1080: Shell 1080 px, Footer ab y = 860, 33 px hoch,
   187 px Abstand zum unteren Rand.
-- Die zu breite Trennlinie entstand durch `border-top` auf einem
-  Flex-Container, der über `align-items: stretch` die volle Breite annahm:
-  1856 px Linie bei 425 px Text.
+- Die volle Breite war nicht das Problem, sie ist gewollt: Der Footer ist ein
+  Block mit `border-top`, der über `align-items: stretch` die Innenbreite des
+  Shells annimmt (1920 px minus 2 × 32 px Padding = 1856 px).
 
 ### Die Lösung
 
@@ -6864,19 +6868,21 @@ Seitenbreite – obwohl die Einträge zusammen nur 425 px einnahmen.
   Flex-Kind `.landing-footer` bekommt `margin-top: auto` und nimmt damit den
   Freiraum auf. Das funktioniert unabhängig davon, wie viele Sections
   vorhanden sind – anders als eine feste `grid-template-rows`.
-- `width: fit-content; max-width: 100%` lässt Trennlinie und Box auf die
-  tatsächliche Breite der Einträge schrumpfen.
+- Die Breite bleibt unangetastet: `align-self` steht weiter auf `auto`, es
+  wurde bewusst **kein** `width: fit-content` gesetzt.
 
 ### Getestet
 
 - **Vorher/nachher bei 1920 × 1080:** Footer von y = 860 auf y = 1029, Abstand
-  zum unteren Rand 187 → 18 px (genau das `padding` des Shells), Breite
-  1856 → 425 px, kein Leerraum mehr rechts.
+  zum unteren Rand 187 → 18 px (genau das `padding` des Shells). Die Breite
+  bleibt 1856 px, der Rand links wie rechts 32 px.
 - **Acht Fenstergrößen geprüft,** jeweils gemessen statt geraten: 1920 × 1080,
   1440 × 900, 1024 × 768, 800 × 600, 390 × 844, 1920 × 420 und 1000 × 360 auf
   `/landing` sowie 1920 × 1080 auf `/legal-notice`. In **keinem** Fall
   horizontaler Scroll; bei passender Seite exakt 18 px Abstand, bei Überlauf
   liegt der Footer korrekt unterhalb der Falz und die Seite scrollt.
+  **Volle Breite in allen sieben Fällen** geprüft: Der Footer misst exakt die
+  Innenbreite des Shells, links wie rechts 32 px Rand, kein `max-width`.
 - **Ohne Regressionsfolgen:** `.landing-header` behält seinen `z-index: 1`,
   das Sprachmenü (§57) ist weiterhin nicht übermalt – 0 px Überlappung zur
   News-Box, alle 8 Optionen per `elementFromPoint` an ihrer Position
