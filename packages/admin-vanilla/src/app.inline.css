@@ -4306,6 +4306,12 @@ odt-preview-document {
 }
 
 .landing-header {
+	position: relative;
+	/* backdrop-filter below establishes a stacking context, which traps the
+	   z-index of the language menu inside the header. Without an own z-index the
+	   header would sit on level 0 like the following news box, which comes later
+	   in the DOM and would paint over it - the menu looked half covered. */
+	z-index: 1;
 	display: flex;
 	justify-content: space-between;
 	align-items: flex-start;
