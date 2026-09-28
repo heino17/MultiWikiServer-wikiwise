@@ -8,7 +8,7 @@ package to be published on npm under a reserved name. The fork is currently
 distributed as a GitHub release instead, so the documented installation is:
 
     mkdir my-folder && cd my-folder
-    npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.3.2/mws-wikiwise-0.3.2.tgz
+    npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.3.3/mws-wikiwise-0.3.3.tgz
     npx mws init-data-folder
     npx mws update-tiddlywiki
     npx mws init-store

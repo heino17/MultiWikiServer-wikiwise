@@ -176,8 +176,14 @@ export class SqliteAdapter {
 
       const fileContent = await readFile(migration_path, 'utf-8');
 
-      console.log("Applying migration", migration);
-      await libsql.executeScript(fileContent);
+      const addedColumns = parseAddedColumns(fileContent);
+      if (addedColumns && await columnsArePresent(libsql, addedColumns)) {
+        console.log("Skipping the schema change of migration " + migration +
+          ", this database already has " + addedColumns.map(c => c.table + "." + c.column).join(", "));
+      } else {
+        console.log("Applying migration", migration);
+        await libsql.executeScript(fileContent);
+      }
 
       await libsql.executeRaw(InsertStatement("_prisma_migrations", [
         {
@@ -218,6 +224,44 @@ export class SqliteAdapter {
     console.log("Migrations applied", new_migrations);
   }
 
+}
+
+interface AddedColumn {
+  table: string;
+  column: string;
+}
+
+/** The "ALTER TABLE x ADD COLUMN y" statements of a migration, or null if the
+ *  script does anything else than that.
+ *
+ *  SQLite has no "ADD COLUMN IF NOT EXISTS", so a migration that only adds
+ *  columns cannot be replayed on a database that has them already. That is not
+ *  a hypothetical: databases created before a column migration was written
+ *  already have the columns, because they were part of the schema back then.
+ *  The migration is only missing from _prisma_migrations, so it looks pending
+ *  and fails with "duplicate column name" on every start. */
+function parseAddedColumns(fileContent: string): AddedColumn[] | null {
+  const withoutComments = fileContent.replace(/--[^\n]*/g, "");
+  const pattern = /ALTER\s+TABLE\s+["'`]?(\w+)["'`]?\s+ADD\s+COLUMN\s+["'`]?(\w+)["'`]?[^;]*(?:;|$)/gi;
+  const added = [...withoutComments.matchAll(pattern)]
+    .map(match => ({ table: match[1], column: match[2] }));
+  if (!added.length) return null;
+  // Only trust the analysis if nothing but those statements is left.
+  if (withoutComments.replace(pattern, "").replace(/;/g, "").trim()) return null;
+  return added;
+}
+
+async function columnsArePresent(libsql: SqlDriverAdapter, columns: AddedColumn[]) {
+  for (const { table, column } of columns) {
+    const info = await libsql.queryRaw({
+      sql: `PRAGMA table_info("${table}")`,
+      args: [],
+      argTypes: [],
+    }).then(e => e?.rows as unknown as string[][] | undefined);
+    if (!info?.length) return false;
+    if (!info.some(row => row[1] === column)) return false;
+  }
+  return true;
 }
 
 interface InsertArg extends ArgType {
