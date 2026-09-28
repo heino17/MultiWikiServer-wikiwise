@@ -169,11 +169,23 @@ function isImageType(type) {
 	return typeof type === "string" && type.indexOf("image/") === 0;
 }
 
+/** Absolute URL of a wiki file, based on the same host the XHRs use. The
+ *  wiki lives under /wiki/<slug>, so a relative "api/..." would resolve to
+ *  /wiki/api/... inside a tiddler — never a working request. */
+function wikiFileUrl(recipe,id) {
+	return getHost() + WIKIFILE_PATH + "?recipe=" + encodeURIComponent(recipe) + "&id=" + encodeURIComponent(id);
+}
+
 /** The ready-to-paste reference for a wiki file: [img[…]] for images
- *  (rendered inline), [ext[…]] as a link for everything else. */
+ *  (rendered inline), embedded links for everything else. TiddlyWiki has no
+ *  core [ext[…]] macro, so non-images get a plain [[label|url]] link. */
 function wikiFileSnippet(file,recipe) {
-	var url = WIKIFILE_PATH + "?recipe=" + encodeURIComponent(recipe) + "&id=" + encodeURIComponent(file.id);
-	return isImageType(file.type) ? "[img[" + url + "]]" : "[ext[" + url + "]]";
+	var url = wikiFileUrl(recipe,file.id);
+	if(isImageType(file.type)) {
+		return "[img[" + url + "]]";
+	}
+	var label = String(file.filename || "Download").replace(/[\]|]/g," ");
+	return "[[" + label + "|" + url + "]]";
 }
 
 function showUploadSnippet(res,recipe) {
@@ -228,9 +240,8 @@ function showWikiFiles() {
 
 function renderWikiFiles(files,recipe) {
 	var entries = files.map(function(file) {
-		var path = WIKIFILE_PATH + "?recipe=" + encodeURIComponent(recipe) + "&id=" + encodeURIComponent(file.id),
-			snippet = wikiFileSnippet(file,recipe),
-			media = isImageType(file.type) ? "[img[" + path + "]]" : "[ext[" + path + "]]";
+		var snippet = wikiFileSnippet(file,recipe),
+			media = snippet;
 		return "* " + media + "\n" +
 			"**" + file.filename + "**\nsnippet: ``" + snippet + "``\n";
 	}).join("\n");
