@@ -5963,6 +5963,71 @@ Frische Installation aus dem lokal gebauten 0.3.1-Tarball:
 
 ---
 
+## 55. Fix: Ein totes Chromium hat alle Wiki-Vorschaubilder dauerhaft blockiert
+
+**Ziel:** Nach der Installation aus dem 0.3.1-Release meldete eine echte
+Installation:
+
+```
+GET /wiki/wiki-admin/thumbnail browser.newContext: Target page, context or browser has been closed
+    at renderThumbnail (.../WikiThumbnailRoutes.ts:282:19)
+```
+
+Die Admin-Liste zeigte danach für **keine** Wiki mehr ein Vorschaubild, und ein
+Neustart des Servers war nötig, damit überhaupt wieder eines entstand.
+
+### Was passiert ist
+
+- Chromium wird beim ersten Bedarf gestartet und danach in einem
+  Modul-globalen `browserPromise` gehalten
+  (`packages/mws/src/new-managers/WikiThumbnailRoutes.ts`, vor dieser Änderung
+  Zeile 193). Das gecachte Objekt wurde **nie** wieder geprüft.
+- Playwright hält ein Browser-Objekt auch dann noch für gültig, wenn der
+  Prozess dahinter längst beendet ist. Nur `isConnected()` sagt die Wahrheit.
+  Stirbt Chromium – Absturz, OOM-Killer, ein `kill` von außen –, dann wirft
+  jedes weitere `browser.newContext()` auf diesem Objekt
+  `Target page, context or browser has been closed`.
+- `getBrowser()` fing nur **Start**fehler ab (`browserPromise = null`), nicht
+  den Tod des gestarteten Browsers. Ergebnis: ein einziger Absturz poisons den
+  Cache, und jede spätere Vorschau scheitert identisch, bis der Server neu
+  startet. Die Korrektur war damit wirkungslos.
+
+### Die Lösung
+
+- `startBrowser()` prüft vor jeder Weitergabe `isConnected()` und startet
+  Chromium neu, wenn er nicht mehr lebt. Ein gestarteter, aber inzwischen
+  toter Browser wird nie weiterverwendet.
+- Die Starts laufen über eine Promise-Kette. Ohne sie würden zwei parallel
+  eintreffende Vorschau-Anfragen je ein Chromium starten und das zweite
+  dauerhaft herrenlos im Hintergrund stehen lassen.
+- Stirbt der Browser **während** des Renderns, gibt es genau einen Retry mit
+  frischem Browser statt einer dauerhaft kaputten Vorschau.
+- Ein dauerhaft scheiterndes Rendern ist jetzt kein Anfragefehler mehr. Die
+  Route antwortet wie für eine Wiki ohne Vorschaubild mit `404` und schreibt
+  eine verständliche Zeile ins Log, statt ein Playwright-Fehlerobjekt zu
+  werfen. In der Wiki-Liste erscheint ein Platzhalter, die Wiki selbst ist
+  davon nicht betroffen.
+
+### Getestet
+
+Am laufenden Server, mit Anmeldung und echter Admin-Liste. Test war: einmal
+ rendern, alle Chromium-Prozesse des Servers per SIGKILL beenden, Vorschau-Cache
+ löschen, neu laden.
+
+| Durchlauf | vorher (0.3.1) | nachher |
+| --- | --- | --- |
+| 1, frisch | `200 image/png`, 2 Dateien | `200 image/png`, 2 Dateien |
+| 2, Chromium war tot | `500 application/json`, 0 Dateien | `200 image/png`, 2 Dateien |
+| 3 | `500 application/json`, 0 Dateien | `200 image/png`, 2 Dateien |
+
+Gegenprobe mit dem unveränderten 0.3.1-Bundle auf demselben Test: Der
+`500`-Fehler samt identischem Stacktrace bleibt dauerhaft bestehen, der
+Vorschau-Ordner bleibt leer. Der Chromium-Aufruf selbst ist nicht das Problem
+– Start, Seitenausgabe und Screenshot funktionieren auf demselben Rechner
+fehlerfrei, es ist allein die Wiederverwendung des toten Browsers.
+
+---
+
 ## Nicht eingecheckte Start-Konfiguration (lokal, gitignored)
 
 ```json
