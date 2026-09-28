@@ -4295,8 +4295,13 @@ odt-preview-document {
 /* #region landing page */
 .landing-shell {
 	min-height: 100vh;
-	display: grid;
-	align-content: start;
+	/* Flex instead of grid, because the footer has to sit at the bottom of the
+	   viewport when the sections are short. A grid with align-content: start
+	   packed every row to the top and left the remaining space below the
+	   footer; the flex child .landing-footer with margin-top: auto takes the
+	   slack instead. */
+	display: flex;
+	flex-direction: column;
 	gap: 24px;
 	padding: 18px 32px 18px;
 	background:
@@ -4707,6 +4712,17 @@ odt-preview-document {
 
 .news-style-swatch.is-danger {
 	background: color-mix(in srgb, var(--color-danger) 55%, var(--color-surface-card));
+}
+
+.landing-shell > .landing-footer {
+	/* takes up the slack of a short page. Once the content overflows, auto
+	   resolves to 0 and the 24px gap of .landing-shell remains as the spacing. */
+	margin-top: auto;
+	/* shrink to the entries instead of stretching the rule across the whole
+	   page. Without this the border-top drew a line of 1856px while the text
+	   occupied 425px of it. */
+	width: fit-content;
+	max-width: 100%;
 }
 
 .landing-footer {
