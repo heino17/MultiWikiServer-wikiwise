@@ -234,10 +234,11 @@ async function mirrorDisplayNameIntoStarterTiddlers(
   // Heal stale starter teasers (left behind by older edits) but never clobber
   // a genuinely customized one: only rewrite if it still looks like the
   // auto-generated starter (heading + onboarding sentence) and does not yet
-  // carry the new display name.
+  // carry the new display name. Both heading markers are accepted, so wikis
+  // created before the `#` → `!` fix are recognised and migrated on rename.
   if (
     typeof welcomeTextValue === "string"
-    && welcomeTextValue.startsWith("# Willkommen in \u201e")
+    && (welcomeTextValue.startsWith("# Willkommen in \u201e") || welcomeTextValue.startsWith("! Willkommen in \u201e"))
     && welcomeTextValue.includes("per Knopfdruck für dich angelegt")
     && welcomeTextValue !== welcomeText(newDisplayName)
   ) {
@@ -898,10 +899,12 @@ export class BagDataAdapter extends TabDataAdapter<"bags"> {
       where: { name: data.name },
       select: { owner_user_id: true },
     });
-    const isOwner = !!existing?.owner_user_id && existing.owner_user_id === this.user.user_id;
-    const isSiteAdmin = this.user.username === "admin";
-    if (existing && !isOwner && !isSiteAdmin)
-      throw new SendError("ACCESS_DENIED", 403, { reason: "Only the user who created the bag (or the site admin 'admin') may edit it." });
+    // Same rule as every other tab: the owner or a site admin. `isAdmin` is
+    // derived from the ADMIN role by the session manager and is what the
+    // importers' checkExisting() trusts, so testing `username === "admin"`
+    // alone was inconsistent: it locked out every other ADMIN-role user and
+    // the CLI importer, which identifies as admin but has no username.
+    assertCanEdit({ existingOwnerId: existing?.owner_user_id, user: this.user, kind: "bag" });
 
     const permissions = normalizePermissions(data.bagPermissions);
     const roles = await getRolesMapper(prisma, permissions.map(e => e.role));
@@ -985,7 +988,7 @@ function assertCanEdit(opts: {
 }) {
   const { existingOwnerId, user, kind, selfUserId } = opts;
   const isOwner = !!existingOwnerId && existingOwnerId === user.user_id;
-  const isSiteAdmin = user.username === "admin";
+  const isSiteAdmin = user.username === "admin" || user.isAdmin === true;
   const isSelf = !!selfUserId && user.user_id === selfUserId;
   // existingOwnerId === undefined means the record does not exist yet (create).
   // A present owner that is not the current user — or a missing owner (legacy
@@ -1418,7 +1421,9 @@ export const AdminLoad = zodRoute({
 });
 
 // #region AdminCreateWiki
-const NEW_WIKI_ROLES = ["ADMIN", "USER", "ANON"] as const;
+// Only ADMIN is resolved: a 1-click wiki is created private, so no
+// `USER`/`ANON` read role is looked up (nor granted) here.
+const NEW_WIKI_ROLES = ["ADMIN"] as const;
 
 // A_read < B_write < C_admin — the highest permission a user's roles hold on
 // the wiki definition. Used to summarize "which rights do I have" per wiki.
@@ -1601,7 +1606,9 @@ function wikiTiddlerMeta(modifier: string) {
 }
 
 function welcomeText(displayName: string): string {
-  return `# Willkommen in „${displayName}" 🎉
+  // TiddlyWiki wiki syntax, not Markdown: `!` is a heading (`#` would start an
+  // ordered list and render the line as "1. Willkommen in …").
+  return `! Willkommen in „${displayName}" 🎉
 
 Dieses Wiki wurde gerade per Knopfdruck für dich angelegt.
 
@@ -1732,12 +1739,13 @@ export const AdminCreateWiki = zodRoute({
       }
 
       const rolesMapper = await new RoleImportWriter(prisma, false).getNameMapper(NEW_WIKI_ROLES);
-      // Admins keep the public system roles; teachers and students get a
-      // private personal role so their wikis stay theirs.
+      // Admins keep the ADMIN system role; teachers and students get a
+      // private personal role so their wikis stay theirs. Either way the
+      // new wiki starts private: no `USER`/`ANON` `A_read` is granted for
+      // anybody. Making it readable is a deliberate later step
+      // ("Readable by" in the wiki dialog / recipeUsers).
       const personalRole = isAdmin ? undefined : await ensurePersonalRole(prisma, state.user);
       const adminRole = personalRole ?? rolesMapper("ADMIN");
-      const commonRole = isAdmin ? rolesMapper("USER") : undefined;
-      const anonRole = isAdmin ? rolesMapper("ANON") : undefined;
 
       const slug = await findFreeWikiSlug(prisma, wikiSlugBase(state.user.username));
       const bagName = defaultBagName(state.user.user_id, slug);
@@ -1750,8 +1758,6 @@ export const AdminCreateWiki = zodRoute({
         ownerUserId: new IdString(state.user.user_id),
         permissions: [
           { role_id: adminRole, level: "C_admin" },
-          ...(commonRole ? [{ role_id: commonRole, level: "A_read" as const }] : []),
-          ...(anonRole ? [{ role_id: anonRole, level: "A_read" as const }] : []),
         ],
       } satisfies UpsertBagInput]);
 
@@ -1778,8 +1784,6 @@ export const AdminCreateWiki = zodRoute({
         ownerUserId: new IdString(state.user.user_id),
         permissions: [
           { role_id: adminRole, level: "B_write" },
-          ...(commonRole ? [{ role_id: commonRole, level: "A_read" as const }] : []),
-          ...(anonRole ? [{ role_id: anonRole, level: "A_read" as const }] : []),
         ],
       } satisfies UpsertRecipeInput]);
 

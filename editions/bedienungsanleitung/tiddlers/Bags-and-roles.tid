@@ -2,11 +2,11 @@ title: Bags and roles
 tags: Anleitung
 lang: en
 
-EN: **Bags and roles** · DE: [[Bags und Rollen]] · [[Start]]
+EN: ''Bags and roles'' · DE: [[Bags und Rollen]] · [[Start]]
 
-# Bags and roles
+! Bags and roles
 
-- **Bags** are storage containers — every wiki has a bag that holds its content.
-- **Roles** bundle rights; the basics are explained under [[Roles and permissions]].
-- The **Roles tab** lists all roles with their rights and the protected system roles.
-- For normal use no manual work is needed: the wiki dialog sets rights automatically.
+* ''Bags'' are storage containers — every wiki has a bag that holds its content.
+* ''Roles'' bundle rights; the basics are explained under [[Roles and permissions]].
+* The ''Roles tab'' lists all roles with their rights and the protected system roles.
+* For normal use no manual work is needed: the wiki dialog sets rights automatically.

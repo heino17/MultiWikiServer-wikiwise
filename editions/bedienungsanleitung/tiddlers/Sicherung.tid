@@ -2,11 +2,11 @@ title: Sicherung
 tags: Anleitung
 lang: de
 
-DE: **Sicherung (Backup)** · EN: [[Backup]] · [[Start]]
+DE: ''Sicherung (Backup)'' · EN: [[Backup]] · [[Start]]
 
-# Sicherung (Backup)
+! Sicherung (Backup)
 
-- Der MultiWiki-Server bietet ein **Admin-Backup**: Eine einzige Datei mit Datenbank, Schlüsseln und Konfiguration.
-- Im **Backup-Bereich** startest Du den Download.
-- Bewahre Backups an einem sicheren Ort auf (Betriebsgeheimnisse sind darin enthalten).
-- Erstelle regelmäßig ein Backup, bevor Du größere Umbauten machst.
+* Der MultiWiki-Server bietet ein ''Admin-Backup'': Eine einzige Datei mit Datenbank, Schlüsseln und Konfiguration.
+* Im ''Backup-Bereich'' startest Du den Download.
+* Bewahre Backups an einem sicheren Ort auf (Betriebsgeheimnisse sind darin enthalten).
+* Erstelle regelmäßig ein Backup, bevor Du größere Umbauten machst.

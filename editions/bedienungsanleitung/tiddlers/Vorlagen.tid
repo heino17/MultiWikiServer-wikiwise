@@ -2,11 +2,11 @@ title: Vorlagen
 tags: Anleitung
 lang: de
 
-DE: **Vorlagen** · EN: [[Templates]] · [[Start]]
+DE: ''Vorlagen'' · EN: [[Templates]] · [[Start]]
 
-# Vorlagen
+! Vorlagen
 
-- **Templates** (Vorlagen) bündeln Start-Bags, Schreib-Rechte und Plugins — so entstehen Wikis mit gleichem Grundaufbau.
-- Im **Templates-Tab** kannst Du Vorlagen anlegen und bearbeiten.
-- Beim Anlegen eines Wikis wählst Du die Vorlage (siehe [[Ein neues Wiki anlegen]]).
-- Änderungen an der Vorlage gelten für neu angelegte Wikis, nicht automatisch für bestehende.
+* ''Templates'' (Vorlagen) bündeln Start-Bags, Schreib-Rechte und Plugins — so entstehen Wikis mit gleichem Grundaufbau.
+* Im ''Templates-Tab'' kannst Du Vorlagen anlegen und bearbeiten.
+* Beim Anlegen eines Wikis wählst Du die Vorlage (siehe [[Ein neues Wiki anlegen]]).
+* Änderungen an der Vorlage gelten für neu angelegte Wikis, nicht automatisch für bestehende.

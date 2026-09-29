@@ -2,11 +2,11 @@ title: Wiki mit einer Klasse teilen
 tags: Anleitung
 lang: de
 
-DE: **Wiki mit einer Klasse teilen** · EN: [[Sharing a wiki with a class]] · [[Start]]
+DE: ''Wiki mit einer Klasse teilen'' · EN: [[Sharing a wiki with a class]] · [[Start]]
 
-# Wiki mit einer Klasse teilen
+! Wiki mit einer Klasse teilen
 
-- Der Admin legt eine Klassen-Rolle an (z. B. `Klasse 1`) und weist sie den Schüler-Konten zu.
-- Du trägst im Wikis-Dialog bei **„Wer darf das Wiki lesen"** die Klassen-Rolle ein.
-- Dann können alle Schüler dieser Klasse das Wiki öffnen und mitlesen.
-- Nur die Personen, die Du bei **„Wer darf das Wiki schreiben"** einträgst, dürfen auch ändern.
+* Der Admin legt eine Klassen-Rolle an (z. B. ``Klasse 1``) und weist sie den Schüler-Konten zu.
+* Du trägst im Wikis-Dialog bei ''„Wer darf das Wiki lesen"'' die Klassen-Rolle ein.
+* Dann können alle Schüler dieser Klasse das Wiki öffnen und mitlesen.
+* Nur die Personen, die Du bei ''„Wer darf das Wiki schreiben"'' einträgst, dürfen auch ändern.

@@ -2,12 +2,12 @@ title: Ein neues Wiki anlegen
 tags: Anleitung
 lang: de
 
-DE: **Ein neues Wiki anlegen** · EN: [[Creating a new wiki]] · [[Start]]
+DE: ''Ein neues Wiki anlegen'' · EN: [[Creating a new wiki]] · [[Start]]
 
-# Ein neues Wiki anlegen
+! Ein neues Wiki anlegen
 
-- Gehe auf die Startseite und klicke **Neues Wiki**.
-- Vergib einen Anzeigenamen (und optional eine Beschreibung).
-- Ein **Slug** (Kurzname, z. B. `mein-wiki`) wird passend erzeugt; er darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten und muss frei sein.
-- Lehrer und Admins können aus [[Vorlagen]] wählen; Schüler bekommen ein eigenes Start-Wiki.
-- Schüler: Ob Du Wikis anlegen darfst, entscheidet die Wiki-Grenze, die Dein Lehrer setzt ([[Wiki-Limit für Schüler]]).
+* Gehe auf die Startseite und klicke ''Neues Wiki''.
+* Vergib einen Anzeigenamen (und optional eine Beschreibung).
+* Ein ''Slug'' (Kurzname, z. B. ``mein-wiki``) wird passend erzeugt; er darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten und muss frei sein.
+* Lehrer und Admins können aus [[Vorlagen]] wählen; Schüler bekommen ein eigenes Start-Wiki.
+* Schüler: Ob Du Wikis anlegen darfst, entscheidet die Wiki-Grenze, die Dein Lehrer setzt ([[Wiki-Limit für Schüler]]).

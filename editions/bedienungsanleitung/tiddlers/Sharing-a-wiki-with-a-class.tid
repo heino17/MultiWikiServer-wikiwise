@@ -2,11 +2,11 @@ title: Sharing a wiki with a class
 tags: Anleitung
 lang: en
 
-EN: **Sharing a wiki with a class** · DE: [[Wiki mit einer Klasse teilen]] · [[Start]]
+EN: ''Sharing a wiki with a class'' · DE: [[Wiki mit einer Klasse teilen]] · [[Start]]
 
-# Sharing a wiki with a class
+! Sharing a wiki with a class
 
-- The admin creates a class role (e.g. `Class 1`) and assigns it to the student accounts.
-- In the wiki dialog, add the class role under **"Who may read this wiki"**.
-- All students of that class can then open and read the wiki.
-- Only people you add under **"Who may write this wiki"** may also change content.
+* The admin creates a class role (e.g. ``Class 1``) and assigns it to the student accounts.
+* In the wiki dialog, add the class role under ''"Who may read this wiki"''.
+* All students of that class can then open and read the wiki.
+* Only people you add under ''"Who may write this wiki"'' may also change content.

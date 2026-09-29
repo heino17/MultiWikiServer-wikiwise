@@ -2,10 +2,10 @@ title: Wiki-Limit für Schüler
 tags: Anleitung
 lang: de
 
-DE: **Wiki-Limit für Schüler** · EN: [[Wiki limits for students]] · [[Start]]
+DE: ''Wiki-Limit für Schüler'' · EN: [[Wiki limits for students]] · [[Start]]
 
-# Wiki-Limit für Schüler
+! Wiki-Limit für Schüler
 
-- Im Users-Tab stellst Du pro Schüler eine **Wiki-Grenze** ein (0 = gar nicht, oder eine feste Anzahl).
-- Ein leerer Wert bedeutet: kein Limit.
-- Überschreitet der Schüler die Grenze, erscheint die Meldung, dass er nicht mehr anlegen darf.
+* Im Users-Tab stellst Du pro Schüler eine ''Wiki-Grenze'' ein (0 = gar nicht, oder eine feste Anzahl).
+* Ein leerer Wert bedeutet: kein Limit.
+* Überschreitet der Schüler die Grenze, erscheint die Meldung, dass er nicht mehr anlegen darf.

@@ -128,7 +128,6 @@ export const frStrings: Record<string, string> = {
   "Name of the wiki": "Nom du wiki",
   "Create a wiki with a single click": "Créer un wiki en un clic",
   "A name is all it takes. Slug, bag and default permissions are assigned automatically (slug: wiki-<username>).": "Un nom suffit. Le slug, le bag et les permissions par défaut sont attribués automatiquement (slug : wiki-<username>).",
-  "Done — your wiki is here:": "Terminé — votre wiki est ici :",
   "Creating…": "Création…",
 
   "Current server state": "État actuel du serveur",

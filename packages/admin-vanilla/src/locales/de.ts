@@ -132,7 +132,6 @@ export const deStrings: Record<string, string> = {
   "Name of the wiki": "Name des Wikis",
   "Create a wiki with a single click": "Wiki auf einen Klick anlegen",
   "A name is all it takes. Slug, bag and default permissions are assigned automatically (slug: wiki-<username>).": "Nur ein Name genügt. Slug, Bag und Standard-Rechte werden automatisch vergeben (Slug: wiki-<benutzername>).",
-  "Done — your wiki is here:": "Fertig — dein Wiki ist da:",
   "Creating…": "Wird angelegt …",
 
   // #region section headings

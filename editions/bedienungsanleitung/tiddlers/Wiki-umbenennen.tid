@@ -2,11 +2,11 @@ title: Wiki umbenennen
 tags: Anleitung
 lang: de
 
-DE: **Wiki umbenennen** · EN: [[Renaming a wiki]] · [[Start]]
+DE: ''Wiki umbenennen'' · EN: [[Renaming a wiki]] · [[Start]]
 
-# Wiki umbenennen
+! Wiki umbenennen
 
-- Als Besitzer (oder Admin) öffnest Du die Wiki-Liste und klickst **Bearbeiten** neben dem Wiki.
-- Ändere den **Anzeigenamen** — so sieht die Klasse das Wiki in der Liste.
-- Der Slug (Kurzname) bleibt aus Links stabil; ändere ihn nur, wenn Du die alten Links aktualisieren möchtest.
-- Nach dem Umbenennen erscheint das Vorschau-Bild beim nächsten Öffnen neu gerendert.
+* Als Besitzer (oder Admin) öffnest Du die Wiki-Liste und klickst ''Bearbeiten'' neben dem Wiki.
+* Ändere den ''Anzeigenamen'' — so sieht die Klasse das Wiki in der Liste.
+* Der Slug (Kurzname) bleibt aus Links stabil; ändere ihn nur, wenn Du die alten Links aktualisieren möchtest.
+* Nach dem Umbenennen erscheint das Vorschau-Bild beim nächsten Öffnen neu gerendert.

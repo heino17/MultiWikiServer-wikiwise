@@ -7323,6 +7323,281 @@ aufgelöst, daher kein Fix möglich. In-Range bereinigt:
 
 ---
 
+## 68. Fix: 1-Klick-Wiki des `admin` startet jetzt ebenfalls privat
+
+Beim 1-Klick-Wiki-Anlegen (`PUT /admin/wiki`, Button **„1-Klick Wiki erstellen"**)
+bekam nur der **Site-Admin** zusätzlich `USER → A_read` und `ANON → A_read`
+eingetragen. Lehrer und Schüler bekamen — seit §22 — nur ihre **persönliche**
+Rolle und damit bewusst **keinen** Lesezugriff für alle. Der Admin war damit
+der einzige Benutzer, dessen per Knopfdruck angelegtes Wiki sofort für *alle*
+eingeloggten Benutzer **und** anonym öffentlich war; es erschien damit
+zusätzlich auf der öffentlichen Startseite `/` (§48, gleiche ANON-Regel wie
+`LandingRoutes.ts`).
+
+**Ursache:** `AdminCreateWiki` in
+`packages/mws/src/new-managers/TabDataAdapter.ts` hat die Rollen bedingt
+gewählt:
+
+```ts
+const commonRole = isAdmin ? rolesMapper("USER") : undefined;
+const anonRole   = isAdmin ? rolesMapper("ANON") : undefined;
+```
+
+und diese beiden Variablen in beide Permission-Listen (Bag `C_admin` +
+Recipe `B_write`) als `A_read` eingespreizt.
+
+**Fix (`TabDataAdapter.ts`):** Die Sonderbehandlung für `isAdmin` entfällt
+komplett — jetzt wird **für niemanden** ein Lesezugriff eingetragen:
+
+- `commonRole`/`anonRole` und die beiden `...(… ? [{ level: "A_read" }] : [])`-Spreizungen entfernt; die Permission-Listen bestehen nur noch aus der Creator-Rolle.
+- `NEW_WIKI_ROLES` von `["ADMIN", "USER", "ANON"]` auf `["ADMIN"]` verkleinert — `USER`/`ANON` werden gar nicht mehr aufgelöst, der Kommentar dort und an der Rollenwahl erläutert das.
+
+**Ergebnis:** Das 1-Klick-Wiki ist für **alle** Benutzer privat — identisch zu
+dem von Frau Meyer und Heino. Der Admin behält vollen Zugriff: `ADMIN → C_admin`
+(Bag) bzw. `ADMIN → B_write` (Recipe) sowie der `isAdmin`-Bypass in
+`RecipeResolver.assertRecipe` (`RecipeResolver.ts:200`). `owner_user_id` bleibt
+der Admin, der Owner-Schutz (§11) greift unverändert.
+
+**Freigeben:** bewusst wie bisher beim Lehrer über den Wiki-Dialog
+(„Definiertes Wiki erstellen" → *Lesbar durch* / `recipeUsers`, §26) bzw. per
+Einladung (§25) — also **nicht** über den 1-Klick-Knopf.
+
+**Verifiziert:** `tsc -p tsconfig.json --noEmit` fehlerfrei.
+
+**Hinweis:** Bereits angelegte Admin-Wikis behalten ihre bisherigen
+`USER`/`ANON`-Rechte (die Änderung wirkt nur auf neu angelegte Wikis). Wer sie
+privat ziehen will, entfernt die beiden Rollen im Wiki-Dialog unter
+*Lesbar durch*.
+
+---
+
+## 69. Fix: Das 1-Klick-Wiki-Modal schließt nach dem Anlegen
+
+Nach einem erfolgreichen 1-Klick-Anlegen blieb der Dialog **„Wiki auf einen
+Klick anlegen"** offen und zeigte zusätzlich den Hinweis
+„Fertig — dein Wiki ist da:" mit dem Link auf das neue Wiki. Der Dialog
+verschwand erst, wenn man ihn per *Schließen* / ✕ wegklickte — obwohl die
+Aktion längst fertig war.
+
+**Fix (`packages/admin-vanilla/src/app.tsx`, `submitNewWiki`):** Im
+Erfolgsfall wird der Dialog jetzt geschlossen (`newWikiOpen = false`) und das
+Namensfeld geleert — genau wie beim Wiki-Löschen (`deleteWiki` →
+`store.closeModal()`), das denselben Ablauf schon so handhabt. Bei einem
+Fehler bleibt der Dialog wie bisher offen und zeigt den Fehler im
+`error-banner`.
+
+**Folge:** Der Bestätigungs-Links „Fertig — dein Wiki ist da:" im Dialog ist
+überflüssig geworden und wurde entfernt — samt `@state() newWikiSlug` (wird
+nicht mehr gesetzt) und dem jetzt ungenutzten Textschlüssel in allen acht
+Sprachdateien (`de`, `en`, `es`, `fr`, `ja`, `ko`, `ru`, `zh-cn`). Der Link
+geht nicht verloren: `store.reload()` lädt die Liste, das neue Wiki steht
+sofort unter *Meine Wikis* — die Slug-Spalte ist dort ein Link auf
+`/wiki/<slug>` (`getListColumnLinkMappers`, `app.tsx:2492`).
+
+**Verifiziert:** `tsc -p tsconfig.json --noEmit` fehlerfrei.
+
+---
+
+## 70. Fix: Willkommen-Tiddler zeigte „1. Willkommen in …" statt einer Überschrift
+
+Das Start-Tiddler des 1-Klick-Wiki enthielt als erste Zeile
+`# Willkommen in „<Wiki-Name>" 🎉`. Das ist **Markdown**, der Tiddler ist aber
+`text/vnd.tiddlywiki` — und dort ist `#` **keine** Überschrift, sondern das
+Zeichen für einen **nummerierten Listenpunkt**. TW rendert die Zeile deshalb
+als `<ol><li>` → in der Wiki-Ansicht stand ein kleines „1." vor dem Text statt
+der fett gesetzten Überschrift.
+
+**Fix (`packages/mws/src/new-managers/TabDataAdapter.ts`, `welcomeText`):**
+`#` → `!`. Die TW-Syntax für Überschriften ist `!` (h1) bis `!!!!!!` (h6)
+(`core/modules/parsers/wikiparser/rules/heading.js`, Regexp `(!{1,6})`);
+`#` gehört zur Liste `list.js` (`ordered`). Die beiden Aufzählungspunkte
+unten bleiben `*` (ungesortete Liste) — das war schon richtig.
+
+**Migration bestehender Wikis (`mirrorDisplayNameIntoStarterTiddlers`):**
+Der Guard, der den automatisch erzeugten Willkommen-Text am unveränderten
+Starter erkennt (und ihn beim Umbenennen des Wikis mitzieht), prüfte auf
+`startsWith("# Willkommen in …")`. Da der Starter-Text sich geändert hat,
+wäre er für bestehende Wikis ins Leere gelaufen und der Text hätte beim
+Umbenennen **nicht** mehr aktualisiert. Der Guard akzeptiert deshalb jetzt
+beide Formen (`#` **und** `!`); beim nächsten Umbenamen wird ein altes Wiki
+automatisch auf `!` mitgezogen. Selbst geschriebene Willkommen-Texte bleiben
+weiterhin unangetastet (Zusatzbedingung „per Knopfdruck für dich angelegt").
+
+**Verifiziert:** TW-5.4.1-Quellcode der Regeln `heading.js` (`!`) und der
+Listenregel (`#`) gelesen; `tsc -p tsconfig.json --noEmit` fehlerfrei.
+
+**Noch offen (nicht angefasst):** Die 54 `.tid`-Dateien der Edition
+`bedienungsanleitung` (Wiki *MWS Bedienungsanleitung*) sind ebenfalls in
+Markdown geschrieben (`#` Überschrift, `-` Listen, `**fett**`), haben aber
+**kein** `type:`-Feld — sie erben damit `text/vnd.tiddlywiki` und werden
+genauso falsch gerendert. (Zum Vergleich: `editions/mws-docs` macht es
+richtig, `.md`-Dateien mit `.meta`-Dateien auf `type: text/markdown`.)
+
+---
+
+## 71. Fix: „Dateien in diesem Wiki" zeigte „1. Dateien in diesem Wiki"
+
+Dieselbe Markdown-statt-TW-Syntax wie in §70, diesmal im **Client-Plugin**
+beim Wiki-Toolbar-Knopf **„Dateien in diesem Wiki"**. Der Knopf legt den
+Tiddler `$:/state/mws/WikiFiles` an und zeigt ihn als Modal; dessen Überschrift
+war mit `# ` gebaut und erschien deshalb als nummerierter Listenpunkt
+(„1. Dateien in diesem Wiki") statt als fetter Überschrift.
+
+**Datei:** `plugins/client/tiddlers/upload-file.js`
+
+Darin wurden **drei** Stellen mit Markdown-Syntax für `text/vnd.tiddlywiki`
+gebaut, **zwei** davon Überschriften:
+
+- `renderWikiFiles` (`:250`) — `var body = "# " + …` → `"! " + …`. Das ist der Tiddler `$:/state/mws/WikiFiles`.
+- `showUploadSnippet` (`:203`) — `text: "# " + …` → `"! " + …`. **Dieselbe** Überschrift, aber im Erfolgs-Modal, das nach einem Datei-Upload in ein Wiki erscheint — die war denselben Fehler wert und wird mit korrigiert.
+- `renderWikiFiles` (`:248`) — `"**" + file.filename + "**"` → `"''" + file.filename + "''"`. TW-Fett ist `''` (`rules/emphasis/bold.js`, Regexp `/''/mg`); `**` blieb als **zwei sichtbare Sternchen** stehen. Betraf jeden Listeneintrag, also den Dateinamen jeder Datei im Modal.
+
+Die Sprachtexte selbst (`en-US.multids` und die sieben `i18n/*.multids`) sind
+reiner Fließtext ohne Markup — sie waren nie betroffen.
+
+**Verifiziert:** TW-5.4.1-Regeln `heading.js` (`!`), `emphasis/bold.js` (`''`),
+`list.js` (`#`/`*`) gelesen. Der Code-Teil des Repos ist damit vollständig
+geprüft: die Sweep über alle `addTiddler`/`setText`/`saveTiddler`-Stellen
+findet **keine** weitere Stelle mehr, die Wiki-Text aus Markdown baut. Die
+übrigen Treffer sind entweder Durchreichung von Client-Text
+(`attachments.ts`, `RecipeResolver.ts`, `save-tiddler-text.ts`), JSON/`"yes"`-/
+`"no"`-Statuswerte oder bewusst Markdown für die Admin-Oberfläche
+(`app-landing.tsx`, `legal-notice.tsx`, `user-files.tsx` — die wird serverseitig
+zu HTML gerendert, TW-Wiki-Text wäre dort wirkungslos).
+
+**Bleibt offen** (statische Inhalte, nicht angefasst, siehe Rückfrage):
+`editions/bedienungsanleitung/tiddlers/*.tid` (49 von 54 Dateien, §70) und
+drei `editions/mws-docs/tiddlers/*.tid` mit einfachem Backtick statt
+Doppel-Backtick für Inline-Code (`Allowed Methods.tid`, `Usage.tid`,
+`system/$__mws_cssvar-macro.tid`).
+
+---
+
+## 72. Fix: die komplette „MWS Bedienungsanleitung" war in Markdown geschrieben
+
+Nach §70/§71 dieselbe Ursache in der Edition
+`editions/bedienungsanleitung` (dem Wiki *MWS Bedienungsanleitung*, 54
+`.tid`-Dateien, angelegt in `new-commands/init-store.ts`): Die Tiddler sind
+**ohne** `type:`-Feld, erben also `text/vnd.tiddlywiki` — geschrieben waren sie
+in **Markdown**. Überschriften erschienen als „1. Titel", Aufzählungen als
+wörtliche Bindestriche, Fettungen als sichtbare `**`.
+
+**Entscheidung:** TW-Syntax statt `type: text/markdown`. Ein Markdown-Parser
+ist im Standard-Setup nicht vorhanden (er ist nur in `editions/mws-docs`
+verfügbar) — mit `text/markdown` wäre die Anleitung im Normalbetrieb unlesbar
+gewesen.
+
+**Umgestellt (49 der 54 Dateien, 354 Zeilen):**
+
+- `# Titel` → `! Titel`
+- `- Punkt` → `* Punkt` (alle 220 Listenpunkte standen auf Spalte 0, keine Verschachtelung, keine Fortsetzungszeilen)
+- `**fett**` → `''fett''` (155 Stellen)
+- `` `code` `` → ```` ``code`` ```` (8 Stellen)
+
+Unangetastet blieben die 5 Dateien ohne Markdown: `$:/core/ui/TagTemplate`
+(Widget/HTML), `$:/TagLanguageStyles` (CSS), `$:/DefaultTiddlers`, `$:/SiteTitle`,
+`$:/SiteSubtitle`. Der Konverter hat **nur den Body** angefasst (nie den
+Header) und liefert 368/354 Zeilen — die Differenz sind ausschließlich 14 neu
+eingefügte Leerzeilen.
+
+**Zweite, nur durch Rendern sichtbare Fehlerklasse:** In Markdown darf eine
+Liste einen Absatz unterbrechen, in TW nicht. In `Übersicht`/`Overview`
+standen die Abschnitts-Überschriften (`''Anmelden & Konto''`) unmittelbar
+über ihrer Liste, wodurch alle Punkte als Text in einem `<p>` landeten. 14
+Leerzeilen eingefügt (7 pro Datei).
+
+**Verifiziert mit dem echten Renderer** (`node dev/wiki/tw5/5.4.1/tiddlywiki.js
+editions/bedienungsanleitung --rendertiddler … text/html`), alle 54 Seiten:
+
+- `<h1>`, `<strong>`, `<ul><li>`, `<code>` — keine wörtlichen `- `, `# `,
+  `**`, kein sichtbarer Backtick, kein `<ol>` mehr
+- alle Links lösen auf (`tc-tiddlylink-resolves`)
+
+**Zwei Korrekturen an meiner eigenen Analyse:** Ein erster Sweep meldete drei
+Fehlalarme in `editions/mws-docs` (`Allowed Methods.tid`, `Usage.tid`,
+`system/$__mws_cssvar-macro.tid`) — „einfacher statt doppelter Backtick für
+Inline-Code". Der Renderer widerlegt das: die Regel
+`codeinline.js` matcht `/(``?)/mg`, **ein** Backtick ist in TW 5.4.1 ein
+gültiger Inline-Code-Begrenzer (ebenso wie der doppelte). Diese drei Dateien
+sind daher **unverändert** geblieben. Ebenso waren die 4 Backtick-Stellen in
+der Anleitung bereits korrekt; die Umstellung auf Doppel-Backtick ist
+kosmetisch.
+
+Für die Code-Dateien aus §70/§71 gilt dasselbe: die verwendeten TW-Konstrukte
+(`!`, `''`, `*`, ``````) sind am echten Renderer verifiziert.
+
+---
+
+## 73. Fix: `load-wiki-folder --overwrite` war für vorhandene Bags grundsätzlich unbenutzbar
+
+Beim Aktualisieren der Anleitung aus §72 im lokalen Store (`load-wiki-folder
+editions/bedienungsanleitung --overwrite`) brach der Befehl mit einem 403 ab:
+
+```
+SendError: {"status":403,"reason":"ACCESS_DENIED",
+  "details":{"reason":"Only the user who created the bag (or the site admin
+  'admin') may edit it."}}
+  at BagDataAdapter.saveRow (TabDataAdapter.ts:905)
+  at LoadWikiFolderCommand.execute (new-commands/load-wiki-folder.ts:142)
+```
+
+**Ursache:** Zwei Autorisierungspfade im selben `saveRow` widersprachen sich.
+`BagDataAdapter.saveRow` prüfte den Besitzer über den hartkodierten Vergleich
+`user.username === "admin"`, während der vorgeschaltete
+`checkExisting()` (TabUpserts.ts:97) `user.isAdmin` auswertet. Der CLI-Befehl
+identifiziert sich als Admin, hat aber gar keinen `username`
+(`new BagDataAdapter({ isAdmin: true } as any)`), also schlug die Inline-Prüfung
+immer fehl — und zwar für **jeden** bereits existierenden Bag. `init-store`
+kam daran vorbei, weil er neue Bags anlegt (`existing === null`); ein
+`--overwrite` konnte also nie funktionieren. Betroffen war auch jeder
+ADMIN-Rollen-Benutzer, dessen `username` nicht exakt `admin` lautet.
+
+**Fix (ohne Semantikänderung der Rechte):** Die Inline-Prüfung zugunsten des
+kanonischen Helpers `assertCanEdit()` entfernt, den es bereits für Templates
+gibt, und dessen `isSiteAdmin` um `user.isAdmin` erweitert. `isAdmin` wird vom
+SessionManager aus der ADMIN-Rolle abgeleitet und ist damit verlässlich;
+`checkExisting` vertraute bereits ausschließlich darauf. Beide Pfade urteilen
+jetzt identisch, die Fehlermeldung ist einheitlich.
+
+**Zweite, kleine CLI-Korrektur:** `recipe-users` und `owner-roles` waren im
+Commander-Info mit `<string>` (also **einzelwertig**) deklariert, während
+Beschreibung, Typ (`string[]`) und `init-store` mehrere Rollen vorsahen. Der
+Parser lehnt daher `--recipe-users ANON USER` mit
+`The option "recipe-users" may only have a single value` ab. Deklariert als
+`<string...>` (variadic) sind beide Optionen nun mehrwertig, wie dokumentiert.
+Ohne das hätte der Import die bestehende `USER`→`A_read`-Freigabe der Anleitung
+verloren — angemeldete Benutzer bekommen die `ANON`-Rolle nämlich *nicht*
+(`SessionManager.parseIncomingRequest`), der Zugriff wäre stillschweigend auf
+Administratoren beschränkt gewesen.
+
+**Nebeneffekt des Imports, geprüft und bewusst übernommen:** Die
+Rezept-Definition der Anleitung enthält jetzt explizit
+`plugins: ["$:/themes/tiddlywiki/vanilla", "$:/themes/tiddlywiki/snowwhite"]`
+(statt `[]`). Das ist ein **No-op**: `requiredPlugins`
+(plugin-cache/index.ts:22-26) enthält dieselben beiden Themes bereits, und
+`RecipeResolver.getPluginList()` vereinigt beide Listen über ein `Set`.
+Darstellung und Zugriff ändern sich nicht.
+
+**Ebenfalls vom Import betroffen, wiederhergestellt:** `load-wiki-folder`
+schreibt `landingVisible: true` fest (load-wiki-folder.ts:176, TabDataAdapter.ts:463),
+löscht damit ein gesetztes `landing.hidden.<recipeId>` und hätte die Anleitung
+auf der öffentlichen Startseite sichtbar gemacht. Da die CLI diesen Zustand
+nicht ausdrücken kann, wurde das Flag nach dem Import gesetzt zurück (die
+Checkbox *Landing page* im Wiki-Editor steuert dasselbe). Ebenso wurden die
+8 handgeschriebenen Tiddler des Bags gelöscht (`saveLoadedTiddlers` entfernt
+jeden Titel, der nicht im Ordner liegt) — darunter `$:/language`,
+`$:/languages/de-DE`, das Markdown-Plugin und der Entwurf
+`Entwurf: 'Start' von admin`.
+
+**Verifiziert:** Vollvergleich der SQLite-Datenbank vor/nach dem Import über
+Rezepte, Rezept-Definitionen, Recipe-Bag-Zuordnung, Recipe- und Bag-Rechte,
+Bags, Templates, Benutzer und Rollen: **alle 14 anderen Wikis bitidentisch**,
+Rezept- und Bag-Rechte der Anleitung unverändert, nur der Anleitungs-Bag
+62 → 54 Tiddler. Alle 54 importierten Tiddler wurden auf Markdown-Reste geprüft:
+0 Treffer.
+
+---
+
 ## Nicht eingecheckte Start-Konfiguration (lokal, gitignored)
 
 ```json
