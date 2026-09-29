@@ -2,11 +2,11 @@ title: Wiki löschen
 tags: Anleitung
 lang: de
 
-DE: **Wiki löschen** · EN: [[Deleting a wiki]] · [[Start]]
+DE: ''Wiki löschen'' · EN: [[Deleting a wiki]] · [[Start]]
 
-# Wiki löschen
+! Wiki löschen
 
-- Nur der **Besitzer** des Wikis oder der **Admin** kann es löschen.
-- Wiki-Liste → **Bearbeiten** → **Löschen** und bestätigen.
-- Beim Löschen verschwinden auch die Inhalte des Wikis und das Vorschau-Bild **sofort** — es gibt keine Wiederherstellung.
-- Übrig gebliebene Vorschau-Dateien gelöschter Wikis werden beim Serverstart automatisch aufgeräumt.
+* Nur der ''Besitzer'' des Wikis oder der ''Admin'' kann es löschen.
+* Wiki-Liste → ''Bearbeiten'' → ''Löschen'' und bestätigen.
+* Beim Löschen verschwinden auch die Inhalte des Wikis und das Vorschau-Bild ''sofort'' — es gibt keine Wiederherstellung.
+* Übrig gebliebene Vorschau-Dateien gelöschter Wikis werden beim Serverstart automatisch aufgeräumt.

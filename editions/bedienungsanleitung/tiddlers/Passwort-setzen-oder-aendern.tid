@@ -2,11 +2,11 @@ title: Passwort setzen oder ändern
 tags: Anleitung
 lang: de
 
-DE: **Passwort setzen oder ändern** · EN: [[Setting or changing your password]] · [[Start]]
+DE: ''Passwort setzen oder ändern'' · EN: [[Setting or changing your password]] · [[Start]]
 
-# Passwort setzen oder ändern
+! Passwort setzen oder ändern
 
-- Nach der Einladung hat der Nutzer noch kein Passwort — er setzt es beim ersten Anmelden selbst.
-- Passwort ändern: Menü oben rechts → **Profil** → **Passwort ändern**.
-- Nutze die Zufallsfunktion neben dem Feld, um ein sicheres Passwort zu erzeugen.
-- Der Admin kann ein Passwort jederzeit zurücksetzen (siehe [[Nutzer verwalten]]).
+* Nach der Einladung hat der Nutzer noch kein Passwort — er setzt es beim ersten Anmelden selbst.
+* Passwort ändern: Menü oben rechts → ''Profil'' → ''Passwort ändern''.
+* Nutze die Zufallsfunktion neben dem Feld, um ein sicheres Passwort zu erzeugen.
+* Der Admin kann ein Passwort jederzeit zurücksetzen (siehe [[Nutzer verwalten]]).

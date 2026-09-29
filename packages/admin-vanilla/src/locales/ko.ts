@@ -128,7 +128,6 @@ export const koStrings: Record<string, string> = {
   "Name of the wiki": "Wiki 이름",
   "Create a wiki with a single click": "한 번의 클릭으로 Wiki 만들기",
   "A name is all it takes. Slug, bag and default permissions are assigned automatically (slug: wiki-<username>).": "이름만 있으면 됩니다. 슬러그, 백, 기본 권한이 자동으로 할당됩니다 (슬러그: wiki-<username>).",
-  "Done — your wiki is here:": "완료 — 당신의 Wiki가 여기 있습니다:",
   "Creating…": "만드는 중…",
 
   "Current server state": "현재 서버 상태",

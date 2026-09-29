@@ -2,13 +2,13 @@ title: Nutzer verwalten
 tags: Anleitung
 lang: de
 
-DE: **Nutzer verwalten** · EN: [[Managing users]] · [[Start]]
+DE: ''Nutzer verwalten'' · EN: [[Managing users]] · [[Start]]
 
-# Nutzer verwalten
+! Nutzer verwalten
 
-- Im **Users-Tab** siehst Du alle Konten mit ihren Rollen.
-- **Einladen:** Neues Konto anlegen (Name, E-Mail) — das Passwort setzt die Person selbst.
-- **Rollen:** Rollen zuweisen oder entziehen.
-- **Passwort zurücksetzen:** Wenn jemand ausgesperrt ist, kannst Du ein neues Passwort setzen.
-- **Löschen:** Konten entfernen; bedenke, dass damit auch der Zugriff auf deren Wikis entfällt.
-- System-Rollen (z. B. `ADMIN`) sind geschützt und können nicht gelöscht werden.
+* Im ''Users-Tab'' siehst Du alle Konten mit ihren Rollen.
+* ''Einladen:'' Neues Konto anlegen (Name, E-Mail) — das Passwort setzt die Person selbst.
+* ''Rollen:'' Rollen zuweisen oder entziehen.
+* ''Passwort zurücksetzen:'' Wenn jemand ausgesperrt ist, kannst Du ein neues Passwort setzen.
+* ''Löschen:'' Konten entfernen; bedenke, dass damit auch der Zugriff auf deren Wikis entfällt.
+* System-Rollen (z. B. ``ADMIN``) sind geschützt und können nicht gelöscht werden.

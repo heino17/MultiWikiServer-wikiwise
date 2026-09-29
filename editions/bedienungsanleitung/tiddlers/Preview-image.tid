@@ -2,11 +2,11 @@ title: Preview image
 tags: Anleitung
 lang: en
 
-EN: **Preview image** · DE: [[Vorschau-Bild]] · [[Start]]
+EN: ''Preview image'' · DE: [[Vorschau-Bild]] · [[Start]]
 
-# Preview image
+! Preview image
 
-- In the wiki list every wiki shows a **preview image** (a screenshot of its start page).
-- The image is created **lazily**: only when needed, and re-rendered at most once a day (unless something changes).
-- After an edit it is not redrawn immediately — it shows the state after the latest editing pause.
-- If the preview is missing (e.g. right after creation), it appears within a few seconds of opening the wiki.
+* In the wiki list every wiki shows a ''preview image'' (a screenshot of its start page).
+* The image is created ''lazily'': only when needed, and re-rendered at most once a day (unless something changes).
+* After an edit it is not redrawn immediately — it shows the state after the latest editing pause.
+* If the preview is missing (e.g. right after creation), it appears within a few seconds of opening the wiki.

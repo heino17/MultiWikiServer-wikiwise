@@ -2,11 +2,11 @@ title: Storage and files
 tags: Anleitung
 lang: en
 
-EN: **Storage and files** · DE: [[Speicher und Dateien]] · [[Start]]
+EN: ''Storage and files'' · DE: [[Speicher und Dateien]] · [[Start]]
 
-# Storage and files
+! Storage and files
 
-- The **Storage tab** shows usage: wikis, files and the biggest storage consumers.
-- The **"Blobs & files"** section lists uploaded files and where they come from.
-- Invalid leftovers (aborted uploads, orphaned files) can be cleaned up after previewing the list.
-- **"Storage usage per user (top 10)"** shows who uses the most space.
+* The ''Storage tab'' shows usage: wikis, files and the biggest storage consumers.
+* The ''"Blobs & files"'' section lists uploaded files and where they come from.
+* Invalid leftovers (aborted uploads, orphaned files) can be cleaned up after previewing the list.
+* ''"Storage usage per user (top 10)"'' shows who uses the most space.

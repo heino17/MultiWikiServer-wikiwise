@@ -128,7 +128,6 @@ export const ruStrings: Record<string, string> = {
   "Name of the wiki": "Название вики",
   "Create a wiki with a single click": "Создать вики в один клик",
   "A name is all it takes. Slug, bag and default permissions are assigned automatically (slug: wiki-<username>).": "Достаточно названия. Слаг, бэг и права по умолчанию назначаются автоматически (слаг: wiki-<username>).",
-  "Done — your wiki is here:": "Готово — вот ваша вики:",
   "Creating…": "Создание…",
 
   "Current server state": "Текущее состояние сервера",

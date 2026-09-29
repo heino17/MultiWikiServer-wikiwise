@@ -2,12 +2,12 @@ title: Creating a new wiki
 tags: Anleitung
 lang: en
 
-EN: **Creating a new wiki** · DE: [[Ein neues Wiki anlegen]] · [[Start]]
+EN: ''Creating a new wiki'' · DE: [[Ein neues Wiki anlegen]] · [[Start]]
 
-# Creating a new wiki
+! Creating a new wiki
 
-- Go to the home page and click **New wiki**.
-- Enter a display name (and optionally a description).
-- A **slug** (short name, e.g. `my-wiki`) is generated; it may only contain lowercase letters, numbers and hyphens, and must be free.
-- Teachers and admins can choose from [[Templates]]; students get their own starter wiki.
-- Students: whether you may create wikis depends on the limit your teacher set ([[Wiki limits for students]]).
+* Go to the home page and click ''New wiki''.
+* Enter a display name (and optionally a description).
+* A ''slug'' (short name, e.g. ``my-wiki``) is generated; it may only contain lowercase letters, numbers and hyphens, and must be free.
+* Teachers and admins can choose from [[Templates]]; students get their own starter wiki.
+* Students: whether you may create wikis depends on the limit your teacher set ([[Wiki limits for students]]).

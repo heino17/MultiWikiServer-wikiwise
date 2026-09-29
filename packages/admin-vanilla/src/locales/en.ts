@@ -133,7 +133,6 @@ export const enStrings: Record<string, string> = {
   "Name of the wiki": "Name of the wiki",
   "Create a wiki with a single click": "Create a wiki with a single click",
   "A name is all it takes. Slug, bag and default permissions are assigned automatically (slug: wiki-<username>).": "A name is all it takes. Slug, bag and default permissions are assigned automatically (slug: wiki-<username>).",
-  "Done — your wiki is here:": "Done — your wiki is here:",
   "Creating…": "Creating…",
 
   // #region section headings / tabs.ts labels

@@ -2,10 +2,10 @@ title: Autospeicherung
 tags: Anleitung
 lang: de
 
-DE: **Autospeicherung** · EN: [[Autosave]] · [[Start]]
+DE: ''Autospeicherung'' · EN: [[Autosave]] · [[Start]]
 
-# Autospeicherung
+! Autospeicherung
 
-- Der MultiWiki-Server speichert jede Änderung **automatisch** — Du brauchst nichts manuell zu sichern.
-- Solange Du in einem Wiki arbeitest, wird bei jedem Wechsel gespeichert.
-- Hinweis: Die Vorschau ([[Vorschau-Bild]]) wird nicht bei jedem Speichern aktualisiert — sie zeigt den Stand nach der letzten Bearbeitungspause.
+* Der MultiWiki-Server speichert jede Änderung ''automatisch'' — Du brauchst nichts manuell zu sichern.
+* Solange Du in einem Wiki arbeitest, wird bei jedem Wechsel gespeichert.
+* Hinweis: Die Vorschau ([[Vorschau-Bild]]) wird nicht bei jedem Speichern aktualisiert — sie zeigt den Stand nach der letzten Bearbeitungspause.

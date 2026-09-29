@@ -128,7 +128,6 @@ export const esStrings: Record<string, string> = {
   "Name of the wiki": "Nombre del wiki",
   "Create a wiki with a single click": "Crear un wiki con un solo clic",
   "A name is all it takes. Slug, bag and default permissions are assigned automatically (slug: wiki-<username>).": "Basta con un nombre. El slug, el bag y los permisos por defecto se asignan automáticamente (slug: wiki-<username>).",
-  "Done — your wiki is here:": "Listo: aquí está tu wiki:",
   "Creating…": "Creando…",
 
   "Current server state": "Estado actual del servidor",

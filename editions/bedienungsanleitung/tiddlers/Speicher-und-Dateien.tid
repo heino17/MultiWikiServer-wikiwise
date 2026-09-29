@@ -2,11 +2,11 @@ title: Speicher und Dateien
 tags: Anleitung
 lang: de
 
-DE: **Speicher und Dateien** · EN: [[Storage and files]] · [[Start]]
+DE: ''Speicher und Dateien'' · EN: [[Storage and files]] · [[Start]]
 
-# Speicher und Dateien
+! Speicher und Dateien
 
-- Der **Speicher-Tab** zeigt die Auslastung: Wikis, Dateien und die größten Speicherverbraucher.
-- Die Sektion **„Blobs & Dateien"** listet hochgeladene Dateien samt Herkunft.
-- Ungültige Reste (abgebrochene Uploads, verwaiste Dateien) kannst Du nach Vorschau der Liste bereinigen.
-- Mit **„Speicherverbrauch pro User (Top 10)"** siehst Du, wer am meisten Platz belegt.
+* Der ''Speicher-Tab'' zeigt die Auslastung: Wikis, Dateien und die größten Speicherverbraucher.
+* Die Sektion ''„Blobs & Dateien"'' listet hochgeladene Dateien samt Herkunft.
+* Ungültige Reste (abgebrochene Uploads, verwaiste Dateien) kannst Du nach Vorschau der Liste bereinigen.
+* Mit ''„Speicherverbrauch pro User (Top 10)"'' siehst Du, wer am meisten Platz belegt.

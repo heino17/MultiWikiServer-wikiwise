@@ -200,7 +200,7 @@ function showUploadSnippet(res,recipe) {
 	$tw.wiki.addTiddler({
 		title: UPLOAD_RESULT_TIDDLER,
 		type: "text/vnd.tiddlywiki",
-		text: "# " + $tw.wiki.getTiddlerText("$:/language/MWS/WikiFiles/ButtonCaption","Files in this wiki") + "\n\n" +
+		text: "! " + $tw.wiki.getTiddlerText("$:/language/MWS/WikiFiles/ButtonCaption","Files in this wiki") + "\n\n" +
 			heading + "\n\n````\n" + snippet + "\n````\n"
 	});
 	$tw.rootWidget.dispatchEvent({ type: "tm-modal", param: UPLOAD_RESULT_TIDDLER });
@@ -244,10 +244,11 @@ function renderWikiFiles(files,recipe) {
 	var entries = files.map(function(file) {
 		var snippet = wikiFileSnippet(file,recipe),
 			media = snippet;
+		// TiddlyWiki wiki syntax: `*` list item, `''` bold (not `**`).
 		return "* " + media + "\n" +
-			"**" + file.filename + "**\nsnippet: ``" + snippet + "``\n";
+			"''" + file.filename + "''\nsnippet: ``" + snippet + "``\n";
 	}).join("\n");
-	var body = "# " + $tw.wiki.getTiddlerText("$:/language/MWS/WikiFiles/ButtonCaption","Files in this wiki") + "\n\n" +
+	var body = "! " + $tw.wiki.getTiddlerText("$:/language/MWS/WikiFiles/ButtonCaption","Files in this wiki") + "\n\n" +
 		(entries || $tw.wiki.getTiddlerText("$:/language/MWS/WikiFiles/Missing","No files yet."));
 	$tw.wiki.addTiddler({
 		title: WIKIFILES_TIDDLER,

@@ -128,7 +128,6 @@ export const jaStrings: Record<string, string> = {
   "Name of the wiki": "Wiki の名前",
   "Create a wiki with a single click": "ワンクリックで Wiki を作成",
   "A name is all it takes. Slug, bag and default permissions are assigned automatically (slug: wiki-<username>).": "名前があればそれで十分です。スラッグ、バッグ、デフォルトの権限は自動的に割り当てられます (スラッグ: wiki-<username>)。",
-  "Done — your wiki is here:": "完了しました — あなたの Wiki はここにあります:",
   "Creating…": "作成中…",
 
   "Current server state": "現在のサーバー状態",

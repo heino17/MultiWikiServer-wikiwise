@@ -128,7 +128,6 @@ export const zhCnStrings: Record<string, string> = {
   "Name of the wiki": "Wiki 名称",
   "Create a wiki with a single click": "一键创建 Wiki",
   "A name is all it takes. Slug, bag and default permissions are assigned automatically (slug: wiki-<username>).": "只需一个名称。Slug、袋和默认权限会自动分配（slug：wiki-<username>）。",
-  "Done — your wiki is here:": "完成 — 您的 Wiki 在这里：",
   "Creating…": "正在创建…",
 
   "Current server state": "当前服务器状态",

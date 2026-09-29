@@ -2,10 +2,10 @@ title: Wiki limits for students
 tags: Anleitung
 lang: en
 
-EN: **Wiki limits for students** · DE: [[Wiki-Limit für Schüler]] · [[Start]]
+EN: ''Wiki limits for students'' · DE: [[Wiki-Limit für Schüler]] · [[Start]]
 
-# Wiki limits for students
+! Wiki limits for students
 
-- In the Users tab you can set a **wiki limit** per student (0 = none, or a fixed number).
-- An empty value means: no limit.
-- When a student reaches the limit, a message tells them they cannot create more wikis.
+* In the Users tab you can set a ''wiki limit'' per student (0 = none, or a fixed number).
+* An empty value means: no limit.
+* When a student reaches the limit, a message tells them they cannot create more wikis.

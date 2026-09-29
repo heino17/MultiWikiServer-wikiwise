@@ -1331,7 +1331,6 @@ export class App extends JSXElement {
   @state() accessor newWikiName = "";
   @state() accessor newWikiBusy = false;
   @state() accessor newWikiError = "";
-  @state() accessor newWikiSlug: string | null = null;
   @state() accessor themeMode: ThemeMode = getEffectiveTheme();
   @state() accessor thumbnailSrc = "";
 
@@ -1461,7 +1460,6 @@ export class App extends JSXElement {
     const username = embeddedServerResponse.userState.username;
     this.newWikiName = username ? t("{username}'s Wiki", { username }) : t("My Wiki");
     this.newWikiError = "";
-    this.newWikiSlug = null;
     this.newWikiOpen = true;
   };
 
@@ -1475,7 +1473,6 @@ export class App extends JSXElement {
     if (!displayName || this.newWikiBusy) return;
     this.newWikiBusy = true;
     this.newWikiError = "";
-    this.newWikiSlug = null;
     try {
       const response = await fetch(pathPrefix + "/admin/wiki", {
         method: "PUT",
@@ -1484,10 +1481,11 @@ export class App extends JSXElement {
       });
       const text = await response.text();
       if (response.status !== 200) throw new Error(text);
-      const result = JSON.parse(text, jsonReviver);
       await this.store.reload();
-      this.newWikiSlug = result.slug ?? null;
+      // Success: close the dialog (same as the delete-wiki flow). The new
+      // wiki is listed in the wikis tab right away, with its slug as a link.
       this.newWikiName = "";
+      this.newWikiOpen = false;
     } catch (error) {
       console.error(error);
       this.newWikiError = getErrorMessage(error, t("Failed to create wiki."));
@@ -2337,14 +2335,6 @@ export class App extends JSXElement {
                         oninput={(event) => { this.newWikiName = (event.target as HTMLInputElement).value; }}
                       />
                       {this.newWikiError ? renderErrorBanner(formatStorageErrorForDisplay(this.newWikiError, t)) : null}
-                      {this.newWikiSlug ? (
-                        <p class="field-helper">
-                          {t("Done — your wiki is here:")}{" "}
-                          <a href={pathPrefix + "/wiki/" + encodeURIComponent(this.newWikiSlug)} target="_blank" rel="noreferrer">
-                            {pathPrefix}/wiki/{this.newWikiSlug}
-                          </a>
-                        </p>
-                      ) : null}
                     </div>
                   </div>
                 </div>

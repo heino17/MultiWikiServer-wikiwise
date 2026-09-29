@@ -2,13 +2,13 @@ title: Datei in einem Wiki verwenden
 tags: Anleitung
 lang: de
 
-DE: **Datei in einem Wiki verwenden** · EN: [[Using a file in a wiki]] · [[Start]]
+DE: ''Datei in einem Wiki verwenden'' · EN: [[Using a file in a wiki]] · [[Start]]
 
-# Datei in einem Wiki verwenden
+! Datei in einem Wiki verwenden
 
-- **Datei-Upload im Wiki:** Beim Bearbeiten eines Wikis lädst Du die Datei direkt dort hoch — sie landet beim Besitzer des Wikis.
-- **Werkzeugleiste:** Der Upload-Button lädt die Datei in den Speicher des Wiki-Besitzers. Anschließend öffnet sich ein Fenster mit dem fertigen Code für Deinen Tiddler: Bilder als `[img[...]]`, alle anderen Dateien als `[ext[...]]`. Füge den Code in einen beliebigen Tiddler ein, um die Datei darzustellen.
-- **Dateien in diesem Wiki:** Der Ordner-Button in der Werkzeugleiste öffnet eine Liste aller Dateien des Wikis mit Vorschau, Download-Link und kopierbarem Code.
-- **Wiki-Besitzer (Lehrer/Admin):** In eigenen Wikis hochgeladene Dateien stehen dem Wiki dauerhaft zur Verfügung.
-- **Sichtbarkeit:** Die Dateien eines Wikis kann jeder sehen, der das Wiki öffnen darf (Leserecht). Es ist keine separate Freigabe nötig. Persönliche Dateien aus „Meine Dateien“ sind davon unberührt und bleiben privater Speicher.
-- Gäste mit Leserecht sehen die Inhalte mit, können aber keine Dateien hinzufügen.
+* ''Datei-Upload im Wiki:'' Beim Bearbeiten eines Wikis lädst Du die Datei direkt dort hoch — sie landet beim Besitzer des Wikis.
+* ''Werkzeugleiste:'' Der Upload-Button lädt die Datei in den Speicher des Wiki-Besitzers. Anschließend öffnet sich ein Fenster mit dem fertigen Code für Deinen Tiddler: Bilder als ``[img[...]]``, alle anderen Dateien als ``[ext[...]]``. Füge den Code in einen beliebigen Tiddler ein, um die Datei darzustellen.
+* ''Dateien in diesem Wiki:'' Der Ordner-Button in der Werkzeugleiste öffnet eine Liste aller Dateien des Wikis mit Vorschau, Download-Link und kopierbarem Code.
+* ''Wiki-Besitzer (Lehrer/Admin):'' In eigenen Wikis hochgeladene Dateien stehen dem Wiki dauerhaft zur Verfügung.
+* ''Sichtbarkeit:'' Die Dateien eines Wikis kann jeder sehen, der das Wiki öffnen darf (Leserecht). Es ist keine separate Freigabe nötig. Persönliche Dateien aus „Meine Dateien“ sind davon unberührt und bleiben privater Speicher.
+* Gäste mit Leserecht sehen die Inhalte mit, können aber keine Dateien hinzufügen.
