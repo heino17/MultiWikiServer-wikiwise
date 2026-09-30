@@ -7904,9 +7904,7 @@ durchscrollen und von oben und unten gegenlesen.
 
 Alle fünf generischen Tabs (**Wikis, Templates, Bags, Rollen, Benutzer**) haben
 jetzt dieselbe Kopfleiste mit Suchfeld und anklickbaren Spalten. „Meine Dateien"
-ist bewusst nicht dabei: dort hängt die Liste an einem wechselnden
-Ordner-Kontext, und eine clientseitige Suche über die geladene Teilmenme wäre
-dort irreführend — das bleibt ein eigenes Vorhaben.
+ist hier noch nicht dabei — das folgt in §79.
 
 **Suche.** Ein `type="search"`-Feld pro Tab filtert die Liste während des
 Tippens, dazu ein Klick-Button (×) und die Trefferzahl („3 of 15 shown"). Die
@@ -7991,6 +7989,76 @@ per Unit-Test gegen die echte Funktionsquelle (`Schüler`/`schuler`,
 Bekannte bewusste Grenzen: Der Datensatz-Editor hat keinen Escape-Shortcut
 (geschlossen wird über „Cancel"), und die älteren Platzhalter wie „Create a {tab}
 to get started." verwenden weiterhin kleingeschriebene Tab-Namen.
+
+
+---
+
+## 79. Suche und Sortierung auch im Tab „Meine Dateien"
+
+§78 hatte „Meine Dateien" bewusst ausgelassen. Die Begründung war eine
+Annahme und hat nicht gehalten: Es gibt hier keinen wechselnden
+Ordner-Kontext, der eine clientseitige Suche irreführend machen würde.
+`/api/user-files/list` und `/api/user-files/shared` fragen `userFile` ohne
+`take` ab und liefern **alle** Dateien — dieselbe Ausgangslage wie
+`/admin/load` in den fünf Datensatz-Tabs. Die Liste ist damit vollständig
+im Browser, und Suche wie Sortierung gelten für alles, nicht für eine
+stillschweigend gekappte Teilmenge.
+
+**Ein Suchfeld für beide Tabellen.** Der Tab zeigt eigene Dateien und – für
+normale Konten – darunter „Shared with me". Eine Datei ist eine Datei, ob
+sie jetzt selbst hochgeladen wurde oder geteilt ist: ein Eingabefeld über
+beiden Tabellen filtert deshalb beide, und die Trefferzahl zählt über beide
+Abschnitte zusammen. Die Überschrift des geteilten Abschnitts verschwindet
+nicht, wenn ihre Zeilen alle herausfallen; stattdessen erscheint dort ein
+eigener Leerzustand („No matches in Shared with me."), damit klar ist,
+dass die Suche der Grund ist und nicht eine leere Freigabe.
+
+**Sortierbare Spalten** wie in den Datensatz-Tabs: Klick aufsteigend, nochmal
+absteigend, dritter Klick zurück zur Serverreihenfolge („Uploaded" absteigend,
+wie vom Server geliefert). Pfeil, `aria-sort` und Screenreader-Angabe
+ausdrücklich dieselben wie in §78, damit die Bedienung im ganzen Admin
+gleich bleibt. Die Aktionsspalte (Teilen, Vorschau, Download, Löschen) hat
+weiterhin keinen Header und ist nicht sortierbar.
+
+**Große Dateien zuerst, wie man es erwartet.** Die Spalte „Size" zeigt
+„1.5 KB" bis „54.5 MB". Würde man die formatierte Zelle sortieren, stünde
+„950.4 KB" vor „2.3 MB", weil „9" alphabetisch vor „2" kommt. Sortiert wird
+deshalb nach `sizeBytes`, der rohen Zahl, und nach `createdAt`, dem
+ISO-Zeitstempel — dieselbe Idee wie bei „3 / ∞" in den Benutzern: es wird
+nach dem Messwert sortiert, nicht nach seiner Beschriftung.
+
+**Eigentümer nur, wo es ihn gibt.** Die eigene Tabelle führt die Spalte
+„Owner" nur in der Admin-Sicht; die geteilte immer. Ein normaler Account
+sieht dort also vier sortierbare Header, ein Admin fünf – wie in den
+Datensatz-Tabs, wo Spalten je nach Rolle vorhanden sind oder nicht.
+
+**Keine doppelte Logik.** Normalisierung, Tristate-Umschaltung, Sortier-
+und Vergleichslogik liegen jetzt in `list-view.ts` und werden von beiden
+Stellen benutzt. `app.tsx` ist entsprechend um rund 100 Zeilen kleiner; die
+Faltung aus §78 gilt dadurch unverändert auch hier (siehe unten).
+
+**Übersetzungen:** keine neuen. Alle benötigten Schlüssel („Search",
+„Search {tab}…", „Clear search", „{shown} of {total} shown", „Sort by
+{column}", „Sorted ascending", „Sorted descending", „Clear sorting",
+„No matches in {tab}.") waren mit §78 schon vorhanden; der Tab-Name wird per
+`t("My files")` bzw. `t("Shared with me")` eingesetzt, damit der Platzhalter
+in jeder Sprache passt.
+
+**Geprüft** (zweite Dev-Instanz, Playwright): 122 Checks bestanden, davon 24
+für diesen Abschnitt. Sortiert wird numerisch nach Größe (1.5 KB → 54.5 MB,
+„KB steht vor MB"), Suche und Sortierung wirken zusammen, der dritte Klick
+stellt die Serverreihenfolge wieder her, „Clear sorting" und der ×-Button
+funktionieren, kein horizontaler Overflow. `tsc --noEmit` und `tsup` sauber.
+
+Zusätzlich am echten Nicht-Admin-Konto geprüft (Testnutzer angelegt, eine
+Datei namens „Straßennamen-Liste.txt" hochgeladen, danach wieder gelöscht):
+`strassen`, `STRASSEN`, `Straßen`, `straße`, `Strassennamen` und `liste`
+finden sie, `strase` und `strassn` nicht; die eigene Tabelle hat vier
+sortierbare Header; der geteilte Abschnitt wird durchsucht, sortiert und
+zeigt seinen eigenen Leerzustand; und ohne eigene Dateien bleibt es bei
+„No files yet. Upload something to get started." statt eines irreführenden
+„No matches". Testnutzer, Testdatei und Test-Bag aus dieser Messung sind
+wieder entfernt — der Bestand ist unverändert bei 6 Benutzern und 23 Dateien.
 
 
 ---

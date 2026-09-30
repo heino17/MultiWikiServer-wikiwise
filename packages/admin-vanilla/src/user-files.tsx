@@ -19,6 +19,13 @@ import { odtToHtml } from "odf-kit/reader";
 import { MaterialSymbol } from "./material-symbol";
 import { OdtPreviewDocument } from "./odt-preview";
 import { getEffectiveTheme } from "./theme";
+import {
+  compareListValues,
+  listMatchesQuery,
+  nextListSort,
+  normalizeListSearchText,
+  type ListSortDirection,
+} from "./list-view";
 import { t } from "./i18n";
 
 export interface UserFilesPanelProps {
@@ -41,6 +48,13 @@ export interface UserFileRow {
   owner?: string | null;
   shared?: { type: string; id: string | null }[];
 }
+
+/** One sortable column of the file tables. */
+type UserFileColumn = {
+  key: string;
+  /** Resolved lazily so the label follows the current language. */
+  label: () => string;
+};
 
 export interface ShareTargets {
   global: boolean;
@@ -220,6 +234,14 @@ export class UserFilesPanel extends JSXElement {
   @state() accessor previewDocumentHtml = "";
   @state() accessor previewError = "";
 
+  /** Search text and sort column. In memory only, like the other lists: a
+   *  stored sort key would outlive a renamed column. `/api/user-files/list`
+   *  returns every file (`findMany` without a limit), so filtering and sorting
+   *  the whole list in the browser is complete, not a partial view. */
+  @state() accessor query = "";
+  @state() accessor sortKey = "";
+  @state() accessor sortDirection: ListSortDirection = "asc";
+
   connectedCallback(): void {
     super.connectedCallback();
     void this.fetchFiles();
@@ -398,6 +420,66 @@ export class UserFilesPanel extends JSXElement {
   };
 
   private readonly isShared = (file: UserFileRow): boolean => (file.shared?.length ?? 0) > 0;
+
+  /** Columns offered for sorting. "Owner" only exists in the admin view of the
+   *  own-files table and always in the shared table, so it is not offered
+   *  everywhere. The trailing actions column has no header and is not
+   *  sortable, mirroring the thumbnail column in the record lists. */
+  private fileColumns = (includeOwner: boolean): UserFileColumn[] => {
+    const columns: UserFileColumn[] = [{ key: "filename", label: () => t("File name") }];
+    if (includeOwner) columns.push({ key: "owner", label: () => t("Owner") });
+    columns.push(
+      { key: "type", label: () => t("Type") },
+      { key: "size", label: () => t("Size") },
+      { key: "uploaded", label: () => t("Uploaded") },
+    );
+    return columns;
+  };
+
+  /** Raw cell value for one column. Sizes stay numbers and dates stay ISO
+   *  strings, so they sort by magnitude and by time rather than by their
+   *  formatted text. */
+  private static fileValue = (columnKey: string, file: UserFileRow): unknown => {
+    switch (columnKey) {
+      case "filename": return file.filename;
+      case "owner": return file.owner ?? "";
+      case "type": return file.type;
+      case "size": return file.sizeBytes;
+      case "uploaded": return file.createdAt;
+      default: return "";
+    }
+  };
+
+  /** Searchable text of one row: the name, plus the "Shared" badge wording so
+   *  that searching "shared" finds the shared own-files too. */
+  private fileSearchText = (file: UserFileRow): unknown[] => [
+    file.filename,
+    file.owner,
+    file.type,
+    this.isShared(file) ? t("Shared") : "",
+  ];
+
+  private readonly sortFiles = (files: readonly UserFileRow[], sortKey: string): UserFileRow[] => {
+    if (!sortKey) return [...files];
+    return [...files].sort((left, right) =>
+      compareListValues(
+        UserFilesPanel.fileValue(sortKey, left),
+        UserFilesPanel.fileValue(sortKey, right),
+        this.sortDirection,
+      )
+      // Stable tiebreak, so equal sizes or dates do not shuffle between sorts.
+      || String(left.id).localeCompare(String(right.id)));
+  };
+
+  private readonly toggleFileSort = (columnKey: string) => {
+    const next = nextListSort(this.sortKey, this.sortDirection, columnKey);
+    this.sortKey = next.sortKey;
+    this.sortDirection = next.sortDirection;
+  };
+
+  private readonly handleQueryInput = (event: Event) => {
+    this.query = (event.target as HTMLInputElement).value;
+  };
 
   private static readonly TEXT_EXTENSIONS = new Set([
     "md", "markdown", "txt", "csv", "json", "js", "ts", "css", "html",
@@ -640,8 +722,51 @@ export class UserFilesPanel extends JSXElement {
     );
   };
 
+  /** One sortable column header. The arrow, `aria-sort` and the screen-reader
+   *  status work like in the record lists; a real `<th>` already carries the
+   *  `columnheader` role, so only the state has to be named. */
+  private renderSortableHeader = (column: UserFileColumn) => {
+    const isSortedBy = this.sortKey === column.key;
+    const label = column.label();
+    return (
+      <th
+        scope="col"
+        aria-sort={isSortedBy ? (this.sortDirection === "asc" ? "ascending" : "descending") : "none"}
+      >
+        <button
+          class={"list-sort" + (isSortedBy ? " is-active" : "")}
+          type="button"
+          title={t("Sort by {column}", { column: label })}
+          aria-label={t("Sort by {column}", { column: label })}
+          onclick={() => this.toggleFileSort(column.key)}
+        >
+          <span class="list-sort-label">{label}</span>
+          <span class="list-sort-arrow" aria-hidden="true">
+            {isSortedBy ? (this.sortDirection === "asc" ? "▲" : "▼") : "↕"}
+          </span>
+          {isSortedBy ? (
+            <span class="visually-hidden">
+              {this.sortDirection === "asc" ? t("Sorted ascending") : t("Sorted descending")}
+            </span>
+          ) : null}
+        </button>
+      </th>
+    );
+  };
+
   protected render() {
-    const showShared = !this.isAdminView() && this.sharedFiles.length > 0;
+    const adminView = this.isAdminView();
+    const needle = normalizeListSearchText(this.query);
+    // One search field covers both tables: a file is a file, whether it was
+    // uploaded by this account or shared with it.
+    const matches = (file: UserFileRow) => listMatchesQuery(this.fileSearchText(file), needle);
+    const ownColumns = this.fileColumns(adminView);
+    const shownFiles = this.sortFiles(this.files.filter(matches), this.sortKey);
+    const shownSharedFiles = this.sortFiles(this.sharedFiles.filter(matches), this.sortKey);
+    const totalFiles = this.files.length + this.sharedFiles.length;
+    const shownCount = shownFiles.length + shownSharedFiles.length;
+    const searching = needle !== "";
+    const showShared = !adminView && this.sharedFiles.length > 0;
     return (
       <section class="user-files-panel">
         <div class="user-files-toolbar">
@@ -670,6 +795,47 @@ export class UserFilesPanel extends JSXElement {
               <MaterialSymbol icon={refreshIcon} /> {t("Refresh")}
             </button>
           </div>
+          <div class="user-files-search-row">
+            <div class="list-search">
+              <label class="list-search-label" for="list-search-user-files">{t("Search")}</label>
+              <input
+                id="list-search-user-files"
+                class="field-input list-search-input"
+                type="search"
+                placeholder={t("Search {tab}…", { tab: t("My files") })}
+                /* The JSX runtime writes `value` as an attribute, and an
+                 * attribute does not update a search box the user already typed
+                 * in. Setting the property keeps the field in step. */
+                ref={(element) => { if (element && element.value !== this.query) element.value = this.query; }}
+                oninput={this.handleQueryInput}
+              />
+              {this.query ? (
+                <button
+                  class="list-search-clear"
+                  type="button"
+                  aria-label={t("Clear search")}
+                  title={t("Clear search")}
+                  onclick={() => { this.query = ""; }}
+                >
+                  <MaterialSymbol icon={closeIcon} />
+                </button>
+              ) : null}
+            </div>
+            <div class="user-files-search-actions">
+              {searching ? (
+                <span class="list-result-count">
+                  {t("{shown} of {total} shown", { shown: shownCount, total: totalFiles })}
+                </span>
+              ) : null}
+              {this.sortKey ? (
+                <button
+                  class="ghost-button"
+                  type="button"
+                  onclick={() => { this.sortKey = ""; }}
+                >{t("Clear sorting")}</button>
+              ) : null}
+            </div>
+          </div>
         </div>
 
         {this.error ? (
@@ -685,21 +851,17 @@ export class UserFilesPanel extends JSXElement {
 
         {this.loading ? (
           <div class="field-callout"><p>{t("Loading your files…")}</p></div>
-        ) : this.files.length ? (
+        ) : shownFiles.length ? (
           <div class="storage-table-scroll">
             <table class="storage-table user-files-table">
               <thead>
                 <tr>
-                  <th>{t("File name")}</th>
-                  {this.isAdminView() ? <th>{t("Owner")}</th> : null}
-                  <th>{t("Type")}</th>
-                  <th>{t("Size")}</th>
-                  <th>{t("Uploaded")}</th>
+                  {ownColumns.map((column) => this.renderSortableHeader(column))}
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {this.files.map((file) => (
+                {shownFiles.map((file) => (
                   <tr key={file.id}>
                     <td>
                       <strong class="user-files-name">{file.filename}</strong>
@@ -758,7 +920,9 @@ export class UserFilesPanel extends JSXElement {
         ) : (
           <div class="pinboard-empty">
             <MaterialSymbol icon={folderIcon} />
-            <p>{t("No files yet. Upload something to get started.")}</p>
+            {searching && this.files.length
+              ? <p>{t("No matches in {tab}.", { tab: t("My files") })}</p>
+              : <p>{t("No files yet. Upload something to get started.")}</p>}
           </div>
         )}
 
@@ -768,20 +932,17 @@ export class UserFilesPanel extends JSXElement {
               <MaterialSymbol icon={shareIcon} />
               {t("Shared with me")}
             </h3>
+            {shownSharedFiles.length ? (
             <div class="storage-table-scroll">
               <table class="storage-table user-files-table">
                 <thead>
                   <tr>
-                    <th>{t("File name")}</th>
-                    <th>{t("Owner")}</th>
-                    <th>{t("Type")}</th>
-                    <th>{t("Size")}</th>
-                    <th>{t("Uploaded")}</th>
+                    {this.fileColumns(true).map((column) => this.renderSortableHeader(column))}
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {this.sharedFiles.map((file) => (
+                  {shownSharedFiles.map((file) => (
                     <tr key={file.id}>
                       <td><strong class="user-files-name">{file.filename}</strong></td>
                       <td>{file.owner || "—"}</td>
@@ -814,6 +975,12 @@ export class UserFilesPanel extends JSXElement {
                 </tbody>
               </table>
             </div>
+            ) : (
+              <div class="pinboard-empty">
+                <MaterialSymbol icon={folderIcon} />
+                <p>{t("No matches in {tab}.", { tab: t("Shared with me") })}</p>
+              </div>
+            )}
           </div>
         ) : null}
 
