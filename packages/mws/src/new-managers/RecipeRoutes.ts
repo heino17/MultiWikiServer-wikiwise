@@ -1,7 +1,6 @@
 import { zodRoute, SendError } from "@tiddlywiki/server";
 import { RecipeResolver } from "./RecipeResolver";
 import { serveWikiIndex } from "./RecipeIndexSender";
-import { invalidateThumbnail } from "./WikiThumbnailRoutes";
 // ---------------------------------------------------------------------------
 // Recipe-scoped endpoints (RSD, batch, list, status) — addressed by title.
 // ---------------------------------------------------------------------------
@@ -224,9 +223,10 @@ export const TiddlerBatch = zodRoute({
       throw new Error("Invalid op should have been caught by zod");
     });
 
-    if (op === "save" || op === "delete") {
-      invalidateThumbnail(state.config.storePath, recipe_slug);
-    }
+    // No thumbnail invalidation here any more: serveWikiThumbnail() compares
+    // the PNG's mtime against the wiki's newest tiddler change (see
+    // isStaleAfterEdit), so a save needs no event and cannot be lost by a
+    // server restart.
 
     return result;
   },

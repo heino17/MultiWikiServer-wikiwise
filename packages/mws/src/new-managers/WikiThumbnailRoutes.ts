@@ -32,37 +32,43 @@ async function unlinkThumbnail(storePath: string, slug: string): Promise<void> {
   }
 }
 
-/** Debounce window (ms) between the last save and the thumbnail being dropped.
- *  Keeps the preview intact while a wiki is actively being edited (TiddlyWiki
- *  autosaves call batch/save on every change), instead of deleting the PNG on
- *  each save which would re-render on the next list view. */
-function thumbnailDebounceMs(): number {
-  const value = Number.parseInt(process.env.MWS_THUMBNAIL_DEBOUNCE_SECONDS ?? "", 10);
-  return (Number.isFinite(value) && value >= 0 ? value : 180) * 1000;
+/** Grace period (ms): how long a wiki may be edited before its cached preview
+ *  counts as outdated. TiddlyWiki syncs roughly once a second while typing
+ *  (syncer.js throttles saves by 1000 ms), so this only has to outlast a pause
+ *  in writing — not a whole editing session. */
+function thumbnailGraceMs(): number {
+  const value = Number.parseInt(process.env.MWS_THUMBNAIL_GRACE_SECONDS ?? "", 10);
+  return (Number.isFinite(value) && value >= 0 ? value : 30) * 1000;
 }
 
-const invalidationTimers = new Map<string, NodeJS.Timeout>();
-
-/** Debounce invalidation of the cached thumbnail per wiki: subsequent saves
- *  reset the timer, and the PNG is removed once, shortly after the last save.
- *  The next thumbnail request then re-renders the wiki. */
-export function invalidateThumbnail(storePath: string, slug: string): void {
-  const key = slug;
-  const existing = invalidationTimers.get(key);
-  if (existing) clearTimeout(existing);
-  invalidationTimers.set(key, setTimeout(() => {
-    invalidationTimers.delete(key);
-    unlinkThumbnail(storePath, slug).catch((error: unknown) => {
-      console.error(`[thumbnail] failed to invalidate "${slug}":`, error);
-    });
-  }, thumbnailDebounceMs()));
+/** Whether the cached PNG predates the wiki's newest tiddler change and the
+ *  wiki has then been quiet for longer than the grace period.
+ *
+ *  Deliberately derived from the database rather than from a timer: a timer
+ *  only lives as long as the server process, so a restart inside the debounce
+ *  window silently kept a stale preview until the TTL expired. And the PNG is
+ *  *kept* rather than deleted — a stale preview is harmless, while a missing
+ *  one leaves an empty cell for everyone without write access (the public
+ *  landing page never renders at all) and costs a fresh ~2.5 s Chromium render
+ *  on the next list view. */
+async function isStaleAfterEdit(state: ServerRequest, bagIds: string[], pngMtimeMs: number): Promise<boolean> {
+  if (!bagIds.length) return false;
+  const newest = await state.engine.tiddler.aggregate({
+    where: { bag_id: { in: bagIds } },
+    _max: { updated: true },
+  });
+  if (!newest._max.updated) return false;
+  const editMs = newest._max.updated.getTime();
+  // The preview has to be younger than the newest change …
+  if (pngMtimeMs >= editMs) return false;
+  // … and the wiki has to have been quiet for the grace period, so that a wiki
+  // being actively edited does not re-render on every single autosave.
+  return Date.now() - editMs > thumbnailGraceMs();
 }
 
 /** Immediately drop the cached thumbnail of a wiki (used when the wiki itself
- *  is deleted) and cancel any pending debounced invalidation for the slug, so
- *  a leftover timer cannot wipe a re-created wiki's fresh thumbnail later. */
+ *  is deleted). */
 export async function deleteThumbnail(storePath: string, slug: string): Promise<void> {
-  invalidationTimers.delete(slug);
   await unlinkThumbnail(storePath, slug);
 }
 
@@ -240,7 +246,18 @@ function queue(key: string, fn: () => Promise<void>): Promise<void> {
 /** Maximum number of wiki renders running at once (each owns its own Chromium
  *  context). After a TTL expiry the whole wiki list re-renders on first view —
  *  this bounds the CPU/RAM spike instead of opening unlimited contexts.
- *  Overridable via MWS_THUMBNAIL_RENDER_CONCURRENCY (default 2, clamped 1..8). */
+ *  Overridable via MWS_THUMBNAIL_RENDER_CONCURRENCY (default 2, clamped 1..8).
+ *
+ *  Measured on a 4-core/8 GB host with 15 wikis: raising the default to 4
+ *  pushed the peak from 463 MB to 883 MB RAM (+420 MB, ~14 % of the free
+ *  memory) while the full re-render of all 15 wikis still took 90 s — the
+ *  individual renders merely stretched from ~4.5 s to 5.6–12.2 s. Rendering is
+ *  wait-bound (`networkidle` plus a fixed 2.5 s settle), not CPU-bound: 15
+ *  renders consumed 27 CPU-seconds, i.e. 29 % of four cores. Four parallel
+ *  renders of the same four small wikis needed 12.2 s against 18.3 s one after
+ *  the other — a factor of 1.5 for double the memory. Hence 2 stays the
+ *  default; raise it only where RAM is plentiful and wall-clock latency of a
+ *  full list re-render matters more. */
 function renderConcurrency(): number {
   const value = Number.parseInt(process.env.MWS_THUMBNAIL_RENDER_CONCURRENCY ?? "", 10);
   const n = Number.isFinite(value) ? value : 2;
@@ -338,7 +355,7 @@ export async function serveWikiThumbnail(state: ServerRequest) {
   // previously cached preview of a wiki they are allowed to read. Trying to
   // fetch the thumbnail of a private wiki answers like the wiki itself does
   // (404/403), so the public gallery cannot leak whether a wiki exists.
-  await RecipeResolver.assertRecipe({ state, recipe_slug });
+  const recipe = await RecipeResolver.assertRecipe({ state, recipe_slug });
 
   const dir = join(state.config.storePath, "thumbnails");
   await mkdir(dir, { recursive: true });
@@ -351,7 +368,11 @@ export async function serveWikiThumbnail(state: ServerRequest) {
     // Logged-in callers refresh the cache (bounded by render slots).
     // Anonymous visitors never trigger a headless browser render, so the
     // public landing page cannot be abused to run up CPU/RAM.
-    if (!cached || Date.now() - cached.mtimeMs > ttlMs) {
+    const expired = !cached || Date.now() - cached.mtimeMs > ttlMs;
+    const outdated = cached
+      ? await isStaleAfterEdit(state, recipe.recipe_bags.map(e => e.bag_id), cached.mtimeMs)
+      : false;
+    if (expired || outdated) {
       // A failed render is not a failed request: the wiki is still there, only
       // its preview is missing. Falling through answers 404, which is the path
       // the list already handles for a wiki without a cached picture.
@@ -364,11 +385,21 @@ export async function serveWikiThumbnail(state: ServerRequest) {
 
   const current = (await statSafe(outPath)) ?? cached;
   if (!current) {
-    state.writeHead(404, { contentType: { mediaType: "image/png" } });
+    // A missing preview must never stick in a browser cache: a 404 without
+    // explicit freshness headers is heuristically cacheable, so the list would
+    // keep showing an empty cell even after the PNG has been rendered — and
+    // only a hard reload (Ctrl+Shift+R) would clear it.
+    state.writeHead(404, { contentType: { mediaType: "image/png" }, cacheControl: "no-store" });
     return state.end();
   }
 
-  const maxAge = Math.floor(ttlMs / 1000);
+  // The URL is stable per wiki (`/wiki/<slug>/thumbnail`), so a `max-age`
+  // would freeze the picture in the browser for hours even though the server
+  // re-renders it on save (debounced) and on TTL expiry. The ETag below is
+  // derived from the PNG's mtime+size, so revalidation is both correct and
+  // cheap: `no-cache` revalidates on every view and answers 304 (no body) as
+  // long as nothing changed. The server-side TTL governs re-rendering, not
+  // how long a browser may reuse a byte-identical picture.
   const modifiedSeconds = Math.floor(current.mtimeMs / 1000) * 1000;
   const etag = `"${Math.floor(current.mtimeMs)}-${current.size}"`;
   const lastModified = new Date(modifiedSeconds).toUTCString();
@@ -381,7 +412,7 @@ export async function serveWikiThumbnail(state: ServerRequest) {
     && new Date(ifModifiedSince).getTime() >= modifiedSeconds;
 
   if (etagMatches || notModifiedSince) {
-    state.writeHead(304, { etag, lastModified, cacheControl: `private, max-age=${maxAge}` });
+    state.writeHead(304, { etag, lastModified, cacheControl: "private, no-cache" });
     return state.end();
   }
 
@@ -389,7 +420,7 @@ export async function serveWikiThumbnail(state: ServerRequest) {
     contentType: { mediaType: "image/png" },
     etag,
     lastModified,
-    cacheControl: `private, max-age=${maxAge}`,
+    cacheControl: "private, no-cache",
   });
   if (state.method !== "HEAD") {
     await state.pipeFrom(createReadStream(outPath));
