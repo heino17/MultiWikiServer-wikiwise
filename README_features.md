@@ -37,6 +37,7 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
 - **Live-Validierung beim Tippen:** Slug-Format (`mein-wiki`), und Verfügbarkeit von Slug/Bag-Namen/Benutzernamen sofort sichtbar (grün = frei, rot = vergeben)
 - **Löschen:** mit Bestätigung, Owner-/Admin-Schutz, geteilte Bags bleiben erhalten
 - **Öffentlich machen:** Wiki-Rezept und Bags geben an `ANON`→Lesen frei; ein öffentlich lesbares Wiki lässt sich zusätzlich von der Startseite nehmen (Pro-Wiki-Schalter)
+- **Blättern statt endloser Liste:** Standard sind 10 Wikis pro Seite (Zurück/Weiter plus „Seite X von Y" und Gesamtzahl); einstellbar unter „Einstellungen → Wikis pro Seite" (0 = alle in einer Liste). Die Gruppen „Meine Wikis", „Für dich freigegeben" und „System-Wikis" bleiben, und eine Gruppe, die über den Seitenwechsel läuft, wird auf der Folgeseite mit ihrer Überschrift wiederholt. Der eigentliche Gewinn ist der Renderaufwand: Nur die sichtbare Seite holt ihre Vorschaubilder
 
 ### Lehrer- & Klassenmodus (Schulbetrieb)
 
@@ -74,8 +75,11 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
 
 ### Wiki-Vorschau (Thumbnails)
 
-- Die Wiki-Liste zeigt echte **Vorschaubilder** (Headless-Screenshots der Wiki-Seite, per-User-Sicht): 640×400 auf `store/thumbnails/`, TTL 24 h, Klick öffnet das große Bild
-- Rendering serverseitig mit **Chromium** (max. 2 parallel), anonyme Besucher bekommen nur aus dem Cache bedient (DoS-Schutz); gelöschte Wikis räumen ihre Vorschau sofort und beim Serverstart automatisch weg
+- Die Wiki-Liste zeigt echte **Vorschaubilder** (Headless-Screenshots der Wiki-Seite, per-User-Sicht): 640×400 auf `store/thumbnails/`, Klick öffnet das große Bild
+- **Die Vorschau verschwindet beim Bearbeiten nicht mehr:** Sie bleibt nach der letzten Änderung stehen und wird erst nach einer kurzen **Schonfrist** (Vorgabe 30 s, `MWS_THUMBNAIL_GRACE_SECONDS`) im Hintergrund erneuert – wer kein Schreibrecht hat, sieht also nie ein leeres Feld. Die Schonfrist wird aus dem Datenbank-Stand ermittelt (jüngster Tiddler der Wiki), überlebt damit auch einen Server-Neustart
+- Veraltete PNGs werden **ersetzt, nicht gelöscht**; erst ein gelöschtes Wiki räumt sein Vorschaubild weg (sofort und beim nächsten Serverstart)
+- Rendering serverseitig mit **Chromium** (Vorgabe 2 parallel, `MWS_THUMBNAIL_RENDER_CONCURRENCY` 1–8), anonyme Besucher bekommen nur aus dem Cache bedient (DoS-Schutz); ein Chromium-Pfad ist über `MWS_CHROMIUM_PATH`/`CHROME_PATH` vorgebbar
+- Harte Cache-Obergrenze: `MWS_THUMBNAIL_TTL_HOURS` → Einstellung „Vorschaubild-Cache-Zeit" → Vorgabe 24 h
 
 ### Speicher & Backups
 
@@ -87,7 +91,7 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
 ### Admin-Einstellungen
 
 - **Standard-Sprache & Theme fürs 1. Laden** (Browser-/System-Folge wählbar), Feature-Schalter: Pinnwand, Meine Dateien, Upload im Wiki, Sprachwahl anzeigen, Vorschaubilder, Öffentliche Startseite, **Cookie-Hinweis**, **Impressum**
-- Thumbnail-Cache-Zeit (leer = 24 h), Markdown-Felder für Begrüßungstext, News und **Impressum-Text**; schreibgeschützt für Nicht-Admins
+- Thumbnail-Cache-Zeit (leer = 24 h), **Wikis pro Seite** (leer = 10, `0` = alle Wikis in einer Liste), Markdown-Felder für Begrüßungstext, News und **Impressum-Text**; schreibgeschützt für Nicht-Admins
 - Theme wird **vor dem ersten Paint** angewendet (kein Flash beim Öffnen); X-Button schließt die Einstellungen direkt zurück zur Übersicht
 
 ### Sicherheit
@@ -114,7 +118,7 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
 - **Admin-App:** eigenständige Web-App (Vanilla-JSX/Lit-Webkomponenten) ohne Framework; eingebettete SVG-Icons, lokale Fonts – keine externen Assets im Browser
 - **TiddlyWiki** als Wiki-Engine; mehrere Wikis pro Server über das Bag-/Recipe-System
 - **Passwörter:** OPAQUE (aPAKE) – serverseitig nur Hashes, kein Klartext, keine Passwortwörterbücher nötig
-- **Thumbnails:** headless Chromium (Playwright), paralleles Rendering begrenzt, TTL-Cache in `store/thumbnails/`
+- **Thumbnails:** headless Chromium (Playwright), begrenztes paralleles Rendering, Cache in `store/thumbnails/` mit harter TTL und Schonfrist nach Änderungen
 - **Dateispeicher:** content-addressed (`store/files/<sha256>/`), Streaming-Uploads über die Inbox
 - **8 Sprachen:** `en`, `de`, `es`, `fr`, `ja`, `ko`, `ru`, `zh-cn` (Admin-App, Wiki-Client, Startseite)
 
@@ -165,6 +169,7 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
 - **Live validation while typing:** slug format (`my-wiki`) and availability of slug/bag name/username are shown instantly (green = free, red = taken)
 - **Deleting:** with confirmation, owner/admin protection; shared bags stay intact
 - **Going public:** wiki recipe and bags grant `ANON`→read; a publicly readable wiki can additionally be removed from the start page (per-wiki switch)
+- **Paging instead of an endless list:** 10 wikis per page by default (Previous/Next plus "Page X of Y" and the total), configurable under "Settings → Wikis per page" (0 = all in one list). The "My wikis" / "Shared with you" / "System wikis" groups stay, and a group that runs across a page boundary is repeated on the next page with its heading. The real saving is render work: only the visible page fetches its preview images
 
 ### **Teacher & Classroom Mode (school operation)**
 - **Teacher role** (`TEACHER`): a delegated user manager – creates students, sets passwords, manages **only their own class**; the capability is tied to a role **flag**, not the name (survives any renaming)
@@ -194,10 +199,14 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
 - **Sharing by account type:** admin shares reach everyone, teacher shares reach their classes (never other teachers), student shares reach only chosen recipients; unshared files → 404
 - Audio/video with **range support** (seeking), Markdown and ODT preview are rendered client-side **without HTML parsing** (XSS-safe)
 - **"Upload file" right in the wiki:** the wiki toolbar stores files in the **wiki owner's** file store – even when you write in a foreign wiki as a guest/teacher
+- **Embedding wiki files:** after the upload, a window shows the ready-to-paste TiddlyWiki code (`[img[...]]` for images, `[ext[...]]` otherwise); the "Files in this wiki" button lists all files of the wiki with preview. Visibility = **wiki read access** (no separate share needed); personal files stay private
 
 ### **Wiki Previews (Thumbnails)**
-- The wiki list shows real **preview images** (headless screenshots of the wiki page, per-user view): 640×400 in `store/thumbnails/`, 24 h TTL, a click opens the large image
-- Rendered server-side with **Chromium** (max. 2 parallel); anonymous visitors are served only from cache (DoS protection); deleted wikis have their preview removed immediately and automatically swept on server start
+- The wiki list shows real **preview images** (headless screenshots of the wiki page, per-user view): 640×400 in `store/thumbnails/`, a click opens the large image
+- **The preview no longer vanishes while a wiki is edited:** it stays in place after the last change and is only refreshed in the background once a short **grace period** has passed (default 30 s, `MWS_THUMBNAIL_GRACE_SECONDS`) – so anyone without write access never sees an empty cell. The grace period is derived from the database state (the wiki's newest tiddler) and therefore survives a server restart
+- Outdated PNGs are **replaced, not deleted**; only a deleted wiki sweeps its preview away (immediately and on the next server start)
+- Rendered server-side with **Chromium** (default 2 parallel, `MWS_THUMBNAIL_RENDER_CONCURRENCY` 1–8); anonymous visitors are served only from cache (DoS protection); a Chromium path can be given via `MWS_CHROMIUM_PATH`/`CHROME_PATH`
+- Hard cache limit: `MWS_THUMBNAIL_TTL_HOURS` → setting "Thumbnail cache time" → default 24 h
 
 ### **Storage & Backups**
 - **Admin "Storage" tab:** system disk with traffic-light status, app storage usage, record counts (tiddlers/bags/wikis/templates/users) and directory categories with a legend
@@ -207,7 +216,7 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
 
 ### **Admin Settings**
 - **Default language & theme for the first load** (follow browser/system), feature switches: pinboard, My files, upload in wiki, show language selector, previews, public start page, **cookie notice**, **legal notice**
-- Thumbnail cache time (empty = 24 h), Markdown fields for welcome message, news and **legal notice text**; read-only for non-admins
+- Thumbnail cache time (empty = 24 h), **Wikis per page** (empty = 10, `0` = all wikis in one list), Markdown fields for welcome message, news and **legal notice text**; read-only for non-admins
 - The theme is applied **before the first paint** (no flash on load); an X button closes Settings straight back to the overview
 
 ### **Security**
@@ -232,7 +241,7 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
 - **Admin app:** a standalone web app (vanilla JSX/Lit web components) without a framework; embedded SVG icons, local fonts – no external assets in the browser
 - **TiddlyWiki** as the wiki engine; multiple wikis per server via the bag/recipe system
 - **Passwords:** OPAQUE (aPAKE) – only hashes server-side, no plaintext, no password dictionaries needed
-- **Thumbnails:** headless Chromium (Playwright), capped parallel rendering, TTL cache in `store/thumbnails/`
+- **Thumbnails:** headless Chromium (Playwright), capped parallel rendering, cache in `store/thumbnails/` with a hard TTL and a grace period after edits
 - **File store:** content-addressed (`store/files/<sha256>/`), streaming uploads via the inbox
 - **8 languages:** `en`, `de`, `es`, `fr`, `ja`, `ko`, `ru`, `zh-cn` (admin app, wiki client, start page)
 
