@@ -7668,6 +7668,171 @@ Rezept- und Bag-Rechte der Anleitung unverändert, nur der Anleitungs-Bag
 
 ---
 
+## 74. Fix: Thumbnails im Browser-Cache eingefroren (Bild aktualisiert sich erst nach Strg+Shift+R)
+
+Nach §43 (Thumbnail-Anzeige) kam die Meldung: ein neu angelegter Tiddler
+erscheint nicht im Vorschaubild, ein `Strg+Shift+R` zeigt ihn aber sofort.
+Die Serverlogik aus §43 arbeitet dabei korrekt — der Fehler lag an zwei
+Response-Headern in `serveWikiThumbnail()`
+(`WikiThumbnailRoutes.ts`).
+
+**Ursache 1 — `Cache-Control: private, max-age=<TTL>`:** Die Bild-URL ist pro
+Wiki stabil (`/wiki/<slug>/thumbnail`, `store.ts:316`), und `max-age` stand auf
+dem **Server-TTL** (24 h). Der Browser stellte die Anfrage also bis zu 24 Stunden
+gar nicht erst — die Revalidierung über `ETag`/`If-Modified-Since`, die direkt
+darunter bereits vollständig implementiert ist, wurde nie erreicht. Der Server
+konnte das PNG noch so oft neu rendern: das im Browser liegende Exemplar blieb
+stehen. `max-age` war hier doppelt falsch — der TTL steuert, **wann der Server
+neu rendert**, nicht, wie lange ein Browser ein *byteidentisches* Bild behalten
+darf. Verifiziert am Beispiel `wiki-heino`: Tiddler `New Tiddler` um 08:07
+gespeichert, PNG serverseitig um 10:19 neu gerendert, HTTP-Header davor
+`cache-control: private, max-age=86400` bei unveränderter URL.
+
+**Fix:** `private, no-cache` (statt `max-age`) für 200 und 304. Der Browser
+fragt damit bei jedem Anzeigen nach, bekommt bei Unverändertheit aber nur einen
+304 ohne Body — der ETag wird aus `mtime`+`Größe` der PNG-Datei gebildet, ist
+also nach einem Re-Render garantiert neu.
+
+**Ursache 2 — der 404 ohne Cache-Header:** Für ein Wiki ohne PNG antwortete die
+Route mit `writeHead(404, {contentType})` und **ohne** `Cache-Control`. Ein 404
+ohne Frische-Informationen ist laut HTTP heuristisch cachebar, der Browser
+konnte sich also den „kein Bild"-Zustand merken und lange weiter ausliefern,
+nachdem das PNG längst existierte. Genau das ist beim Wiki *MWS
+Bedienungsanleitung* passiert: Das Vorschaubild fehlte über Stunden in der
+Admin-Liste, obwohl die Route es jederzeit hätte rendern können — der Browser
+wollte es nur nicht mehr laden. **Fix:** `404` antwortet jetzt mit
+`cache-control: no-store`.
+
+**Bleibende, gewollte Verzögerung:** Der 180-s-Debounce aus §43 (TiddlyWiki
+autosavet bei jedem Tipp) und das Rendern erst beim nächsten Listenaufruf
+bleiben unverändert. Erwartetes Verhalten ist damit: Tiddler speichern → ca.
+3 min warten → Wikis-Tab (neu) laden → neues Bild. Kein Neuladen der Seite und
+kein Hard-Reload mehr nötig. *(Diese Verzögerung ist in §75 auf 60 s verkürzt und
+das Löschen des PNG abgeschafft — die Abschnitte 74 und 75 gehören zusammen.)*
+
+**Verifiziert** gegen den laufenden Server:
+
+| Fall | vorher | nachher |
+| --- | --- | --- |
+| Abruf | `200`, `max-age=86400` | `200`, `private, no-cache` + `ETag` |
+| `If-None-Match` = aktuell | — | `304 Not Modified` (kein Body) |
+| `If-None-Match` = veraltet | — | `200` mit neuem Bild |
+| PNG fehlt | `404` ohne Header | `404`, `no-store` |
+
+Zwei kleinere Beobachtungen aus demselben Durchgang (kein Fehler, nur
+Erklärung): `recipe.compiledAt` wird nur beim Speichern der
+Wiki-**definition** aktualisiert, nicht beim Speichern eines Tiddlers — es taugt
+deshalb nicht als Cache-Buster, wohl aber `lastEventId`/`tiddler.updated`, falls
+man später einmal versionierte URLs (`?v=…`) statt Revalidierung will. Und
+`bedienungsanleitung.png` existierte bis zum Hard-Reload gar nicht: die Datei
+entstand erst um 10:19, also durch die erzwungene Neuanfrage.
+
+---
+
+## 75. Fix: Vorschau veraltet nicht mehr, statt zu verschwinden (kein Leerbild mehr beim Tippen)
+
+Der Cache-Fix aus §74 hat die Anzeige zuverlässig gemacht, aber die Wartezeit
+blieb unverändert: 180 s Debounce plus Rendern erst beim nächsten Listenaufruf.
+Grund: TiddlyWiki sendet bei jedem Tastendruck einen Sync (`syncer.js`
+`throttleInterval = 1000`), und §43 ließ das PNG **löschen**, sobald nach 180 s
+Ruhe ein Tiddler gespeichert worden war. In diesem Zeitfenster war das Bild weg —
+bei einem echten Render (etwa 2,5 s Chromium) hatte die Wiki-Liste für alle
+Besucher ohne Schreibrecht eine leere Zelle, denn nur angemeldete Nutzer
+rendern überhaupt.
+
+**Ursache der 3 Minuten, in Zahlen:** `syncer.js` drosselt Saves auf einen pro
+Sekunde (`throttleInterval = 1000`), der Task-Timer des Servers läuft mit 250 ms,
+also nach der letzten Änderung summa 1,25 s. Der Debounce in §43 war deshalb auf
+180 s gesetzt, damit ein tippender Benutzer nicht jedes Vorschaubild neu rendert.
+Der Preis: bis zu drei Minuten bis zur Aktualisierung.
+
+**Änderung — Freshness aus der Datenbank statt Timer:**
+`serveWikiThumbnail()` vergleicht jetzt das `mtime` desliegenden PNG mit dem
+neuesten `tiddler.updated` über die Bags des Recipes (`isStaleAfterEdit()`,
+eine `aggregate`-Abfrage auf `_max(updated)`). Der Aufrufer `RecipeRoutes.ts`
+ruft nach `batch/save` und `batch/delete` **gar nichts** mehr auf, es gibt keine
+`invalidationTimers` mehr und das PNG wird nie gelöscht. Neu gerendert wird nur
+noch, wenn
+
+1. kein PNG existiert,
+2. das Server-TTL (§43, `admin.thumbnailTtlHours`) abgelaufen ist, oder
+3. das PNG älter als der letzte Tiddler-Save ist **und** das Wiki seitdem
+   `thumbnailGraceMs()` ms Ruhe hat (Default **30 s**,
+   `MWS_THUMBNAIL_GRACE_SECONDS`; der alte Name
+   `MWS_THUMBNAIL_DEBOUNCE_SECONDS` entfällt).
+
+Damit bleibt ein veraltetes Vorschaubild sichtbar und wird nach 60 s Schreibpause
+beim nächsten Abruf ersetzt — statt zu verschwinden. Der Vergleich überlebt
+außerdem einen Neustart: der Debounce-Timer aus §43 lebte nur im Prozess, und ein
+Neustart innerhalb des Fensters ließ ein veraltetes Bild bis zum TTL (24 h)
+stehen. Gelöscht wird weiterhin nur beim **Löschen des Wikis**
+(`deleteThumbnail()`), und der Aufräumlauf über verwaiste Dateien beim Start
+(`sweepOrphanedThumbnails()`) bleibt unverändert.
+
+**Verifiziert** gegen den laufenden Server, echte `batch/save`-Aufrufe inklusive
+(die Messung entstand mit dem damals eingestellten Grace von 60 s, der Default
+ist inzwischen auf 30 s gesenkt):
+
+| Fall | Ergebnis |
+| --- | --- |
+| PNG neuer als letzter Save | `200` in 19 ms, kein Render |
+| Save, Abruf sofort (innerhalb der Grace) | `200` in 19 ms, PNG unverändert, altes Bild sichtbar |
+| Save, Abruf anonym während der Grace | `200`, PNG vorhanden |
+| Abruf nach 62 s Ruhe | `200` in 4,6 s, PNG neu gerendert |
+| Tiddler neuer als PNG, Grace 0 | `200` in 4,0 s, PNG neu gerendert |
+| Header unverändert | `200`/`304`: `private, no-cache`; `404`: `no-store` |
+
+**Grace-Default von 60 s auf 30 s gesenkt**, `MWS_THUMBNAIL_RENDER_CONCURRENCY`
+bleibt bei **2**. Beides sind reine Defaults, per Umgebungsvariable weiterhin
+überschreibbar; die Parallelität wird einmal beim Start gelesen, ein Neustart
+genügt also.
+
+Warum die Grace kein Last-Treiber ist: Ein Render wird ausschließlich
+angefordert — es gibt keinen Hintergrund-Job, der alle Wikis neu rendert. „Viele
+Wikis im Einsatz" erzeugt für sich genommen keine Last, nur „viele Wikis, die
+gerade veraltet sind **und** angesehen werden". Verlängerte Denkpausen von 30–60 s
+werden jetzt gerendert; das kostet Renders, aber keine RAM/CPU ohne Anlass. Der
+inhaltliche Preis: häufiger entsteht ein Bild aus einem halbfertigen
+Bearbeitungsstand.
+
+Warum die Parallelität bei 2 bleibt — gemessen auf 4 Kernen / 8 GB mit 15 Wikis,
+alle Thumbnails entfernt und alle 15 parallel neu gerendert:
+
+| | Wert |
+| --- | --- |
+| RAM in Ruhe | 463 MB (151 MB Node + 312 MB untätiger Browser) |
+| RAM-Spitze bei 4 gleichzeitigen Renders | 883 MB (+420 MB, ~14 % des freien Speichers) |
+| CPU beim Voll-Render | 26,9 CPU-Sekunden = **29 % von 4 Kernen** |
+| Wandzeit Voll-Render aller 15 Wikis (4 Slots) | 89,95 s |
+
+Das Rendern ist **warte-, nicht CPU-gebunden**: `page.goto(…, networkidle)` mit
+60 s Timeout plus 2,5 s Wartezeit vor dem Screenshot, dazu
+Software-Rendering (`--disable-gpu`) — im Node-Prozess selbst landen 0,00 s CPU,
+die Last steckt vollständig in Chromium. Derselbe Auftrag mit vier kleinen Wikis,
+zweimal ausgeführt:
+
+| | Wandzeit | je Render |
+| --- | --- | --- |
+| 4 parallel (Concurrency 4) | **12,24 s** | 5,6 – 12,2 s |
+| nacheinander (Concurrency 1) | **18,27 s** | 4,0 – 4,8 s |
+
+Faktor **1,5** für doppelten Speicherbedarf. Hochgerechnet auf die 15er-Burst ist
+der Zeitgewinn entsprechend klein (seriell ~70–90 s, mit 4 Slots 90 s), weil sich
+die einzelnen Renders von ~4,5 s auf 5,6–12,2 s dehnen. Auf dieser Maschine
+lohnt die höhere Parallelität also nicht; sie bleibt deshalb bei 2 und ist für
+Installationen mit viel RAM weiterhin per Umgebungsvariable bis 8 anhebbar. Was
+hier überhaupt spürbar war, ist die Wandzeit des Voll-Renders selbst: 90 s bis
+das letzte Bild einer Wiki-Liste da ist.
+
+Nebenbefund beim Messen: Der 404 der **Rechteprüfung** (privates Wiki, anonymer
+Abruf) trägt weiterhin keinen `Cache-Control`. Das ist das generische MWS-Verhalten
+für alle Routen, nicht thumbnailspezifisch; ein pauschales `no-store` als Default
+wurde verworfen, weil `Cache-Control` beim Antworten *merge* statt ersetzt wird
+und daraufhin jede erfolgreiche Antwort widersprüchlich
+`no-store, private, no-cache` ausgeliefert hätte.
+
+---
+
 ## Betrieb / Ausblick
 
 - Start über `npm start` (`scripts.mjs` → `tsup` + `mws.dev.mjs`), im
