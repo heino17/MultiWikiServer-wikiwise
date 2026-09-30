@@ -7868,6 +7868,30 @@ Feldes (Zeile wird gelöscht, der Default 10 greift); 999, −3 und `"abc"` werd
 mit 400 abgewiesen, der gespeicherte Wert bleibt unverändert.
 
 
+## 77. Bags-Tab: Rollen untereinander statt als Kommaliste
+
+Die Spalte „Berechtigungen" im Bags-Tab zeigte die Rollen eines Bags als **eine**
+kommaseparierte Zeile („ADMIN, USER, ANON"). Jede weitere Rolle machte die Zeile
+breiter, und weil die Spalte ganz rechts steht, war genau sie diejenige, die aus
+dem Fenster rutschte – man musste horizontal scrollen, um sie zu sehen.
+
+**Wie in der Wiki-Liste:** Dort stehen `recipeUsers`, `recipeAdmins` und
+`groupRoles` schon länger als untereinander gesetzte Badges (`list-access-names`),
+und genau das fehlte hier. Der Bags-Tab nutzt diese Darstellung jetzt ebenfalls –
+eine Rolle pro Zeile statt nebeneinander.
+
+Der Wert kommt unverändert als kommaseparierter String aus der Aufbereitung
+(`summarizePermissionRoles()` in `definition/store.ts`) und wird nur noch in der
+Listen-Zelle aufgeteilt; am Datensatz ändert sich nichts, damit Export und
+Detailansicht unberührt bleiben.
+
+**Gemessen** (zweite Dev-Instanz, 1600 px breites Fenster): Spalte
+„Berechtigungen" 347 → 156 px, der horizontale Overflow der Liste schrumpft von
+245 px auf 55 px. Der Templates-Tab hat dieselbe Kommasepalte („Readonly bags"),
+ist hier aber unauffällig (153 px, kein Überlauf), weil die installierte Vorlage
+keine Readonly-Bags führt.
+
+
 ---
 
 ## Betrieb / Ausblick
