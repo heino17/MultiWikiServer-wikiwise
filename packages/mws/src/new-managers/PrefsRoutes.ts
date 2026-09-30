@@ -18,6 +18,7 @@ export const PREF_KEYS = {
   showThumbnails: "admin.showThumbnails",
   showLoginPuzzle: "admin.showLoginPuzzle",
   thumbnailTtlHours: "admin.thumbnailTtlHours",
+  wikisPerPage: "admin.wikisPerPage",
   showLanding: "admin.showLanding",
   landingMessage: "admin.landingMessage",
   landingNews: "admin.landingNews",
@@ -50,6 +51,9 @@ export interface ServerPrefs {
   showLoginPuzzle: boolean;
   /** Thumbnail cache time in hours. `null` = install default (24h). */
   thumbnailTtlHours: number | null;
+  /** Wikis shown at once in the admin "Wikis" list. `null` = install default
+   *  (10); `0` = no pagination, the list shows every wiki in one go. */
+  wikisPerPage: number | null;
   /** Serve a public landing page to anonymous visitors at "/" instead of
    *  redirecting them straight to the login form. */
   showLanding: boolean;
@@ -83,6 +87,7 @@ export const INSTALL_DEFAULTS: { key: string; value: string }[] = [
   { key: PREF_KEYS.showThumbnails, value: "true" },
   { key: PREF_KEYS.showLoginPuzzle, value: "true" },
   { key: PREF_KEYS.thumbnailTtlHours, value: "24" },
+  { key: PREF_KEYS.wikisPerPage, value: "10" },
   { key: PREF_KEYS.showLanding, value: "true" },
   {
     key: PREF_KEYS.landingMessage,
@@ -136,6 +141,8 @@ export async function readPrefs(prisma: PrismaTxnClient): Promise<ServerPrefs> {
     : null;
   const rawTtl = map.get(PREF_KEYS.thumbnailTtlHours);
   const ttlHours = rawTtl == null ? null : Number.parseInt(rawTtl, 10);
+  const rawPerPage = map.get(PREF_KEYS.wikisPerPage);
+  const perPage = rawPerPage == null ? null : Number.parseInt(rawPerPage, 10);
   return {
     defaultLocale,
     defaultTheme,
@@ -146,6 +153,7 @@ export async function readPrefs(prisma: PrismaTxnClient): Promise<ServerPrefs> {
     showThumbnails: boolPref(map, PREF_KEYS.showThumbnails, true),
     showLoginPuzzle: boolPref(map, PREF_KEYS.showLoginPuzzle, true),
     thumbnailTtlHours: ttlHours != null && Number.isFinite(ttlHours) && ttlHours > 0 ? ttlHours : null,
+    wikisPerPage: perPage != null && Number.isFinite(perPage) && perPage >= 0 ? perPage : null,
     showLanding: boolPref(map, PREF_KEYS.showLanding, true),
     landingMessage: map.get(PREF_KEYS.landingMessage)?.trim() || null,
     landingNews: map.get(PREF_KEYS.landingNews)?.trim() || null,
@@ -186,6 +194,7 @@ export const AdminPrefsPut = zodRoute({
     showThumbnails: z.boolean().nullable(),
     showLoginPuzzle: z.boolean().nullable(),
     thumbnailTtlHours: z.number().int().min(1).max(2160).nullable(),
+    wikisPerPage: z.number().int().min(0).max(200).nullable(),
     showLanding: z.boolean().nullable(),
     landingMessage: z.string().max(2000).nullable(),
     landingNews: z.string().max(10000).nullable(),
@@ -209,6 +218,7 @@ export const AdminPrefsPut = zodRoute({
       showThumbnails,
       showLoginPuzzle,
       thumbnailTtlHours,
+      wikisPerPage,
       showLanding,
       landingMessage,
       landingNews,
@@ -227,6 +237,7 @@ export const AdminPrefsPut = zodRoute({
     if (showThumbnails != null) entries.push({ key: PREF_KEYS.showThumbnails, value: showThumbnails ? "true" : "false" });
     if (showLoginPuzzle != null) entries.push({ key: PREF_KEYS.showLoginPuzzle, value: showLoginPuzzle ? "true" : "false" });
     if (thumbnailTtlHours != null) entries.push({ key: PREF_KEYS.thumbnailTtlHours, value: String(thumbnailTtlHours) });
+    if (wikisPerPage != null) entries.push({ key: PREF_KEYS.wikisPerPage, value: String(wikisPerPage) });
     if (showLanding != null) entries.push({ key: PREF_KEYS.showLanding, value: showLanding ? "true" : "false" });
     if (landingMessage != null) entries.push({ key: PREF_KEYS.landingMessage, value: landingMessage.trim() });
     if (landingNews != null) entries.push({ key: PREF_KEYS.landingNews, value: landingNews.trim() });

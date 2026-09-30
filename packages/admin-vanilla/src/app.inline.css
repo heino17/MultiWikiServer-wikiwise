@@ -998,6 +998,64 @@ h6 {
 	padding-top: 8px;
 }
 
+/* Pager under the wikis list. Sits inside the section, so it spans the full
+   width below the last row instead of aligning to the grid columns. */
+.list-pager {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 16px;
+	flex-wrap: wrap;
+	margin-top: 18px;
+	padding-top: 16px;
+	border-top: 1px solid var(--color-border-soft);
+}
+
+.pager-status {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+	font-size: 0.9rem;
+	color: var(--color-text-strong);
+}
+
+.pager-status small {
+	font-size: 0.76rem;
+	color: var(--color-text-faint);
+}
+
+.pager-button {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 8px 16px;
+	border-radius: 999px;
+	border: 1px solid var(--color-border-soft);
+	background: var(--color-surface-pill);
+	color: var(--color-text-strong);
+	font: inherit;
+	font-size: 0.88rem;
+	cursor: pointer;
+}
+
+.pager-button:hover:not(:disabled),
+.pager-button:focus-visible {
+	background: var(--color-accent-fill);
+	color: var(--color-text-on-accent);
+	border-color: transparent;
+}
+
+.pager-button:disabled {
+	opacity: 0.45;
+	cursor: default;
+}
+
+.pager-arrow {
+	font-size: 1.1rem;
+	line-height: 1;
+}
+
 .shared-areas-badge {
 	display: inline-flex;
 	align-items: center;
