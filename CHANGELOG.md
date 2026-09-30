@@ -8044,11 +8044,19 @@ Faltung aus §78 gilt dadurch unverändert auch hier (siehe unten).
 `t("My files")` bzw. `t("Shared with me")` eingesetzt, damit der Platzhalter
 in jeder Sprache passt.
 
-**Geprüft** (zweite Dev-Instanz, Playwright): 122 Checks bestanden, davon 24
+**Geprüft** (zweite Dev-Instanz, Playwright): 124 Checks bestanden, davon 24
 für diesen Abschnitt. Sortiert wird numerisch nach Größe (1.5 KB → 54.5 MB,
 „KB steht vor MB"), Suche und Sortierung wirken zusammen, der dritte Klick
 stellt die Serverreihenfolge wieder her, „Clear sorting" und der ×-Button
 funktionieren, kein horizontaler Overflow. `tsc --noEmit` und `tsup` sauber.
+
+Zwei weitere Checks sichern eine Aussage, die erst in die READMEs kam: die
+Badge-Spalten werden über ihren **Klartext** gefunden, nicht über ihren Wert.
+`private` liefert 10 Zeilen und 10 Private-Badges, `shared` 3 Zeilen und
+3 Shared-Badges – in der Zelle steht kein Wort, gesucht wird die Beschriftung.
+Die erste Fassung des Tests suchte `owner` und fand nichts: als Admin haben
+alle Wikis durchgehend Admin-Rechte, es gibt schlicht keine Owner-Badge zu
+finden. Der Test wurde auf das korrigiert, was tatsächlich vorhanden ist.
 
 Zusätzlich am echten Nicht-Admin-Konto geprüft (Testnutzer angelegt, eine
 Datei namens „Straßennamen-Liste.txt" hochgeladen, danach wieder gelöscht):

@@ -72,6 +72,8 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
 - Audio/Video mit **Range-Support** (Suchen/Seeken), Markdown und ODT-Vorschau werden clientseitig **ohne HTML-Parsing** (XSS-sicher) gerendert
 - **„Upload file" direkt im Wiki:** die Wiki-Werkzeugleiste lädt Dateien in den Dateispeicher des **Wiki-Besitzers** – auch wenn man als Gast/Lehrer im fremden Wiki schreibt
 - **Wiki-Dateien einbinden:** Nach dem Upload zeigt ein Fenster den fertigen TiddlyWiki-Code (`[img[...]]` für Bilder, `[ext[...]]` sonst); der Ordner-Button „Dateien in diesem Wiki" listet alle Wiki-Dateien mit Vorschau. Sichtbarkeit = **Wiki-Leserecht** (keine separate Freigabe nötig); persönliche Dateien bleiben privat
+- **Ein Suchfeld für beide Tabellen** (eigene Dateien *und* „Geteilt mit mir"): eine Datei ist eine Datei, egal ob selbst hochgeladen oder geteilt; die Trefferzahl zählt über beide Abschnitte. Durchsucht werden Name, Typ, Besitzer und der Klartext des „Geteilt"-Badges, nicht der Dateiinhalt – der Index wächst sonst mit jedem hochgeladenen Megabyte
+- **Der geteilte Abschnitt verschwindet nicht beim Filtern:** er zeigt seinen eigenen Leerzustand („No matches in Shared with me.") – sonst wäre nicht unterscheidbar, ob die Suche schuld war oder ob wirklich niemand etwas geteilt hat
 
 ### Wiki-Vorschau (Thumbnails)
 
@@ -106,6 +108,10 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
 
 ### Oberfläche & Sprachen
 
+- **Suche in allen sechs Listen** (Wikis, Templates, Bags, Rollen, Benutzer, Meine Dateien): ein Feld filtert beim Tippen, dazu Trefferzahl „X von Y" und ein Klick-Button zum Leeren. Groß-/Kleinschreibung, Umlaute und „ß" werden ignoriert – „schuler" findet „Schüler", „strasse" findet „Straße". Durchsucht werden nur benannte, sichtbare Spalten; Badge-Spalten sind über ihren Klartext auffindbar – „private" findet die Wikis ohne geteilten Bereich, „shared" die geteilten, obwohl in der Zelle kein Wort steht
+- **Sortieren per Spaltenkopf:** Klick aufsteigend, nochmal absteigend, dritter Klick nimmt die Sortierung weg. Zahlen in Textfeldern zählen numerisch („10 Bags" hinter „9 Bags"), ISO-Daten chronologisch, „3 / 5" bzw. „3 / ∞" nach dem aktuellen Verbrauch, **Dateigrößen nach den echten Bytes** („950.4 KB" vor „2.3 MB"). Leere Werte bleiben in beiden Richtungen ganz unten. Aktive Spalte mit Pfeil, `aria-sort` und Screenreader-Angabe, Taste mit sprechendem Namen („Sort by Slug")
+- **Gruppierung weicht der Sortierung:** in der Wiki-Liste stehen sonst „Meine Wikis", „Für dich freigegeben" und „System-Wikis". Sobald sortiert wird, gibt es **eine** flache Liste über alle Gruppen – sonst würde die Gruppierung das Ergebnis in drei Blöcke zerreißen; der dritte Klick stellt sie wieder her
+- **Je Tab eigener Zustand:** Query und Sortierung bleiben beim Tabwechsel erhalten, aber nur im Arbeitsspeicher – eine gespeicherte Sortierung würde ein Update überleben, in dem die Spalte umbenannt wurde, und dann nach nichts sortieren
 - **8 Sprachen** in der gesamten Admin-App (500+ Keys, Sprachenumschalter in der Kopfzeile) *und* im TiddlyWiki-Client (folgt automatisch der Wiki-Sprache, 23 Strings)
 - **Hell-/Dunkel-Modus** mit Umschalter (System-Folge, warme helle Grundierung), ohne Flackern beim Laden
 - **Verständliche, übersetzte Fehlermeldungen** statt roher JSON-Blöcke
@@ -200,6 +206,8 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
 - Audio/video with **range support** (seeking), Markdown and ODT preview are rendered client-side **without HTML parsing** (XSS-safe)
 - **"Upload file" right in the wiki:** the wiki toolbar stores files in the **wiki owner's** file store – even when you write in a foreign wiki as a guest/teacher
 - **Embedding wiki files:** after the upload, a window shows the ready-to-paste TiddlyWiki code (`[img[...]]` for images, `[ext[...]]` otherwise); the "Files in this wiki" button lists all files of the wiki with preview. Visibility = **wiki read access** (no separate share needed); personal files stay private
+- **One search field for both tables** (own files *and* "Shared with me"): a file is a file, whether uploaded by you or shared with you; the hit count spans both sections. Name, type, owner and the plain wording of the "Shared" badge are searched – not the file content, because that index would grow with every uploaded megabyte
+- **The shared section does not vanish while filtering:** it shows its own empty state ("No matches in Shared with me.") – otherwise you could not tell whether the search caused it or whether really nobody shared anything
 
 ### **Wiki Previews (Thumbnails)**
 - The wiki list shows real **preview images** (headless screenshots of the wiki page, per-user view): 640×400 in `store/thumbnails/`, a click opens the large image
@@ -229,6 +237,10 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
 - **Legal notice page** at `/legal-notice` – your own Markdown text, HTML is escaped; linked in the footer of the start page and the admin app
 
 ### **User Interface & Languages**
+- **Search in all six lists** (wikis, templates, bags, roles, users, my files): one field filters as you type, with a hit count "X of Y" and a one-click clear button. Case, umlauts and "ß" are ignored – "schuler" finds "Schüler", "strasse" finds "Straße". Only named, visible columns are searched; badge columns are findable by their plain wording – "private" finds the wikis without a shared area, "shared" the shared ones, even though the cell holds no word at all
+- **Sort by column header:** click for ascending, click again for descending, a third click removes the sort. Numbers inside text fields count numerically ("10 bags" after "9 bags"), ISO dates sort chronologically, "3 / 5" resp. "3 / ∞" by current usage, and **file sizes by their real byte count** ("950.4 KB" before "2.3 MB"). Empty values stay at the bottom in both directions. The active column gets an arrow, `aria-sort` and a screen-reader note; the button has a speaking name ("Sort by Slug")
+- **Grouping yields to sorting:** the wiki list otherwise shows "My wikis", "Shared with you" and "System wikis". As soon as a column is sorted, there is **one** flat list across all groups – otherwise the grouping would tear the result into three blocks; the third click restores it
+- **State per tab:** query and sort survive a tab switch, but in memory only – a stored sort would outlive an update that renamed the column and then sort by nothing
 - **8 languages** in the entire admin app (500+ keys, language switch in the header) *and* in the TiddlyWiki client (follows the wiki language automatically, 23 strings)
 - **Light/Dark mode** with toggle (follows system, warm light base), no flicker on load
 - **Clear, translated error messages** instead of raw JSON blocks
