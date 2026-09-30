@@ -54,6 +54,8 @@ export class SettingsForm extends JSXElement {
 
   @state() accessor thumbnailTtlHours = embeddedServerResponse.prefs?.thumbnailTtlHours ?? null;
 
+  @state() accessor wikisPerPage = embeddedServerResponse.prefs?.wikisPerPage ?? null;
+
   @state() accessor showLanding = embeddedServerResponse.prefs?.showLanding ?? true;
 
   @state() accessor landingMessage = embeddedServerResponse.prefs?.landingMessage ?? "";
@@ -92,6 +94,7 @@ export class SettingsForm extends JSXElement {
       if (typeof prefs.showThumbnails === "boolean") this.showThumbnails = prefs.showThumbnails;
       if (typeof prefs.showLoginPuzzle === "boolean") this.showLoginPuzzle = prefs.showLoginPuzzle;
       if (typeof prefs.thumbnailTtlHours === "number") this.thumbnailTtlHours = prefs.thumbnailTtlHours;
+      if (typeof prefs.wikisPerPage === "number") this.wikisPerPage = prefs.wikisPerPage;
       if (typeof prefs.showLanding === "boolean") this.showLanding = prefs.showLanding;
       if (typeof prefs.landingMessage === "string") this.landingMessage = prefs.landingMessage;
       if (typeof prefs.landingNews === "string") this.landingNews = prefs.landingNews;
@@ -128,6 +131,7 @@ export class SettingsForm extends JSXElement {
           showThumbnails: this.showThumbnails,
           showLoginPuzzle: this.showLoginPuzzle,
           thumbnailTtlHours: this.thumbnailTtlHours,
+          wikisPerPage: this.wikisPerPage,
           showLanding: this.showLanding,
           landingMessage: this.landingMessage.trim() || null,
           landingNews: this.landingNews.trim() || null,
@@ -175,6 +179,16 @@ export class SettingsForm extends JSXElement {
     }
     const parsed = Number.parseInt(value, 10);
     if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 2160) this.thumbnailTtlHours = parsed;
+  };
+
+  private readonly onWikisPerPageChange = (value: string) => {
+    this.touched = true;
+    if (value.trim() === "") {
+      this.wikisPerPage = null;
+      return;
+    }
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isFinite(parsed) && parsed >= 0 && parsed <= 200) this.wikisPerPage = parsed;
   };
 
   private readonly onUserFilesChange = (checked: boolean) => {
@@ -377,6 +391,23 @@ export class SettingsForm extends JSXElement {
                     value={this.thumbnailTtlHours ?? ""}
                     disabled={!this.isAdmin}
                     oninput={(event) => this.onThumbnailTtlChange((event.target as HTMLInputElement).value)}
+                  />
+                </div>
+
+                <div class="settings-toggle-row is-input-row">
+                  <span class="settings-toggle-copy">
+                    <strong>{t("Wikis per page")}</strong>
+                    <p>{t("How many wikis the Wikis list shows at once. 0 shows all wikis in a single list. Leave empty to use the default of 10.")}</p>
+                  </span>
+                  <input
+                    class="field-input settings-number-input"
+                    type="number"
+                    min="0"
+                    max="200"
+                    step="1"
+                    value={this.wikisPerPage ?? ""}
+                    disabled={!this.isAdmin}
+                    oninput={(event) => this.onWikisPerPageChange((event.target as HTMLInputElement).value)}
                   />
                 </div>
 

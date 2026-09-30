@@ -39,6 +39,7 @@ declare global {
       showThumbnails: boolean;
       showLoginPuzzle: boolean;
       thumbnailTtlHours: number | null;
+      wikisPerPage: number | null;
       showLanding: boolean;
       landingMessage: string | null;
       landingNews: string | null;

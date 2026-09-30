@@ -56,6 +56,12 @@ function featurePref(name: "showPinboard" | "showUserFiles" | "showWikiUpload" |
   return embeddedServerResponse.prefs?.[name] ?? true;
 }
 
+/** Wikis shown per page in the "Wikis" list; 0 = all wikis in one list. */
+function wikisPerPagePref(): number {
+  const stored = embeddedServerResponse.prefs?.wikisPerPage;
+  return typeof stored === "number" && stored >= 0 ? stored : 10;
+}
+
 
 declare global {
   namespace JSX {
@@ -1333,6 +1339,18 @@ export class App extends JSXElement {
   @state() accessor newWikiError = "";
   @state() accessor themeMode: ThemeMode = getEffectiveTheme();
   @state() accessor thumbnailSrc = "";
+  /** 1-based page of the paginated "Wikis" list. Reset on every tab switch;
+   *  the rendered page is clamped anyway, so a list that shrank below the
+   *  current page still shows the last page that has content. */
+  @state() accessor wikiPage = 1;
+
+  /** Jumps to another page of the wiki list and brings its header back into
+   *  view — otherwise the new rows appear far above the viewport after a click
+   *  at the bottom of a long list. */
+  private readonly goToWikiPage = (page: number) => {
+    this.wikiPage = Math.max(1, page);
+    this.renderRoot.querySelector(".list-head-row")?.scrollIntoView({ block: "start", behavior: "smooth" });
+  };
 
   @state() accessor backupBusy = false;
   @state() accessor backupError = "";
@@ -1672,10 +1690,13 @@ export class App extends JSXElement {
     const isTeacher = userState.isTeacher;
     const isStudent = userState.isLoggedIn && !isAdmin && !isTeacher;
     const ownWikiCount = itemsByTab.wikis.filter((wiki) => wiki.ownerUsername === userState.username).length;
-    // Wikis are grouped into "mine / shared with me / system"; every other
-    // tab stays a flat list.
-    const listRows: WikiListRow[] = activeTab === "wikis"
-      ? groupWikiRows(activeTabItems, userState.username)
+    // Wikis are grouped into "mine / shared with me / system" and paginated;
+    // every other tab stays a flat, complete list.
+    const wikiPaging = activeTab === "wikis"
+      ? paginateWikiRows(activeTabItems, userState.username, this.wikiPage, wikisPerPagePref())
+      : null;
+    const listRows: WikiListRow[] = wikiPaging
+      ? wikiPaging.rows
       : activeTabItems.map((item) => ({ kind: "row" as const, item }));
     // Admins and teachers create freely; students are limited by the
     // teacher-configured wiki limit (NULL = unlimited, 0 = none).
@@ -1798,7 +1819,10 @@ export class App extends JSXElement {
           }).map((tab) => (
             <button
               class={tab.id === activeTab ? "tab-button is-active" : "tab-button"}
-              onclick={() => store.setActiveTab(tab.id)}
+              onclick={() => {
+                this.wikiPage = 1;
+                store.setActiveTab(tab.id);
+              }}
               type="button"
             >
               <span>{t(tab.label)}</span>
@@ -1809,6 +1833,7 @@ export class App extends JSXElement {
             <button
               class={isStorageTab ? "tab-button is-active" : "tab-button"}
               onclick={() => {
+                this.wikiPage = 1;
                 store.setActiveTab("storage");
                 void this.loadStorage();
               }}
@@ -1826,6 +1851,7 @@ export class App extends JSXElement {
             <button
               class={activeTab === "pinboard" ? "tab-button is-active" : "tab-button"}
               onclick={() => {
+                this.wikiPage = 1;
                 store.setActiveTab("pinboard");
                 void this.loadPinboardUnread();
               }}
@@ -1841,7 +1867,10 @@ export class App extends JSXElement {
           {featurePref("showUserFiles") ? (
             <button
               class={activeTab === "files" ? "tab-button is-active" : "tab-button"}
-              onclick={() => store.setActiveTab("files")}
+              onclick={() => {
+                this.wikiPage = 1;
+                store.setActiveTab("files");
+              }}
               type="button"
             >
               <span>{t("My files")}</span>
@@ -2300,6 +2329,31 @@ export class App extends JSXElement {
             )}
             </div>
           </div>
+
+          {wikiPaging && wikiPaging.pages > 1 ? (
+            <div class="list-pager" role="navigation" aria-label={t("Wikis list")}>
+              <button
+                class="pager-button"
+                type="button"
+                disabled={wikiPaging.page <= 1}
+                onclick={() => this.goToWikiPage(wikiPaging.page - 1)}
+              >
+                <span class="pager-arrow" aria-hidden="true">&#8249;</span>{t("Previous")}
+              </button>
+              <span class="pager-status">
+                {t("Page {page} of {pages}", { page: wikiPaging.page, pages: wikiPaging.pages })}
+                <small>{t("{count} wikis in total", { count: wikiPaging.total })}</small>
+              </span>
+              <button
+                class="pager-button"
+                type="button"
+                disabled={wikiPaging.page >= wikiPaging.pages}
+                onclick={() => this.goToWikiPage(wikiPaging.page + 1)}
+              >
+                {t("Next")}<span class="pager-arrow" aria-hidden="true">&#8250;</span>
+              </button>
+            </div>
+          ) : null}
           </section>
         )}
 
@@ -2500,9 +2554,11 @@ type WikiListRow =
   | { kind: "group"; label: string }
   | { kind: "row"; item: AdminRecord };
 
-/** Groups the wiki list into "mine / shared with me / system" sections. */
-function groupWikiRows(items: readonly AdminRecord[], username: string): WikiListRow[] {
-  const groups: { label: string; rows: AdminRecord[] }[] = [
+type WikiListRowGroup = { label: string; rows: AdminRecord[] };
+
+/** Splits the wiki list into "mine / shared with me / system" sections. */
+function groupWikiRows(items: readonly AdminRecord[], username: string): WikiListRowGroup[] {
+  const groups: WikiListRowGroup[] = [
     { label: t("My wikis"), rows: [] },
     { label: t("Shared with you"), rows: [] },
     { label: t("System wikis"), rows: [] },
@@ -2514,11 +2570,50 @@ function groupWikiRows(items: readonly AdminRecord[], username: string): WikiLis
     else if (owner === "") groups[2].rows.push(item);
     else groups[1].rows.push(item);
   }
-  const rows: WikiListRow[] = [];
-  for (const group of groups) {
-    if (!group.rows.length) continue;
-    rows.push({ kind: "group", label: group.label });
-    for (const item of group.rows) rows.push({ kind: "row", item });
+  return groups.filter((group) => group.rows.length > 0);
+}
+
+/** Renders one page of grouped rows, repeating a group label whenever the group
+ *  changes — also on the first row of a page, so a group split across two pages
+ *  stays readable. `perPage <= 0` disables pagination. The page is clamped into
+ *  range, so deleting wikis on the last page cannot leave an empty list. */
+function paginateWikiRows(
+  items: readonly AdminRecord[],
+  username: string,
+  page: number,
+  perPage: number,
+): { rows: WikiListRow[]; page: number; pages: number; total: number } {
+  const groups = groupWikiRows(items, username);
+  const total = groups.reduce((count, group) => count + group.rows.length, 0);
+  if (perPage <= 0) {
+    return {
+      rows: groups.flatMap((group) => [
+        { kind: "group" as const, label: group.label },
+        ...group.rows.map((item) => ({ kind: "row" as const, item })),
+      ]),
+      page: 1,
+      pages: 1,
+      total,
+    };
   }
-  return rows;
+  const pages = Math.max(1, Math.ceil(total / perPage));
+  const current = Math.min(Math.max(1, page), pages);
+  const from = (current - 1) * perPage;
+  const to = from + perPage;
+  const rows: WikiListRow[] = [];
+  let seen = 0;
+  let label = "";
+  for (const group of groups) {
+    for (const item of group.rows) {
+      if (seen >= from && seen < to) {
+        if (group.label !== label) {
+          rows.push({ kind: "group", label: group.label });
+          label = group.label;
+        }
+        rows.push({ kind: "row", item });
+      }
+      seen++;
+    }
+  }
+  return { rows, page: current, pages, total };
 }

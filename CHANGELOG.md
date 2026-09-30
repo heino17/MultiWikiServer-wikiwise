@@ -7831,6 +7831,43 @@ wurde verworfen, weil `Cache-Control` beim Antworten *merge* statt ersetzt wird
 und daraufhin jede erfolgreiche Antwort widersprüchlich
 `no-store, private, no-cache` ausgeliefert hätte.
 
+## 76. Wiki-Liste blättern statt 15 Vorschaubilder auf einmal rendern
+
+Mit aktivierten Vorschaubildern (§73/§74) lädt die Wiki-Liste **alle** Wikis
+auf einmal: eine Zeile pro Wiki, jede mit eigenem PNG. Bei 15 Wikis sind das
+15 HTTP-Anfragen und 15 Bilder im DOM — sichtbar sind zunächst nur die oberen,
+der Rest rendert trotzdem im Hintergrund mit (2 Slots, §75).
+
+**Warum clientseitig und nicht serverseitig:** `/admin/load` liefert die
+Wiki-Liste bereits als einzelnes Response mit, und Sortierung wie Gruppierung
+passieren ohnehin im Client. Ein serverseitiger Seitenabruf würde daran nichts
+ändern, sondern nur einen weiteren Roundtrip pro Blätterbewegung einführen. Die
+Liste ist zudem klein und nach oben begrenzt (eine Zeile pro Wiki) — es gibt
+nichts, was serverseitig wegließe.
+
+**Verhalten:** Standard sind 10 Wikis pro Seite, einstellbar über
+`admin.wikisPerPage` (0–200; `0` = alle Wikis in einer Liste, leeres Feld =
+Standard 10). Der Pager zeigt Zurück/Weiter, „Seite X von Y" und die Gesamtzahl.
+Die Gruppen „Meine Wikis", „Für dich freigegeben" und „System-Wikis" bleiben;
+setzt sich eine Gruppe auf der Folgeseite fort, wird ihre Überschrift dort
+wiederholt. Die Seitenzahl wird geklemmt (keine leere Seite, wenn die Liste
+kürzer wird) und beim Tabwechsel zurückgesetzt; ein Klick auf Zurück/Weiter holt
+den Listenkopf zurück in den sichtbaren Bereich.
+
+**Wirkung:** Der eigentliche Gewinn ist nicht die Seitenanzahl, sondern die Zahl
+der Vorschaubilder: bei 15 Wikis und 10 pro Seite liegen 10 PNGs im DOM statt
+15 — und gerendert wird nur die Seite, die man tatsächlich ansieht.
+
+**Einstellung:** Neues Feld „Wikis pro Seite" in den Admin-Einstellungen, mit
+derselben 0–200-Prüfung wie im Server-Schema.
+
+**Getestet** (zweite Dev-Instanz auf Port 5001, 15 Wikis, Chromium headless):
+10 → 2 Seiten (10 + 5), 7 → 3 Seiten, 5 → 3 Seiten, 0 → kein Pager mit allen
+drei Gruppen in einer Liste; Speichern über das Formular (7) und Leeren des
+Feldes (Zeile wird gelöscht, der Default 10 greift); 999, −3 und `"abc"` werden
+mit 400 abgewiesen, der gespeicherte Wert bleibt unverändert.
+
+
 ---
 
 ## Betrieb / Ausblick
