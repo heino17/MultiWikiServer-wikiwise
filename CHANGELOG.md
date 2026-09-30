@@ -7894,6 +7894,108 @@ keine Readonly-Bags führt.
 
 ---
 
+## 78. Suche und Sortierung in allen fünf Listen-Tabs
+
+Bei 15 Wikis, 15 Bags und 12 Rollen war die Admin-Liste die einzige Stelle, in der
+man noch wusste, wie ein Datensatz heißt: kein Suchfeld, keine sortierbaren
+Spalten, und die Reihenfolge war die Reihenfolge aus `/admin/load`. Wer „die
+Rezeptsammlung" oder „den Wiki von Frau Meyer" suchte, musste die Liste
+durchscrollen und von oben und unten gegenlesen.
+
+Alle fünf generischen Tabs (**Wikis, Templates, Bags, Rollen, Benutzer**) haben
+jetzt dieselbe Kopfleiste mit Suchfeld und anklickbaren Spalten. „Meine Dateien"
+ist bewusst nicht dabei: dort hängt die Liste an einem wechselnden
+Ordner-Kontext, und eine clientseitige Suche über die geladene Teilmenme wäre
+dort irreführend — das bleibt ein eigenes Vorhaben.
+
+**Suche.** Ein `type="search"`-Feld pro Tab filtert die Liste während des
+Tippens, dazu ein Klick-Button (×) und die Trefferzahl („3 of 15 shown"). Die
+Suche ist **case-, umlaut- und eszettunabhängig**: „schuler" findet „Schüler",
+„strasse" findet „Straße". Groß-/Kleinschreibung und Diakritika werden per
+`normalize("NFD")` entfernt. Für „ß" (und das große „ẞ") hat Unicode keine
+Zerlegung — `NFD` lässt es unverändert, und `toLowerCase` macht daraus vorher
+ein kleines „ß" —, deshalb wird es von Hand zu „ss" ersetzt. Ohne das würde die
+Suche bei deutschen Daten genau an der üblichsten Art, ein Umlaut zu umgehen,
+scheitern.
+
+Gefaltet wird nur in der **Suche**, nicht in der Sortierung: eine Sortierung ist
+eine feste Ordnung und `localeCompare` faltet „ß" ebenfalls nicht, die Suche
+darf dagegen verzeihlich sein. „Schuler" findet deshalb „Schüler" (Umlaut
+weggelassen), „Schueler" aber nicht — das ist ein anderes Wort.
+
+Durchsucht werden nur **benannte, sichtbare** Spalten. Die Thumbnail-Spalte hat
+keine Überschrift und ihre URL sagt nichts über den Datensatz aus, deshalb zählt
+sie nicht mit. Die Badge-Spalten sind über ihren sichtbaren Wortlaut auffindbar
+(„Owner", „Private", „Shared"), abgeschnittene Spalten in voller Länge — ein
+Treffer, den man nicht sieht, ist besser als einer, den man nicht findet.
+
+**Sortierung.** Ein Klick auf eine Spalte sortiert aufsteigend, der zweite absteigend,
+der dritte nimmt die Sortierung wieder weg. Aktive Spalten bekommen einen Pfeil
+(▲/▼), `aria-sort` und eine Screenreader-Angabe („Sorted ascending"); die Kopfzeile
+ist als `columnheader` ausgezeichnet, der Sortierbutton heißt „Sort by Slug".
+
+Sortiert wird nach dem, was in der Zelle *steht*:
+- Zahlen in Textfeldern numerisch, damit „10 Bags" hinter „9 Bags" landet und nicht davor.
+- ISO-Daten chronologisch.
+- „Eigene Wikis" in der Form „3 / 5" bzw. „3 / ∞" nach der aktuellen Nutzung (der ersten Zahl).
+- Text mit `localeCompare(..., { numeric: true, sensitivity: "base" })`, also inklusive Ziffern im Text („Klasse 2" nach „Klasse 10").
+
+**Leere Werte bleiben unten** – in *beiden* Richtungen. Ein unbekannter Wert ist
+„nicht bekannt" und nicht „am kleinsten"; sonst würden die beiden System-Wikis
+ohne Eigentümer beim Abwärtssortieren nach oben springen. Bei Gleichstand entscheidet
+die ID, damit die Reihenfolge stabil bleibt.
+
+**Gruppierung weicht der Sortierung.** Die Wiki-Liste ist sonst in „My wikis",
+„Shared with you" und „System wikis" gruppiert. Sobald eine Spalte aktiv sortiert
+wird, erscheint **eine** flache Liste über alle Gruppen — sonst würde die
+Gruppierung das Sortierergebnis in drei Blöcke zerreißen. Ein dritter Klick auf
+den Header stellt die Gruppen wieder her. Auch die Seitennavigation aus §76
+arbeitet mit gefilterten und sortierten Daten, der Pager zählt also das, was
+tatsächlich zu sehen ist.
+
+**Je Tab eigener Zustand, nur im Arbeitsspeicher.** Wer den Tab wechselt und
+zurückkommt, findet Query und Sortierung vor. Bewusst *nicht* in `localStorage`:
+eine gespeicherte Sortierung überlebt ein Update, in dem die Spalte umbenannt
+wurde, und sortiert dann nach einer nicht mehr existierenden Spalte.
+
+**Ein JSX-Fund dabei:** Das verwendete JSX-Runtime schreibt `value={...}` per
+`setAttribute`. Ein Attribut aktualisiert aber kein `search`-Feld, in dem schon
+getippt wurde — beim Tabwechsel blieb deshalb der alte Text stehen, während die
+Liste nach dem neuen gefiltert wurde. Ein `ref`-Callback, der die DOM-Property
+setzt, behebt das.
+
+**Neue Texte** in allen acht Sprachdateien (561 Schlüssel, Parität geprüft). Die
+neuen Platzhalter benutzen `t(currentTab.label)` statt eines kleingeschriebenen
+Tab-Namens, damit z. B. „Keine Treffer in Wikis." und nicht „No matches in
+wikis." erscheint.
+
+**Geprüft** (zweite Dev-Instanz auf `127.0.0.1:5001` mit Kopie der Testdaten,
+Playwright, 15 Wikis / 15 Bags / 12 Rollen / 6 Benutzer / 1 Template, Fenster
+1600 px): alle Checks bestanden, darunter Suche über Slug **und** Eigentümer
+(`meyer` → 3), Umlautfaltung (`schuler` → 3), Suche in E-Mail-Adressen und
+Rollen, `ownWikiUsage` numerisch (`1 / ∞`, `1 / ∞`, `1 / 2`, `2 / ∞`, `2 / 2`,
+`6 / ∞`), Sortierung über Seitengrenzen hinweg (10 + 5, Seite 2 als exakte
+Fortsetzung), leere Eigentümer in beiden Richtungen ganz unten, Gruppierung kehrt
+nach dem dritten Klick zurück, Grid-Spaltenbreiten und Overflow unverändert.
+`tsc --noEmit` und `tsup` sauber, keine Laufzeitfehler in der Konsole.
+
+Für das **ß-Falten** wurde zusätzlich Ende-zu-Ende eine Bag namens
+„Straßen-Projekt" angelegt: `strassen`, `STRASSEN`, `Straßen`, `straße`,
+`Strassen-Projekt` und `projekt` finden sie (je 1 Treffer), `strase` und
+`strassn` dagegen nicht. Die Test-Bag wurde danach wieder gelöscht. Weil der
+Testbestand kein „ß" enthält, prüft die Testsuite die Normalisierung zusätzlich
+per Unit-Test gegen die echte Funktionsquelle (`Schüler`/`schuler`,
+`Straße`/`strasse`, `STRAẞE`/`strasse`, `Große`/`grosse`, `Maße`/`masse`,
+`Füße`/`fusse`).
+
+Bekannte bewusste Grenzen: Der Datensatz-Editor hat keinen Escape-Shortcut
+(geschlossen wird über „Cancel"), und die älteren Platzhalter wie „Create a {tab}
+to get started." verwenden weiterhin kleingeschriebene Tab-Namen.
+
+
+---
+
+
 ## Betrieb / Ausblick
 
 - Start über `npm start` (`scripts.mjs` → `tsup` + `mws.dev.mjs`), im
