@@ -23,14 +23,14 @@ Multiple users, multiple wikis for TiddlyWiki.
 Highlights only – the full story, with file names, code and background, lives in the [CHANGELOG](CHANGELOG.md).
 
 - 🏫 **A teacher area for school operation.** A school operator creates teachers, and each teacher manages **only their own class** – walled off from colleagues by personal roles and a server-side role guard, while class roles hand students targeted read access and cooperation by invitation stays possible. (§21–§27)
-- 📚 **Wikis you can actually manage.** Create a wiki with a single click (or from a full form), rename slug and display name, delete, get live validation of every name, and see "real names" instead of "recipe" in the UI. (§10–§13, §17, §30)
+- 📚 **Wikis you can actually manage.** Create a wiki with a single click (or from a full form), rename slug and display name, delete, get live validation of every name, see "real names" instead of "recipe" in the UI – and page through long lists. (§10–§13, §17, §30, §76)
 - 🌍 **8 languages.** The whole admin app – and the wiki client, which follows the wiki's language automatically. With 500+ translated keys and a language switcher in the header. (§14, §46)
 - 🏠 **A public start page for anonymous visitors.** Hero area, statistic cards, wiki cards with preview images, an operator welcome text, a news block and a version footer – instead of a login form. (§48)
 - 📌 **A pinboard.** Shared post-its for all logged-in users, addressed globally, to a class or to one person, with important notes pinned to the top, an unread badge and moderation. (§42)
 - 🗂️ **My Files.** Every account uploads its own files, previews them in the browser (image, audio, video, PDF, text, Markdown, ODT) and shares them selectively – admin shares reach everyone, teacher shares their class. (§44, §45)
-- 🖼️ **Real wiki thumbnails.** Headless screenshots of each wiki, per user view, 24 h cache, automatically swept when a wiki is deleted. (§43)
+- 🖼️ **Real wiki thumbnails.** Headless screenshots of each wiki, per user view. The preview stays visible while a wiki is being edited and refreshes by itself after a short grace period instead of going blank; swept automatically when a wiki is deleted. (§43, §74–§75)
 - 💾 **Storage transparency and one-click backups.** An admin tab that separates system disk status from MWS usage, reports blobs & files, orphaned files and the top-10 storage users – plus a consistent ZIP backup of database, keys and config. (§36, §39–§41)
-- ⚙️ **Settings that cover the whole operation.** Default language and theme for the first load, feature switches, the cookie notice and the legal notice page. (§47)
+- ⚙️ **Settings that cover the whole operation.** Default language and theme for the first load, feature switches (including screenshot previews and how many wikis a list shows at once), the cookie notice and the legal notice page. (§47, §76)
 - 🔐 **Security rework.** Owner protection for wikis, bags, templates, roles and users, per-owner bag namespaces against name squatting, `CSP` headers and no existence oracle. Anonymous read access is now an explicit `ANON` role. (§4, §15, §47)
 
 ## 🚀 How to run
@@ -245,14 +245,14 @@ Mehrere Nutzer, mehrere Wikis für TiddlyWiki.
 Nur Highlights – die vollständige Geschichte mit Dateinamen, Code und Hintergrund steht im [CHANGELOG](CHANGELOG.md).
 
 - 🏫 **Ein Lehrer-Bereich für den Schulbetrieb.** Ein Schulbetreiber legt Lehrer an, und jeder Lehrer verwaltet **nur seine eigene Klasse** – von den Kollegen abgetrennt durch persönliche Rollen und einen serverseitigen Rollen-Guard, während Klassenrollen Schülern gezielten Lesezugriff geben und eine Kooperation per Einladung möglich bleibt. (§21–§27)
-- 📚 **Wikis, die man wirklich verwalten kann.** Ein Wiki mit einem Klick anlegen (oder aus einem Vollformular), Slug und Anzeigename umbenennen, löschen, jeden Namen live prüfen lassen – und in der Oberfläche „Klarnamen" statt „Recipe" sehen. (§10–§13, §17, §30)
+- 📚 **Wikis, die man wirklich verwalten kann.** Ein Wiki mit einem Klick anlegen (oder aus einem Vollformular), Slug und Anzeigename umbenennen, löschen, jeden Namen live prüfen lassen – und in der Oberfläche „Klarnamen" statt „Recipe" sehen, auch auf langen Listen. (§10–§13, §17, §30, §76)
 - 🌍 **8 Sprachen.** Die komplette Admin-App – und der Wiki-Client, der automatisch der Wiki-Sprache folgt. Mit über 500 übersetzten Keys und einem Sprachumschalter in der Kopfzeile. (§14, §46)
 - 🏠 **Eine öffentliche Startseite für anonyme Besucher.** Hero-Bereich, Statistik-Kacheln, Wiki-Karten mit Vorschaubildern, ein Willkommenstext des Betreibers, ein News-Block und ein Versions-Footer – statt eines Login-Formulars. (§48)
 - 📌 **Eine Pinnwand.** Gemeinsame Zettel für alle angemeldeten Nutzer: global, an eine Klasse oder an eine einzelne Person adressiert, mit wichtigen Zetteln oben, Ungelesen-Badge und Moderation. (§42)
 - 🗂️ **Meine Dateien.** Jedes Konto lädt eigene Dateien hoch, zeigt sie im Browser an (Bild, Audio, Video, PDF, Text, Markdown, ODT) und teilt sie gezielt – Admin-Freigaben erreichen alle, Lehrer-Freigaben ihre Klasse. (§44, §45) Über die Wiki-Werkzeugleiste hochgeladene Dateien lassen sich direkt ins Wiki einbinden (`[img[...]]`/`[ext[...]]`) und sind für alle sichtbar, die das Wiki öffnen dürfen. (§65)
-- 🖼️ **Echte Wiki-Vorschaubilder.** Screenshots der Wikis aus einem Headless-Browser, pro User-Sicht, 24-h-Cache, werden beim Löschen eines Wikis automatisch mit aufgeräumt. (§43)
+- 🖼️ **Echte Wiki-Vorschaubilder.** Screenshots der Wikis aus einem Headless-Browser, pro User-Sicht. Die Vorschau bleibt beim Bearbeiten sichtbar und erneuert sich nach einer kurzen Schonfrist von selbst, statt zu verschwinden; beim Löschen eines Wikis wird sie automatisch mit aufgeräumt. (§43, §74–§75)
 - 💾 **Speicher-Transparenz und Backups per Klick.** Ein Admin-Tab, der System-Festplatte und MWS-Belegung trennt, Blobs & Dateien, verwaiste Dateien und die Top-10-Speichernutzer meldet – plus ein konsistentes ZIP-Backup von Datenbank, Schlüsseln und Config. (§36, §39–§41)
-- ⚙️ **Einstellungen für den gesamten Betrieb.** Standard-Sprache und -Theme fürs erste Laden, Feature-Schalter, der Cookie-Hinweis und die Impressum-Seite. (§47)
+- ⚙️ **Einstellungen für den gesamten Betrieb.** Standard-Sprache und -Theme fürs erste Laden, Feature-Schalter (u. a. Vorschaubilder und Wikis pro Seite), der Cookie-Hinweis und die Impressum-Seite. (§47, §76)
 - 🔐 **Security-Umbau.** Owner-Schutz für Wikis, Bags, Templates, Rollen und Nutzer, Bag-Namespaces pro Owner gegen Namens-Squatting, `CSP`-Header und kein Existenz-Orakel. Anonyme Lesezugriffe sind jetzt eine explizite `ANON`-Rolle. (§4, §15, §47)
 
 ## 🚀 So startest du es
