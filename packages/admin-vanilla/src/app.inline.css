@@ -855,6 +855,124 @@ h6 {
 	color: var(--color-text-strong);
 }
 
+/* Search field with a clear button tucked into its right edge. */
+.list-search {
+	position: relative;
+	display: flex;
+	align-items: center;
+	flex: 1 1 320px;
+	max-width: 520px;
+}
+
+.list-search-label {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+.list-search-input {
+	padding-right: 40px;
+}
+
+.list-search-input::-webkit-search-cancel-button {
+	display: none;
+}
+
+.list-search-clear {
+	position: absolute;
+	right: 6px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 30px;
+	height: 30px;
+	padding: 0;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--color-text-muted);
+	cursor: pointer;
+}
+
+.list-search-clear:hover,
+.list-search-clear:focus-visible {
+	background: var(--color-surface-list-hover);
+	color: var(--color-text-strong);
+}
+
+.list-search-clear material-symbol {
+	width: 18px;
+	height: 18px;
+}
+
+.list-result-count {
+	font-size: 0.86rem;
+	color: var(--color-text-muted);
+	white-space: nowrap;
+}
+
+/* Screen-reader-only text, e.g. the current sort direction. */
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
+}
+
+/* Sortable column header. Reset to plain text first: a native button's padding
+   and border would widen every `minmax(max-content, 1fr)` grid track below. */
+.list-sort {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 6px;
+	max-width: 100%;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: none;
+	font: inherit;
+	letter-spacing: inherit;
+	text-transform: inherit;
+	color: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.list-sort-label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.list-sort-arrow {
+	flex: none;
+	font-size: 0.7em;
+	opacity: 0.45;
+}
+
+.list-sort:hover .list-sort-arrow,
+.list-sort:focus-visible .list-sort-arrow {
+	opacity: 0.9;
+}
+
+.list-sort.is-active {
+	color: var(--color-text-strong);
+}
+
+.list-sort.is-active .list-sort-arrow {
+	opacity: 1;
+}
+
 .toolbar-actions {
 	display: grid;
 	grid-auto-flow: column;

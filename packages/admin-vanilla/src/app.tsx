@@ -1344,6 +1344,34 @@ export class App extends JSXElement {
    *  current page still shows the last page that has content. */
   @state() accessor wikiPage = 1;
 
+  /** Search text and sort column per tab. Held in memory only: a sort key that
+   *  survived a reload would silently mis-sort after a column was renamed.
+   *  Kept per tab, so looking at another tab and coming back keeps the query. */
+  @state() accessor listViews: Partial<Record<TabId, ListViewState>> = {};
+
+  private getListView(tabId: TabId): ListViewState {
+    return this.listViews[tabId] ?? EMPTY_LIST_VIEW;
+  }
+
+  private updateListView(tabId: TabId, patch: Partial<ListViewState>): void {
+    this.listViews = { ...this.listViews, [tabId]: { ...EMPTY_LIST_VIEW, ...this.listViews[tabId], ...patch } };
+    // A narrower or reordered list no longer has the page the user was on.
+    this.wikiPage = 1;
+  }
+
+  /** First click sorts ascending, the second flips, the third drops the sort
+   *  and restores the server order (and, on the wikis tab, the grouping). */
+  private readonly toggleListSort = (tabId: TabId, columnKey: string) => {
+    const view = this.getListView(tabId);
+    if (view.sortKey !== columnKey) return this.updateListView(tabId, { sortKey: columnKey, sortDirection: "asc" });
+    if (view.sortDirection === "asc") return this.updateListView(tabId, { sortDirection: "desc" });
+    this.updateListView(tabId, { sortKey: "" });
+  };
+
+  private readonly handleListQueryInput = (tabId: TabId) => (event: Event) => {
+    this.updateListView(tabId, { query: (event.target as HTMLInputElement).value });
+  };
+
   /** Jumps to another page of the wiki list and brings its header back into
    *  view — otherwise the new rows appear far above the viewport after a click
    *  at the bottom of a long list. */
@@ -1690,14 +1718,26 @@ export class App extends JSXElement {
     const isTeacher = userState.isTeacher;
     const isStudent = userState.isLoggedIn && !isAdmin && !isTeacher;
     const ownWikiCount = itemsByTab.wikis.filter((wiki) => wiki.ownerUsername === userState.username).length;
+    // Search and sort run over the whole tab in memory — `/admin/load` already
+    // delivered every record — and both narrow the list before pagination, so
+    // the pager counts what is actually on screen.
+    const listView = this.getListView(currentTab.id);
+    const searchColumns = getListSearchColumns(listColumns);
+    const searchNeedle = normalizeListSearchText(listView.query);
+    const searchedItems = filterListItems(activeTabItems, searchColumns, searchNeedle);
+    const sortColumn = listColumns.find((column) => column.key === listView.sortKey) ?? null;
+    const sortedItems = sortColumn
+      ? sortListRecords(searchedItems, sortColumn, listView.sortDirection)
+      : searchedItems;
     // Wikis are grouped into "mine / shared with me / system" and paginated;
-    // every other tab stays a flat, complete list.
+    // an explicit sort replaces the grouping with one flat ordering, and every
+    // other tab stays a flat, complete list.
     const wikiPaging = activeTab === "wikis"
-      ? paginateWikiRows(activeTabItems, userState.username, this.wikiPage, wikisPerPagePref())
+      ? paginateWikiRows(sortedItems, userState.username, this.wikiPage, wikisPerPagePref(), !sortColumn)
       : null;
     const listRows: WikiListRow[] = wikiPaging
       ? wikiPaging.rows
-      : activeTabItems.map((item) => ({ kind: "row" as const, item }));
+      : sortedItems.map((item) => ({ kind: "row" as const, item }));
     // Admins and teachers create freely; students are limited by the
     // teacher-configured wiki limit (NULL = unlimited, 0 = none).
     const canCreateOwnWiki = isAdmin || isTeacher
@@ -2218,22 +2258,50 @@ export class App extends JSXElement {
           </section>
         ) : (
           <section class="list-panel">
-          {/* <div class="list-toolbar">
-            <div>
-              <strong>{currentTab.label} list</strong>
-              <p>{isLoadingData
-                ? "Loading…"
-                : "Click any row to for more information."}</p>
+          <div class="list-toolbar">
+            <div class="list-search">
+              <label class="list-search-label" for={"list-search-" + currentTab.id}>
+                {t("Search")}
+              </label>
+              <input
+                id={"list-search-" + currentTab.id}
+                class="field-input list-search-input"
+                type="search"
+                placeholder={t("Search {tab}…", { tab: t(currentTab.label) })}
+                /* The JSX runtime writes `value` as an attribute, and an
+                 * attribute does not update a search box the user already typed
+                 * in. Setting the property keeps the field in step when the tab
+                 * changes and restores that tab's own query. */
+                ref={(element) => { if (element && element.value !== listView.query) element.value = listView.query; }}
+                oninput={this.handleListQueryInput(currentTab.id)}
+              />
+              {listView.query ? (
+                <button
+                  class="list-search-clear"
+                  type="button"
+                  aria-label={t("Clear search")}
+                  title={t("Clear search")}
+                  onclick={() => this.updateListView(currentTab.id, { query: "" })}
+                >
+                  <MaterialSymbol icon={closeIcon} />
+                </button>
+              ) : null}
             </div>
             <div class="toolbar-actions">
-              <button
-                class="ghost-button"
-                type="button"
-                onclick={() => this.openCreate(currentTab.id)}
-                disabled={isLoadingData || perTabStore.isOpeningItem || perTabStore.isSaving}
-              >{getCreateLabel(currentTab)}</button>
+              {searchNeedle ? (
+                <span class="list-result-count">
+                  {t("{shown} of {total} shown", { shown: sortedItems.length, total: activeTabItems.length })}
+                </span>
+              ) : null}
+              {sortColumn ? (
+                <button
+                  class="ghost-button"
+                  type="button"
+                  onclick={() => this.updateListView(currentTab.id, { sortKey: "" })}
+                >{t("Clear sorting")}</button>
+              ) : null}
             </div>
-          </div> */}
+          </div>
 
           {mainStorageError ? renderErrorBanner(mainStorageError, { label: t("Dismiss"), onclick: this.clearMainStorageError }) : null}
 
@@ -2255,9 +2323,38 @@ export class App extends JSXElement {
 
           <div class="list-grid" style={{ ["--grid-columns"]: buildListGridTemplate(listColumns) }}>
             <div class="list-head-row">
-              {listColumns.map((column) => (
-                <div class={"list-cell list-head" + (column.width && column.width > 1 ? " span-" + column.width : "")}>{t(column.label)}</div>
-              ))}
+              {listColumns.map((column) => {
+                const sortable = Boolean(column.label);
+                const isSortedBy = sortable && sortColumn?.key === column.key;
+                const direction = listView.sortDirection;
+                return (
+                  <div
+                    class={"list-cell list-head" + (column.width && column.width > 1 ? " span-" + column.width : "")}
+                    role="columnheader"
+                    aria-sort={isSortedBy ? (direction === "asc" ? "ascending" : "descending") : "none"}
+                  >
+                    {sortable ? (
+                      <button
+                        class={"list-sort" + (isSortedBy ? " is-active" : "")}
+                        type="button"
+                        title={t("Sort by {column}", { column: t(column.label) })}
+                        aria-label={t("Sort by {column}", { column: t(column.label) })}
+                        onclick={() => this.toggleListSort(currentTab.id, column.key)}
+                      >
+                        <span class="list-sort-label">{t(column.label)}</span>
+                        <span class="list-sort-arrow" aria-hidden="true">
+                          {isSortedBy ? (direction === "asc" ? "▲" : "▼") : "↕"}
+                        </span>
+                        {isSortedBy ? (
+                          <span class="visually-hidden">
+                            {direction === "asc" ? t("Sorted ascending") : t("Sorted descending")}
+                          </span>
+                        ) : null}
+                      </button>
+                    ) : t(column.label)}
+                  </div>
+                );
+              })}
             </div>
 
             <div class="list-body">
@@ -2320,11 +2417,13 @@ export class App extends JSXElement {
               </div>
             )) : (
               <div class="field-callout full-row">
-                {currentTab.id === "wikis" && isStudent && !canCreateOwnWiki
-                  ? <p>{userState.wikiLimit === 0
-                    ? t("Your administrator has not allowed you to create your own wikis yet.")
-                    : t("You have reached your limit of {limit} own wiki(s).", { limit: userState.wikiLimit ?? 0 })}</p>
-                  : <p>{t("Create a {tab} to get started.", { tab: currentTab.label.toLowerCase() })}</p>}
+                {searchNeedle
+                  ? <p>{t("No matches in {tab}.", { tab: t(currentTab.label) })}</p>
+                  : currentTab.id === "wikis" && isStudent && !canCreateOwnWiki
+                    ? <p>{userState.wikiLimit === 0
+                      ? t("Your administrator has not allowed you to create your own wikis yet.")
+                      : t("You have reached your limit of {limit} own wiki(s).", { limit: userState.wikiLimit ?? 0 })}</p>
+                    : <p>{t("Create a {tab} to get started.", { tab: currentTab.label.toLowerCase() })}</p>}
               </div>
             )}
             </div>
@@ -2487,13 +2586,8 @@ function renderListCellValue(columnKey: string, value: string | undefined, onThu
   }
 
   if (columnKey === "myRights") {
-    const labels: Record<string, string> = {
-      admin: t("Admin"),
-      owner: t("Owner"),
-      write: t("Write access"),
-      read: t("Read access"),
-    };
-    return <span class={"my-rights" + (value && labels[value] ? " my-rights-" + value : "")}>{labels[value ?? ""] ?? ""}</span>;
+    const label = getMyRightsLabel(value);
+    return <span class={"my-rights" + (label ? " my-rights-" + String(value) : "")}>{label}</span>;
   }
 
   if (columnKey === "thumbnailUrl" && value) {
@@ -2563,6 +2657,130 @@ function getListColumnLinkMappers(tabId: TabId): Partial<Record<string, ListColu
 
 type ListColumnLinkMapper = (item: AdminRecord) => string | null;
 
+type ListSortDirection = "asc" | "desc";
+
+type ListViewState = {
+  /** Raw text of the search field; compared case- and umlaut-insensitively. */
+  query: string;
+  /** Column key of the active sort; empty means "server order". */
+  sortKey: string;
+  sortDirection: ListSortDirection;
+};
+
+const EMPTY_LIST_VIEW: ListViewState = { query: "", sortKey: "", sortDirection: "asc" };
+
+/** Labels of the "My rights" column, shared by the cell renderer and the
+ *  search index so that searching "owner" finds the row shown as "Owner". */
+function getMyRightsLabel(value: unknown): string {
+  const labels: Record<string, string> = {
+    admin: t("Admin"),
+    owner: t("Owner"),
+    write: t("Write access"),
+    read: t("Read access"),
+  };
+  return labels[typeof value === "string" ? value : ""] ?? "";
+}
+
+/** Case-, accent- and eszett-insensitive search key, so "schuler" finds
+ *  "Schüler" and "Strasse" finds "Straße". `normalize("NFD")` removes the
+ *  diacritics but has no decomposition for "ß" (and none for the capital "ẞ",
+ *  which `toLowerCase` turns into a lowercase "ß" first), so both are mapped
+ *  to "ss" by hand. Without that, German search would miss the most common
+ *  way of typing an umlaut-free substitute.
+ *
+ *  The sorting below deliberately does *not* fold "ß": `localeCompare` does
+ *  not either, and a sort order is a fixed order, while a search may be
+ *  forgiving. */
+function normalizeListSearchText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/ß/g, "ss")
+    .trim();
+}
+
+/** Text of an arbitrary cell value. Unlike `formatFieldValue` this never
+ *  throws: numbers and booleans are rendered as text and unknown shapes are
+ *  flattened, because it runs for every visible cell on every keystroke. */
+function listValueToText(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) return value.map(listValueToText).filter(Boolean).join(" ");
+  if (typeof value === "object") {
+    return Object.values(value as Record<string, unknown>).map(listValueToText).filter(Boolean).join(" ");
+  }
+  return String(value);
+}
+
+/** What one cell contributes to the search index. Mirrors the special cases of
+ *  `renderListCellValue`: the badge columns are searchable by their visible
+ *  wording too. Truncated columns are indexed in full — a hit you cannot see is
+ *  better than one you cannot find. */
+function getListCellSearchText(column: ColumnDefinition, record: AdminRecord): string {
+  const value = getAdminRecordValue(column, record);
+  const text = listValueToText(value);
+  if (column.key === "myRights") return `${text} ${getMyRightsLabel(value)}`.trim();
+  if (column.key === "sharedWritableBags") {
+    const names = listValueToText(value);
+    return `${names} ${names ? t("Shared") : t("Private")}`.trim();
+  }
+  return text;
+}
+
+/** Columns offered to the search: everything the user can actually read, minus
+ *  the unlabeled thumbnail column, whose URL says nothing about the row. */
+function getListSearchColumns(columns: readonly ColumnDefinition[]): ColumnDefinition[] {
+  return columns.filter((column) => Boolean(column.label));
+}
+
+function filterListItems(items: readonly AdminRecord[], columns: readonly ColumnDefinition[], needle: string): AdminRecord[] {
+  if (!needle) return [...items];
+  return items.filter((item) => columns.some((column) => normalizeListSearchText(getListCellSearchText(column, item)).includes(needle)));
+}
+
+/** Sort key of a cell. Counts are numeric strings and dates are ISO strings, so
+ *  both have to be recognised to sort "10 bags" after "9 bags" and dates
+ *  chronologically instead of alphabetically. */
+function getListSortValue(value: unknown): number | string | null {
+  if (value == null) return null;
+  if (typeof value === "number") return value;
+  if (typeof value === "boolean") return value ? 1 : 0;
+  if (typeof value !== "string") return listValueToText(value);
+  const text = value.trim();
+  if (!text) return null;
+  if (/^\d+$/.test(text)) return Number(text);
+  // The users tab shows "own wikis" as "3 / 5" (or "3 / ∞"); order by the
+  // current usage, which is what the column is about.
+  const usage = /^(\d+)\s*\//.exec(text);
+  if (usage) return Number(usage[1]);
+  if (/\d{4}-\d{2}-\d{2}/.test(text)) {
+    const timestamp = Date.parse(text);
+    if (!Number.isNaN(timestamp)) return timestamp;
+  }
+  return text;
+}
+
+function sortListRecords(items: readonly AdminRecord[], column: ColumnDefinition, direction: ListSortDirection): AdminRecord[] {
+  const factor = direction === "asc" ? 1 : -1;
+  return [...items].sort((left, right) => {
+    const leftValue = getListSortValue(getAdminRecordValue(column, left));
+    const rightValue = getListSortValue(getAdminRecordValue(column, right));
+    // An empty value is "unknown", not "smallest", so it sinks to the bottom in
+    // both directions instead of jumping to the top when sorting descending.
+    if (leftValue === null || rightValue === null) {
+      if (leftValue === null && rightValue === null) return 0;
+      return leftValue === null ? 1 : -1;
+    }
+    const result = typeof leftValue === "number" && typeof rightValue === "number"
+      ? leftValue - rightValue
+      : String(leftValue).localeCompare(String(rightValue), undefined, { numeric: true, sensitivity: "base" });
+    // Fall back to the id so equal values keep a stable order across sorts.
+    return result !== 0 ? result * factor : String(left.id).localeCompare(String(right.id));
+  });
+}
+
 type WikiListRow =
   | { kind: "group"; label: string }
   | { kind: "row"; item: AdminRecord };
@@ -2589,19 +2807,23 @@ function groupWikiRows(items: readonly AdminRecord[], username: string): WikiLis
 /** Renders one page of grouped rows, repeating a group label whenever the group
  *  changes — also on the first row of a page, so a group split across two pages
  *  stays readable. `perPage <= 0` disables pagination. The page is clamped into
- *  range, so deleting wikis on the last page cannot leave an empty list. */
+ *  range, so deleting wikis on the last page cannot leave an empty list.
+ *  With `grouped === false` the rows are returned flat: an explicit sort means
+ *  the user asked for one ordering, and interleaving group labels into it would
+ *  just fragment the result. */
 function paginateWikiRows(
   items: readonly AdminRecord[],
   username: string,
   page: number,
   perPage: number,
+  grouped: boolean,
 ): { rows: WikiListRow[]; page: number; pages: number; total: number } {
-  const groups = groupWikiRows(items, username);
+  const groups = grouped ? groupWikiRows(items, username) : [{ label: "", rows: [...items] }];
   const total = groups.reduce((count, group) => count + group.rows.length, 0);
   if (perPage <= 0) {
     return {
       rows: groups.flatMap((group) => [
-        { kind: "group" as const, label: group.label },
+        ...(group.label ? [{ kind: "group" as const, label: group.label }] : []),
         ...group.rows.map((item) => ({ kind: "row" as const, item })),
       ]),
       page: 1,
@@ -2619,7 +2841,7 @@ function paginateWikiRows(
   for (const group of groups) {
     for (const item of group.rows) {
       if (seen >= from && seen < to) {
-        if (group.label !== label) {
+        if (group.label && group.label !== label) {
           rows.push({ kind: "group", label: group.label });
           label = group.label;
         }
