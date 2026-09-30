@@ -4,7 +4,7 @@ These instructions require minimal knowledge of the terminal and require NodeJS 
 
 - Recommended: install the finished package from a release. Download the `.tgz` from the [[releases page|https://github.com/heino17/MultiWikiServer-wikiwise/releases]], then:
 <<.copy-code-to-clipboard """mkdir "new_folder_name" && cd "new_folder_name" """>>
-<<.copy-code-to-clipboard """npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.3.3/mws-wikiwise-0.3.3.tgz """>>
+<<.copy-code-to-clipboard """npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.4.0/mws-wikiwise-0.4.0.tgz """>>
 <<.copy-code-to-clipboard """npx mws init-data-folder """>>
 <<.copy-code-to-clipboard """npx mws update-tiddlywiki """>>
 <<.copy-code-to-clipboard """npx mws init-store """>>
@@ -21,7 +21,7 @@ These instructions require minimal knowledge of the terminal and require NodeJS 
 <<.copy-code-to-clipboard """npm pack """>>
 <<.copy-code-to-clipboard """mkdir "new_folder_name" && cp create-package/files/* "new_folder_name"/ """>>
 <<.copy-code-to-clipboard """cd "new_folder_name" """>>
-<<.copy-code-to-clipboard """npm install ../mws-wikiwise-0.3.3.tgz """>>
+<<.copy-code-to-clipboard """npm install ../mws-wikiwise-0.4.0.tgz """>>
 - Initialize the TiddlyWiki files and the database 
 <<.copy-code-to-clipboard """npx mws update-tiddlywiki """>>
 <<.copy-code-to-clipboard """npx mws init-store """>>
