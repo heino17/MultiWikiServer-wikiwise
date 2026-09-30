@@ -4,7 +4,7 @@ Documentation of the changes to heino17's MultiWikiServer-wikiwise fork. This lo
 tells the development story in reverse order of features, bug fixes, and reworks
 since the base state.
 
-As of: 2026-09-22 · Base: `TiddlyWiki/MultiWikiServer` @ `3627482`
+As of: 2026-09-30 · Base: `TiddlyWiki/MultiWikiServer` @ `3627482`
 
 ## Summary
 
@@ -74,6 +74,63 @@ and copyable code. Wiki files are visible to whoever may open the wiki
 (read access) — no separate share is required; personal "My files"
 stay private.
 
+---
+
+## Release 0.4.0 — 2026-09-30
+
+24 commits since 0.3.3, 95 files, +3622/−602. The centre of gravity is files
+and lists: uploading into a wiki and embedding the result (§65), and search
+plus sorting in every list of the admin app (§78, §79).
+
+**New**
+
+- **Files inside a wiki** (§65): the wiki toolbar uploads into the wiki
+  owner's file store — also when you write in a foreign wiki as guest or
+  teacher. "Files in this wiki" lists them with preview and ready-to-paste
+  TiddlyWiki code (`[img[...]]`/`[ext[...]]`). Visibility follows the wiki's
+  read access; personal files in "My files" stay private.
+- **Search and sort in all six lists** (§78, §79): wikis, templates, bags,
+  roles, users and my files each get a search field that filters as you type
+  (case, umlauts and "ß" ignored) plus sortable column headers. Numbers count
+  as numbers, file sizes by their real byte count, and sorting flattens the
+  wiki groups on purpose — otherwise the grouping would tear one result into
+  three blocks.
+- **The wiki list pages** (§76): ten wikis per page instead of rendering
+  fifteen thumbnails at once, configurable under settings (0 = all in one
+  list).
+
+**Fixed**
+
+- **Security:** the one-click wiki of `admin` was the only wiki that was
+  immediately readable by every logged-in user and publicly visible on the
+  start page; it now starts private like everyone else's (§68). The modal also
+  closes after creating (§69), and welcome tiddler as well as "Files in this
+  wiki" show a headline instead of "1. …" (§70, §71).
+- Thumbnails were frozen in the browser cache and only refreshed after
+  Ctrl+Shift+R (§74); the preview now stays visible while editing and refreshes
+  by itself after a 30 s grace period instead of going blank (§75).
+- The whole "MWS Bedienungsanleitung" was written in Markdown and therefore
+  unusable as a manual (§72), and `load-wiki-folder --overwrite` was
+  fundamentally unusable for existing bags (§73).
+- The bags list shows its roles one under another instead of as a comma list
+  (§77).
+- Maintenance: dependency clean-up, `hono` to 4.13.10 and in-range repairs
+  (§67), README quick start completed (§66).
+
+**Operating notes**
+
+- One additive migration, `20260928_user_file_recipe`: it adds a nullable
+  `recipe_id` and an index to `user_file`. No data is rewritten. If a database
+  already has the column, the migration is recognised as applied (§56) instead
+  of aborting the start with "duplicate column name" — that protection now
+  applies for real.
+- The first start after the update builds a fresh plugin cache under
+  `cache/mws/0.4.0/`; older directories are left untouched and can be deleted.
+- The 0.2.x data-folder rule and the API are unchanged, and all eight
+  languages are complete.
+
+Sections §65–§79 are written in the German half of this log so far; the
+English text is still to come.
 ---
 
 ## 1. Missing dependency: `escape-string-regexp`
@@ -3636,7 +3693,7 @@ Dokumentation der Änderungen am MultiWikiServer-wikiwise-Fork von heino17.
 Dieses Log erzählt die Entwicklungsgeschichte in umgekehrter
 Reihenfolge der Features, Bug-Fixes und Umbauten seit dem Basis-Stand.
 
-Stand: 2026-09-22 · Basis: `TiddlyWiki/MultiWikiServer` @ `3627482`
+Stand: 2026-09-30 · Basis: `TiddlyWiki/MultiWikiServer` @ `3627482`
 
 ## Zusammenfassung
 
@@ -3698,6 +3755,64 @@ Personalisierte Bag-Namespaces gegen Namens-Squatting (C1), Wiki-
 Klassifikation + CSP-Header + Existenz-Orakel (C2) und die gegliederte
 „Meine Bereiche"-UI mit Vertrauens-Labeln (C3).
 
+---
+
+## Release 0.4.0 — 2026-09-30
+
+24 Commits seit 0.3.3, 95 Dateien, +3622/−602. Das Schwergewicht liegt auf
+Dateien und Listen: Upload in ein Wiki mit direkt einbindsbarem Ergebnis (§65)
+sowie Suche und Sortierung in jeder Liste der Admin-App (§78, §79).
+
+**Neu**
+
+- **Dateien im Wiki** (§65): die Wiki-Werkzeugleiste lädt in den Dateispeicher
+  des Wiki-Besitzers hoch – auch wenn man als Gast oder Lehrer im fremden Wiki
+  schreibt. „Dateien in diesem Wiki" listet sie mit Vorschau und fertigem,
+  kopierfertigem TiddlyWiki-Code (`[img[...]]`/`[ext[...]]`). Sichtbarkeit ist
+  das Wiki-Leserecht; persönliche Dateien in „Meine Dateien" bleiben privat.
+- **Suche und Sortierung in allen sechs Listen** (§78, §79): Wikis, Templates,
+  Bags, Rollen, Benutzer und Meine Dateien haben je ein Suchfeld, das beim
+  Tippen filtert (Schreibweise, Umlaute und „ß" egal), dazu anklickbare
+  Spaltenköpfe. Zahlen zählen als Zahlen, Dateigrößen nach echten Bytes, und
+  beim Sortieren werden die Wiki-Gruppen bewusst flach – sonst zerreißt die
+  Gruppierung ein Ergebnis in drei Blöcke.
+- **Die Wiki-Liste blättert** (§76): zehn Wikis pro Seite statt 15
+  Vorschaubilder auf einmal zu rendern, unter „Einstellungen" konfigurierbar
+  (0 = alle in einer Liste).
+
+**Behoben**
+
+- **Sicherheit:** Das 1-Klick-Wiki des `admin` war als einziges sofort für
+  *alle* eingeloggten Benutzer und anonym öffentlich lesbar und erschien auf
+  der Startseite; es startet jetzt wie alle anderen privat (§68). Das Modal
+  schließt außerdem nach dem Anlegen (§69), und Willkommenstiddler wie
+  „Dateien in diesem Wiki" zeigen eine Überschrift statt „1. …" (§70, §71).
+- Thumbnails waren im Browser-Cache eingefroren und aktualisierten sich erst
+  nach Strg+Shift+R (§74); die Vorschau bleibt jetzt beim Bearbeiten sichtbar
+  und erneuert sich nach 30 s Schonfrist von selbst, statt zu verschwinden
+  (§75).
+- Die komplette „MWS Bedienungsanleitung" war in Markdown geschrieben und damit
+  als Handbuch unbrauchbar (§72), und `load-wiki-folder --overwrite` war für
+  vorhandene Bags grundsätzlich unbenutzbar (§73).
+- Die Bags-Liste zeigt ihre Rollen untereinander statt als Kommaliste (§77).
+- Wartung: Dependency-Reinigung, `hono` auf 4.13.10 und In-Range-Reparaturen
+  (§67), README-Schnellstart vervollständigt (§66).
+
+**Hinweise für den Betrieb**
+
+- Eine additive Migration, `20260928_user_file_recipe`: sie ergänzt ein
+  nullable `recipe_id` samt Index in `user_file`. Es werden keine Daten
+  umgeschrieben. Hat eine Datenbank die Spalte schon, gilt die Migration nach
+  §56 als angewandt, statt den Start mit „duplicate column name" abzubrechen –
+  dieser Schutz greift damit erstmals real.
+- Der erste Start nach dem Update baut einen frischen Plugin-Cache unter
+  `cache/mws/0.4.0/`; ältere Verzeichnisse bleiben unangetastet und können
+  gelöscht werden.
+- Die `0.2.x`-Regel für den Datenordner und die API bleiben unverändert, und
+  alle acht Sprachen sind vollständig.
+
+Der englische Text zu §65–§79 fehlt noch; er steht bislang nur in dieser
+Hälfte.
 ---
 
 ## 1. Fehlende Dependency: `escape-string-regexp`
