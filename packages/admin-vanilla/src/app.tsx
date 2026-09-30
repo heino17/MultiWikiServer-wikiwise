@@ -2473,6 +2473,19 @@ function renderListCellValue(columnKey: string, value: string | undefined, onThu
     );
   }
 
+  // A bag's roles arrive as one joined string ("ADMIN, USER, ANON") and are
+  // shown as stacked badges like the wiki list's role columns — inline they
+  // pushed the table wider with every additional role.
+  if (columnKey === "permissionSummary") {
+    const names = typeof value === "string" ? value.split(",").map((name) => name.trim()).filter(Boolean) : [];
+    if (!names.length) return <span class="list-access-names is-empty">—</span>;
+    return (
+      <span class="list-access-names">
+        {names.map((name) => <span class="list-access-name" key={name}>{name}</span>)}
+      </span>
+    );
+  }
+
   if (columnKey === "myRights") {
     const labels: Record<string, string> = {
       admin: t("Admin"),
