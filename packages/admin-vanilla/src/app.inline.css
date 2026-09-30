@@ -4136,6 +4136,29 @@ html[data-theme="dark"] .pinboard-note-actions {
   font-weight: 600;
 }
 
+/* Search row of the file list. The record lists use `.list-toolbar`, which
+   carries its own generous padding; inside the file panel the tables are
+   full-bleed, so this row only aligns the field with the actions. */
+.user-files-search-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+}
+
+.user-files-search-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* The column headers reuse the record lists' sort buttons; keep the arrow on
+   the baseline of the uppercase, small header text. */
+.user-files-table th .list-sort {
+  align-items: baseline;
+}
+
 .user-files-actions {
   white-space: nowrap;
   text-align: right;

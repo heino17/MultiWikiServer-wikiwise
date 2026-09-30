@@ -43,6 +43,16 @@ import { definitely, is } from "./definition/utils";
 import { logout } from "./passwords";
 import { fieldTypeRenderSidebars, formatFieldValue, renderFieldEditor, renderFieldSidebar, renderSwitchField, textWithSlashes } from "./definition/renders";
 import { tw5logo } from "./logos";
+import {
+  compareListValues,
+  EMPTY_LIST_VIEW,
+  listMatchesQuery,
+  listValueToText,
+  nextListSort,
+  normalizeListSearchText,
+  type ListSortDirection,
+  type ListViewState,
+} from "./list-view";
 import { t } from "./i18n";
 import { getEffectiveTheme, toggleTheme, type ThemeMode } from "./theme";
 import "./pinboard";
@@ -1363,9 +1373,7 @@ export class App extends JSXElement {
    *  and restores the server order (and, on the wikis tab, the grouping). */
   private readonly toggleListSort = (tabId: TabId, columnKey: string) => {
     const view = this.getListView(tabId);
-    if (view.sortKey !== columnKey) return this.updateListView(tabId, { sortKey: columnKey, sortDirection: "asc" });
-    if (view.sortDirection === "asc") return this.updateListView(tabId, { sortDirection: "desc" });
-    this.updateListView(tabId, { sortKey: "" });
+    this.updateListView(tabId, nextListSort(view.sortKey, view.sortDirection, columnKey));
   };
 
   private readonly handleListQueryInput = (tabId: TabId) => (event: Event) => {
@@ -2657,18 +2665,6 @@ function getListColumnLinkMappers(tabId: TabId): Partial<Record<string, ListColu
 
 type ListColumnLinkMapper = (item: AdminRecord) => string | null;
 
-type ListSortDirection = "asc" | "desc";
-
-type ListViewState = {
-  /** Raw text of the search field; compared case- and umlaut-insensitively. */
-  query: string;
-  /** Column key of the active sort; empty means "server order". */
-  sortKey: string;
-  sortDirection: ListSortDirection;
-};
-
-const EMPTY_LIST_VIEW: ListViewState = { query: "", sortKey: "", sortDirection: "asc" };
-
 /** Labels of the "My rights" column, shared by the cell renderer and the
  *  search index so that searching "owner" finds the row shown as "Owner". */
 function getMyRightsLabel(value: unknown): string {
@@ -2679,39 +2675,6 @@ function getMyRightsLabel(value: unknown): string {
     read: t("Read access"),
   };
   return labels[typeof value === "string" ? value : ""] ?? "";
-}
-
-/** Case-, accent- and eszett-insensitive search key, so "schuler" finds
- *  "Schüler" and "Strasse" finds "Straße". `normalize("NFD")` removes the
- *  diacritics but has no decomposition for "ß" (and none for the capital "ẞ",
- *  which `toLowerCase` turns into a lowercase "ß" first), so both are mapped
- *  to "ss" by hand. Without that, German search would miss the most common
- *  way of typing an umlaut-free substitute.
- *
- *  The sorting below deliberately does *not* fold "ß": `localeCompare` does
- *  not either, and a sort order is a fixed order, while a search may be
- *  forgiving. */
-function normalizeListSearchText(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase()
-    .replace(/ß/g, "ss")
-    .trim();
-}
-
-/** Text of an arbitrary cell value. Unlike `formatFieldValue` this never
- *  throws: numbers and booleans are rendered as text and unknown shapes are
- *  flattened, because it runs for every visible cell on every keystroke. */
-function listValueToText(value: unknown): string {
-  if (value == null) return "";
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
-  if (Array.isArray(value)) return value.map(listValueToText).filter(Boolean).join(" ");
-  if (typeof value === "object") {
-    return Object.values(value as Record<string, unknown>).map(listValueToText).filter(Boolean).join(" ");
-  }
-  return String(value);
 }
 
 /** What one cell contributes to the search index. Mirrors the special cases of
@@ -2737,48 +2700,14 @@ function getListSearchColumns(columns: readonly ColumnDefinition[]): ColumnDefin
 
 function filterListItems(items: readonly AdminRecord[], columns: readonly ColumnDefinition[], needle: string): AdminRecord[] {
   if (!needle) return [...items];
-  return items.filter((item) => columns.some((column) => normalizeListSearchText(getListCellSearchText(column, item)).includes(needle)));
-}
-
-/** Sort key of a cell. Counts are numeric strings and dates are ISO strings, so
- *  both have to be recognised to sort "10 bags" after "9 bags" and dates
- *  chronologically instead of alphabetically. */
-function getListSortValue(value: unknown): number | string | null {
-  if (value == null) return null;
-  if (typeof value === "number") return value;
-  if (typeof value === "boolean") return value ? 1 : 0;
-  if (typeof value !== "string") return listValueToText(value);
-  const text = value.trim();
-  if (!text) return null;
-  if (/^\d+$/.test(text)) return Number(text);
-  // The users tab shows "own wikis" as "3 / 5" (or "3 / ∞"); order by the
-  // current usage, which is what the column is about.
-  const usage = /^(\d+)\s*\//.exec(text);
-  if (usage) return Number(usage[1]);
-  if (/\d{4}-\d{2}-\d{2}/.test(text)) {
-    const timestamp = Date.parse(text);
-    if (!Number.isNaN(timestamp)) return timestamp;
-  }
-  return text;
+  return items.filter((item) => listMatchesQuery(columns.map((column) => getListCellSearchText(column, item)), needle));
 }
 
 function sortListRecords(items: readonly AdminRecord[], column: ColumnDefinition, direction: ListSortDirection): AdminRecord[] {
-  const factor = direction === "asc" ? 1 : -1;
-  return [...items].sort((left, right) => {
-    const leftValue = getListSortValue(getAdminRecordValue(column, left));
-    const rightValue = getListSortValue(getAdminRecordValue(column, right));
-    // An empty value is "unknown", not "smallest", so it sinks to the bottom in
-    // both directions instead of jumping to the top when sorting descending.
-    if (leftValue === null || rightValue === null) {
-      if (leftValue === null && rightValue === null) return 0;
-      return leftValue === null ? 1 : -1;
-    }
-    const result = typeof leftValue === "number" && typeof rightValue === "number"
-      ? leftValue - rightValue
-      : String(leftValue).localeCompare(String(rightValue), undefined, { numeric: true, sensitivity: "base" });
+  return [...items].sort((left, right) =>
     // Fall back to the id so equal values keep a stable order across sorts.
-    return result !== 0 ? result * factor : String(left.id).localeCompare(String(right.id));
-  });
+    compareListValues(getAdminRecordValue(column, left), getAdminRecordValue(column, right), direction)
+    || String(left.id).localeCompare(String(right.id)));
 }
 
 type WikiListRow =
