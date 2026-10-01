@@ -239,6 +239,35 @@ interface TiddlerInfo {
 type BatchMutationResult = { title: string; info: TiddlerInfo; revision?: string };
 type BatchReadResult = { fields: Record<string, any> & { title: string }; info: TiddlerInfo } | null;
 
+/** A request that never reached the server: the connection is gone, the
+ *  server is unreachable, the request was aborted or timed out. Marked so that
+ *  the syncer can tell "network gone" from "server answered with an error",
+ *  which is what decides between the connection alert and the normal one. */
+class NetworkError extends Error {
+	isNetworkError = true;
+	constructor(cause: unknown) {
+		super(cause instanceof Error ? cause.message : String(cause));
+		this.name = "NetworkError";
+	}
+}
+
+/** A request error that keeps the distinction: a failed request that never
+ *  reached the server stays a NetworkError, an answered one becomes an Error. */
+function asRequestError(message: string, cause: unknown) {
+	return (cause as { isNetworkError?: boolean } | undefined)?.isNetworkError
+		? new NetworkError(new Error(message))
+		: new Error(message);
+}
+
+/** httpRequest answers instead of rejecting, and a request that never reached
+ *  the server comes back with status 0: the network is gone, not the server
+ *  complaining. Every other status is a real answer and stays an Error. */
+function requestFailure(status: number, reason: string | null) {
+	return status === 0
+		? new NetworkError(new Error("Server unreachable"))
+		: new Error(`Server returned ${status}: ${reason ?? "(no reason)"}`);
+}
+
 // ---------------------------------------------------------------------------
 // Adaptor
 // ---------------------------------------------------------------------------
@@ -423,24 +452,24 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		try {
 			if (!this.initialLoadDone) {
 				// Fetch full list + current lastSeq in parallel on first load
-				const [[listOk, , listResult], [updOk, , updResult]] = await Promise.all([
+				const [[listOk, listErr, listResult], [updOk, updErr, updResult]] = await Promise.all([
 					this.recipeRequest({ method: "GET", url: "/list.json" }),
 					this.recipeRequest({ method: "GET", url: "/updates", queryParams: { since: "0" } }),
 				]);
-				if (!listOk) throw new Error("Failed to fetch tiddler list");
-				if (!updOk) throw new Error("Failed to fetch updates");
+				if (!listOk) throw asRequestError("Failed to fetch tiddler list", listErr);
+				if (!updOk) throw asRequestError("Failed to fetch updates", updErr);
 				const list = listResult!.responseJSON as TiddlerInfo[];
 				const upd = updResult!.responseJSON as { modifications: string[]; deletions: string[]; lastSeq: string };
 				this.setLastSeq(upd.lastSeq);
 				this.initialLoadDone = true;
 				callback(null, { modifications: list.map(t => t.title), deletions: [] });
 			} else {
-				const [ok, , result] = await this.recipeRequest({
+				const [ok, err, result] = await this.recipeRequest({
 					method: "GET",
 					url: "/updates",
 					queryParams: { since: this.lastSeq },
 				});
-				if (!ok) throw new Error("Failed to fetch updates");
+				if (!ok) throw asRequestError("Failed to fetch updates", err);
 				const upd = result!.responseJSON as { modifications: string[]; deletions: string[]; lastSeq: string };
 				this.setLastSeq(upd.lastSeq);
 				callback(null, { modifications: upd.modifications, deletions: upd.deletions });
@@ -602,9 +631,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 			responseType: "blob",
 			url: this.host + "recipe/" + encodeURIComponent(this.recipe) + options.url,
 		}).then(async e => {
-			if (!e.ok) return [false, new Error(
-				`Server returned ${e.status}: ${e.headers.get("x-reason") ?? "(no reason)"}`
-			), { ...e, responseJSON: undefined }] as const;
+			if (!e.ok) return [false, requestFailure(e.status, e.headers.get("x-reason")), { ...e, responseJSON: undefined }] as const;
 
 			let responseString: string;
 			if (e.headers.get("x-gzip-stream") === "yes") {
@@ -629,7 +656,7 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 				...e,
 				responseJSON: e.status === 200 ? tryParseJSON(responseString) : undefined,
 			}] as const;
-		}, e => [false, e, undefined] as const);
+		}, e => [false, new NetworkError(e), undefined] as const);
 	}
 }
 

@@ -10,6 +10,7 @@ Syncer/LoggedIn: Du bist angemeldet
 Syncer/LoggedInAs: Du bist angemeldet als
 Syncer/Login: Anmelden
 Syncer/Logout: Abmelden
+Syncer/NetworkErrorAlert: Verbindung zum Server unterbrochen. Diese Wiki erreicht den Server nicht. Bitte prüfe deine Netzwerkverbindung. Es ist nichts verloren: Änderungen, die noch nicht gespeichert sind, werden synchronisiert, sobald die Verbindung wieder steht.
 Syncer/ReadOnly: (schreibgeschützt)
 Syncer/Refresh: Vom Server aktualisieren
 Syncer/RefreshTooltip: Neueste Änderungen vom Server holen

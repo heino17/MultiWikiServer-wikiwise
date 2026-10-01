@@ -24,6 +24,7 @@ Syncer.prototype.titleSyncThrottleInterval = "$:/config/SyncThrottleInterval";
 Syncer.prototype.taskTimerInterval = 0.25 * 1000; // Interval for sync timer
 Syncer.prototype.throttleInterval = 1 * 1000; // Defer saving tiddlers if they've changed in the last 1s...
 Syncer.prototype.errorRetryInterval = 5 * 1000; // Interval to retry after an error
+Syncer.prototype.errorRetryBackoff = [1,2,6,12]; // Multipliers of the base retry interval used while an error persists
 Syncer.prototype.fallbackInterval = 10 * 1000; // Unless the task is older than 10s
 Syncer.prototype.pollTimerInterval = 60 * 1000; // Interval for polling for changes from the adaptor
 
@@ -45,6 +46,9 @@ function Syncer(options) {
 	this.taskTimerInterval = options.taskTimerInterval || this.taskTimerInterval;
 	this.throttleInterval = options.throttleInterval || parseInt(this.wiki.getTiddlerText(this.titleSyncThrottleInterval,""),10) || this.throttleInterval;
 	this.errorRetryInterval = options.errorRetryInterval || this.errorRetryInterval;
+	this.baseErrorRetryInterval = this.errorRetryInterval;
+	this.errorFailureCount = 0;
+	this.connectionAlertShown = false;
 	this.fallbackInterval = options.fallbackInterval || this.fallbackInterval;
 	this.pollTimerInterval = options.pollTimerInterval || parseInt(this.wiki.getTiddlerText(this.titleSyncPollingInterval,""),10) || this.pollTimerInterval;
 	this.logging = "logging" in options ? options.logging : true;
@@ -152,15 +156,62 @@ function Syncer(options) {
 }
 
 /*
+Is this the loss of the connection to the server rather than an answer from
+it? Sync adaptors report a vanished connection by tagging the error; the
+comparison with the legacy XHR string keeps adaptors that still report it that
+way working.
+*/
+function isConnectionError(err) {
+	return !!err && (err.isNetworkError === true || err === ($tw.language.getString("Error/XMLHttpRequest") + ": 0"));
+}
+
+/*
+The text of the connection alert, in the language of the wiki. The MWS wording
+lives in the client plugin; the core wording is the fallback.
+*/
+function connectionErrorText() {
+	return $tw.language.getString("MWS/Syncer/NetworkErrorAlert") || $tw.language.getString("Error/NetworkErrorAlert");
+}
+
+/*
 Show a generic network error alert
 */
 Syncer.prototype.displayError = function(msg,err) {
-	if(err === ($tw.language.getString("Error/XMLHttpRequest") + ": 0")) {
-		this.loggerConnection.alert($tw.language.getString("Error/NetworkErrorAlert"));
+	if(isConnectionError(err)) {
 		this.logger.log(msg + ":",err);
+		// One alert per outage: it stays until a sync task works again, so a
+		// connection that keeps failing does not pile up notices.
+		if(!this.connectionAlertShown) {
+			this.connectionAlertShown = true;
+			this.loggerConnection.alert(connectionErrorText());
+		}
 	} else {
 		this.logger.alert(msg + ":",err);
 	}
+};
+
+/*
+Slow the retries down while an error persists: the first wait is the plain
+errorRetryInterval, then twice, then six times, then twelve times and no more.
+A browser that wakes from sleep, or a class whose wifi drops for a minute,
+otherwise asks the server every five seconds until it answers.
+*/
+Syncer.prototype.escalateErrorRetry = function() {
+	var backoff = this.errorRetryBackoff,
+		index = this.errorFailureCount < backoff.length ? this.errorFailureCount : backoff.length - 1;
+	this.errorRetryInterval = this.baseErrorRetryInterval * backoff[index];
+	this.errorFailureCount += 1;
+};
+
+/*
+One task that worked is proof that the server is reachable again, so the next
+error starts over at the plain interval and a later outage may alert again.
+*/
+Syncer.prototype.resetErrorRetry = function() {
+	this.errorFailureCount = 0;
+	this.errorRetryInterval = this.baseErrorRetryInterval;
+	this.connectionAlertShown = false;
+	this.loggerConnection.clearAlerts();
 };
 
 /*
@@ -247,9 +298,6 @@ Syncer.prototype.updateDirtyStatus = function() {
 	if($tw.browser && !this.disableUI) {
 		var dirty = this.isDirty();
 		$tw.utils.toggleClass(document.body,"tc-dirty",dirty);
-		if(!dirty) {
-			this.loggerConnection.clearAlerts();
-		}
 	}
 };
 
@@ -451,8 +499,10 @@ Syncer.prototype.processTaskQueue = function() {
 					const [,name] = /(save|load|delete|sync)Task$/.exec(task.name) || [];
 					this.displayError("Sync error while processing " + name + " task", err);
 					this.updateDirtyStatus();
+					this.escalateErrorRetry();
 					this.triggerTimeout(this.errorRetryInterval);
 				} else {
+					this.resetErrorRetry();
 					this.updateDirtyStatus();
 					// Process the next task
 					this.processTaskQueue.call(this);
