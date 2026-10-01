@@ -4564,32 +4564,87 @@ noticed on the way: the `exclude` list in `tsconfig.json` still names
 in this fork (it has `packages/admin-vanilla`). Those entries have no effect,
 since nothing matches them.
 
-## 82. GitHub Actions auf `node24` statt `node20`
+## 82. GitHub Actions on `node24` instead of `node20`
 
-Der erste Lauf von §81 war grün — und trotzdem mit einer Warnung:
+The first run of §81 was green — and nevertheless carried a warning:
 `Node.js 20 is deprecated. The following actions target Node.js 20 but are
 being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4`.
-Die Warnung galt nicht dem Projekt, sondern den Actions selbst: `checkout` und
-`setup-node` in der vierten Hauptversion laufen intern auf der Node-20-Laufzeit,
-die GitHub abschaltet. §81 hatte sie nur auf `@v4` gehoben, weil das die
-übliche Aktualisierung war — inzwischen sind das die ältesten verfügbaren
-Hauptversionen.
+The warning was not about the project but about the actions themselves:
+`checkout` and `setup-node` in the fourth major release run internally on the
+Node 20 runtime that GitHub is switching off. §81 had only raised them to `@v4`,
+because that was the usual upgrade — by now those are the oldest available
+major versions.
 
-**Auf die aktuelle Hauptversion gesprungen, nicht auf `@v5`.** Die Actions
-lagen schon bei `@v7` (`checkout` v7.0.1, `setup-node` v7.0.0), und `@v5` hätte
-denselben Fehler nur mit neuerer Nummer wiederholt. In beiden `action.yml` steht
-`using: node24`, während die vierte Hauptversion auf `node20` lief; die
-verwendeten Inputs (`node-version`, `cache`) sind unverändert. Ein Sprung auf
-`@v7` statt auf die Zwischenversion ist damit die kürzere und die zukunftssichere
-Wahl — SHA-Pinning bleibt eine Option, wenn der Workflow einmal Sicherheits-
-relevant wird.
+**Jumped to the current major version, not to `@v5`.** The actions were already
+on `@v7` (`checkout` v7.0.1, `setup-node` v7.0.0), and `@v5` would only have
+repeated the same mistake under a newer number. Both `action.yml` files say
+`using: node24`, while the fourth major version ran on `node20`; the inputs
+used (`node-version`, `cache`) are unchanged. Going to `@v7` instead of the
+intermediate version is therefore the shorter and the future-proof choice —
+SHA pinning remains an option if the workflow ever becomes security-relevant.
 
-**Verified.** Der Workflow parst weiterhin als YAML, alle sechs Schritte sind
-unverändert, und `git status` zeigt nur Workflow und dieses Changelog. Ob die
-Warnung wirklich verschwunden ist, kann nur der Lauf auf GitHub zeigen — nach
-dem Push ist sie es: der Lauf ist grün und die Annotation über `node20` nicht
-mehr vorhanden, nur noch der Hinweis, dass `ubuntu-latest` ab 19.10.2026 auf
-Ubuntu 26 migriert.
+**Verified.** The workflow still parses as YAML, all six steps are unchanged,
+and `git status` shows only the workflow and this changelog. Only the run on
+GitHub can show whether the warning is really gone — and after the push it is:
+the run is green and the annotation about `node20` is no longer there, only the
+notice that `ubuntu-latest` migrates to Ubuntu 26 from 19.10.2026.
+
+## 83. Bug fix: one connection alert instead of a flood (Issue #139)
+
+Upstream issue #139: when the network disappears, the wiki stacks alert after
+alert. Before this change it was reproducible in the browser and measurable.
+
+**Measured before** on an isolated instance
+(`/tmp/opencode/mws-sim`, port 5099, Playwright aborting `/updates`): the first
+alert only appeared after 61.9 s — the syncer polls every 60 s — and then the
+two `displayError` calls of one failed poll each raised their own alert into
+the normal logger `syncer-browser-multiwikiclient`, because the multiwikiclient
+adaptor reported a request that never reached the server as a plain `Error`.
+The count of the first alert grew from 1 to 10, a new `/updates` request went
+out every 5 s, and after the network came back both alerts stayed on screen
+during the 40 s that were watched.
+
+**Four causes, all of them ours.**
+
+1. `httpRequest` in `plugins/client/src/new-multiwikiclientadaptor.ts` uses
+   `XMLHttpRequest` and does not reject: a request that never reached the server
+   answers with status `0`. `recipeRequest` turned every non-ok answer into
+   `Server returned 0: (no reason)`, indistinguishable from a real server
+   error — so the syncer never saw a connection error.
+2. `displayError` only recognises the legacy core string
+   `XMLHttpRequest: 0`, which this adaptor never produces. It also alerts
+   twice, because the failed poll reports the error twice: once from the
+   task, once from `syncFromServerTask`. `Logger.alert` only *counts*
+   duplicates of identical text, so both remain visible.
+3. The retry interval stayed at 5 s, no matter how long the failure lasted.
+4. The syncer copy in `plugins/client/tiddlers/syncer/syncer.js` cleared the
+   connection alerts in `updateDirtyStatus` as soon as the wiki was not dirty.
+   For an anonymous reader that is true immediately, so an alert that had just
+   been raised was thrown away again.
+
+**The fix.** A `NetworkError` with `isNetworkError` marks what never reached
+the server; status `0` is such a case, every other status stays a normal
+`Error` with the server's reason. `isConnectionError()` recognises the marker
+next to the legacy string, and one alert per outage is raised through
+`loggerConnection` — with new German and English wording in
+`MWS/Syncer/NetworkErrorAlert`. A working task resets the alert, the backoff
+`[1,2,6,12]` of the 5 s base interval makes the retries 5/10/30/60 s, and
+`updateDirtyStatus` no longer clears anything.
+
+**Measured after**, same scenario: first alert at 60.1 s, exactly one alert
+with count 1 across 100 s of outage, requests at 60.1, 65.1, 75.1 and 107.1 s,
+and the alert gone at the first successful poll after the network returned.
+A server that answers `503` still produces the ordinary syncer alerts and no
+connection alert.
+
+**The measurement is a script:** `scripts/syncer-alert-sim.mjs` (Playwright,
+`playwright-core`, the Chromium from the Playwright cache). Defaults are 20 ×
+5 s outage and 16 × 5 s recovery; the recovery window has to outlast the 60 s
+backoff, because the attempt that clears the alert is the one after it.
+`MWS_URL`, `MWS_WIKI`, `MWS_ABORT_REASON` (default `failed`) and the sample
+counts are environment variables, `--help` lists them.
+
+Not verified: real sleep/wake on a laptop — that belongs to the maintainer.
 
 ## Privacy / Datenschutz
 
@@ -9328,6 +9383,65 @@ Warnung wirklich verschwunden ist, kann nur der Lauf auf GitHub zeigen — nach
 dem Push ist sie es: der Lauf ist grün und die Annotation über `node20` nicht
 mehr vorhanden, nur noch der Hinweis, dass `ubuntu-latest` ab 19.10.2026 auf
 Ubuntu 26 migriert.
+
+## 83. Bugfix: ein Verbindungsalarm statt einer Flut (Issue #139)
+
+Upstream-Issue #139: Ist das Netzwerk weg, stapelt die Wiki Alarm nach Alarm.
+Vor dieser Änderung war das im Browser reproduzierbar und messbar.
+
+**Vorher gemessen** auf einer isolierten Instanz
+(`/tmp/opencode/mws-sim`, Port 5099, Playwright bricht `/updates` ab): Der erste
+Alarm erschien erst nach 61,9 s — der Syncer fragt alle 60 s ab — und die beiden
+`displayError`-Aufrufe eines fehlgeschlagenen Abrufs erzeugten je einen eigenen
+Alarm im normalen Logger `syncer-browser-multiwikiclient`, weil der
+MultiWikiClient-Adaptor eine Anfrage, die den Server nie erreichte, als
+gewöhnlichen `Error` meldete. Der Zähler des ersten Alarms stieg von 1 auf 10,
+alle 5 s ging eine neue `/updates`-Anfrage hinaus, und nachdem das Netzzeug
+zurückkam, blieben beide Alarme während der beobachteten 40 s stehen.
+
+**Vier Ursachen, alle unsere.**
+
+1. `httpRequest` in `plugins/client/src/new-multiwikiclientadaptor.ts` nutzt
+   `XMLHttpRequest` und lehnt nicht ab: Eine Anfrage, die den Server nie
+   erreicht, antwortet mit Status `0`. `recipeRequest` machte aus jeder
+   Nicht-ok-Antwort `Server returned 0: (no reason)` und damit ununterscheidbar
+   von einem echten Serverfehler — der Syncer sah also nie einen
+   Verbindungsfehler.
+2. `displayError` erkennt nur den alten Core-String `XMLHttpRequest: 0`, den
+   dieser Adaptor nie liefert. Und es alarmiert zweimal, weil der fehlgeschlagene
+   Abruf den Fehler zweimal meldet: einmal aus der Aufgabe, einmal aus
+   `syncFromServerTask`. `Logger.alert` zählt nur gleiche Texte, beide Alarme
+   bleiben also sichtbar.
+3. Das Wiederholungsintervall blieb bei 5 s, egal wie lange der Fehler dauerte.
+4. Die Syncer-Kopie in `plugins/client/tiddlers/syncer/syncer.js` löschte die
+   Verbindungsalarme in `updateDirtyStatus`, sobald die Wiki nicht schmutzig
+   war. Für einen anonyben Leser ist das sofort wahr, ein gerade erzeugter Alarm
+   wurde also wieder weggeworfen.
+
+**Die Lösung.** Ein `NetworkError` mit `isNetworkError` kennzeichnet, was den
+Server nie erreicht hat; Status `0` ist genau das, jeder andere Status bleibt ein
+gewöhnlicher `Error` mit dem Grund des Servers. `isConnectionError()` erkennt
+die Markierung neben dem alten String, und pro Ausfall wird ein Alarm über
+`loggerConnection` erzeugt — mit neuem deutschen und englischem Text in
+`MWS/Syncer/NetworkErrorAlert`. Eine erfolgreiche Aufgabe setzt Alarm und
+Zähler zurück, das Backoff `[1,2,6,12]` der 5-s-Basis macht aus den
+Wiederholungen 5/10/30/60 s, und `updateDirtyStatus` löscht nichts mehr.
+
+**Nachher gemessen**, gleiches Szenario: erster Alarm bei 60,1 s, genau ein
+Alarm mit Zähler 1 über 100 s Ausfall, Anfragen bei 60,1; 65,1; 75,1 und 107,1 s,
+und der Alarm ist beim ersten erfolgreichen Abruf nach der Rückkehr des Netzes
+weg. Ein Server, der `503` antwortet, erzeugt weiterhin die gewöhnlichen
+Syncer-Alarme und keinen Verbindungsalarm.
+
+**Die Messung ist ein Skript:** `scripts/syncer-alert-sim.mjs` (Playwright,
+`playwright-core`, das Chromium aus dem Playwright-Cache). Vorgaben sind
+20 × 5 s Ausfall und 16 × 5 s Recovery; das Recovery-Fenster muss das 60-s-Backoff
+überdauern, denn der Versuch, der den Alarm löscht, ist der danach. `MWS_URL`,
+`MWS_WIKI`, `MWS_ABORT_REASON` (Vorgabe `failed`) und die Messpunktzahlen sind
+Umgebungsvariablen, `--help` listet sie auf.
+
+Nicht verifiziert: echtes Schlafen und Aufwachen am Laptop — das gehört zur
+Freigabe durch die Maintainer.
 
 ## Betrieb / Ausblick
 

@@ -38,6 +38,7 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
 - **Löschen:** mit Bestätigung, Owner-/Admin-Schutz, geteilte Bags bleiben erhalten
 - **Öffentlich machen:** Wiki-Rezept und Bags geben an `ANON`→Lesen frei; ein öffentlich lesbares Wiki lässt sich zusätzlich von der Startseite nehmen (Pro-Wiki-Schalter)
 - **Blättern statt endloser Liste:** Standard sind 10 Wikis pro Seite (Zurück/Weiter plus „Seite X von Y" und Gesamtzahl); einstellbar unter „Einstellungen → Wikis pro Seite" (0 = alle in einer Liste). Die Gruppen „Meine Wikis", „Für dich freigegeben" und „System-Wikis" bleiben, und eine Gruppe, die über den Seitenwechsel läuft, wird auf der Folgeseite mit ihrer Überschrift wiederholt. Der eigentliche Gewinn ist der Renderaufwand: Nur die sichtbare Seite holt ihre Vorschaubilder
+- **Ein Verbindungsalarm pro Netzausfall:** Ist das Netz weg, zeigt die Wiki **einen** Hinweis („Verbindung zum Server unterbrochen …") statt eines Alarms pro Fehlversuch; er verschwindet von selbst, sobald wieder gespeichert werden kann. Die Wiederholungen gehen dabei zurück (5 → 10 → 30 → 60 s), damit ein Laptop aus dem Schlafen nicht minutenlang den Server fragt. Ungespeicherte Änderungen bleiben erhalten. Serverfehler, die wirklich eine Antwort sind (z. B. 403 oder 503), melden sich weiterhin als normale Meldung
 
 ### Lehrer- & Klassenmodus (Schulbetrieb)
 
@@ -176,6 +177,7 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
 - **Deleting:** with confirmation, owner/admin protection; shared bags stay intact
 - **Going public:** wiki recipe and bags grant `ANON`→read; a publicly readable wiki can additionally be removed from the start page (per-wiki switch)
 - **Paging instead of an endless list:** 10 wikis per page by default (Previous/Next plus "Page X of Y" and the total), configurable under "Settings → Wikis per page" (0 = all in one list). The "My wikis" / "Shared with you" / "System wikis" groups stay, and a group that runs across a page boundary is repeated on the next page with its heading. The real saving is render work: only the visible page fetches its preview images
+- **One connection alert per outage:** if the network is gone, the wiki shows **one** notice ("Connection lost …") instead of one alert per failed attempt, and it disappears by itself as soon as saving works again. The retries back off while that lasts (5 → 10 → 30 → 60 s), so a laptop waking from sleep does not query the server for minutes. Unsaved changes are kept. Errors that really are an answer from the server (e.g. 403 or 503) are still reported as an ordinary message
 
 ### **Teacher & Classroom Mode (school operation)**
 - **Teacher role** (`TEACHER`): a delegated user manager – creates students, sets passwords, manages **only their own class**; the capability is tied to a role **flag**, not the name (survives any renaming)
