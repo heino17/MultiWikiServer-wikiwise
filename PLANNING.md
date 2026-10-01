@@ -113,6 +113,15 @@ Markers used below:
   separate decision, with its own hosting and its own fix for the
   `markdown-it-tiddlywiki` crash that killed the build
 
+## Build and CI
+
+- ✅ GitHub Actions typechecks the server packages and the admin app and builds
+  the bundle, on every push to `main` and every pull request ([§81](CHANGELOG.md));
+  the actions run on `node24` ([§82](CHANGELOG.md)). First green run on `18d56f0`
+- ✗ pin `runs-on` before 19.10.2026 — GitHub migrates the `ubuntu-latest` label to
+  Ubuntu 26, which is announced but not yet exercised here. If a runner change
+  breaks the build, pin `ubuntu-24.04`; no reason to freeze it before that
+
 ## some ideas
 
 - ✗ webdav or samba for importing or editing tiddlers
