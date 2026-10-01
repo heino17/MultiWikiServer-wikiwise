@@ -101,6 +101,17 @@ Markers used below:
   ([§80](CHANGELOG.md)); the CLA requirement was dropped deliberately, the
   repository license covers contributions. `AGENTS.md` was rewritten in the same
   pass ([§80](CHANGELOG.md))
+- ✅ a check that also runs without a maintainer — GitHub Actions installs,
+  typechecks the server packages and the admin app and builds the bundle on every
+  push to `main` and on every pull request ([§81](CHANGELOG.md)). Until then every
+  check was manual
+- ⚖️ the CI of this fork does not deploy anything — the inherited workflow built
+  `editions/mws-docs` and pushed it to `TiddlyWiki/mws.tiddlywiki.com-gh-pages`
+  with a token the fork does not have, and that site belongs to TiddlyWiki. The
+  workflow and `.github/scripts/build-mws-site.sh` were therefore replaced by a
+  pure verification run ([§81](CHANGELOG.md)). Publishing our own docs site is a
+  separate decision, with its own hosting and its own fix for the
+  `markdown-it-tiddlywiki` crash that killed the build
 
 ## some ideas
 
