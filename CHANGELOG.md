@@ -4564,6 +4564,33 @@ noticed on the way: the `exclude` list in `tsconfig.json` still names
 in this fork (it has `packages/admin-vanilla`). Those entries have no effect,
 since nothing matches them.
 
+## 82. GitHub Actions auf `node24` statt `node20`
+
+Der erste Lauf von §81 war grün — und trotzdem mit einer Warnung:
+`Node.js 20 is deprecated. The following actions target Node.js 20 but are
+being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4`.
+Die Warnung galt nicht dem Projekt, sondern den Actions selbst: `checkout` und
+`setup-node` in der vierten Hauptversion laufen intern auf der Node-20-Laufzeit,
+die GitHub abschaltet. §81 hatte sie nur auf `@v4` gehoben, weil das die
+übliche Aktualisierung war — inzwischen sind das die ältesten verfügbaren
+Hauptversionen.
+
+**Auf die aktuelle Hauptversion gesprungen, nicht auf `@v5`.** Die Actions
+lagen schon bei `@v7` (`checkout` v7.0.1, `setup-node` v7.0.0), und `@v5` hätte
+denselben Fehler nur mit neuerer Nummer wiederholt. In beiden `action.yml` steht
+`using: node24`, während die vierte Hauptversion auf `node20` lief; die
+verwendeten Inputs (`node-version`, `cache`) sind unverändert. Ein Sprung auf
+`@v7` statt auf die Zwischenversion ist damit die kürzere und die zukunftssichere
+Wahl — SHA-Pinning bleibt eine Option, wenn der Workflow einmal Sicherheits-
+relevant wird.
+
+**Verified.** Der Workflow parst weiterhin als YAML, alle sechs Schritte sind
+unverändert, und `git status` zeigt nur Workflow und dieses Changelog. Ob die
+Warnung wirklich verschwunden ist, kann nur der Lauf auf GitHub zeigen — nach
+dem Push ist sie es: der Lauf ist grün und die Annotation über `node20` nicht
+mehr vorhanden, nur noch der Hinweis, dass `ubuntu-latest` ab 19.10.2026 auf
+Ubuntu 26 migriert.
+
 ## Privacy / Datenschutz
 
 - **No external fonts/assets:** The admin interface loads neither Google
@@ -9274,6 +9301,33 @@ ein grüner würde etwas bedeuten. Nicht angefasst, dabei bemerkt: Die
 `packages/admin-mdui`, zwei Pakete, die es in diesem Fork nicht gibt (er hat
 `packages/admin-vanilla`). Diese Einträge haben keine Wirkung, weil nichts darauf
 passt.
+
+## 82. GitHub Actions auf `node24` statt `node20`
+
+Der erste Lauf von §81 war grün — und trotzdem mit einer Warnung:
+`Node.js 20 is deprecated. The following actions target Node.js 20 but are
+being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4`.
+Die Warnung galt nicht dem Projekt, sondern den Actions selbst: `checkout` und
+`setup-node` in der vierten Hauptversion laufen intern auf der Node-20-Laufzeit,
+die GitHub abschaltet. §81 hatte sie nur auf `@v4` gehoben, weil das die
+übliche Aktualisierung war — inzwischen sind das die ältesten verfügbaren
+Hauptversionen.
+
+**Auf die aktuelle Hauptversion gesprungen, nicht auf `@v5`.** Die Actions
+lagen schon bei `@v7` (`checkout` v7.0.1, `setup-node` v7.0.0), und `@v5` hätte
+denselben Fehler nur mit neuerer Nummer wiederholt. In beiden `action.yml` steht
+`using: node24`, während die vierte Hauptversion auf `node20` lief; die
+verwendeten Inputs (`node-version`, `cache`) sind unverändert. Ein Sprung auf
+`@v7` statt auf die Zwischenversion ist damit die kürzere und die zukunftssichere
+Wahl — SHA-Pinning bleibt eine Option, wenn der Workflow einmal sicherheits-
+relevant wird.
+
+**Verifiziert.** Der Workflow parst weiterhin als YAML, alle sechs Schritte sind
+unverändert, und `git status` zeigt nur Workflow und dieses Changelog. Ob die
+Warnung wirklich verschwunden ist, kann nur der Lauf auf GitHub zeigen — nach
+dem Push ist sie es: der Lauf ist grün und die Annotation über `node20` nicht
+mehr vorhanden, nur noch der Hinweis, dass `ubuntu-latest` ab 19.10.2026 auf
+Ubuntu 26 migriert.
 
 ## Betrieb / Ausblick
 
