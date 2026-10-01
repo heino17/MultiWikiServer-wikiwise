@@ -10,6 +10,7 @@ Syncer/LoggedIn: You are logged in
 Syncer/LoggedInAs: You are logged in as
 Syncer/Login: Login
 Syncer/Logout: Logout
+Syncer/NetworkErrorAlert: Connection lost. This wiki cannot reach the server. Please check your network connection. Nothing is lost: changes you have not saved yet are synchronised as soon as the connection is back.
 Syncer/ReadOnly: (read-only)
 Syncer/Refresh: Refresh from server
 Syncer/RefreshTooltip: Get latest changes from the server
