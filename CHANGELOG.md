@@ -4423,6 +4423,89 @@ removed again — the inventory is unchanged at 6 users and 23 files.
 > Note: Port 8080, the default port, is already in use on the server by Apache2
 > (Ubuntu default page), hence port 5000.
 
+## 80. `CONTRIBUTING.md` and `AGENTS.md` written out
+
+Both files existed in the repository but had never been touched in this fork:
+`AGENTS.md` (7 lines) was last changed upstream on 6 July 2026,
+`CONTRIBUTING.md` (4 lines) on 7 July 2026 — while `README.md`,
+`README_features.md`, `ARCHITECTURE.md`, `PLANNING.md` and `CHANGELOG.md` were
+all maintained here. Both were also empty of anything specific to this fork.
+`CONTRIBUTING.md` was only the note that contributors have to sign the
+TiddlyWiki CLA, pointing at `TiddlyWiki5/contributing.md`; upstream had itself
+cut the file down in `f1ed053` ("add some notes about architecture", 93
+deleted lines) and moved the content into `ARCHITECTURE.md`, so the fork
+inherited a husk. `AGENTS.md` — the file with instructions for AI coding agents
+— consisted of one behavioural rule and a list of VS Code/Cursor tool names
+(`get_errors`, `vscode_*`, `lsp_*`) that exist in no agent setup at all: the
+rule was useful, the tool list ballast.
+
+**The CLA reference is gone, deliberately.** A contributor license agreement
+grants the project the right to redistribute a contribution under other terms.
+TiddlyWiki asks for one because the TiddlyWiki project needs that freedom for
+its own codebase. This fork is BSD 3-Clause with a single maintainer, where the
+repository license already covers what is contributed, so the requirement
+produced an obstacle without a legal benefit. `CONTRIBUTING.md` now says that
+plainly: pull requests are accepted under BSD 3-Clause and there is nothing to
+sign.
+
+**`CONTRIBUTING.md`: 4 → 288 lines, English and German.** The structure follows
+the other user-facing documents, one half per language with matching headings.
+It covers what to read before starting (`ARCHITECTURE.md`, `PLANNING.md`,
+`CHANGELOG.md`), a setup block (`git clone`, `npm install`, `npm run certs`,
+`npm start update-tiddlywiki`, `npm start init-store`, `npm start` →
+<http://localhost:8080/>), a command table, and the traps that are only
+learnable the hard way: `npm test` builds, packs, **deletes and recreates
+`tests/`** and starts that instance on port 8080, so the dev server has to be
+stopped first, and it is a smoke test without automated assertions;
+`npm run tsc` is a tsup variant, the typechecker is `npm run tsc2`; the root
+script `npm run tsc-client` still points at the removed
+`packages/react-admin` and no longer works, so the admin app is typechecked with
+`cd packages/admin-vanilla && npm run tsc`. The database comes from
+`DATABASE_URL` (SQLite, Postgres, MSSQL), the schema is in
+`prisma/schema.prisma`, and stores created before 27.09.2026 need the
+additional tables (§70). The conventions are the ones used in this repository:
+one topic per commit, German commit messages with a prefix and a §-reference,
+no dependency without saying so, no generated artifacts. The documentation
+contract has its own section: a new numbered CHANGELOG section in both language
+halves with the same number, `README.md` and `README_features.md` mirrored,
+wiki files are not Markdown, new UI strings in German and English. The release
+checklist lists every version location (`package.json`, `package-lock.json`,
+`tools/package-lock.json`, `README.md`, `README_features.md`,
+`editions/mws-docs/tiddlers/Installation.md`, `create-package/README.md`),
+`npm run build`, `npm pack` → `mws-wikiwise-X.Y.Z.tgz`, a commit as
+`release: Version X.Y.Z`, the annotated tag `vX.Y.Z` and a GitHub release with
+the tarball attached. Publishing to npm is not part of it and is called out as
+deliberate, so that nobody adds it back.
+
+**`AGENTS.md`: 7 → 125 lines, for agents.** What the repository is (the server
+packages; the admin app in `packages/admin-vanilla` with `src/app.tsx`,
+`src/list-view.ts`, `src/i18n.ts` and `src/locales/` on
+`@tiddlywiki/jsx-runtime` — no React, no preact; the wiki-side client in
+`plugins/client`), the mandatory reading with `grep -n "§N" CHANGELOG.md` as
+the quick way into existing code, and the hard rules: never edit `dist/`,
+TiddlyWiki files are not Markdown, new user-visible strings need both
+languages, documentation is bilingual by contract, the CHANGELOG is the
+development story (`§81` is next), the security invariants (the referer check
+in `RequestState.ts` as a deliberate prefix test, the per-wiki CSP from
+`RecipeResolver.ts`, public read access only via the `ANON` role, read-only
+wikis never save), no silent dependencies, no secrets from `~/.npmrc`, never
+push, tag, publish or bump a version unless asked, and a side tangent answered
+as a comment before any file is edited. The upstream behavioural rule was kept
+word for word. The command table replaces the dead tool list with the actual
+scripts and their failure modes, the conventions section records that
+verification is manual (CI only builds the documentation site on pushes to
+`main`), and a definition-of-done checklist ends the file.
+
+**Verified.** Both halves of `CONTRIBUTING.md` have the same nine headings in
+the same order and at the same depth; every file path and every `npm` script
+mentioned in both documents exists, checked mechanically against the working
+tree and `package.json`; `npm run tsc2` is clean; `git status` shows only the
+two documents plus this changelog and `PLANNING.md`. No runtime behaviour was
+touched, so there was nothing to click through in a dev instance — the check
+here was reading, the path and script check, and the typechecker. The open
+point "sell people on contributing to the project" in `PLANNING.md` is now
+done, and both documents name `§81` as the next section.
+
 ## Privacy / Datenschutz
 
 - **No external fonts/assets:** The admin interface loads neither Google
@@ -8982,6 +9065,96 @@ wieder entfernt — der Bestand ist unverändert bei 6 Benutzern und 23 Dateien.
 
 
 ---
+
+
+## 80. `CONTRIBUTING.md` und `AGENTS.md` ausformuliert
+
+Beide Dateien gab es im Repository, waren in diesem Fork aber nie angefasst
+worden: `AGENTS.md` (7 Zeilen) wurde zuletzt am 6. Juli 2026 upstream geändert,
+`CONTRIBUTING.md` (4 Zeilen) am 7. Juli 2026 — während `README.md`,
+`README_features.md`, `ARCHITECTURE.md`, `PLANNING.md` und `CHANGELOG.md` hier
+alle gepflegt wurden. Beide enthielten zudem nichts, das diesen Fork betrifft.
+`CONTRIBUTING.md` war nur der Hinweis, Beitragende müssten die TiddlyWiki-CLA
+unterschreiben, mit Verweis auf `TiddlyWiki5/contributing.md`; Upstream hatte
+die Datei in `f1ed053` selbst ausgedünnt („add some notes about architecture",
+93 gelöschte Zeilen) und den Inhalt nach `ARCHITECTURE.md` verschoben, der Fork
+ererbte also eine leere Hülse. `AGENTS.md` — die Datei mit Anweisungen für
+KI-Coding-Agenten — bestand aus einer Verhaltensregel und einer Liste von
+VS-Code-/Cursor-Werkzeugnamen (`get_errors`, `vscode_*`, `lsp_*`), die in
+keinem Agent-Setup existieren: die Regel war nützlich, die Werkzeugliste
+Ballast.
+
+**Die CLA-Referenz ist bewusst weg.** Eine Contributor License Agreement
+gibt dem Projekt das Recht, einen Beitrag unter anderen Bedingungen weiterzugeben.
+TiddlyWiki verlangt eine, weil das TiddlyWiki-Projekt diese Freiheit für seine
+eigene Codebasis braucht. Dieser Fork ist BSD 3-Clause mit einer einzelnen
+Maintainerin, wo die Repository-Lizenz das Beigesteuerte bereits abdeckt — die
+Anforderung erzeugte also ein Hindernis ohne rechtlichen Gegenwert.
+`CONTRIBUTING.md` sagt das jetzt ausdrücklich: Pull Requests werden unter
+BSD 3-Clause angenommen, und es gibt nichts zu unterschreiben.
+
+**`CONTRIBUTING.md`: 4 → 288 Zeilen, Englisch und Deutsch.** Die Struktur folgt
+den anderen nutzersichtbaren Dokumenten, eine Hälfte je Sprache mit
+übereinstimmenden Überschriften. Behandelt werden, was vor dem Beginn zu lesen
+ist (`ARCHITECTURE.md`, `PLANNING.md`, `CHANGELOG.md`), ein Setup-Block
+(`git clone`, `npm install`, `npm run certs`, `npm start update-tiddlywiki`,
+`npm start init-store`, `npm start` → <http://localhost:8080/>), eine
+Befehlstabelle und die Fallstricke, die man nur auf dem harten Weg lernt:
+`npm test` baut, packt, **löscht und neu anlegt `tests/`** und startet diese
+Instanz auf Port 8080, der Entwicklungsserver muss also vorher beendet werden,
+und es ist ein Smoke-Test ohne automatisierte Prüfungen; `npm run tsc` ist
+eine tsup-Variante, der Typechecker ist `npm run tsc2`; das Root-Skript
+`npm run tsc-client` zeigt noch auf das entfernte `packages/react-admin` und
+funktioniert nicht mehr, die Admin-App wird deshalb mit
+`cd packages/admin-vanilla && npm run tsc` geprüft. Die Datenbank kommt aus
+`DATABASE_URL` (SQLite, Postgres, MSSQL), das Schema liegt in
+`prisma/schema.prisma`, und Datenbestände von vor dem 27.09.2026 brauchen die
+zusätzlichen Tabellen (§70). Die Konventionen sind die in diesem Repository
+gepflegten: ein Thema pro Commit, deutsche Commit-Nachrichten mit Präfix und
+§-Verweis, keine Abhängigkeit ohne Ansage, keine erzeugten Artefakte. Der
+Dokumentationsvertrag hat einen eigenen Abschnitt: neuer nummerierter
+CHANGELOG-Abschnitt in beiden Sprachhälften mit gleicher Nummer, `README.md`
+und `README_features.md` gespiegelt, Wiki-Dateien sind kein Markdown, neue
+Oberflächentexte auf Deutsch und Englisch. Die Release-Checkliste nennt alle
+Versionsorte (`package.json`, `package-lock.json`, `tools/package-lock.json`,
+`README.md`, `README_features.md`,
+`editions/mws-docs/tiddlers/Installation.md`, `create-package/README.md`),
+`npm run build`, `npm pack` → `mws-wikiwise-X.Y.Z.tgz`, einen Commit als
+`release: Version X.Y.Z`, den annotierten Tag `vX.Y.Z` und ein GitHub-Release
+mit angehängtem Tarball. Eine Veröffentlichung auf npm gehört nicht dazu und
+ist als Absicht benannt, damit sie niemand wieder einführt.
+
+**`AGENTS.md`: 7 → 125 Zeilen, für Agenten.** Was das Repository ist (die
+Server-Pakete; die Admin-App in `packages/admin-vanilla` mit `src/app.tsx`,
+`src/list-view.ts`, `src/i18n.ts` und `src/locales/` auf
+`@tiddlywiki/jsx-runtime` — kein React, kein preact; der Wiki-Client in
+`plugins/client`), die Pflichtlektüre mit `grep -n "§N" CHANGELOG.md` als
+schnellem Weg in bestehenden Code, und die harten Regeln: `dist/` nie
+bearbeiten, TiddlyWiki-Dateien sind kein Markdown, neue nutzersichtbare Texte
+brauchen beide Sprachen, Dokumentation ist vertraglich zweisprachig, das
+CHANGELOG ist die Entwicklungsgeschichte (`§81` ist der nächste), die
+Sicherheitsinvarianten (die Referer-Prüfung in `RequestState.ts` als bewusster
+Präfixtest, das CSP pro Wiki aus `RecipeResolver.ts`, öffentliches Lesen nur
+über die Rolle `ANON`, schreibgeschützte Wikis speichern nie), keine stillen
+Abhängigkeiten, keine Secrets aus `~/.npmrc`, nie pushen, taggen, veröffentlichen
+oder Version hochsetzen ohne Aufforderung, und ein Side Tangent wird als Kommentar
+beantwortet, bevor eine Datei angefasst wird. Die Verhaltensregel aus dem
+Upstream ist wortgleich erhalten geblieben. Die Befehlstabelle ersetzt die tote
+Werkzeugliste durch die tatsächlichen Skripte und ihre Fehlerfälle, der
+Abschnitt zu den Konventionen hält fest, dass die Verifikation manuell ist
+(CI baut auf Pushes nach `main` nur die Dokumentationsseite), und eine Checkliste
+„before a change counts as done" beendet die Datei.
+
+**Verifiziert.** Beide Hälften von `CONTRIBUTING.md` haben dieselben neun
+Überschriften in derselben Reihenfolge und Tiefe; jeder in beiden Dokumenten
+genannte Dateipfad und jedes `npm`-Skript existiert, maschinell gegen den
+Arbeitsbaum und `package.json` geprüft; `npm run tsc2` ist sauber; `git status`
+zeigt nur die beiden Dokumente, dieses Changelog und `PLANNING.md`. Am
+Laufzeitverhalten wurde nichts geändert, es gab also nichts in einer
+Entwicklungsinstanz durchzuklicken — geprüft wurde hier durch Lesen, den Pfad-
+und Skriptabgleich und den Typechecker. Der offene Punkt „sell people on
+contributing to the project" in `PLANNING.md` ist damit erledigt, und beide
+Dokumente nennen `§81` als den nächsten Abschnitt.
 
 
 ## Betrieb / Ausblick

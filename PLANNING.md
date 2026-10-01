@@ -95,8 +95,12 @@ Markers used below:
   migration list against a real old database belongs into the release check
   from now on
 - ✗ put site restrictions in a file — still unclear what belongs into it
-- ✗ sell people on contributing to the project — CONTRIBUTING.md is four lines and
-  only points at the upstream CLA
+- ✅ sell people on contributing to the project — `CONTRIBUTING.md` is now a real
+  bilingual guide (setup, commands, conventions, documentation contract,
+  release checklist) instead of four lines pointing at the upstream CLA
+  ([§80](CHANGELOG.md)); the CLA requirement was dropped deliberately, the
+  repository license covers contributions. `AGENTS.md` was rewritten in the same
+  pass ([§80](CHANGELOG.md))
 
 ## some ideas
 
