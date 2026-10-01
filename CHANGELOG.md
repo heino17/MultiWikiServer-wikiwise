@@ -4506,6 +4506,64 @@ here was reading, the path and script check, and the typechecker. The open
 point "sell people on contributing to the project" in `PLANNING.md` is now
 done, and both documents name `§81` as the next section.
 
+## 81. GitHub Actions verifies instead of publishing the upstream site
+
+The workflow this fork inherited, `.github/workflows/ci.yml`, did not test
+anything: on every push to `main` it built the documentation edition
+`editions/mws-docs` and pushed the result to
+`TiddlyWiki/mws.tiddlywiki.com-gh-pages`. That is the **upstream** website, and
+overwriting it is not this fork's business — the push could never have worked
+anyway, because the token it uses, `GITHUBPUSHTOKEN`, does not exist here. It
+had also been red for a while: the build died inside
+`markdown-it-tiddlywiki.js` with `Error: inline rule didn't increment
+state.pos`, before the push step. That failure has nothing to do with the
+fork's own code, which is why the two pushes before this one were red as well.
+
+**What it is now:** a verification run and nothing else.
+
+- `npm ci` for a lockfile-faithful install. The `prepare` hook runs
+  `build:pack` during it, and `scripts.mjs` installs `tools/` on demand, so a
+  fresh checkout needs no extra step.
+- `npm run tsc2` — the typechecker over the server packages (the root script
+  `npm run tsc` is a tsup variant, not a typechecker).
+- `npm run tsc` in `packages/admin-vanilla` — the admin app with its own
+  `tsconfig.json`, which the root configuration only covers in part.
+- `npm run build` — the client bundle and the runtime bundle into `dist/`.
+
+There is no deployment step, no secret and no write permission: the workflow
+declares `permissions: contents: read`, so even a later addition of a deploy
+step would fail instead of pushing somewhere. It runs on pushes to `main`, on
+every `pull_request` (the check that matters is the one before a merge, and
+this fork will get pull requests from outside) and on manual
+`workflow_dispatch`. Node is pinned to 22, the version this fork is developed
+and released with; `actions/checkout` and `actions/setup-node` were bumped from
+`@v2` and `@v1` to `@v4`, which also removes the deprecation warning about
+actions targeting Node 20. Superseded runs on the same ref are cancelled. The
+job is called `build-and-typecheck`, because the old name
+(`build-mws-tiddlywiki-com`) described a job that no longer exists.
+
+`build-mws-site.sh` went with it. It existed only to serve that deployment, and
+a script in this repository that pushes to TiddlyWiki's site is a trap for
+whoever runs it next; it stays recoverable in the git history. **Deliberately
+not fixed:** the `markdown-it-tiddlywiki` crash — it belongs to the rendering
+of the upstream documentation site, which this fork does not publish, and
+fixing it would mean carrying along a fork of TiddlyWiki's site build for a
+page nobody asked for. Publishing our own documentation site is a separate
+decision with its own hosting, recorded in `PLANNING.md` so that it is not
+mistaken for an oversight.
+
+**Verified.** `npm ci --dry-run` passes, so the lockfile is in sync with
+`package.json`; `npm run tsc2`, `npm run tsc` in `packages/admin-vanilla` and
+`npm run build` all run clean in that order, and `git status` stays empty after
+the build because `dist/` is git-ignored. The workflow file parses as YAML and
+every command it runs exists in `package.json`. Whether GitHub's own runners
+agree is decided by the first run after the push — nothing is deployed, so a
+red first run would be harmless and a green one means something. Not touched,
+noticed on the way: the `exclude` list in `tsconfig.json` still names
+`packages/admin-react` and `packages/admin-mdui`, two packages that do not exist
+in this fork (it has `packages/admin-vanilla`). Those entries have no effect,
+since nothing matches them.
+
 ## Privacy / Datenschutz
 
 - **No external fonts/assets:** The admin interface loads neither Google
@@ -9156,6 +9214,66 @@ und Skriptabgleich und den Typechecker. Der offene Punkt „sell people on
 contributing to the project" in `PLANNING.md` ist damit erledigt, und beide
 Dokumente nennen `§81` als den nächsten Abschnitt.
 
+
+## 81. GitHub Actions prüft, statt die Upstream-Website zu veröffentlichen
+
+Der geerbte Workflow `.github/workflows/ci.yml` hat nichts geprüft: Er hat bei
+jedem Push auf `main` die Dokumentations-Edition `editions/mws-docs` gebaut und
+das Ergebnis nach `TiddlyWiki/mws.tiddlywiki.com-gh-pages` geschoben. Das ist
+die **Upstream**-Website, und sie zu überschreiben gehört nicht zu diesem
+Fork — der Push hätte ohnehin nie funktioniert, weil das dafür benutzte Token
+`GITHUBPUSHTOKEN` hier nicht existiert. Länger rot war er auch: Der Build
+stürzte in `markdown-it-tiddlywiki.js` mit `Error: inline rule didn't increment
+state.pos` ab, noch vor dem Push-Schritt. Dieser Fehler hat nichts mit dem Code
+des Forks zu tun, weshalb auch die beiden Pushes davor rot waren.
+
+**Was es jetzt ist:** eine Prüfung und sonst nichts.
+
+- `npm ci` für eine lockfile-getreue Installation. Der `prepare`-Hook läuft
+  dabei `build:pack`, und `scripts.mjs` installiert `tools/` bei Bedarf, ein
+  frischer Checkout braucht also keinen zusätzlichen Schritt.
+- `npm run tsc2` — der Typechecker über die Server-Pakete (das Root-Skript
+  `npm run tsc` ist eine tsup-Variante, kein Typechecker).
+- `npm run tsc` in `packages/admin-vanilla` — die Admin-App mit ihrem eigenen
+  `tsconfig.json`, die die Root-Konfiguration nur teilweise abdeckt.
+- `npm run build` — das Client-Bundle und das Runtime-Bundle nach `dist/`.
+
+Es gibt keinen Deployment-Schritt, kein Secret und keine Schreibrecht: Der
+Workflow deklariert `permissions: contents: read`, sodass auch ein später
+hinzugefütgter Deployment-Schritt scheitern würde, statt irgendwohin zu
+schieben. Er läuft bei Pushes auf `main`, bei jedem `pull_request` (die
+Prüffung, die zählt, ist die vor dem Merge, und dieser Fork wird
+Pull-Requests von außen bekommen) und manuell über `workflow_dispatch`. Node
+ist auf 22 gepinnt, die Version, mit der dieser Fork entwickelt und ausgeliefert
+wird; `actions/checkout` und `actions/setup-node` wurden von `@v2` und `@v1` auf
+`@v4` gehoben, was zugleich die Deprecation-Warnung zu Actions mit Node 20
+beseitigt. Überholte Läufe auf demselben Ref werden abgebrochen. Der Job
+heißt `build-and-typecheck`, denn der alte Name
+(`build-mws-tiddlywiki-com`) beschrieb einen Job, den es nicht mehr gibt.
+
+`build-mws-site.sh` ist mit verschwunden. Es existierte nur für dieses
+Deployment, und ein Skript in diesem Repository, das auf TiddlyWIKIs Website
+schiebt, ist eine Falle für die nächste Person, die es ausführt; im
+Git-Verlauf bleibt es wiederherstellbar. **Bewusst nicht behoben:** der
+`markdown-it-tiddlywiki`-Absturz — er gehört zum Rendern der
+Upstream-Dokumentationsseite, die dieser Fork nicht veröffentlicht, und ein
+Fix würde bedeuten, einen Fork von TiddlyWikis Site-Build für eine Seite
+mitzuschleppen, nach der niemand gefragt hat. Unsere eigene Dokumentationsseite
+zu veröffentlichen ist eine eigene Entscheidung mit eigenem Hosting, in
+`PLANNING.md` festgehalten, damit sie nicht für ein Versehen gehalten wird.
+
+**Verifiziert.** `npm ci --dry-run` läuft durch, das Lockfile ist also synchron
+zu `package.json`; `npm run tsc2`, `npm run tsc` in `packages/admin-vanilla` und
+`npm run build` laufen in dieser Reihenfolge sauber durch, und `git status`
+bleibt nach dem Build leer, weil `dist/` git-ignoriert ist. Die Workflow-Datei
+parst als YAML, und jeder Befehl, den sie ausführt, existiert in `package.json`.
+Ob die GitHub-Runner das genauso sehen, entscheidet der erste Lauf nach dem
+Push — es wird nichts deployt, ein roter erster Lauf wäre also harmlos und
+ein grüner würde etwas bedeuten. Nicht angefasst, dabei bemerkt: Die
+`exclude`-Liste in `tsconfig.json` nennt weiterhin `packages/admin-react` und
+`packages/admin-mdui`, zwei Pakete, die es in diesem Fork nicht gibt (er hat
+`packages/admin-vanilla`). Diese Einträge haben keine Wirkung, weil nichts darauf
+passt.
 
 ## Betrieb / Ausblick
 

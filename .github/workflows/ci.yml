@@ -1,18 +1,42 @@
+name: Build and typecheck
+
+# Verification for this fork: install, typecheck server packages and admin app,
+# then build the runtime bundle.
+#
+# This workflow deliberately deploys nothing and uses no secrets. The workflow
+# it replaces was inherited from upstream: it built editions/mws-docs and pushed
+# the result to TiddlyWiki/mws.tiddlywiki.com-gh-pages, a site that belongs to
+# TiddlyWiki and that this fork must never overwrite.
+
 on:
   push:
     branches:
       - main
-env:
-  NODE_VERSION: "23"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build-mws-tiddlywiki-com:
+  build-and-typecheck:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: "${{ env.NODE_VERSION }}"
-      - run: "bash .github/scripts/build-mws-site.sh"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUBPUSHTOKEN }}
+          node-version: "22"
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Typecheck server packages
+        run: npm run tsc2
+      - name: Typecheck admin app
+        run: npm run tsc
+        working-directory: packages/admin-vanilla
+      - name: Build runtime and client bundle
+        run: npm run build
