@@ -131,6 +131,43 @@ plus sorting in every list of the admin app (§78, §79).
 
 ---
 
+## Release 0.4.1 — 2026-10-01
+
+4 commits since 0.4.0. A patch release: one user-visible bug fix in the wiki
+client, three maintenance commits behind it.
+
+**Fixed**
+
+- **One connection alert instead of a flood** (§83, upstream issue #139): when
+  the network disappeared, the wiki stacked alert after alert — measured on an
+  isolated instance, the first alert after 61.9 s, then two alerts per failed
+  poll with a counter up to 10, a reload every 5 s, and both alerts stayed on
+  screen after the network came back. Now there is **one** notice with its own
+  German and English wording, it disappears as soon as a sync task works
+  again, and the retries back off from 5 s to 10, 30 and 60 s, so a laptop
+  waking from sleep no longer queries the server for minutes. Unsaved changes
+  are kept. A server that really answers with an error (403, 503) is still
+  reported as an ordinary message.
+
+**Maintenance**
+
+- `CONTRIBUTING.md` and `AGENTS.md` written out (§80).
+- GitHub Actions verify instead of publishing the upstream site (§81) and run
+  on `node24` with `checkout`/`setup-node` v7 (§82).
+- `scripts/syncer-alert-sim.mjs` measures the alert behaviour with Playwright
+  and is the regression check for §83.
+
+**Operating notes**
+
+- No migration, no schema change; the 0.2.x data-folder rule and the API are
+  unchanged.
+- The first start after the update builds a fresh plugin cache under
+  `cache/mws/0.4.1/`; `cache/mws/0.4.0/` is left untouched and can be deleted.
+- The syncer in the wiki is client-side code: an open wiki tab needs a reload
+  to get the new behaviour.
+
+---
+
 ## 1. Missing dependency: `escape-string-regexp`
 
 **Files:** `package.json` (root)
@@ -4832,6 +4869,45 @@ sowie Suche und Sortierung in jeder Liste der Admin-App (§78, §79).
   gelöscht werden.
 - Die `0.2.x`-Regel für den Datenordner und die API bleiben unverändert, und
   alle acht Sprachen sind vollständig.
+
+---
+
+## Release 0.4.1 — 2026-10-01
+
+4 Commits seit 0.4.0. Ein Patch-Release: ein sichtbarer Bugfix im Wiki-Client,
+drei Wartungs-Commits dahinter.
+
+**Behoben**
+
+- **Ein Verbindungsalarm statt einer Flut** (§83, Upstream-Issue #139): War das
+  Netz weg, stapelte die Wiki Alarm nach Alarm — gemessen auf einer isolierten
+  Instanz erschien der erste Alarm nach 61,9 s, danach zwei Alarme je
+  fehlgeschlagenem Abruf mit einem Zähler bis 10, alle 5 s ein neuer Versuch, und
+  beide Alarme blieben stehen, nachdem das Netz zurückkam. Jetzt gibt es
+  **einen** Hinweis mit eigenem deutschen und englischem Text, er verschwindet,
+  sobald wieder eine Aufgabe durchgeht, und die Wiederholungen gehen zurück
+  (5 → 10 → 30 → 60 s), damit ein Laptop aus dem Schlafen nicht minutenlang
+  den Server fragt. Ungespeicherte Änderungen bleiben erhalten. Ein Server, der
+  wirklich mit einem Fehler antwortet (403, 503), meldet sich weiterhin als
+  gewöhnliche Meldung.
+
+**Wartung**
+
+- `CONTRIBUTING.md` und `AGENTS.md` ausformuliert (§80).
+- GitHub Actions prüfen, statt die Upstream-Website zu veröffentlichen (§81), und
+  laufen auf `node24` mit `checkout`/`setup-node` v7 (§82).
+- `scripts/syncer-alert-sim.mjs` misst das Alarmverhalten mit Playwright und ist
+  die Regressionsprüfung für §83.
+
+**Betriebshinweise**
+
+- Keine Migration, keine Schemaänderung; die 0.2.x-Datenordnerregel und die API
+  bleiben unverändert.
+- Der erste Start nach dem Update baut einen frischen Plugin-Cache unter
+  `cache/mws/0.4.1/`; `cache/mws/0.4.0/` bleibt unberührt und kann gelöscht
+  werden.
+- Der Syncer in der Wiki ist Client-seitiger Code: ein offener Wiki-Tab braucht
+  ein Neuladen für das neue Verhalten.
 
 ---
 
