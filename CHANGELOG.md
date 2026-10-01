@@ -78,7 +78,7 @@ stay private.
 
 ## Release 0.4.0 — 2026-09-30
 
-24 commits since 0.3.3, 95 files, +3622/−602. The centre of gravity is files
+26 commits since 0.3.3, 98 files, +4554/−622. The centre of gravity is files
 and lists: uploading into a wiki and embedding the result (§65), and search
 plus sorting in every list of the admin app (§78, §79).
 
@@ -129,8 +129,6 @@ plus sorting in every list of the admin app (§78, §79).
 - The 0.2.x data-folder rule and the API are unchanged, and all eight
   languages are complete.
 
-Sections §65–§79 are written in the German half of this log so far; the
-English text is still to come.
 ---
 
 ## 1. Missing dependency: `escape-string-regexp`
@@ -3610,6 +3608,807 @@ including the emoji puzzle):
 
 ---
 
+## 65. Embedding files uploaded into a wiki ("Files in this wiki")
+
+**Goal:** files uploaded through the wiki toolbar should be usable inside the
+wiki right away — images as images, other files as a link — without the wiki
+having to know an "folder" or a separate share being needed. The documentation
+had claimed this for longer (`Datei-in-einem-Wiki-verwenden`), but technically
+the assignment was missing.
+
+### The solution
+
+**Server (steps 1–4, commit `5b68a69`):**
+
+- `user_file.recipe_id` (recipe id, nullable, with an index) via Prisma schema
+  plus migration `20260928_user_file_recipe`. `NULL` = personal file.
+- An upload with `?recipe=<slug>` now writes this `recipe_id`
+  (`UserFileUpload`); uploads from "My files" stay `NULL`.
+- New routes, both with `assertReferer(["/", "/wiki"])`:
+  - `GET/HEAD /api/user-files/wiki-file?recipe=<slug>&id=<id>` — streams the
+    file **inline** (images/audio/video/PDF/…) with **range support**
+    (seeking). The range logic of `UserFilePreview` was extracted into the
+    shared helper `streamInline` for that, and both routes use it.
+  - `GET /api/user-files/wiki-files?recipe=<slug>` — the list of all files of
+    the wiki (for the folder modal).
+- **Visibility = wiki read access:** both routes use the same read gate as the
+  wiki page itself (`RecipeResolver.assertRecipe`). Whoever may open the wiki
+  sees the files — deliberately **without `okUser`**, so that anonymous readers
+  of a public wiki can load the contents too. Users with no relation to the
+  wiki get exactly the same 404 as for the wiki itself (no existence oracle).
+  Only files that really were uploaded into *this* wiki (`recipe_id` match) are
+  reachable; personal files stay private.
+
+**Client (step 5, commit `1d1379a`):**
+
+- After an upload **inside a wiki** a modal opens with the finished TiddlyWiki
+  code to paste: `[img[…]]` for images, `[ext[…]]` for everything else.
+  (Personal uploads still get only the success note.)
+- New toolbar button **"Files in this wiki"** (folder icon,
+  `$:/tags/PageControls`, `tm-mws-wiki-files`): loads
+  `/api/user-files/wiki-files` and shows per file preview (`[img]`/`[ext]`),
+  file name and the copyable code snippet in a modal.
+- The upload response now passes `id` and `type` through; 8 new i18n strings in
+  all 8 languages.
+
+### Tested
+
+- `tsc2` and client `tsc` without errors; server and client bundle build.
+- The migration is applied automatically by the `SqliteAdapter` at startup
+  ("Applying migration 20260928_user_file_recipe"); column plus index
+  `user_file_recipe_id_idx` verified via `PRAGMA table_info`.
+- **End to end against a fresh instance** (port 5099, with the built-in
+  `dist/`): login via the real OPAQUE protocol (`@serenity-kit/opaque`,
+  `/login/1` + `/login/2`), then `PUT /api/user-files/upload?recipe=bedienungsanleitung`
+  with a test PNG. Verified: `200` with `id/type/sizeBytes`; in the database
+  `user_file.recipe_id` is exactly the recipe id of the wiki; `GET
+  /api/user-files/wiki-files?recipe=…` lists the file; `GET
+  /api/user-files/wiki-file?recipe=…&id=…` returns `200 image/png` with
+  byte-identical content and, with `Range: bytes=0-9`, `206` + `Content-Range:
+  bytes 0-9/70`. Gate: anonymously the file route returns exactly the same
+  status as the wiki page itself (here `200`, because the wiki has ANON read
+  access), unknown `recipe` → `404` (no existence oracle).
+
+### Addition: URL resolution in the wiki client repaired
+
+In the browser test (wiki `wiki-frau-meyer`, image `TAvatar2.jpg`) the folder
+modal showed no image, and the inserted snippet loaded the file as
+`http://localhost:5000/wiki/api/user-files/…` → `400 NO_ROUTE_MATCHED`. The
+reason: the snippet began with `api/user-files/…` (without a leading slash),
+and TiddlyWiki resolves relative URLs against the wiki page URL `/wiki/<slug>`
+— which yields `/wiki/api/…`. In addition `[ext[…]]` was not a TW macro at all
+(there is no core macro `ext`), so non-images would have been rendered as
+literal text.
+
+**Fix (`plugins/client/tiddlers/upload-file.js`):**
+
+- New helper `wikiFileUrl()` returns the **domain-independent** URL
+  `/api/user-files/wiki-file?recipe=…&id=…` (leading slash instead of host):
+  TiddlyWiki resolves it against the current origin, so no host and port are
+  baked into the tiddler and the snippet survives a change of server address.
+  The XHR paths (upload, folder list) keep using
+  `getHost()`/`$:/config/multiwikiclient/host`.
+- Non-images get a real wiki link `[[filename|url]]` instead of the dead
+  `[ext[…]]` (special characters `]`/`|` in the name are removed).
+- Since the dev server reads the client tiddlers from
+  `plugins/client/tiddlers/` at startup (plugin cache `mws/<version>/client`),
+  the fix takes effect after a restart of the dev server.
+
+---
+
+## 66. README: quick start "Aus dem Repository" extended by initialization steps
+
+After `git clone` + `npm install` + `npm start` on a fresh clone the server got
+stuck at `Error: You need to run update-tiddlywiki first`, because `dev/` is
+gitignored and the clone therefore contains neither `dev/wiki/tw5/<version>` nor
+`dev/wiki/store/` — the steps were only in the development section, which the
+quick start left out. In addition the quick start pointed at
+`localhost:5000/dev/`, which only holds with a local `dev/mws.dev.json`; a fresh
+clone listens on port `8080` without that file.
+
+**Fix (`README.md`, EN and DE):** the quick start was extended by
+`npm start update-tiddlywiki` and `npm start init-store`, with a note that
+`dev/` is not in git; address corrected to <http://localhost:8080/>.
+
+---
+
+## 67. Dependency clean-up: hono to 4.13.10, in-range repairs
+
+`npm audit` reported hono advisories among others (CORS ReDoS, `memo()` SSR data
+leak, proxy helpers, language middleware, `parseBody()`, query parser) — hono
+4.12.27 was pinned exactly in `@tiddlywiki/server` and resolved as `"*"` in
+`@mws/wikiwise`, so no fix was possible. Cleaned up in range:
+
+- `packages/mws/package.json: "hono": "*"` → `"hono": "^4.13.10"`, and
+  `packages/server/package.json: "hono": "4.12.27"` → `"hono": "^4.13.10"`.
+  hono is the core router of the server-side TW server (`new Hono<HonoEnv>()`,
+  `@hono/node-server`, `serve-static`); 4.13.10 fixes all the listed advisories.
+- `npm audit fix` additionally pulled in-range: `@hono/node-server` 2.0.8 → 2.1.1
+  (WS handshake DoS), `uuid` 11.1.0 → 11.1.1, `picomatch` 2.3.1 → 2.3.2,
+  `micromatch` 3.1.3 → 3.2.3.
+- **Verified:** E2E (17 checks, login/upload/wiki-file/wiki-files/recipe gate)
+  against a fresh instance with the newly built `dist/mws.js` → **ALL PASS**.
+- **Remaining:** only `esbuild`/`html-jsx` (moderate, pure build dev tooling,
+  not part of the server package; a fix only via the breaking change
+  `html-jsx@0.3.7`).
+
+---
+
+## 68. Fix: the one-click wiki of `admin` now also starts private
+
+When creating a one-click wiki (`PUT /admin/wiki`, button **"Create 1-Click
+Wiki"**) only the **site admin** additionally received `USER → A_read` and
+`ANON → A_read`. Teachers and students have received — since §22 — only their
+**personal** role and thus deliberately **no** read access for everyone. The
+admin was therefore the only user whose wiki, created with a click, was
+immediately readable by *all* logged-in users **and** anonymously public; it
+additionally appeared on the public start page `/` (§48, same ANON rule as
+`LandingRoutes.ts`).
+
+**Cause:** `AdminCreateWiki` in
+`packages/mws/src/new-managers/TabDataAdapter.ts` chose the roles
+conditionally:
+
+```ts
+const commonRole = isAdmin ? rolesMapper("USER") : undefined;
+const anonRole   = isAdmin ? rolesMapper("ANON") : undefined;
+```
+
+and injected those two variables into both permission lists (bag `C_admin` +
+recipe `B_write`) as `A_read`.
+
+**Fix (`TabDataAdapter.ts`):** the special treatment for `isAdmin` is dropped
+completely — a read access is now entered **for nobody**:
+
+- `commonRole`/`anonRole` and the two `...(… ? [{ level: "A_read" }] : [])`
+  spreads removed; the permission lists now consist only of the creator role.
+- `NEW_WIKI_ROLES` reduced from `["ADMIN", "USER", "ANON"]` to `["ADMIN"]` —
+  `USER`/`ANON` are not resolved at all any more, which the comment there and
+  at the role selection explains.
+
+**Result:** the one-click wiki is private for **all** users — identical to the
+one of Frau Meyer and Heino. The admin keeps full access: `ADMIN → C_admin`
+(bag) resp. `ADMIN → B_write` (recipe) as well as the `isAdmin` bypass in
+`RecipeResolver.assertRecipe` (`RecipeResolver.ts:200`). `owner_user_id` remains
+the admin, the owner protection (§11) applies unchanged.
+
+**Sharing:** deliberately, as before for the teacher, via the wiki dialog
+("Create Defined Wiki" → *Readable by* / `recipeUsers`, §26) resp. by invitation
+(§25) — thus **not** via the one-click button.
+
+**Verified:** `tsc -p tsconfig.json --noEmit` without errors.
+
+**Note:** already created admin wikis keep their previous `USER`/`ANON` rights
+(the change only affects newly created wikis). Whoever wants to make them
+private removes the two roles in the wiki dialog under *Readable by*.
+
+---
+
+## 69. Fix: the one-click wiki modal closes after creating
+
+After a successful one-click creation the dialog **"Create a wiki with a
+single click"** stayed open and additionally showed the note "Fertig — dein
+Wiki ist da:" with the link to the new wiki. The dialog only vanished when it
+was clicked away with *Close* / ✕ — although the action had long since
+finished.
+
+**Fix (`packages/admin-vanilla/src/app.tsx`, `submitNewWiki`):** in the success
+case the dialog is now closed (`newWikiOpen = false`) and the name field is
+emptied — exactly like when deleting a wiki (`deleteWiki` →
+`store.closeModal()`), which already handles the same sequence this way. In the
+error case the dialog stays open as before and shows the error in the
+`error-banner`.
+
+**Consequence:** the confirmation link "Fertig — dein Wiki ist da:" in the
+dialog has become superfluous and was removed — along with
+`@state() newWikiSlug` (no longer set) and the now unused text key in all eight
+language files (`de`, `en`, `es`, `fr`, `ja`, `ko`, `ru`, `zh-cn`). The link is
+not lost: `store.reload()` reloads the list, the new wiki stands immediately under *My
+wikis* — the slug column there is a link to `/wiki/<slug>`
+(`getListColumnLinkMappers`, `app.tsx:2492`).
+
+**Verified:** `tsc -p tsconfig.json --noEmit` without errors.
+
+---
+
+## 70. Fix: the welcome tiddler showed "1. Willkommen in …" instead of a heading
+
+The start tiddler of the one-click wiki contained as its first line
+`# Willkommen in „<Wiki-Name>" 🎉`. That is **Markdown**, but the tiddler is
+`text/vnd.tiddlywiki` — and there `#` is **not** a heading, it is the character
+for a **numbered list item**. TW therefore renders the line as `<ol><li>` → in
+the wiki view a small "1." stood in front of the text instead of the bold
+heading.
+
+**Fix (`packages/mws/src/new-managers/TabDataAdapter.ts`, `welcomeText`):**
+`#` → `!`. The TW syntax for headings is `!` (h1) to `!!!!!!` (h6)
+(`core/modules/parsers/wikiparser/rules/heading.js`, regexp `(!{1,6})`); `#`
+belongs to the list `list.js` (`ordered`). The two bullet points below stay `*`
+(unsorted list) — that was already right.
+
+**Migration of existing wikis (`mirrorDisplayNameIntoStarterTiddlers`):** the
+guard that recognises the automatically generated welcome text at the unchanged
+starter (and carries it along when the wiki is renamed) tested for
+`startsWith("# Willkommen in …")`. Since the starter text has changed, it would
+have run into the void for existing wikis and the text would no longer have been
+**updated** on a rename. The guard therefore now accepts both forms (`#` **and**
+`!`); on the next rename an old wiki is automatically carried along to `!`.
+Self-written welcome texts remain untouched (the additional condition is
+`includes("per Knopfdruck für dich angelegt")`).
+
+**Verified:** read the TW 5.4.1 source of the rules `heading.js` (`!`) and the
+list rule (`#`); `tsc -p tsconfig.json --noEmit` without errors.
+
+**Still open (not touched):** the 54 `.tid` files of the edition
+`bedienungsanleitung` (wiki *MWS Bedienungsanleitung*) are written in Markdown as
+well (`#` heading, `-` lists, `**bold**`), but have **no** `type:` field — they
+therefore inherit `text/vnd.tiddlywiki` and are rendered just as wrongly. (For
+comparison: `editions/mws-docs` does it right, `.md` files with `.meta` files
+on `type: text/markdown`.)
+
+---
+
+## 71. Fix: "Files in this wiki" showed "1. Dateien in diesem Wiki"
+
+The same Markdown instead of TW syntax as in §70, this time in the **client
+plugin** at the wiki toolbar button **"Files in this wiki"**. The button
+creates the tiddler `$:/state/mws/WikiFiles` and shows it as a modal; its
+heading was built with `# ` and therefore appeared as a numbered list item
+("1. Dateien in diesem Wiki") instead of a bold heading.
+
+**File:** `plugins/client/tiddlers/upload-file.js`
+
+There, **three** places were built with Markdown syntax for
+`text/vnd.tiddlywiki`, **two** of them headings:
+
+- `renderWikiFiles` (`:250`) — `var body = "# " + …` → `"! " + …`. This is the
+  tiddler `$:/state/mws/WikiFiles`.
+- `showUploadSnippet` (`:203`) — `text: "# " + …` → `"! " + …`. The **same**
+  heading, but in the success modal that appears after a file upload into a
+  wiki — it deserved the same fix and gets it along.
+- `renderWikiFiles` (`:248`) — `"**" + file.filename + "**"` →
+  `"''" + file.filename + "''"`. TW bold is `''` (`rules/emphasis/bold.js`,
+  regexp `/''/mg`); `**` remained as **two visible asterisks**. This affected
+  every list entry, thus the file name of every file in the modal.
+
+The language texts themselves (`en-US.multids` and the seven `i18n/*.multids`)
+are plain prose without markup — they were never affected.
+
+**Verified:** read the TW 5.4.1 rules `heading.js` (`!`), `emphasis/bold.js`
+(`''`), `list.js` (`#`/`*`). That covers the code part of the repo completely:
+the sweep over all `addTiddler`/`setText`/`saveTiddler` places finds **no**
+further place that builds wiki text from Markdown. The remaining hits are
+either pass-through of client text (`attachments.ts`, `RecipeResolver.ts`,
+`save-tiddler-text.ts`), JSON/`"yes"`/`"no"` status values or deliberately
+Markdown for the admin interface (`app-landing.tsx`, `legal-notice.tsx`,
+`user-files.tsx` — the latter is rendered to HTML server-side, TW wiki text
+would be without effect there).
+
+**Remains open** (static contents, not touched, see the query):
+`editions/bedienungsanleitung/tiddlers/*.tid` (49 of the 54 files, §70) and
+three `editions/mws-docs/tiddlers/*.tid` with a single backtick instead of a
+double one for inline code (`Allowed Methods.tid`, `Usage.tid`,
+`system/$__mws_cssvar-macro.tid`).
+
+---
+
+## 72. Fix: the complete "MWS Bedienungsanleitung" was written in Markdown
+
+After §70/§71 the same cause in the edition `editions/bedienungsanleitung`
+(the wiki *MWS Bedienungsanleitung*, 54 `.tid` files, created in
+`new-commands/init-store.ts`): the tiddlers have **no** `type:` field, so they
+inherit `text/vnd.tiddlywiki` — but they were written in **Markdown**.
+Headings appeared as "1. Title", bullet lists as literal hyphens, bold as
+visible `**`.
+
+**Decision:** TW syntax instead of `type: text/markdown`. A Markdown parser is
+not present in the standard setup (it is only available in `editions/mws-docs`)
+— with `text/markdown` the manual would have been unreadable in normal
+operation.
+
+**Converted (49 of the 54 files, 354 lines):**
+
+- `# Title` → `! Title`
+- `- Point` → `* Point` (all 220 list items stood in column 0, no nesting, no
+  continuation lines)
+- `**bold**` → `''bold''` (155 places)
+- `` `code` `` → ```` ``code`` ```` (8 places)
+
+Untouched remained the 5 files without Markdown: `$:/core/ui/TagTemplate`
+(widget/HTML), `$:/TagLanguageStyles` (CSS), `$:/DefaultTiddlers`,
+`$:/SiteTitle`, `$:/SiteSubtitle`. The converter touched **only the body**
+(never the header) and yields 368/354 lines — the difference consists
+exclusively of 14 newly inserted blank lines.
+
+**Second class of error, only visible through rendering:** in Markdown a list
+may interrupt a paragraph, in TW it may not. In `Übersicht`/`Overview` the
+section headings (`''Anmelden & Konto''`) stood directly above their list, so
+all the items landed as text inside one `<p>`. 14 blank lines inserted (7 per
+file).
+
+**Verified with the real renderer** (`node dev/wiki/tw5/5.4.1/tiddlywiki.js
+editions/bedienungsanleitung --rendertiddler … text/html`), all 54 pages:
+
+- `<h1>`, `<strong>`, `<ul><li>`, `<code>` — no literal `- `, `# `, `**` any
+  more, no visible backtick, no `<ol>`
+- all links resolve (`tc-tiddlylink-resolves`)
+
+**Two corrections to my own analysis:** a first sweep reported three false
+positives in `editions/mws-docs` (`Allowed Methods.tid`, `Usage.tid`,
+`system/$__mws_cssvar-macro.tid`) — "single instead of double backtick for
+inline code". The renderer refutes this: the rule `codeinline.js` matches
+`/(``?)/mg`, **one** backtick is a valid inline code delimiter in TW 5.4.1
+(just like the double one). Those three files therefore remained **unchanged**.
+Likewise the 4 backtick places in the manual were already correct; converting
+them to double backticks is cosmetic.
+
+For the code files from §70/§71 the same applies: the TW constructs used
+(`!`, `''`, `*`, ``````) are verified against the real renderer.
+
+---
+
+## 73. Fix: `load-wiki-folder --overwrite` was fundamentally unusable for existing bags
+
+When updating the manual from §72 in the local store (`load-wiki-folder
+editions/bedienungsanleitung --overwrite`) the command aborted with a 403:
+
+```
+SendError: {"status":403,"reason":"ACCESS_DENIED",
+  "details":{"reason":"Only the user who created the bag (or the site admin
+  'admin') may edit it."}}
+  at BagDataAdapter.saveRow (TabDataAdapter.ts:905)
+  at LoadWikiFolderCommand.execute (new-commands/load-wiki-folder.ts:142)
+```
+
+**Cause:** two authorization paths in the same `saveRow` contradicted each
+other. `BagDataAdapter.saveRow` checked the owner via the hardcoded comparison
+`user.username === "admin"`, while the preceding `checkExisting()`
+(TabUpserts.ts:97) evaluates `user.isAdmin`. The CLI command identifies itself
+as admin but has no `username` at all
+(`new BagDataAdapter({ isAdmin: true } as any)`), so the inline check always
+failed — and that for **every** already existing bag. `init-store` got past it because it creates new bags
+(`existing === null`); an `--overwrite` could therefore never work. Also
+affected: every user holding the ADMIN role whose `username` is not exactly
+`admin`.
+
+**Fix (without a change of the rights semantics):** the inline check was
+removed in favour of the canonical helper `assertCanEdit()`, which already
+existed for templates, and its `isSiteAdmin` extended by `user.isAdmin`.
+`isAdmin` is derived by the SessionManager from the ADMIN role and is
+therefore reliable; `checkExisting` already relied on nothing else. Both paths
+now judge identically, the error message is uniform.
+
+**Second, small CLI correction:** `recipe-users` and `owner-roles` were declared
+as `<string>` in the commander info (thus **single-valued**), while description,
+type (`string[]`) and `init-store` anticipated several roles. The parser
+therefore rejected `--recipe-users ANON USER` with
+`The option "recipe-users" may only have a single value`. Declared as
+`<string...>` (variadic) both options are now multi-valued, as documented. Without
+this the import would have lost the manual's existing `USER`→`A_read` share — logged-in users do not
+get the `ANON` role (namely `SessionManager.parseIncomingRequest`), so access
+would have silently been restricted to administrators.
+
+**Side effect of the import, checked and deliberately accepted:** the recipe
+definition of the manual now contains explicitly
+`plugins: ["$:/themes/tiddlywiki/vanilla", "$:/themes/tiddlywiki/snowwhite"]`
+(instead of `[]`). That is a **no-op**: `requiredPlugins`
+(plugin-cache/index.ts:22-26) already contains those same two themes, and
+`RecipeResolver.getPluginList()` merges both lists via a `Set`. Neither
+appearance nor access change.
+
+**Also affected by the import, restored:** `load-wiki-folder` hardcodes
+`landingVisible: true` (load-wiki-folder.ts:176, TabDataAdapter.ts:463), thereby
+deleting a set `landing.hidden.<recipeId>` and it would have made the manual
+visible on the public start page. Since the CLI cannot express this state, the
+flag was set back after the import (the checkbox *Landing page* in the wiki
+editor steers the same). Likewise the 8 handwritten tiddlers of the bag were
+deleted (`saveLoadedTiddlers` removes every title that is not in the folder) —
+among them `$:/language`, `$:/languages/de-DE`, the Markdown plugin and the
+draft `Entwurf: 'Start' von admin`.
+
+**Verified:** full comparison of the SQLite database before/after the import
+over recipes, recipe definitions, recipe-bag assignment, recipe and bag rights,
+bags, templates, users and roles: **all 14 other wikis bit-identical**, recipe
+and bag rights of the manual unchanged, only the manual's bag 62 → 54 tiddlers.
+All 54 imported tiddlers were checked for Markdown remains: 0 hits.
+
+---
+
+## 74. Fix: thumbnails frozen in the browser cache (image only updates after Ctrl+Shift+R)
+
+After §43 (thumbnail display) the report came in: a newly created tiddler does
+not appear in the preview image, a `Ctrl+Shift+R` shows it immediately. The
+server logic from §43 is correct in that — the error lay in two response headers
+in `serveWikiThumbnail()` (`WikiThumbnailRoutes.ts`).
+
+**Cause 1 — `Cache-Control: private, max-age=<TTL>`:** the image URL is stable
+per wiki (`/wiki/<slug>/thumbnail`, `store.ts:316`), and `max-age` was set to the
+**server TTL** (24 h). The browser therefore did not issue the request at all for
+up to 24 hours — the revalidation via `ETag`/`If-Modified-Since`, which is
+already fully implemented right below it, was never reached. The server could
+re-render the PNG as often as it liked: the copy in the browser simply stood
+still. `max-age` was doubly wrong here — the TTL controls **when the server
+re-renders**, not how long a browser may keep a *byte-identical* image.
+Verified on the example `wiki-heino`: tiddler `New Tiddler` saved at 08:07, PNG
+re-rendered server-side at 10:19, HTTP headers before that
+`cache-control: private, max-age=86400` with an unchanged URL.
+
+**Fix:** `private, no-cache` (instead of `max-age`) for 200 and 304. The browser
+thus asks again on every display, but on no change it only gets a 304 without
+body — the ETag is formed from `mtime`+size of the PNG file and is therefore
+guaranteed to be new after a re-render.
+
+**Cause 2 — the 404 without cache header:** for a wiki without a PNG the route
+answered with `writeHead(404, {contentType})` and **without** `Cache-Control`. A
+404 without freshness information is heuristically cacheable according to HTTP,
+so the browser could remember the "no image" state and keep serving it long
+after the PNG existed. That is exactly what happened with the wiki *MWS
+Bedienungsanleitung*: the preview image was missing for hours in the admin list
+although the route could have rendered it at any time — the browser just did not
+want to load it any more. **Fix:** a `404` now answers with
+`cache-control: no-store`.
+
+**Remaining, deliberate delay:** the 180 s debounce from §43 (TiddlyWiki
+autosaves on every keystroke) and rendering only on the next list call remain
+unchanged. The expected behaviour is therefore: save tiddler → wait about
+3 min → (re)load the Wikis tab → new image. No reload of the page and no hard
+reload any more. *(This delay is shortened to 60 s in §75 and deleting the PNG
+is abolished — sections 74 and 75 belong together.)*
+
+**Verified** against the running server:
+
+| Case | before | after |
+| --- | --- | --- |
+| Fetch | `200`, `max-age=86400` | `200`, `private, no-cache` + `ETag` |
+| `If-None-Match` = current | — | `304 Not Modified` (no body) |
+| `If-None-Match` = stale | — | `200` with new image |
+| PNG missing | `404` without header | `404`, `no-store` |
+
+Two smaller observations from the same pass (no error, only an explanation):
+`recipe.compiledAt` is only updated when saving the wiki **definition**, not when
+saving a tiddler — it is therefore no use as a cache buster, but `lastEventId`/
+`tiddler.updated` would be, should one ever want versioned URLs (`?v=…`) instead
+of revalidation. And `bedienungsanleitung.png` did not exist at all before the
+hard reload: the file only arose at 10:19, thus through the forced new request.
+
+---
+
+## 75. Fix: the preview goes stale instead of vanishing (no empty image while typing)
+
+The cache fix from §74 made the display reliable, but the waiting time remained
+unchanged: 180 s debounce plus rendering only on the next list call. Reason:
+TiddlyWiki sends a sync on every keystroke (`syncer.js`
+`throttleInterval = 1000`), and §43 had the PNG **deleted** as soon as a tiddler
+had been saved after 180 s of quiet. In that time window the image was gone —
+with a real render (about 2.5 s Chromium) the wiki list had an empty cell for
+all visitors without write access, since only logged-in users render at all.
+
+**Cause of the 3 minutes, in numbers:** `syncer.js` throttles saves to one per
+second (`throttleInterval = 1000`), the task timer of the server runs at 250 ms,
+so after the last change that is 1.25 s in total. The debounce in §43 was
+therefore set to 180 s, so that a typing user does not re-render every preview
+image. The price: up to three minutes until the update.
+
+**Change — freshness from the database instead of a timer:**
+`serveWikiThumbnail()` now compares the `mtime` of the lying PNG with the
+newest `tiddler.updated` across the bags of the recipe (`isStaleAfterEdit()`, an
+`aggregate` query on `_max(updated)`). The caller `RecipeRoutes.ts` no longer
+calls anything at all after `batch/save` and `batch/delete`, there are no
+`invalidationTimers` any more and the PNG is never deleted. A re-render now
+only happens when
+
+1. no PNG exists,
+2. the server TTL (§43, `admin.thumbnailTtlHours`) has expired, or
+3. the PNG is older than the last tiddler save **and** the wiki has had
+   `thumbnailGraceMs()` ms of quiet since (default **30 s**,
+   `MWS_THUMBNAIL_GRACE_SECONDS`; the old name
+   `MWS_THUMBNAIL_DEBOUNCE_SECONDS` is dropped).
+
+Thus a stale preview image stays visible and is replaced on the next fetch after
+60 s of writing quiet — instead of vanishing. The comparison also survives a
+restart: the debounce timer from §43 lived only in the process, and a restart
+within the window left a stale image standing until the TTL (24 h). It is still
+only deleted when the **wiki is deleted** (`deleteThumbnail()`), and the clean-up
+run over orphaned files at startup (`sweepOrphanedThumbnails()`) remains
+unchanged.
+
+**Verified** against the running server, with real `batch/save` calls included
+(the measurement was made with the grace set to 60 s at the time, the default
+has since been lowered to 30 s):
+
+| Case | Result |
+| --- | --- |
+| PNG newer than last save | `200` in 19 ms, no render |
+| Save, fetch immediately (within the grace) | `200` in 19 ms, PNG unchanged, old image visible |
+| Save, fetch anonymously during the grace | `200`, PNG present |
+| Fetch after 62 s of quiet | `200` in 4.6 s, PNG newly rendered |
+| Tiddler newer than PNG, grace 0 | `200` in 4.0 s, PNG newly rendered |
+| Headers unchanged | `200`/`304`: `private, no-cache`; `404`: `no-store` |
+
+**Grace default lowered from 60 s to 30 s**, `MWS_THUMBNAIL_RENDER_CONCURRENCY`
+stays at **2**. Both are pure defaults, still overridable via environment
+variable; the parallelism is read once at startup, so a restart suffices.
+
+Why the grace is not a load driver: a render is requested exclusively — there is
+no background job that re-renders all wikis. "Many wikis in use" does not create
+load by itself, only "many wikis that are currently stale **and** being looked
+at". Extended thinking pauses of 30–60 s are now rendered; that costs renders,
+but no RAM/CPU without cause. The price in content: more often an image is
+created from a half-finished state of editing.
+
+Why the parallelism stays at 2 — measured on 4 cores / 8 GB with 15 wikis, all
+thumbnails removed and all 15 re-rendered in parallel:
+
+| | Value |
+| --- | --- |
+| RAM at rest | 463 MB (151 MB Node + 312 MB idle browser) |
+| RAM peak with 4 simultaneous renders | 883 MB (+420 MB, ~14 % of free memory) |
+| CPU on a full render | 26.9 CPU seconds = **29 % of 4 cores** |
+| Wall time full render of all 15 wikis (4 slots) | 89.95 s |
+
+Rendering is **wait-bound, not CPU-bound**: `page.goto(…, networkidle)` with a
+60 s timeout plus 2.5 s wait time before the screenshot, plus software rendering
+(`--disable-gpu`) — into the Node process itself land 0.00 s CPU, the load sits
+entirely in Chromium. The same job with four small wikis, executed twice:
+
+| | Wall time | per render |
+| --- | --- | --- |
+| 4 in parallel (concurrency 4) | **12.24 s** | 5.6 – 12.2 s |
+| one after another (concurrency 1) | **18.27 s** | 4.0 – 4.8 s |
+
+Factor **1.5** for double the memory need. Extrapolated to the burst of 15 the
+time gain is correspondingly small (serial ~70–90 s, with 4 slots 90 s), because
+the individual renders stretch from ~4.5 s to 5.6–12.2 s. On this machine the
+higher parallelism is therefore not worth it; it stays at 2 and can still be
+raised to 8 via environment variable for installations with lots of RAM. What
+was noticeable here in the first place is the wall time of the full render
+itself: 90 s until the last image of a wiki list is there.
+
+Side finding while measuring: the 404 of the **rights check** (private wiki,
+anonymous fetch) still carries no `Cache-Control`. That is the generic MWS
+behaviour for all routes, not thumbnail-specific; a blanket `no-store` as default
+was discarded, because `Cache-Control` is *merged* rather than replaced when
+answering, and every successful response would then have been delivered
+contradictorily as `no-store, private, no-cache`.
+
+---
+
+## 76. Paging the wiki list instead of rendering 15 preview images at once
+
+With preview images enabled (§73/§74) the wiki list loads **all** wikis at
+once: one row per wiki, each with its own PNG. With 15 wikis that is 15 HTTP
+requests and 15 images in the DOM — initially only the top ones are visible, the
+rest still renders in the background (2 slots, §75).
+
+**Why client-side and not server-side:** `/admin/load` already delivers the wiki
+list within a single response, and sorting as well as grouping happen in the
+client anyway. A server-side page fetch would change nothing about that, it
+would only introduce another roundtrip per paging movement. The list is also
+small and bounded at the top (one row per wiki) — there is nothing a server-side
+fetch would leave out.
+
+**Behaviour:** the default is 10 wikis per page, configurable via
+`admin.wikisPerPage` (0–200; `0` = all wikis in one list, empty field =
+default 10). The pager shows Back/Next, "Page X of Y" and the total count. The
+groups "My wikis", "Shared with you" and "System wikis" remain; if a group
+continues on the following page, its heading is repeated there. The page number
+is clamped (no empty page when the list gets shorter) and reset on tab change; a
+click on Back/Next brings the list header back into the visible area.
+
+**Effect:** the actual gain is not the number of pages but the number of preview
+images: with 15 wikis and 10 per page there are 10 PNGs in the DOM instead of
+15 — and only the page actually being looked at is rendered.
+
+**Setting:** new field "Wikis per page" in the admin settings, with the same
+0–200 validation as in the server schema.
+
+**Tested** (second dev instance on port 5001, 15 wikis, headless Chromium):
+10 → 2 pages (10 + 5), 7 → 3 pages, 5 → 3 pages, 0 → no pager with all three
+groups in one list; saving via the form (7) and clearing the field (row is
+deleted, the default 10 applies); 999, −3 and `"abc"` are rejected with 400, the
+stored value remains unchanged.
+
+
+## 77. Bags tab: roles below each other instead of as a comma list
+
+The "Permissions" column in the Bags tab showed the roles of a bag as **one**
+comma-separated line ("ADMIN, USER, ANON"). Every additional role made the line
+wider, and because the column sits at the far right it was precisely the one
+that slipped out of the window – one had to scroll horizontally to see it.
+
+**Like in the wiki list:** there `recipeUsers`, `recipeAdmins` and `groupRoles`
+have long been stacked below each other as badges (`list-access-names`), and
+exactly that was missing here. The Bags tab now uses this representation too –
+one role per row instead of side by side.
+
+The value still arrives unchanged as a comma-separated string from the
+preparation (`summarizePermissionRoles()` in `definition/store.ts`) and is now
+only split in the list cell; nothing changes in the record itself, so that
+export and detail view remain untouched.
+
+**Measured** (second dev instance, window 1600 px wide): column "Permissions"
+347 → 156 px, the horizontal overflow of the list shrinks from 245 px to 55 px.
+The Templates tab has the same comma column ("Readonly bags"), but is
+unremarkable here (153 px, no overflow), because the installed template has no
+readonly bags.
+
+
+---
+
+## 78. Search and sorting in all five list tabs
+
+With 15 wikis, 15 bags and 12 roles the admin list was the only place left where
+one still knew how a record is called: no search field, no sortable columns,
+and the order was the order from `/admin/load`. Whoever was looking for "the
+collection of recipes" or "Mrs Meyer's wiki" had to scroll through the list and
+read against top and bottom.
+
+All five generic tabs (**Wikis, Templates, Bags, Roles, Users**) now have the
+same header bar with search field and clickable columns. "My files" is not part
+of this yet — that follows in §79.
+
+**Search.** A `type="search"` field per tab filters the list while typing,
+plus a click button (×) and the hit count ("3 of 15 shown"). The search is
+**independent of case, umlauts and eszett**: "schuler" finds "Schüler",
+"strasse" finds "Straße". Case and diacritics are removed via `normalize("NFD")`.
+For "ß" (and the capital "ẞ") Unicode has no decomposition — `NFD` leaves it
+unchanged, and `toLowerCase` makes a lower-case "ß" out of it beforehand —, so
+it is replaced by hand with "ss". Without that the search would fail for German
+data in exactly the most common way of avoiding an umlaut.
+
+Folding applies only in the **search**, not in the sorting: a sort is a fixed
+order and `localeCompare` likewise does not fold "ß", whereas the search may be
+indulgent. Thus "Schuler" finds "Schüler" (umlaut omitted), but "Schueler"
+does not — that is a different word.
+
+Only **named, visible** columns are searched. The thumbnail column has no
+heading and its URL says nothing about the record, so it does not count. The
+badge columns can be found via their visible wording ("Owner", "Private",
+"Shared"), truncated columns in full length — a hit one cannot see is better
+than one one cannot find.
+
+**Sorting.** A click on a column sorts ascending, the second descending, the
+third removes the sorting again. Active columns get an arrow (▲/▼), `aria-sort`
+and a screen reader announcement ("Sorted ascending"); the header cell is marked
+up as `columnheader`, the sort button is called "Sort by Slug".
+
+Sorting is done by what *stands* in the cell:
+- Numbers in text fields numerically, so that "10 Bags" lands behind "9 Bags"
+  and not in front of it.
+- ISO dates chronologically.
+- "Own wikis" in the form "3 / 5" resp. "3 / ∞" by current usage (the first
+  number).
+- Text with `localeCompare(..., { numeric: true, sensitivity: "base" })`, thus
+  including digits in the text ("Class 2" after "Class 10").
+
+**Empty values stay at the bottom** – in *both* directions. An unknown value is
+"not known" and not "the smallest"; otherwise the two system wikis without owner
+would jump to the top when sorting descending. In case of a tie the ID decides,
+so that the order stays stable.
+
+**Grouping yields to sorting.** The wiki list is otherwise grouped into "My
+wikis", "Shared with you" and "System wikis". As soon as a column is actively
+sorted, **one** flat list over all groups appears — otherwise the grouping would
+tear the sorting result into three blocks. A third click on the header restores
+the groups. The page navigation from §76 also works with filtered and sorted
+data, so the pager counts what is actually visible.
+
+**Own state per tab, only in memory.** Whoever changes tab and comes back finds
+query and sorting in place. Deliberately *not* in `localStorage`: a stored
+sorting survives an update in which the column was renamed, and would then sort
+by a column that no longer exists.
+
+**A JSX finding while doing so:** the JSX runtime used writes `value={...}` via
+`setAttribute`. But an attribute update does not update a `search` field in
+which text has already been typed — so on tab change the old text remained while
+the list was filtered by the new one. A `ref` callback that sets the DOM
+property fixes this.
+
+**New texts** in all eight language files (561 keys, parity checked). The new
+placeholders use `t(currentTab.label)` instead of a lower-cased tab name, so that
+e.g. "No matches in Wikis." appears instead of "No matches in wikis.".
+
+**Checked** (second dev instance on `127.0.0.1:5001` with a copy of the test
+data, Playwright, 15 wikis / 15 bags / 12 roles / 6 users / 1 template, window
+1600 px): all checks passed, among them search over slug **and** owner
+(`meyer` → 3), umlaut folding (`schuler` → 3), search in email addresses and
+roles, `ownWikiUsage` numerically (`1 / ∞`, `1 / ∞`, `1 / 2`, `2 / ∞`, `2 / 2`,
+`6 / ∞`), sorting across page boundaries (10 + 5, page 2 as an exact
+continuation), empty owners at the very bottom in both directions, grouping
+returning after the third click, grid column widths and overflow unchanged.
+`tsc --noEmit` and `tsup` clean, no runtime errors in the console.
+
+For the **ß folding** an end-to-end bag named "Straßen-Projekt" was additionally
+created: `strassen`, `STRASSEN`, `Straßen`, `straße`, `Strassen-Projekt` and
+`projekt` find it (1 hit each), `strase` and `strassn` do not. The test bag was
+then deleted again. Since the test data contains no "ß", the test suite checks
+the normalization additionally via unit test against the real function source
+(`Schüler`/`schuler`, `Straße`/`strasse`, `STRAẞE`/`strasse`, `Große`/`grosse`,
+`Maße`/`masse`, `Füße`/`fusse`).
+
+Known deliberate limits: the record editor has no escape shortcut (closing is
+done via "Cancel"), and the older placeholders like "Create a {tab} to get
+started." still use lower-cased tab names.
+
+
+---
+
+## 79. Search and sorting also in the "My files" tab
+
+§78 had deliberately left out "My files". The justification was an assumption
+and it did not hold: there is no changing folder context here that would make a
+client-side search misleading. `/api/user-files/list` and
+`/api/user-files/shared` query `userFile` without `take` and deliver **all**
+files — the same starting position as `/admin/load` in the five record tabs.
+The list is thus complete in the browser, and search as well as sorting apply to
+everything, not to a silently truncated subset.
+
+**One search field for both tables.** The tab shows own files and – for normal
+accounts – below them "Shared with me". A file is a file whether it was uploaded
+by oneself just now or is shared: an input field above both tables therefore
+filters both, and the hit count counts over both sections together. The heading
+of the shared section does not disappear when all of its rows drop out; instead
+its own empty state appears there ("No matches in Shared with me."), so that it
+is clear that the search is the reason and not an empty share.
+
+**Sortable columns** like in the record tabs: click ascending, click again
+descending, third click back to the server order ("Uploaded" descending, as
+delivered by the server). Arrow, `aria-sort` and screen reader announcement
+expressly the same as in §78, so that the handling stays the same throughout the
+admin area. The action column (Share, Preview, Download, Delete) still has no
+header and is not sortable.
+
+**Large files first, as one expects.** The "Size" column shows "1.5 KB" to
+"54.5 MB". If the formatted cell were sorted, "950.4 KB" would come before
+"2.3 MB", because "9" comes before "2" alphabetically. Sorting is therefore done
+by `sizeBytes`, the raw number, and by `createdAt`, the ISO timestamp — the same
+idea as with "3 / ∞" in the users: sorting is done by the measured value, not by
+its label.
+
+**Owner only where there is one.** The own table carries the "Owner" column only
+in the admin view; the shared one always. A normal account therefore sees four
+sortable headers there, an admin five – as in the record tabs, where columns
+are present or absent depending on the role.
+
+**No duplicate logic.** Normalization, tri-state toggling, sorting and
+comparison logic now live in `list-view.ts` and are used by both places.
+`app.tsx` is correspondingly about 100 lines smaller; the folding from §78
+thereby applies unchanged here as well (see below).
+
+**Translations:** none new. All required keys ("Search", "Search {tab}…",
+"Clear search", "{shown} of {total} shown", "Sort by {column}", "Sorted
+ascending", "Sorted descending", "Clear sorting", "No matches in {tab}.") were
+already present with §78; the tab name is inserted via `t("My files")` resp.
+`t("Shared with me")`, so that the placeholder fits in every language.
+
+**Checked** (second dev instance, Playwright): 124 checks passed, 24 of them for
+this section. Sorting is done numerically by size (1.5 KB → 54.5 MB, "KB before
+MB"), search and sorting work together, the third click restores the server
+order, "Clear sorting" and the × button work, no horizontal overflow.
+`tsc --noEmit` and `tsup` clean.
+
+Two further checks secure a statement that only made it into the READMEs: the
+badge columns are found via their **plain text**, not via their value. `private`
+yields 10 rows and 10 Private badges, `shared` 3 rows and 3 Shared badges – in
+the cell there is not a single word, what is searched is the label. The first
+version of the test searched for `owner` and found nothing: as an admin all
+wikis consistently have admin rights, there simply is no owner badge to find.
+The test was corrected to what actually exists.
+
+Additionally checked on a real non-admin account (test user created, a file named
+"Straßennamen-Liste.txt" uploaded, then deleted again): `strassen`, `STRASSEN`,
+`Straßen`, `straße`, `Strassennamen` and `liste` find it, `strase` and `strassn`
+do not; the own table has four sortable headers; the shared section is searched,
+sorted and shows its own empty state; and without own files it stays at "No
+files yet. Upload something to get started." instead of a misleading "No
+matches". Test user, test file and test bag from this measurement have been
+removed again — the inventory is unchanged at 6 users and 23 files.
+
+
+---
+
+---
+
 ## Unchecked-in starter configuration (local, gitignored)
 
 ```json
@@ -3759,7 +4558,7 @@ Klassifikation + CSP-Header + Existenz-Orakel (C2) und die gegliederte
 
 ## Release 0.4.0 — 2026-09-30
 
-24 Commits seit 0.3.3, 95 Dateien, +3622/−602. Das Schwergewicht liegt auf
+26 Commits seit 0.3.3, 98 Dateien, +4554/−622. Das Schwergewicht liegt auf
 Dateien und Listen: Upload in ein Wiki mit direkt einbindsbarem Ergebnis (§65)
 sowie Suche und Sortierung in jeder Liste der Admin-App (§78, §79).
 
@@ -3811,8 +4610,6 @@ sowie Suche und Sortierung in jeder Liste der Admin-App (§78, §79).
 - Die `0.2.x`-Regel für den Datenordner und die API bleiben unverändert, und
   alle acht Sprachen sind vollständig.
 
-Der englische Text zu §65–§79 fehlt noch; er steht bislang nur in dieser
-Hälfte.
 ---
 
 ## 1. Fehlende Dependency: `escape-string-regexp`
