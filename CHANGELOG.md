@@ -4626,6 +4626,110 @@ GitHub can show whether the warning is really gone — and after the push it is:
 the run is green and the annotation about `node20` is no longer there, only the
 notice that `ubuntu-latest` migrates to Ubuntu 26 from 19.10.2026.
 
+## 84. Feature: import a single-file TiddlyWiki 5 into a wiki (CLI)
+
+A wiki that exists only as one `index.html` can now be taken over by MWS. The
+point of the feature is not "any HTML file becomes a wiki", but: a wiki saved
+with TiddlyWiki 5 can be handed to MWS without a detour through a folder of
+`.tid` files.
+
+**Why a server-side parser and not the client.** MWS does not depend on
+`tiddlywiki` as an npm package, but it already boots a real TiddlyWiki 5 at
+runtime — `plugin-cache/index.ts` resolves the version and boots
+`<wikiPath>/tw5/<version>`. That instance is used here with
+`$tw.wiki.deserializeTiddlers("", html, undefined, {deserializer: "text/html"})`,
+which is the call `core-server/commands/import.js:34` makes. The
+`text/html` deserializer is the important part: it reads both store shapes,
+the JSON `tiddlywiki-tiddler-store` script and the classic `storeArea`
+div. `application/json` is wrong, and without an explicit deserializer the
+store falls through to the catch-all branch and the whole file becomes a
+single tiddler.
+
+**What is recognised and what is refused** (`WikiFileImport.ts`):
+`application-name` must be `TiddlyWiki`, `tiddlywiki-version` must be there,
+and a store must exist. A TiddlyWiki 2 file is recognised before that check by
+its version script — it deserves "save it with TiddlyWiki 5 first", not "this
+is not a TiddlyWiki". Password-protected files are refused with that wording,
+an empty store is refused ("nothing to import"), and both the byte limit
+(`MWS_WIKI_FILE_SIZE_LIMIT`, default 50 MB) and a tiddler limit (default 20 000)
+are enforced. An `external-core` marker is reported as `tw5x` and read with
+the installed core, because that is what it is.
+
+**System tiddlers and plugins.** `$:/` tiddlers configure the wiki as a whole,
+so they are skipped by default and `--include-system` opts in explicitly (the
+admin dialog of a later phase will ask). Plugin-, theme-, library- and
+language-tiddlers are *never* imported — in the test file `$:/core` alone is
+2 MB of plugin text, and the plugins of a wiki come from its recipe. The
+default write bag of the wiki is the only target; recipe, ACLs and plugin
+list stay untouched.
+
+**Replace is a snapshot first.** MWS has no content history, so a replace
+copies the bag into a hidden bag `snapshots/<slug>/<UTC timestamp>`
+(`WikiSnapshotBag.ts`) before the first write. It is not referenced by any
+recipe, so it never appears as wiki content, and it is pruned to
+`--snapshot-keep` (default 10) per wiki. `restore-wiki-snapshot` reads it back
+and is itself undoable, because a restore takes a snapshot first, too.
+
+**What a replace never deletes.** The `$:/` tiddlers of the target bag are
+kept even when the file has none — `$:/SiteTitle` and `$:/DefaultTiddlers`
+belong to MWS, and wiping them because an uploaded file lacks one is never
+what the operator meant. They are listed in the preview as
+`kept as they are`.
+
+**Files.**
+- `new-managers/WikiFileImport.ts`: validation, store detection, parser, the
+  system/plugin filter.
+- `new-managers/WikiSnapshotBag.ts`: snapshot bags, metadata, pruning.
+- `new-managers/importWikiFile.ts`: plan (create/update/unchanged/delete),
+  apply, restore.
+- `new-commands/import-wiki-file.ts`, `new-commands/restore-wiki-snapshot.ts`:
+  the CLI, registered in `new-commands/index.ts`.
+
+**Verified** against `editions/bedienungsanleitung/output/index.html`
+(2.5 MB, 5.4.1, JSON store) on the dev instance, the database backed up before
+the run and restored afterwards:
+- `--create --slug import-test` → `49 new`, wiki `import-test` with bag
+  `editions/import-test`, `ADMIN` with `B_write` on the recipe and `C_admin`
+  on the bag, 51 tiddlers (49 content plus `$:/SiteTitle` and
+  `$:/DefaultTiddlers`); largest tiddler 891 bytes, so no plugin slipped in.
+- `--dry-run` on the same file → `48 unchanged, 0 changed` — the round trip
+  through the database is byte-exact.
+- A second file (built with `tiddlywiki --build index`, one tiddler added, two
+  deleted, one changed) → `1 new, 47 changed, 2 deleted` in the preview, and
+  after the real run `2 system tiddler(s) kept as they are`. Re-running gives
+  `48 unchanged`.
+- Snapshot `snapshots/import-test/20261001T173119355Z` held the 51 previous
+  tiddlers plus five `$:/mws/snapshot/*` metadata tiddlers, is in no
+  `recipe_bag`, and `restore-wiki-snapshot … --list` finds it. The restore
+  brought back 51 tiddlers including `Backup` and `Autosave`, dropped
+  `Import-Test-Geändert`, and put the pre-restore state into its own snapshot.
+- Errors: plain HTML → "no application-name meta tag"; TW2 file → the TW2
+  hint; encrypted store → the password hint; store marker in a text example →
+  empty store refused. A bag listed in the recipe's `readonlyBags` is refused
+  even for the CLI ("is a read-only bag of the wiki"), and `--snapshot-keep 0`
+  is refused, because a replace without its own safety copy is not a replace.
+- Two bugs the verification found: `$:/SiteTitle` and `$:/DefaultTiddlers` were
+  listed as deleted by a replace (now kept and reported as `kept as they are`),
+  and `--include-system` only *reported* the system tiddlers without importing
+  them (now 56 instead of 48 tiddlers in the plan).
+- `GET /recipe/import-test/store.json` (anonymous read granted for the test)
+  served 56 tiddlers, and `GET /wiki/import-test` rendered with
+  `<title>MWS Bedienungsanleitung</title>`. The 101 `tiddler_event` rows of
+  the target bag are the server side of the live update of open tabs.
+- A second, smaller round trip on three tiddlers after the shared snapshot
+  reader replaced the duplicated one: create → `0 new, 0 changed, 3 unchanged`
+  on the next dry-run → change one tiddler and delete another → `1 written,
+  1 deleted, 1 unchanged` with a snapshot → restore brings `T3` and the old
+  `T2` text back → `--snapshot-keep 1` drops the two older snapshots and
+  names them.
+- `npm run tsc2` clean, `npm run build` succeeds; the dev store was compared
+  table by table against the backup afterwards and is unchanged.
+
+Not part of this section: the admin dialog (upload, preview, confirmation),
+the wiki-file list in "My Files", and the migration of existing `user_file`
+HTML attachments into a bag. `restoreSnapshotBag` in `importWikiFile.ts` is
+the programmatic entry point for that phase; the CLI uses the command for now.
+
 ## 83. Bug fix: one connection alert instead of a flood (Issue #139)
 
 Upstream issue #139: when the network disappears, the wiki stacks alert after
@@ -9459,6 +9563,116 @@ Warnung wirklich verschwunden ist, kann nur der Lauf auf GitHub zeigen — nach
 dem Push ist sie es: der Lauf ist grün und die Annotation über `node20` nicht
 mehr vorhanden, nur noch der Hinweis, dass `ubuntu-latest` ab 19.10.2026 auf
 Ubuntu 26 migriert.
+
+## 84. Feature: eine Single-File-TiddlyWiki-5 in ein Wiki importieren (CLI)
+
+Ein Wiki, das nur als eine `index.html` existiert, kann jetzt von MWS
+übernommen werden. Gemeint ist nicht "aus beliebigem HTML wird ein Wiki",
+sondern: eine mit TiddlyWiki 5 gespeicherte Wiki lässt sich ohne Umweg über
+einen Ordner voller `.tid`-Dateien an MWS übergeben.
+
+**Warum ein serverseitiger Parser und nicht der Client.** MWS hat `tiddlywiki`
+nicht als npm-Paket, bootet aber zur Laufzeit eine echte TiddlyWiki 5 —
+`plugin-cache/index.ts` ermittelt die Version und bootet
+`<wikiPath>/tw5/<version>`. Diese Instanz wird hier mit
+`$tw.wiki.deserializeTiddlers("", html, undefined, {deserializer: "text/html"})`
+benutzt, also mit dem Aufruf aus `core-server/commands/import.js:34`. Der
+`text/html`-Deserializer ist der entscheidende Teil: er liest beide
+Speicherformen, das JSON-Skript `tiddlywiki-tiddler-store` und das klassische
+`storeArea`-Div. `application/json` ist falsch, und ohne expliziten
+Deserializer fällt der Speicher in den Allerwelts-Zweig und die ganze Datei
+wird zu *einem* Tiddler.
+
+**Was erkannt und was abgelehnt wird** (`WikiFileImport.ts`):
+`application-name` muss `TiddlyWiki` sein, `tiddlywiki-version` muss
+vorhanden sein, und es muss einen Speicher geben. Eine TiddlyWiki-2-Datei wird
+davor an ihrem Versions-Skript erkannt — sie verdient "zuerst mit TiddlyWiki 5
+speichern", nicht "das ist keine TiddlyWiki". Passwortgeschützte Dateien
+werden mit genau dieser Formulierung abgelehnt, ein leerer Speicher ebenfalls
+("nichts zu importieren"), und Bytelimit
+(`MWS_WIKI_FILE_SIZE_LIMIT`, Standard 50 MB) wie Tiddler-Limit (Standard
+20 000) werden durchgesetzt. Eine `external-core`-Markierung wird als `tw5x`
+gemeldet und mit dem installierten Core gelesen, denn genau das ist sie.
+
+**Systemtiddler und Plugins.** `$:/`-Tiddler konfigurieren das Wiki als Ganzes,
+deshalb werden sie standardmäßig übersprungen und nur mit
+`--include-system` ausdrücklich übernommen (der Admin-Dialog einer späteren
+Phase fragt nach). Plugin-, Theme-, Library- und Language-Tiddler werden
+*niemals* importiert — in der Testdatei ist allein `$:/core` rund 2 MB
+Plugintext, und die Plugins eines Wikis kommen aus seinem Rezept. Ziel ist
+ausschließlich der Default-Write-Bag des Wikis; Rezept, ACLs und Pluginliste
+bleiben unangetastet.
+
+**Ersetzen heißt erst Snapshot.** MWS hat keine Inhaltshistorie, deshalb
+kopiert ein Replace den Bag vor dem ersten Schreiben in einen versteckten Bag
+`snapshots/<slug>/<UTC-Zeitstempel>` (`WikiSnapshotBag.ts`). Er wird von keinem
+Rezept referenziert, erscheint also nie als Wiki-Inhalt, und wird pro Wiki auf
+`--snapshot-keep` (Standard 10) beschnitten. `restore-wiki-snapshot` liest ihn
+zurück — und ist selbst rückholbar, weil auch ein Restore zuerst snapshottet.
+
+**Was ein Replace nie löscht.** Die `$:/`-Tiddler des Ziel-Bags bleiben, auch
+wenn die Datei keine hat: `$:/SiteTitle` und `$:/DefaultTiddlers` gehören MWS,
+und sie zu löschen, weil eine hochgeladene Datei keine mitbringt, ist nie das
+Gemeinte des Bedieners. In der Vorschau stehen sie als `kept as they are`.
+
+**Dateien.**
+- `new-managers/WikiFileImport.ts`: Validierung, Speicher-Erkennung, Parser,
+  System-/Plugin-Filter.
+- `new-managers/WikiSnapshotBag.ts`: Snapshot-Bags, Metadaten, Pruning.
+- `new-managers/importWikiFile.ts`: Plan (neu/geändert/unverändert/gelöscht),
+  Anwenden, Restore.
+- `new-commands/import-wiki-file.ts`, `new-commands/restore-wiki-snapshot.ts`:
+  die CLI, registriert in `new-commands/index.ts`.
+
+**Verifiziert** an `editions/bedienungsanleitung/output/index.html` (2,5 MB,
+5.4.1, JSON-Speicher) auf der Dev-Instanz, Datenbank davor gesichert und
+danach zurückgesetzt:
+- `--create --slug import-test` → `49 new`, Wiki `import-test` mit Bag
+  `editions/import-test`, `ADMIN` mit `B_write` auf dem Rezept und `C_admin`
+  auf dem Bag, 51 Tiddler (49 Inhalt plus `$:/SiteTitle` und
+  `$:/DefaultTiddlers`); größter Tiddler 891 Bytes, es ist kein Plugin
+  reingerutscht.
+- `--dry-run` auf dieselbe Datei → `48 unchanged, 0 changed` — der Weg durch
+  die Datenbank ist byte-genau.
+- Eine zweite Datei (gebaut mit `tiddlywiki --build index`, ein Tiddler dazu,
+  zwei weg, einer geändert) → in der Vorschau `1 new, 47 changed, 2 deleted`,
+  nach dem echten Lauf `2 system tiddler(s) kept as they are`. Ein erneuter
+  Lauf ergibt `48 unchanged`.
+- Snapshot `snapshots/import-test/20261001T173119355Z` enthielt die 51
+  vorherigen Tiddler plus fünf Metadaten-Tiddler `$:/mws/snapshot/*`, stand in
+  keinem `recipe_bag`, und `restore-wiki-snapshot … --list` findet ihn. Der
+  Restore holte 51 Tiddler inklusive `Backup` und `Autosave` zurück, ließ
+  `Import-Test-Geändert` verschwinden und legte den Zustand davor im eigenen
+  Snapshot ab.
+- Fehler: einfaches HTML → "no application-name meta tag"; TW2-Datei → der
+  TW2-Hinweis; verschlüsselter Speicher → der Passwort-Hinweis;
+  Speicher-Markierung in einem Textbeispiel → leerer Speicher abgelehnt. Ein Bag
+  aus `readonlyBags` des Rezepts wird auch für die CLI abgelehnt ("is a
+  read-only bag of the wiki"), und `--snapshot-keep 0` ebenso — ein Ersetzen
+  ohne die eigene Sicherungskopie ist kein Ersetzen.
+- Zwei Fehler, die die Verifikation gefunden hat: `$:/SiteTitle` und
+  `$:/DefaultTiddlers` wurden von einem Replace als gelöscht aufgeführt (jetzt
+  behalten und als `kept as they are` gemeldet), und `--include-system` hat die
+  Systemtiddler nur *gemeldet*, aber nicht importiert (jetzt 56 statt 48
+  Tiddler im Plan).
+- `GET /recipe/import-test/store.json` (für den Test anonymes Lesen gesetzt)
+  lieferte 56 Tiddler, `GET /wiki/import-test` rendert mit
+  `<title>MWS Bedienungsanleitung</title>`. Die 101 `tiddler_event`-Zeilen des
+  Ziel-Bags sind die Serviceseite der Live-Aktualisierung offener Tabs.
+- Ein zweiter, kleinerer Durchlauf mit drei Tiddlern, nachdem der gemeinsame
+  Snapshot-Leser den doppelten ersetzt hatte: create → im nächsten Dry-Run
+  `0 new, 0 changed, 3 unchanged` → einen Tiddler ändern, einen löschen →
+  `1 written, 1 deleted, 1 unchanged` mit Snapshot → Restore holt `T3` und den
+  alten `T2`-Text zurück → `--snapshot-keep 1` wirft die zwei älteren Snapshots
+  weg und benennt sie.
+- `npm run tsc2` sauber, `npm run build` erfolgreich; der Dev-Store wurde danach
+  Tabelle für Tabelle mit dem Backup verglichen und ist unverändert.
+
+Nicht Teil dieses Abschnitts: der Admin-Dialog (Upload, Vorschau, Rückfrage),
+die Wiki-Dateiliste in "Meine Dateien" und die Migration bestehender
+`user_file`-HTML-Anhänge in einen Bag. `restoreSnapshotBag` in
+`importWikiFile.ts` ist der programmatische Einstiegspunkt dafür; die CLI
+nutzt bis dahin den Befehl.
 
 ## 83. Bugfix: ein Verbindungsalarm statt einer Flut (Issue #139)
 

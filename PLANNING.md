@@ -29,6 +29,23 @@ Markers used below:
   manager for database, keys and config ([§36](CHANGELOG.md))
 - ✗ Export recipe or bag to wiki folder (file system sync adapter)
 - ✅ Import wiki folder to recipe or bag — `new-commands/load-wiki-folder.ts`
+- ✅ Import a single-file TiddlyWiki 5 — `import-wiki-file`, parser in
+  `new-managers/WikiFileImport.ts` ([§84](CHANGELOG.md))
+- ◐ The admin dialog for it (upload, preview, confirmation for system
+  tiddlers) and the wiki-file list in "My Files" are the next phase; the
+  programmatic entry points (`planWikiFileImport`, `applyWikiFileImport`,
+  `restoreSnapshotBag`) are already there
+- ⚖️ A replace writes only the default write bag of the target wiki and takes a
+  snapshot into a hidden bag first, because MWS has no content history. The
+  snapshot bag is not referenced by any recipe and is pruned to the last 10 per
+  wiki. Do not re-open this as "just delete the tiddlers" — the restore command
+  depends on that bag, and open tabs are updated through `WikiStore` events
+  ([§84](CHANGELOG.md))
+- ⚖️ Plugin-, theme-, library- and language-tiddlers of an imported file are
+  never written into a bag: the plugins of a wiki come from its recipe, and
+  `$:/core` alone is megabytes. `$:/` tiddlers are skipped unless the operator
+  opts in, and a replace never *deletes* the `$:/` tiddlers of the target bag.
+  Both rules are deliberate, not an oversight
 - ✗ Support includeWikis
 - ✗ Automated export
 
