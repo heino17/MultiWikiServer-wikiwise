@@ -11,11 +11,11 @@ Standard-Sprache und Standard-Theme fürs erste Laden stellt der Betreiber in de
 
 > ⚠️ `@tiddlywiki/mws` auf npm ist das **Upstream**-Projekt. `npm init @tiddlywiki/mws@latest` installiert nicht diesen Fork. Dieser Fork wird als GitHub-Release verteilt, nicht über npm.
 >
-> **Schnellster Weg:** `mkdir mein-ordner && cd mein-ordner && npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.4.0/mws-wikiwise-0.4.0.tgz && npx mws init-data-folder`, dann `npx mws update-tiddlywiki`, `npx mws init-store`, `npx mws listen --listener`. `npx mws init-data-folder` ist Pflicht: der Server startet nur, wenn die `package.json` des Datenordners `@tiddlywiki/mws-instance` heißt, `private` ist und Version `0.2.x` trägt.
+> **Schnellster Weg:** `mkdir mein-ordner && cd mein-ordner && npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.4.1/mws-wikiwise-0.4.1.tgz && npx mws init-data-folder`, dann `npx mws update-tiddlywiki`, `npx mws init-store`, `npx mws listen --listener`. `npx mws init-data-folder` ist Pflicht: der Server startet nur, wenn die `package.json` des Datenordners `@tiddlywiki/mws-instance` heißt, `private` ist und Version `0.2.x` trägt.
 
 1. Repository holen und installieren: `git clone https://github.com/heino17/MultiWikiServer-wikiwise.git && cd MultiWikiServer-wikiwise && npm install`
 2. Entwicklungs-Wiki starten: `npm start` → Port `5000` unter `/dev/`
-3. Eigener Datenordner (empfohlen für den Betrieb): `npm pack`, dann `mkdir mein-ordner && cp create-package/files/* mein-ordner/`, `cd mein-ordner && npm install ../mws-wikiwise-0.4.0.tgz`, `npx mws update-tiddlywiki`, `npx mws init-store`, `npx mws listen --listener`
+3. Eigener Datenordner (empfohlen für den Betrieb): `npm pack`, dann `mkdir mein-ordner && cp create-package/files/* mein-ordner/`, `cd mein-ordner && npm install ../mws-wikiwise-0.4.1.tgz`, `npx mws update-tiddlywiki`, `npx mws init-store`, `npx mws listen --listener`
 4. Im Browser öffnen: Port `8080` (bzw. wie konfiguriert) – Erstanmeldung mit `admin` / `1234` (Passwort danach ändern).
 
 Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Cert möglich (z. B. hinter einem Reverse-Proxy wie Apache). Die Daten liegen in einer SQLite-Datei im `store`-Ordner – **immer komplett sichern** (⇒ Admin-Backup). Updates: `npm update` und `npx mws update-tiddlywiki`.
@@ -152,11 +152,11 @@ The operator sets the default language and theme for the very first load in "Set
 
 > ⚠️ `@tiddlywiki/mws` on npm is the **upstream** project. `npm init @tiddlywiki/mws@latest` does not install this fork. This fork is distributed as a GitHub release, not on npm.
 >
-> **Fastest route:** `mkdir my-folder && cd my-folder && npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.4.0/mws-wikiwise-0.4.0.tgz && npx mws init-data-folder`, then `npx mws update-tiddlywiki`, `npx mws init-store`, `npx mws listen --listener`. `npx mws init-data-folder` is not optional: the server only starts if the data folder's `package.json` is named `@tiddlywiki/mws-instance`, is `private` and carries a `0.2.x` version.
+> **Fastest route:** `mkdir my-folder && cd my-folder && npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.4.1/mws-wikiwise-0.4.1.tgz && npx mws init-data-folder`, then `npx mws update-tiddlywiki`, `npx mws init-store`, `npx mws listen --listener`. `npx mws init-data-folder` is not optional: the server only starts if the data folder's `package.json` is named `@tiddlywiki/mws-instance`, is `private` and carries a `0.2.x` version.
 
 1. Get and install the repository: `git clone https://github.com/heino17/MultiWikiServer-wikiwise.git && cd MultiWikiServer-wikiwise && npm install`
 2. Start the development wiki: `npm start` → port `5000` under `/dev/`
-3. Own data folder (recommended for real operation): `npm pack`, then `mkdir my-folder && cp create-package/files/* my-folder/`, `cd my-folder && npm install ../mws-wikiwise-0.4.0.tgz`, `npx mws update-tiddlywiki`, `npx mws init-store`, `npx mws listen --listener`
+3. Own data folder (recommended for real operation): `npm pack`, then `mkdir my-folder && cp create-package/files/* my-folder/`, `cd my-folder && npm install ../mws-wikiwise-0.4.1.tgz`, `npx mws update-tiddlywiki`, `npx mws init-store`, `npx mws listen --listener`
 4. Open in your browser: port `8080` (or as configured) – first login with `admin` / `1234` (change the password afterwards).
 
 Notes: The server speaks plain HTTP by default; HTTPS is possible via your own key/cert (e.g. behind a reverse proxy like Apache). Data lives in a single SQLite file inside the `store` folder – **always back it up completely** (⇒ admin backup). Updates: `npm update` and `npx mws update-tiddlywiki`.
