@@ -96,17 +96,29 @@ export function getStoredLocale(): LocaleCode | null {
 /**
  * Translate a string. The English strings are the keys, so an English lookup
  * always returns the input unchanged. Interpolation placeholders are written
- * as {name} and filled from the provided params object.
+ * as {name} and filled from the provided params object. Numeric params are
+ * grouped for the active locale, so a large count reads as "1.234.567" in
+ * German and "1,234,567" in English.
  *
  * Plural support: when a numeric `count` param is passed and a dict entry with
- * the key `${key}#<plural category>` exists (English/other plus, say, `#one`),
- * that variant wins. Categories follow Intl.PluralRules, so German `1` resolves
- * `#one` and everything else falls back to the base key. Convention:
+ * the key `${key}#<plural category>` exists, that variant wins; otherwise the
+ * base key is used. Categories follow Intl.PluralRules, and the app ships
+ * `#one` for every language that has such a category (`en`, `de`, `es`, `fr`,
+ * `ru`) plus `#few` for Russian, the only supported language that has `few`.
+ * German `1` therefore resolves `#one` and everything else falls back to the
+ * base key. Convention:
  *
  *   en: "{count} notes": "{count} notes",
  *       "{count} notes#one": "{count} note",
  *   de: "{count} notes": "{count} Notizen",
  *       "{count} notes#one": "{count} Notiz",
+ *   ru: "{count} notes": "{count} заметок",
+ *       "{count} notes#one": "{count} заметка",
+ *       "{count} notes#few": "{count} заметки",
+ *
+ * The base key therefore has to be the form used for `many`/`other`, not for
+ * `one` — Russian would read "1 заметок" otherwise. Pass `count` as a number,
+ * not as a pre-formatted string: a string does not select a plural category.
  */
 
 const pluralRulesCache = new Map<LocaleCode, Intl.PluralRules>();
@@ -131,7 +143,9 @@ export function t(key: string, params?: Record<string, string | number>): string
   }
   if (params) {
     for (const [name, value] of Object.entries(params)) {
-      text = text.split("{" + name + "}").join(String(value));
+      const rendered =
+        typeof value === "number" ? value.toLocaleString(locale) : String(value);
+      text = text.split("{" + name + "}").join(rendered);
     }
   }
   return text;

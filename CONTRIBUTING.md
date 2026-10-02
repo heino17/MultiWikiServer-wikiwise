@@ -88,7 +88,7 @@ This fork documents itself in both languages, and a change is not finished
 before the documentation follows:
 
 - **`CHANGELOG.md`** — every user-visible change gets a new numbered section
-  (`§88` is next), newest section first, in *both* the English and the German
+  (`§89` is next), newest section first, in *both* the English and the German
   half. The section number has to be identical on both sides, inline code,
   identifiers, file names and command lines stay literally the same, and prose
   is wrapped at about 80 columns. Release sections additionally carry a release
@@ -233,7 +233,7 @@ Dieser Fork dokumentiert sich zweisprachig, und eine Änderung ist nicht fertig,
 bevor die Dokumentation nachgezogen ist:
 
 - **`CHANGELOG.md`** — jede nutzersichtbare Änderung bekommt einen neuen
-  nummerierten Abschnitt (`§88` ist der nächste), den neuesten zuerst, in
+  nummerierten Abschnitt (`§89` ist der nächste), den neuesten zuerst, in
   *beiden* Hälften, der englischen und der deutschen. Die Abschnittsnummer
   muss auf beiden Seiten gleich sein, Inline-Code, Bezeichner, Dateinamen und
   Kommandozeilen bleiben wörtlich gleich, Fließtext wird bei etwa 80 Spalten

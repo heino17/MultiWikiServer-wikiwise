@@ -116,6 +116,7 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
 - **Gruppierung weicht der Sortierung:** in der Wiki-Liste stehen sonst „Meine Wikis", „Für dich freigegeben" und „System-Wikis". Sobald sortiert wird, gibt es **eine** flache Liste über alle Gruppen – sonst würde die Gruppierung das Ergebnis in drei Blöcke zerreißen; der dritte Klick stellt sie wieder her
 - **Je Tab eigener Zustand:** Query und Sortierung bleiben beim Tabwechsel erhalten, aber nur im Arbeitsspeicher – eine gespeicherte Sortierung würde ein Update überleben, in dem die Spalte umbenannt wurde, und dann nach nichts sortieren
 - **8 Sprachen** in der gesamten Admin-App (500+ Keys, Sprachenumschalter in der Kopfzeile) *und* im TiddlyWiki-Client (folgt automatisch der Wiki-Sprache, 23 Strings)
+- **Zahlen folgen der Sprache:** jede Zahl in der Verwaltung wird so geschrieben, wie die gewählte Sprache es tut – „1.234.567" auf Deutsch, „1,234,567" auf Englisch, „1 234 567" auf Russisch. Mengenangaben stehen im richtigen Numerus: „1 Datei / 2 Dateien", im Russischen zusätzlich die eigene Zwischenform („1 заметка / 2 заметки / 5 заметок")
 - **Hell-/Dunkel-Modus** mit Umschalter (System-Folge, warme helle Grundierung), ohne Flackern beim Laden
 - **Verständliche, übersetzte Fehlermeldungen** statt roher JSON-Blöcke
 - Einheitlicher Footer (Versionen, „Cookie-Einstellungen", „Impressum") in Startseite und Verwaltung
@@ -248,6 +249,7 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
 - **Grouping yields to sorting:** the wiki list otherwise shows "My wikis", "Shared with you" and "System wikis". As soon as a column is sorted, there is **one** flat list across all groups – otherwise the grouping would tear the result into three blocks; the third click restores it
 - **State per tab:** query and sort survive a tab switch, but in memory only – a stored sort would outlive an update that renamed the column and then sort by nothing
 - **8 languages** in the entire admin app (500+ keys, language switch in the header) *and* in the TiddlyWiki client (follows the wiki language automatically, 23 strings)
+- **Numbers follow the language:** every number in the administration is written the way the chosen language does it – "1.234.567" in German, "1,234,567" in English, "1 234 567" in Russian. Quantities use the right plural: "1 file / 2 files", and Russian adds its own middle form ("1 заметка / 2 заметки / 5 заметок")
 - **Light/Dark mode** with toggle (follows system, warm light base), no flicker on load
 - **Clear, translated error messages** instead of raw JSON blocks
 - A shared footer (versions, "Cookie settings", "Legal notice") on the start page and the admin app

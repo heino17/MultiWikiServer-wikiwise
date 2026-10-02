@@ -4626,6 +4626,70 @@ GitHub can show whether the warning is really gone — and after the push it is:
 the run is green and the annotation about `node20` is no longer there, only the
 notice that `ubuntu-latest` migrates to Ubuntu 26 from 19.10.2026.
 
+## 89. Bug fix: numbers did not follow the language they were counted in
+
+§88 fixed a Russian animal text that dropped its `{count}` and closed by
+pointing at what the fix had made visible: Russian `2` read *2 заметок* where
+Russian wants *2 заметки*, because `few` is a separate `Intl.PluralRules`
+category and the app shipped `#one` variants only. Filling in the Russian `few`
+forms turned out to be the small half of the job. Chasing it turned up three
+more defects of the same kind, all of them now fixed.
+
+**`count` was passed as a pre-formatted string in three places.**
+`app.tsx` handed `t("{count} files", { count: count.toLocaleString() })` and the
+two candidate lines to the storage panel. So `typeof count` was not `"number"`,
+`t()` never looked for a plural variant at all, and those three strings were
+wrong in every language, including English. The call sites now pass the number,
+and `t()` formats numeric params itself with `value.toLocaleString(locale)`
+during interpolation — that keeps the thousands separator those tiles are there
+for, and it means a caller cannot silently forget the plural by formatting too
+early.
+
+**Ten strings had no `#one` in `en`, `de`, `es` or `fr`.** `{count} files`,
+`{count} items`, `{count} wikis in total`, `Show {count} titles`,
+`Show the {count} deleted titles`, `System tiddlers in the file ({count})`,
+`Snapshot {name} with {count} tiddlers`, the two candidate lines, and for
+Spanish and French also `Deleted: {count}`, `Unchanged: {count}` and
+`Written: {count}`. English — the default, and the language the keys are
+written in — said **1 files** and **Found 1 candidates**. All of them have the
+singular now.
+
+**Which categories a file ships is decided by the language, not by symmetry.**
+`Intl.PluralRules` gives `ja`, `ko` and `zh-cn` exactly one category for whole
+numbers, so their `#one` entries can never be selected and none were added.
+Russian is the only supported language with `few`, so the eight `#few` entries
+all go into `ru.ts`. German needs no variant at all for *Titel* and
+*Systemtiddler*, which are invariant, and Spanish none for invariable words like
+`вики`. The base key therefore has to hold the `many`/`other` form —
+Russian `{count} notes` is *заметок*, not *заметка* — and that rule is now
+written down in the `t()` doc comment together with the category table.
+
+Word order follows the language, not the English original: German *Die
+gelöschten Titel zeigen* becomes *1 gelöschten Titel zeigen* rather than *Die 1
+gelöschten Titel*, because the article and the adjective ending belong to the
+plural. No language gets a determiner in front of a numeral, so the English
+singulars read *Show 1 title* and *Found 1 candidate* rather than *Show the 1
+title*, and the French ones read *Afficher 0 titre*, since French also takes the
+singular at `0`.
+
+**Verified** by bundling the real `t()` with esbuild and calling it: every one
+of the 16 plural-sensitive strings in all eight locales, at
+`0, 1, 2, 3, 5, 11, 21, 22, 25` and `1000000` — the interesting corners, since
+Russian `one` covers `21` and `101` but not `11`, `few` covers `2` through `4`
+but not `22` alone, and both agree with `many` on `5`. No number is lost in any
+of the 1280 combinations and no locale falls back to the bare key. The 649 base
+keys are identical across all eight files, no file has a duplicate key, and a
+placeholder comparison of all 662 entries finds no deviation. `npm run tsc2`,
+`cd packages/admin-vanilla && npx tsc --noEmit` and `npm run build` are clean.
+
+Two things this deliberately does not do. Spanish `many` fires from `1000000`
+upwards and wants a *de* before the noun — *1.000.000 de archivos* — but no
+count in this app plausibly reaches that, and a `#many` that covers the bare
+count nouns but not the phrases with an article would be worse than none, so
+Spanish ships no `#many`. And `{count} new` is an orphan: it was used by the
+pinboard tab until the unread label became `{count} new notes`, and it is still
+in all eight files with no caller. Both are noted rather than silently absorbed.
+
 ## 88. Bug fix: the Russian plural for "animal" dropped the number
 
 §87 added the missing 83 strings to the six languages that did not have them
@@ -9825,6 +9889,74 @@ Warnung wirklich verschwunden ist, kann nur der Lauf auf GitHub zeigen — nach
 dem Push ist sie es: der Lauf ist grün und die Annotation über `node20` nicht
 mehr vorhanden, nur noch der Hinweis, dass `ubuntu-latest` ab 19.10.2026 auf
 Ubuntu 26 migriert.
+
+## 89. Bugfix: Zahlen folgten nicht der Sprache, in der sie gezählt wurden
+
+§88 hat einen russischen Tiertext korrigiert, der sein `{count}` verlor, und
+dabei auf das verwiesen, was der Fix sichtbar machte: Russisch las `2` als
+*2 заметок*, wo Russisch *2 заметки* will, denn `few` ist eine eigene Kategorie
+in `Intl.PluralRules`, und die App lieferte nur `#one`-Varianten. Die
+russischen `few`-Formen auszufüllen war der kleine Teil der Arbeit. Wer dem
+nachgeht, stößt auf drei weitere Fehler derselben Art — alle drei sind behoben.
+
+**`count` wurde an drei Stellen als vorformatierter String übergeben.**
+`app.tsx` reichte `t("{count} files", { count: count.toLocaleString() })` und
+die beiden Kandidatenzeilen an die Speicheranzeige. `typeof count` war also
+nicht `"number"`, `t()` suchte gar nicht erst nach einer Pluralvariante, und
+diese drei Texte waren in jeder Sprache falsch, auch im Englischen. Die Aufrufer
+übergeben jetzt die Zahl, und `t()` formatiert numerische Parameter selbst
+mit `value.toLocaleString(locale)` — so bleibt das Tausendertrennzeichen, das
+diese Kacheln überhaupt zeigt, und ein Aufrufer kann die Mehrzahl nicht mehr
+versehentlich verlieren, indem er zu früh formatiert.
+
+**Zehn Texte hatten kein `#one` in `en`, `de`, `es` oder `fr`.**
+`{count} files`, `{count} items`, `{count} wikis in total`,
+`Show {count} titles`, `Show the {count} deleted titles`,
+`System tiddlers in the file ({count})`,
+`Snapshot {name} with {count} tiddlers`, die beiden Kandidatenzeilen und für
+Spanisch und Französisch zusätzlich `Deleted: {count}`, `Unchanged: {count}`
+und `Written: {count}`. Englisch — die Vorgabe und die Sprache, in der die
+Schlüssel geschrieben sind — sagte **1 files** und **Found 1 candidates**. Alle
+haben jetzt den Singular.
+
+**Welche Kategorien eine Datei mitbringt, entscheidet die Sprache und nicht die
+Symmetrie.** `Intl.PluralRules` gibt `ja`, `ko` und `zh-cn` für ganze Zahlen
+genau eine Kategorie, ihre vorhandenen `#one`-Einträge können also nie gewählt
+werden, und es kam keine hinzu. Russisch ist die einzige unterstützte Sprache
+mit `few`, also liegen alle acht `#few`-Einträge in `ru.ts`. Deutsch braucht für
+*Titel* und *Systemtiddler* gar keine Variante, weil sie invariant sind, und
+Spanisch für invariante Wörter wie `вики` ebensowenig. Der Basisschlüssel muss
+deshalb die `many`/`other`-Form halten — russisch ist `{count} notes` *заметок*,
+nicht *заметка* — und diese Regel steht jetzt im Doku-Kommentar von `t()`
+zusammen mit der Kategorientabelle.
+
+Die Wortstellung folgt der Sprache und nicht dem englischen Original: Deutsch
+*Die gelöschten Titel zeigen* wird zu *1 gelöschten Titel zeigen* und nicht zu
+*Die 1 gelöschten Titel*, weil Artikel und Adjektivendung zur Mehrzahl gehören.
+Keine Sprache bekommt einen Artikel vor einer Ziffer, die englischen Singularen
+lesen sich deshalb *Show 1 title* und *Found 1 candidate* statt *Show the 1
+title*, und die französischen *Afficher 0 titre*, weil Französisch auch bei `0`
+den Singular nimmt.
+
+**Verifiziert** durch Bündeln des echten `t()` mit esbuild und Aufrufen: jeder
+der 16 pluralrelevanten Texte in allen acht Locales, bei
+`0, 1, 2, 3, 5, 11, 21, 22, 25` und `1000000` — die interessanten Ecken, denn
+Russisch fasst `21` und `101` zu `one`, aber nicht `11`, `few` umfasst `2` bis
+`4` aber nicht `22` allein, und `many` ist bei `5` mit beiden gleich. In keiner
+der 1280 Kombinationen geht eine Zahl verloren, und keine Sprache fällt auf den
+nackten Schlüssel zurück. Die 649 Basisschlüssel sind über alle acht Dateien
+identisch, keine Datei hat einen doppelten Schlüssel, und ein
+Platzhaltervergleich aller 662 Einträge findet keine Abweichung. `npm run tsc2`,
+`cd packages/admin-vanilla && npx tsc --noEmit` und `npm run build` sind sauber.
+
+Zwei Dinge tut dieser Abschnitt bewusst nicht. Spanisch `many` greift ab
+`1000000` und verlangt ein *de* vor dem Nomen — *1.000.000 de archivos* —, aber
+keine Zahl in dieser App erreicht das plausibel, und ein `#many`, das die
+einfachen Zählnomen deckt, aber nicht die Wendungen mit Artikel, wäre schlechter
+als gar keines; deshalb liefert Spanisch kein `#many`. Und `{count} new` ist ein
+Waisen: der Pinnwand-Tab benutzte es, bis das Ungelesen-Label zu
+`{count} new notes` wurde, und es steht noch in allen acht Dateien ohne
+Aufrufer. Beides ist vermerkt und nicht stillschweigend aufgenommen.
 
 ## 88. Bugfix: die russische Mehrzahl von „Tier" ließ die Zahl weg
 
