@@ -4626,6 +4626,40 @@ GitHub can show whether the warning is really gone — and after the push it is:
 the run is green and the annotation about `node20` is no longer there, only the
 notice that `ubuntu-latest` migrates to Ubuntu 26 from 19.10.2026.
 
+## 88. Bug fix: the Russian plural for "animal" dropped the number
+
+§87 added the missing 83 strings to the six languages that did not have them
+yet, and its placeholder audit turned up a defect in a line that had been there
+since §14: `"Find all {count} animals.#one"` in `ru.ts` read *Найдите одно
+животное.* — one animal, with the `{count}` left out. Every other one of the
+eight languages keeps it.
+
+One character plus a space: *Найдите {count} животное.* Nothing in `i18n.ts`
+needed touching, because `t()` already interpolates every param in the variant
+it picked. The wording had to stay in the nominative singular, since that is
+what `Intl.PluralRules("ru")` asks for, and Russian's `one` category is not only
+`1` — it is every number ending in `1` except `11`, so the same string serves
+`21` and `101`.
+
+**Verified.** Not by reading the line, but by bundling the real `t()` with
+esbuild and calling it: `t("Find all {count} animals.", { count })` across
+`0, 1, 2, 3, 5, 11, 21, 22, 25, 101` in all eight locales, asserting that the
+rendered string contains the number that was passed in. Zero lost. The `#one`
+cases read *Найдите 1 животное.*, *Найдите 21 животное.*, *Найдите 101
+животное.*, and everything else falls through to the base key. The same harness
+over `{count} notes` and `{count} new notes` passes in all eight languages too.
+`npm run tsc2`, `cd packages/admin-vanilla && npx tsc --noEmit` and
+`npm run build` are clean, and the placeholder audit over all 653 keys now
+reports no deviation in any of the eight files.
+
+One thing that harness also made visible, which §87 did not catch and this
+section does not fix: Russian `2` reads *2 заметок* where it should read *2
+заметки*. `few` is a separate `Intl.PluralRules` category and the app ships
+`#one` variants only, so `2`–`4` fall through to the base key. The lookup in
+`t()` would already honour a `#few` entry without any code change; what is
+missing is the Russian `few` form for every plural noun in the files, which is a
+translation job rather than a bug fix.
+
 ## 87. Bug fix: the wiki-file dialog only spoke German and English
 
 `AGENTS.md` says the admin app is bilingual by contract, which was read as "two
@@ -9791,6 +9825,42 @@ Warnung wirklich verschwunden ist, kann nur der Lauf auf GitHub zeigen — nach
 dem Push ist sie es: der Lauf ist grün und die Annotation über `node20` nicht
 mehr vorhanden, nur noch der Hinweis, dass `ubuntu-latest` ab 19.10.2026 auf
 Ubuntu 26 migriert.
+
+## 88. Bugfix: die russische Mehrzahl von „Tier" ließ die Zahl weg
+
+§87 hat die fehlenden 83 Texte den sechs Sprachen nachgetragen, die sie noch
+nicht hatten, und die Platzhalterprüfung dabei einen Fehler gefunden, der seit
+§14 dort stand: `"Find all {count} animals.#one"` in `ru.ts` lautete *Найдите
+одно животное.* — ein Tier, ohne das `{count}`. Die anderen sieben Sprachen
+führen es alle.
+
+Ein Zeichen plus Leerzeichen: *Найдите {count} животное.* In `i18n.ts` musste
+nichts geändert werden, denn `t()` interpoliert in der gewählten Variante
+bereits jeden Parameter. Die Formulierung musste im Nominativ Singular
+bleiben, weil genau den verlangt `Intl.PluralRules("ru")`, und Russisch hat die
+Kategorie `one` nicht nur bei `1` — sondern bei jeder Zahl, die auf `1` endet,
+außer `11`. Dieselbe Zeichenkette bedient deshalb auch `21` und `101`.
+
+**Verifiziert.** Nicht durch Lesen der Zeile, sondern indem das echte `t()` mit
+esbuild gebündelt und aufgerufen wurde: `t("Find all {count} animals.", { count })`
+für `0, 1, 2, 3, 5, 11, 21, 22, 25, 101` in allen acht Locales, mit der
+Zusicherung, dass der erzeugte Text die übergebene Zahl enthält. Null verloren.
+Die `#one`-Fälle lesen *Найдите 1 животное.*, *Найдите 21 животное.*, *Найдите
+101 животное.*, alles andere fällt auf den Basisschlüssel zurück. Dieselbe
+Prüfmaschinerie über `{count} notes` und `{count} new notes` besteht in allen
+acht Sprachen ebenfalls. `npm run tsc2`,
+`cd packages/admin-vanilla && npx tsc --noEmit` und `npm run build` sind sauber,
+und die Platzhalterprüfung über alle 653 Schlüssel meldet in keiner der acht
+Dateien mehr eine Abweichung.
+
+Einen Nebeneffekt hat diese Prüfmaschinerie ebenfalls sichtbar gemacht, den §87
+nicht gefunden hat und den dieser Abschnitt nicht behebt: Russisch liest `2`
+als *2 заметок*, wo *2 заметки* stehen müsste. `few` ist eine eigene Kategorie
+in `Intl.PluralRules`, und die App liefert nur `#one`-Varianten, also fallen
+`2` bis `4` auf den Basisschlüssel zurück. Der Lookup in `t()` würde einen
+`#few`-Eintrag bereits ohne jede Codeänderung beachten; es fehlt die russische
+`few`-Form zu jedem Pluralnoun in den Dateien, und das ist eine
+Übersetzungsaufgabe, kein Bugfix.
 
 ## 87. Bugfix: der Wiki-Dateien-Dialog sprach nur Deutsch und Englisch
 

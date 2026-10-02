@@ -48,7 +48,7 @@ orgs or accounts. `create-package/README.md` records why.
   `README_features.md` and `CHANGELOG.md` each carry an English and a German
   half with the same structure. A new section goes into both halves.
 - **The CHANGELOG is the development story.** Every user-visible change gets a
-  new numbered section (`§87` is next), newest first, with the same number in
+  new numbered section (`§88` is next), newest first, with the same number in
   both language halves. Inline code, identifiers, file names and command lines
   stay literally identical across halves; prose is wrapped at about 80 columns.
 - **Do not weaken the security invariants** (`ARCHITECTURE.md`,
