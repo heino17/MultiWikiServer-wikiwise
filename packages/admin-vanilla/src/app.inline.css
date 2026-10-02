@@ -5264,6 +5264,26 @@ odt-preview-document {
 	color: var(--color-text-muted);
 }
 
+/* The one row of the plan that costs something: what a replace removes. */
+.wiki-file-plan-warn {
+	padding: 6px 8px;
+	border-radius: 4px;
+	background: var(--color-message-warning-backdrop, rgb(255 200 0 / 12%));
+}
+
+.wiki-file-plan-warn .wiki-file-plan-label,
+.wiki-file-plan-warn .wiki-file-plan-count {
+	color: var(--color-message-warning, var(--color-text-strong));
+	font-weight: 600;
+}
+
+.wiki-file-dropped {
+	flex: 1 0 100%;
+	margin: 4px 0 0;
+	font-size: 0.86rem;
+	color: var(--color-text-muted);
+}
+
 .wiki-file-plan-samples,
 .wiki-file-system-list {
 	flex: 1 0 100%;

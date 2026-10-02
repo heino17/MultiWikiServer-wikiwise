@@ -11,8 +11,8 @@ If a wiki so far exists only as a single `index.html` on a computer or a USB sti
 * Open the ''admin page'' and click ''Take over a wiki file'' in the ''Create a wiki'' dropdown.
 * Choose the saved `index.html` of the wiki. It must have been saved with ''TiddlyWiki 5''.
 * Choose the target: a ''new wiki'' (with a name and a slug) or an ''existing wiki''.
-* Click ''Check the file''. The server reads the file and shows what would happen: new, changed, unchanged and deleted tiddlers, the system tiddlers it contains and the plugins that are left out. Nothing is written yet.
-* If you want the layout, tag and theme settings of the old wiki ($:/ tiddlers), tick ''Also import system tiddlers''.
+* Click ''Check the file''. The server reads the file and shows what would happen: new, changed, unchanged and deleted tiddlers, the system tiddlers it contains, the plugins that are left out, the session state of the file and the language. Nothing is written yet. The deleted tiddlers are highlighted in red with their titles, because they are the only part of the takeover that can destroy work.
+* If you want the layout, tag and theme settings of the old wiki ($:/ tiddlers), tick ''Also import system tiddlers''. Only then does the wiki's ''language pack'' come along; without that box the target wiki keeps its language.
 * Only ''Import now'' writes. For an existing wiki you choose beforehand whether to ''Replace'' (the wiki becomes the file, a snapshot is taken first) or to ''Merge'' (only new and changed tiddlers are written, nothing is deleted).
 
 !! Rights
@@ -21,8 +21,13 @@ If a wiki so far exists only as a single `index.html` on a computer or a USB sti
 * ''Replace'' deletes tiddlers and therefore needs administrator rights on the bag of the wiki.
 * Clicking the restore button on a snapshot brings the old state back. That, too, is undoable, because a snapshot is taken first again.
 
+!! Language
+
+The wiki file names its language in `$:/language`. A tiddler that points at a language pack which neither the file nor the core (such as `$:/languages/en-GB`) nor the target wiki contains is not taken over: the wiki keeps its language instead of pointing at a pack that does not exist. If the language pack is in the file, it travels along with the system tiddlers.
+
 !! What is not taken over
 
-* Plugins, themes, libraries and language packs: a wiki gets those from its recipe ([[Bags und Rollen]]).
+* The core, plugins, themes and libraries: a wiki gets those from its recipe ([[Bags und Rollen]]). ''Language packs'' are the exception, because MWS keeps them in the bag and not in the recipe.
+* The session state of the browser that saved the file: open tabs and drafts (`$:/StoryList`, `$:/temp/`, `$:/state/`), the request log, the plugin cache, `$:/HistoryList`, `$:/Import`, `$:/build` and `$:/isEncrypted`. Those tiddlers belong to a session and not to a wiki; the plan names them one by one.
 * TiddlyWiki 2 files, password-protected files and files without tiddlers are refused with a clear message.
 * Very large files: the server limit is 50 MB (changeable via `MWS_WIKI_FILE_SIZE_LIMIT`).

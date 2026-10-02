@@ -277,13 +277,23 @@ function planSummary(plan: WikiImportPlan) {
     created: sample(plan.created),
     updated: sample(plan.updated),
     unchanged: plan.unchanged.length,
-    deleted: sample(plan.deleted),
+    /** The tiddlers a replace removes, named: this is the destructive part. */
+    deleted: { count: plan.deleted.length, titles: plan.deleted },
     /** System tiddlers a replace keeps although the file has none. */
     keptSystem: sample(plan.keptSystemTitles),
     /** Left out because they are system tiddlers. */
     skippedSystem: plan.skippedSystemTitles.length,
-    /** Plugins never enter a bag, not even on request. */
+    /**
+     * Core plugins, themes and libraries never enter a bag; only the language
+     * pack does, because MWS keeps language packs in the bag, not the recipe.
+     */
     skippedPlugins: sample(plan.skippedPluginTitles),
+    /** Session and build state the file carries, dropped while reading it. */
+    skippedTransient: sample(plan.skippedTransientTitles),
+    /** What becomes of the file's language. */
+    language: plan.language ?? null,
+    /** Offered by the file, deliberately not written, with the reason. */
+    dropped: plan.dropped,
     /** A replace copies the bag into a snapshot bag first. */
     snapshots: plan.mode === "replace" && plan.existingCount > 0,
   };

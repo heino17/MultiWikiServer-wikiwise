@@ -54,28 +54,84 @@ export interface ParsedWikiFile extends WikiFileInfo {
   tiddlers: TiddlerFields[];
   /** Every $:/ tiddler found in the file that is not a plugin, also when filtered out. */
   systemTiddlers: TiddlerFields[];
-  /** Plugin, theme and library tiddlers, which are never imported. */
+  /** Plugin and theme tiddlers; the language pack is the one that may travel. */
   pluginTiddlers: TiddlerFields[];
   /** The titles that were left out because they are system tiddlers. */
   skippedSystemTitles: string[];
   /** The plugin titles that were left out. */
   skippedPluginTitles: string[];
+  /** The session and build state that was dropped, never importable. */
+  skippedTransientTitles: string[];
   /** The file's own $:/SiteTitle, used as the display name of a new wiki. */
   siteTitle?: string;
+  /** The language the file wants, and the pack it carries for it, if any. */
+  language?: WikiFileLanguage;
+}
+
+/**
+ * What the file says about its language. A file can name a language pack it
+ * does not contain (it came from a recipe, or somebody deleted it), and then
+ * $:/language would point into the void and the plugin switcher would silently
+ * fall back to English.
+ */
+export interface WikiFileLanguage {
+  /** The value of the file's $:/language, e.g. "$:/languages/de-DE". */
+  wanted: string;
+  /** The pack the file carries for it, if any. */
+  packTitle?: string;
+  /** Whether the booted installation knows the language without the file. */
+  inCore: boolean;
 }
 
 /**
  * A single-file TiddlyWiki carries its whole core in the file: the store of a
  * freshly built wiki holds $:/core (over 2 MB of plugin text) plus the themes as
  * plugin-type tiddlers. In MWS the plugin set belongs to the recipe, so a bag
- * must never take a plugin from an uploaded file, no matter what the operator
- * asked for.
+ * must never take a core plugin, theme or library from an uploaded file, no
+ * matter what the operator asked for.
+ *
+ * Language packs are the exception, and they are not a compromise: MWS keeps
+ * language plugins in the bag, not in the recipe (a recipe's plugin list is
+ * empty for the wikis MWS creates), because the language is a property of the
+ * wiki and not of the installation. Without the pack a German single-file wiki
+ * would arrive with $:/language pointing at $:/languages/de-DE, and the plugin
+ * switcher would fall back to en-GB without a word.
  */
 const PLUGIN_TYPES = new Set(["plugin", "theme", "library", "language"]);
+
+/**
+ * Tiddlers that hold the state of one browser session or one build, never the
+ * content of a wiki. TiddlyWiki's own import deselects these (core
+ * modules/upgraders/system.js); we drop them outright, because in MWS they
+ * would end up in the bag and stay there.
+ *
+ * $:/status/ deserves the mention: the syncer reads $:/status/UserName from
+ * there (core modules/wiki.js), so an imported one would put the name of the
+ * person who saved the file on every tiddler created in the wiki afterwards.
+ */
+const TRANSIENT_TITLES = new Set([
+  "$:/build",
+  "$:/HistoryList",
+  "$:/Import",
+  "$:/isEncrypted",
+  "$:/StoryList",
+]);
+
+const TRANSIENT_PREFIXES = ["$:/state/", "$:/status/", "$:/temp/"];
+
+function isTransientTitle(title: string): boolean {
+  return TRANSIENT_TITLES.has(title)
+    || TRANSIENT_PREFIXES.some((prefix) => title.startsWith(prefix));
+}
 
 function isPluginTiddler(fields: TiddlerFields): boolean {
   const type = fields["plugin-type"];
   return typeof type === "string" && PLUGIN_TYPES.has(type);
+}
+
+/** A language pack, the one plugin type an uploaded file may contribute. */
+function isLanguagePack(fields: TiddlerFields): boolean {
+  return fields["plugin-type"] === "language";
 }
 
 const META_TAG = /<meta\b[^>]*>/gi;
@@ -188,26 +244,58 @@ export function parseWikiFile($tw: TW, html: string, options: {
   const pluginTiddlers: TiddlerFields[] = [];
   const skippedSystemTitles: string[] = [];
   const skippedPluginTitles: string[] = [];
+  const skippedTransientTitles: string[] = [];
   let siteTitle: string | undefined;
+  let languageWanted: string | undefined;
+  let languagePack: string | undefined;
 
   for (const fields of found) {
     const title = typeof fields?.title === "string" ? fields.title.trim() : "";
     if (!title) continue;
     const tiddler = { ...fields, title };
-    if (title === "$:/SiteTitle") siteTitle = String(fields.text ?? "").trim() || undefined;
     if (!title.startsWith("$:/")) {
       tiddlers.push(tiddler);
       continue;
     }
+    // Session and build state first: it is junk even when system tiddlers are
+    // wanted, so it must not be counted as a system tiddler either.
+    if (isTransientTitle(title)) {
+      skippedTransientTitles.push(title);
+      continue;
+    }
+    if (title === "$:/SiteTitle") siteTitle = String(fields.text ?? "").trim() || undefined;
+    if (title === "$:/language") languageWanted = String(fields.text ?? "").trim() || undefined;
     if (isPluginTiddler(tiddler)) {
       pluginTiddlers.push(tiddler);
-      skippedPluginTitles.push(title);
+      if (isLanguagePack(tiddler)) {
+        // The pack follows the same rule as every other $:/ tiddler: it only
+        // travels when the operator asked for the file's settings.
+        if (languageWanted === undefined) languageWanted = title;
+        else if (languageWanted === title) languagePack = title;
+        systemTiddlers.push(tiddler);
+        if (options.includeSystem) tiddlers.push(tiddler);
+        else skippedSystemTitles.push(title);
+      } else {
+        skippedPluginTitles.push(title);
+      }
       continue;
     }
     systemTiddlers.push(tiddler);
     if (options.includeSystem) tiddlers.push(tiddler);
     else skippedSystemTitles.push(title);
   }
+
+  // A pack may sit behind its $:/language in the store, so resolve it once the
+  // whole store has been read. Whether the target wiki can speak the language is
+  // decided later, against the target bag.
+  if (languageWanted && !languagePack) {
+    languagePack = pluginTiddlers.some((t) => t.title === languageWanted) ? languageWanted : undefined;
+  }
+  const language = languageWanted ? {
+    wanted: languageWanted,
+    ...(languagePack ? { packTitle: languagePack } : {}),
+    inCore: !!$tw.wiki.getTiddler(languageWanted),
+  } : undefined;
 
   tiddlers.sort((a, b) => a.title.localeCompare(b.title));
 
@@ -228,7 +316,9 @@ export function parseWikiFile($tw: TW, html: string, options: {
     pluginTiddlers,
     skippedSystemTitles,
     skippedPluginTitles,
+    skippedTransientTitles,
     siteTitle,
+    language,
   };
 }
 

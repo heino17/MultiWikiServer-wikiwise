@@ -4626,6 +4626,92 @@ GitHub can show whether the warning is really gone — and after the push it is:
 the run is green and the annotation about `node20` is no longer there, only the
 notice that `ubuntu-latest` migrates to Ubuntu 26 from 19.10.2026.
 
+## 86. Bug fix: three things a single-file wiki import got wrong
+
+The import from §84 and §85 was compared against a real file — a `index.html`
+saved from TiddlyWiki 5.4.1, 2.6 MB, 17 tiddlers, all of them `$:/`. Three
+things did not survive the comparison, and all three are fixed.
+
+**Session state was being imported.** The store of that file holds
+`$:/StoryList`, `$:/temp/...`, `$:/state/tab-...`, `$:/state/plugin-info-...`,
+`$:/HistoryList`, `$:/Import`, `$:/build`, `$:/isEncrypted` and
+`$:/status/...`: the tabs, the drafts, the request log and the plugin cache of
+the browser session that saved the file. Importing them put a stranger's open
+tabs into a wiki and left a stale `$:/StoryList` as the wiki's story river. Our
+importer took 11 of these 13 tiddlers with it. TiddlyWiki's own import does not
+ask about them — `core/modules/upgraders/system.js` deselects this list — and
+that list is now what `TRANSIENT_TITLES` and `TRANSIENT_PREFIXES` hold: the
+seven titles `$:/build`, `$:/HistoryList`, `$:/Import`, `$:/isEncrypted`,
+`$:/StoryList` and the prefixes `$:/state/`, `$:/status/`, `$:/temp/`. They are
+dropped before the system-tiddler switch, because they are junk either way, and
+they are named in the plan so that a skipped tiddler is visible and not merely
+absent. The same file now yields three tiddlers instead of thirteen, and the
+eleven named ones.
+
+**A German wiki arrived in English.** `$:/language` was imported, but its
+language pack was not: it is a `plugin-type: language` tiddler, and the
+importer dropped every plugin because in MWS the plugin set belongs to the
+recipe. That is right for `$:/core` and the themes — 2 MB of core per bag would
+be nonsense — but wrong for the language, because MWS keeps *language* plugins
+in the bag and not in the recipe (a recipe's plugin list is empty for the wikis
+MWS creates, the language is a property of the wiki and not of the
+installation). So the wiki ended up with `$:/language` pointing at
+`$:/languages/de-DE` and no such pack in the bag, and the plugin switcher fell
+back to en-GB without a word. A language pack is now the one plugin type that
+may travel, subject to the same system-tiddler switch as every other `$:/`
+tiddler. `$:/language` itself is only written when the wiki can actually speak
+the language afterwards: the pack comes with the file, the core already has it
+(`$:/languages/en-GB`), or the target bag has it. Otherwise `$:/language` is
+left alone and the plan says so — the wiki keeps its own language instead of
+being pointed at a pack that does not exist.
+
+**A replace destroyed tiddlers without naming them.** The plan counted what a
+replace deletes and the dialog called it "Tiddlers not in the file". For the one
+operation that can lose work that is not one click too few. The plan carries the
+titles, the route returns all of them (not a twelve-item sample: the count is
+bounded by the file's tiddler limit anyway), the CLI prints them, and the dialog
+gives the row a warning background with the titles in an open list. It is the
+only red row in the plan.
+
+Strings in both languages; `Plugins are never imported` and
+`Plugins left out` are now `A language pack is one of them` and
+`Core plugins, themes and libraries left out`, because plugins are no longer a
+flat no. The stale "the file's settings do not travel" wording of the language
+rows is gone with it.
+
+**Verified.** `empty.html` through `import-wiki-file`, before and after, and
+`npm run tsc2`, `cd packages/admin-vanilla && npx tsc --noEmit`, `npm run
+build`, `git diff --check` clean:
+
+- `--include-system` on `empty.html`: `3 tiddler(s)` where it was `13`, the
+  three being `$:/config/Plugins/Disabled/$:/languages/de-AT`, `$:/language`
+  and the pack `$:/languages/de-DE`; `11 session/build tiddler(s) dropped`
+  named in full.
+- `language: $:/languages/en-GB` — the core has it, so `$:/language` travels.
+- A copy of the file pointing at `$:/languages/fr-FR`: `2 new`, `$:/language`
+  not in the list and not taken over -
+  `The file wants the language "$:/languages/fr-FR" but does not contain the
+  language pack, and the target wiki does not have it either. The wiki keeps
+  its own language.` The reason
+  codes are for the dialog; the CLI and the plan print the sentence.
+- A copy pointing at `$:/languages/de-DE`, which the file does carry: `pack
+  $:/languages/de-DE comes with the file`, `$:/language` written.
+- Without `--include-system`: `0 new`, `3 system tiddler(s) left out`, the
+  language not taken over and the wiki keeps its own.
+- End to end into a wiki created by the command, then served:
+  `GET /wiki/de-test` returns `200` and 375 KB, and the browser store contains
+  `$:/language` → `$:/languages/de-DE` with the pack's 1072 tiddlers —
+  `$:/language/Buttons/Cancel/Hint` is "Abbrechen", the file's `en-GB` setting
+  is gone. The same wiki before the fix held `$:/language` → `$:/languages/en-GB`.
+- Deletions: a replace that drops one content tiddler reports `1 deleted: Charlie` and writes a snapshot; one that drops twenty reports `20 deleted`
+  with all twenty in the plan and the first twelve in the terminal.
+- The store was restored from its backup afterwards: 15 wikis, 15 bags, no
+  snapshots, no test wikis.
+
+Not part of this section: `$:/core/modules/` tiddlers (they are system
+tiddlers like any other and travel only with the switch), and the wiki-file
+list in "My Files".
+
 ## 85. Feature: "Take over a wiki file" in the admin app (dialog, routes)
 
 The wiki-file import of §84 is now reachable from the admin app. The entry sits
@@ -9664,6 +9750,96 @@ Warnung wirklich verschwunden ist, kann nur der Lauf auf GitHub zeigen — nach
 dem Push ist sie es: der Lauf ist grün und die Annotation über `node20` nicht
 mehr vorhanden, nur noch der Hinweis, dass `ubuntu-latest` ab 19.10.2026 auf
 Ubuntu 26 migriert.
+
+## 86. Bugfix: drei Dinge, die der Single-File-Import falsch gemacht hat
+
+Der Import aus §84 und §85 wurde gegen eine echte Datei geprüft — eine mit
+TiddlyWiki 5.4.1 gespeicherte `index.html`, 2,6 MB, 17 Tiddler, alle `$:/`.
+Drei Dinge haben den Vergleich nicht überstanden, alle drei sind behoben.
+
+**Sitzungszustand wurde importiert.** Der Store dieser Datei enthält
+`$:/StoryList`, `$:/temp/...`, `$:/state/tab-...`, `$:/state/plugin-info-...`,
+`$:/HistoryList`, `$:/Import`, `$:/build`, `$:/isEncrypted` und `$:/status/...`:
+die Tabs, die Entwürfe, das Request-Log und den Plugin-Cache der
+Browser-Sitzung, die die Datei gespeichert hat. Unser Importierer hat 11 dieser
+13 Tiddler mitgenommen, damit die offenen Tabs einer fremden Person im Wiki
+landeten und ein veraltetes `$:/StoryList` zum Story River des Wikis wurde.
+TiddlyWikys eigener Import fragt nicht nach ihnen — `core/modules/upgraders/system.js`
+deselektiert genau diese Liste — und genau diese Liste steht jetzt in
+`TRANSIENT_TITLES` und `TRANSIENT_PREFIXES`: die fünf Titel `$:/build`,
+`$:/HistoryList`, `$:/Import`, `$:/isEncrypted`, `$:/StoryList` und die Präfixe
+`$:/state/`, `$:/status/`, `$:/temp/`. Sie fallen schon vor dem
+Systemtiddler-Schalter weg, denn sie sind so oder so Müll, und sie werden im
+Plan benannt, damit ein übersprungener Tiddler sichtbar ist und nicht bloß
+fehlt. Dieselbe Datei liefert damit drei Tiddler statt dreizehn, die elf
+übrigen namentlich.
+
+**Ein deutsches Wiki kam auf Englisch an.** `$:/language` wurde importiert,
+sein Sprachpaket nicht: das ist ein `plugin-type: language`-Tiddler, und der
+Importierer ließ jeden Plugin fallen, weil in MWS der Plugin-Satz zum Recipe
+gehört. Für `$:/core` und die Themes stimmt das — 2 MB Core pro Bag wären
+Unsinn — für die Sprache aber nicht, weil MWS *Sprach*-Plugins im Bag hält und
+nicht im Recipe (die Plugin-Liste eines Recipes ist für die von MWS
+erzeugten Wikis leer, die Sprache ist eine Eigenschaft des Wikis und nicht der
+Installation). So blieb das Wiki mit `$:/language` → `$:/languages/de-DE` ohne
+solches Paket im Bag, und der Plugin-Umschalter fiel stillschweigend auf en-GB
+zurück. Ein Sprachpaket ist jetzt der einzige Plugin-Typ, der mitreisen darf,
+unter derselben Bedingung wie jeder andere `$:/`-Tiddler. `$:/language` selbst
+wird nur geschrieben, wenn das Wiki die Sprache danach wirklich sprechen kann:
+das Paket kommt mit der Datei, der Core hat sie schon (`$:/languages/en-GB`),
+oder der Ziel-Bag hat sie. Sonst bleibt `$:/language` unangetastet und der Plan
+sagt es — das Wiki behält seine Sprache, statt auf ein nicht existierendes
+Paket zu zeigen.
+
+**Ein Replace hat Tiddler ohne Namen vernichtet.** Der Plan zählte, was ein
+Replace löscht, und der Dialog nannte es "Tiddlers not in the file". Für die
+einzige Operation, die Arbeit vernichten kann, ist das eine Klick zu wenig. Der
+Plan führt die Titel, die Route gibt alle zurück (kein Zwöfer-Sample: die Zahl
+ist durch das Tiddler-Limit der Datei ohnehin begrenzt), die CLI druckt sie,
+und der Dialog bekommt die Zeile einen Warnhintergrund mit den Titeln in einer
+offenen Liste. Es ist die einzige rote Zeile im Plan.
+
+Texte in beiden Sprachen; aus `Plugins are never imported` und
+`Plugins left out` wurden `A language pack is one of them` und `Core plugins, themes and libraries left out`, denn Plugins sind nicht mehr pauschal nein. Die
+veraltete Formulierung "die Einstellungen der Datei kommen nicht mit" ist mit
+den Sprachzeilen mit verschwunden.
+
+**Verifiziert.** `empty.html` durch `import-wiki-file`, vorher und nachher, und
+`npm run tsc2`, `cd packages/admin-vanilla && npx tsc --noEmit`, `npm run
+build`, `git diff --check` sauber:
+
+- `--include-system` auf `empty.html`: `3 tiddler(s)` statt vorher `13`, nämlich
+  `$:/config/Plugins/Disabled/$:/languages/de-AT`, `$:/language` und das Paket
+  `$:/languages/de-DE`; `11 session/build tiddler(s) dropped` vollständig
+  benannt.
+- `language: $:/languages/en-GB` — der Core hat sie, also reist `$:/language`
+  mit.
+- Eine Kopie der Datei mit Zeiger auf `$:/languages/fr-FR`: `2 new`,
+  `$:/language` nicht in der Liste und nicht taken over -
+  `The file wants the language "$:/languages/fr-FR" but does not contain the
+  language pack, and the target wiki does not have it either. The wiki keeps
+  its own language.` Die Reason-Codes sind für den Dialog; CLI und Plan
+  drucken den Satz.
+- Eine Kopie auf `$:/languages/de-DE`, die die Datei mitbringt: `pack
+  $:/languages/de-DE comes with the file`, `$:/language` geschrieben.
+- Ohne `--include-system`: `0 new`, `3 system tiddler(s) left out`, die Sprache
+  nicht übernommen, das Wiki behält seine.
+- Ende-zu-Ende in ein vom Befehl erzeugtes Wiki, dann ausgeliefert:
+  `GET /wiki/de-test` liefert `200` und 375 KB, und der Browser-Store enthält
+  `$:/language` → `$:/languages/de-DE` mit den 1072 Tiddlern des Pakets —
+  `$:/language/Buttons/Cancel/Hint` ist "Abbrechen", die `en-GB`-Einstellung
+  der Datei ist weg. Dasselbe Wiki hatte vor dem Fix `$:/language` →
+  `$:/languages/en-GB`.
+- Löschungen: ein Replace, der einen Inhaltstiddler verliert, meldet
+  `1 deleted: Charlie` und schreibt einen Snapshot; einer, der zwanzig
+  verliert, meldet `20 deleted` mit allen zwanzig im Plan und den ersten zwölf
+  im Terminal.
+- Der Store wurde danach aus seinem Backup zurückgespielt: 15 Wikis, 15 Bags,
+  keine Snapshots, keine Test-Wikis.
+
+Nicht Teil dieses Abschnitts: `$:/core/modules/`-Tiddler (sie sind Systemtiddler
+wie alle anderen und reisen nur mit dem Schalter) und die Wiki-Dateiliste in
+"Meine Dateien".
 
 ## 85. Feature: "Wiki-Datei übernehmen" in der Admin-App (Dialog, Routen)
 
