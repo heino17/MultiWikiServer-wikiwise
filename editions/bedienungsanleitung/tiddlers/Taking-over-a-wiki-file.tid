@@ -1,0 +1,28 @@
+title: Taking over a wiki file
+tags: Anleitung
+lang: en
+
+EN: ''Taking over a wiki file'' · DE: [[Wiki-Datei übernehmen]] · [[Start]]
+
+! Taking over a wiki file
+
+If a wiki so far exists only as a single `index.html` on a computer or a USB stick, you can take it over into MWS that way. No tiddler is copied by hand.
+
+* Open the ''admin page'' and click ''Take over a wiki file'' in the ''Create a wiki'' dropdown.
+* Choose the saved `index.html` of the wiki. It must have been saved with ''TiddlyWiki 5''.
+* Choose the target: a ''new wiki'' (with a name and a slug) or an ''existing wiki''.
+* Click ''Check the file''. The server reads the file and shows what would happen: new, changed, unchanged and deleted tiddlers, the system tiddlers it contains and the plugins that are left out. Nothing is written yet.
+* If you want the layout, tag and theme settings of the old wiki ($:/ tiddlers), tick ''Also import system tiddlers''.
+* Only ''Import now'' writes. For an existing wiki you choose beforehand whether to ''Replace'' (the wiki becomes the file, a snapshot is taken first) or to ''Merge'' (only new and changed tiddlers are written, nothing is deleted).
+
+!! Rights
+
+* ''Merge'' needs the same right as saving a tiddler.
+* ''Replace'' deletes tiddlers and therefore needs administrator rights on the bag of the wiki.
+* Clicking the restore button on a snapshot brings the old state back. That, too, is undoable, because a snapshot is taken first again.
+
+!! What is not taken over
+
+* Plugins, themes, libraries and language packs: a wiki gets those from its recipe ([[Bags und Rollen]]).
+* TiddlyWiki 2 files, password-protected files and files without tiddlers are refused with a clear message.
+* Very large files: the server limit is 50 MB (changeable via `MWS_WIKI_FILE_SIZE_LIMIT`).

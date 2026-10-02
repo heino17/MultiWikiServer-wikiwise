@@ -1,0 +1,28 @@
+title: Wiki-Datei übernehmen
+tags: Anleitung
+lang: de
+
+DE: ''Wiki-Datei übernehmen'' · EN: [[Taking over a wiki file]] · [[Start]]
+
+! Wiki-Datei übernehmen
+
+Wenn eine Wiki bisher nur als eine einzige `index.html` auf einem Rechner oder USB-Stick existiert, kannst Du sie so in den MWS übernehmen. Es werden dabei ''keine'' Tiddler per Hand kopiert.
+
+* Öffne die ''Admin-Seite'' und klicke im Dropdown ''Wiki erstellen'' auf ''Wiki-Datei übernehmen''.
+* Wähle die gespeicherte `index.html` der Wiki aus. Sie muss mit ''TiddlyWiki 5'' gespeichert worden sein.
+* Wähle das Ziel: eine ''neue Wiki'' (mit Name und Slug) oder eine ''bestehende Wiki''.
+* Klicke auf ''Datei prüfen''. Der Server liest die Datei ein und zeigt, was passieren würde: neue, geänderte, unveränderte und gelöschte Tiddler, die enthaltenen Systemtiddler und die ausgelassenen Plugins. Es wird dabei noch ''nichts'' geschrieben.
+* Möchtest Du die Layout-, Tag- und Theme-Einstellungen der alten Wiki ($:/)-Tiddler) mitnehmen, setze das Kästchen ''Auch Systemtiddler importieren''.
+* Erst ''Jetzt importieren'' schreibt. Bei einer bestehenden Wiki entscheidest Du vorher, ob ''Ersetzen'' (die Wiki wird zur Datei, vorher wird ein Snapshot angelegt) oder ''Zusammenführen'' (nur neue und geänderte Tiddler werden geschrieben, es wird nichts gelöscht) verwendet wird.
+
+!! Rechte
+
+* ''Zusammenführen'' braucht dasselbe Recht wie das Speichern eines Tiddlers.
+* ''Ersetzen'' löscht Tiddler und braucht deshalb Administratorrechte auf dem Bag der Wiki.
+* Ein Klick auf den ''Zurücksetzen''-Knopf bei einem Snapshot holt den alten Stand zurück. Auch das ist rückholbar, weil vorher wieder ein Snapshot angelegt wird.
+
+!! Was nicht übernommen wird
+
+* Plugins, Themes, Bibliotheken und Sprachpakete: die come aus dem Rezept der Wiki ([[Bags und Rollen]]).
+* TiddlyWiki-2-Dateien, passwortgeschützte Dateien und Dateien ohne Tiddler werden mit einer klaren Meldung abgelehnt.
+* Sehr große Dateien: Die Grenze des Servers liegt bei 50 MB (geändert über `MWS_WIKI_FILE_SIZE_LIMIT`).

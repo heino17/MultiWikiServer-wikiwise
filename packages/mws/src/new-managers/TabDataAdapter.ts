@@ -1700,6 +1700,57 @@ async function ensurePersonalRole(prisma: PrismaTxnClient, user: ServerRequest["
   }
   return new IdString(role.role_id);
 }
+/**
+ * Students may create their own private wikis, but only as many as the teacher
+ * granted in the users tab (NULL = unlimited, 0 = none). Admins and teachers
+ * are not limited.
+ */
+export async function assertWikiCreationAllowed(prisma: PrismaTxnClient, user: ServerRequest["user"]) {
+  if (user.isAdmin || user.isTeacher) return;
+  const limit = user.wikiLimit;
+  if (limit == null) return;
+  const ownedWikis = await prisma.recipe.count({ where: { owner_user_id: user.user_id } });
+  if (ownedWikis >= limit) {
+    throw new SendError("ACCESS_DENIED", 403, {
+      reason: limit === 0
+        ? "Your administrator has not allowed you to create your own wikis."
+        : `You have reached your limit of ${limit} own wiki(s).`,
+    });
+  }
+}
+
+/**
+ * The role a wiki created by this user gets administrative rights on. Admins
+ * keep the ADMIN system role, teachers and students get their private personal
+ * role so their wikis stay theirs. Returned as ids (for the import writers) and
+ * as names (for the data adapters).
+ */
+export async function newWikiAdminRole(
+  prisma: PrismaTxnClient,
+  user: ServerRequest["user"],
+): Promise<{ roleIds: IdString[]; roleNames: string[] }> {
+  const rolesMapper = await new RoleImportWriter(prisma, false).getNameMapper(NEW_WIKI_ROLES);
+  if (user.isAdmin) {
+    return { roleIds: [rolesMapper("ADMIN")], roleNames: ["ADMIN"] };
+  }
+  const personalRole = await ensurePersonalRole(prisma, user);
+  const role = await prisma.roles.findUnique({
+    where: { role_id: personalRole.toString() },
+    select: { role_name: true },
+  });
+  return { roleIds: [personalRole], roleNames: [role!.role_name] };
+}
+
+/** A slug for a new wiki of this user: their own name, numbered if taken. */
+export async function newWikiSlug(
+  prisma: PrismaTxnClient,
+  user: ServerRequest["user"],
+  requested?: string,
+): Promise<string> {
+  const base = requested ? sanitizeSlugPart(requested) : "";
+  return findFreeWikiSlug(prisma, base || wikiSlugBase(user.username));
+}
+
 export const AdminCreateWiki = zodRoute({
   method: ["PUT"],
   path: "/admin/wiki",
@@ -1716,38 +1767,15 @@ export const AdminCreateWiki = zodRoute({
 
     const { displayName, description } = state.data;
 
-    const isAdmin = state.user.isAdmin;
-    const isTeacher = state.user.isTeacher;
-
     return await state.$transaction(async (prisma) => {
-      if (!isAdmin && !isTeacher) {
-        // Students may create their own private wikis, but only as many as
-        // the teacher granted in the users tab (NULL = unlimited, 0 = none).
-        const limit = state.user.wikiLimit;
-        if (limit != null) {
-          const ownedWikis = await prisma.recipe.count({
-            where: { owner_user_id: state.user.user_id },
-          });
-          if (ownedWikis >= limit) {
-            throw new SendError("ACCESS_DENIED", 403, {
-              reason: limit === 0
-                ? "Your administrator has not allowed you to create your own wikis."
-                : `You have reached your limit of ${limit} own wiki(s).`,
-            });
-          }
-        }
-      }
+      await assertWikiCreationAllowed(prisma, state.user);
 
-      const rolesMapper = await new RoleImportWriter(prisma, false).getNameMapper(NEW_WIKI_ROLES);
-      // Admins keep the ADMIN system role; teachers and students get a
-      // private personal role so their wikis stay theirs. Either way the
-      // new wiki starts private: no `USER`/`ANON` `A_read` is granted for
-      // anybody. Making it readable is a deliberate later step
+      // Either way the new wiki starts private: no `USER`/`ANON` `A_read` is
+      // granted for anybody. Making it readable is a deliberate later step
       // ("Readable by" in the wiki dialog / recipeUsers).
-      const personalRole = isAdmin ? undefined : await ensurePersonalRole(prisma, state.user);
-      const adminRole = personalRole ?? rolesMapper("ADMIN");
+      const { roleIds: [adminRole] } = await newWikiAdminRole(prisma, state.user);
 
-      const slug = await findFreeWikiSlug(prisma, wikiSlugBase(state.user.username));
+      const slug = await newWikiSlug(prisma, state.user);
       const bagName = defaultBagName(state.user.user_id, slug);
 
       const bagWriter = new BagImportWriter(prisma, false);

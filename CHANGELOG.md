@@ -4626,6 +4626,107 @@ GitHub can show whether the warning is really gone — and after the push it is:
 the run is green and the annotation about `node20` is no longer there, only the
 notice that `ubuntu-latest` migrates to Ubuntu 26 from 19.10.2026.
 
+## 85. Feature: "Take over a wiki file" in the admin app (dialog, routes)
+
+The wiki-file import of §84 is now reachable from the admin app. The entry sits
+in the existing **"Create a wiki"** dropdown as **"Take over a wiki file"**, so
+it needs no new navigation: upload a saved `index.html`, read what would happen,
+then write it.
+
+**Two steps, never one.** The dialog asks the server what a file *would* do
+(`PUT /api/wiki-file/inspect`) and only writes after an explicit confirmation
+(`PUT /api/wiki-file/import`). Both calls send the same multipart upload, and
+both build the plan again on the server — the preview is a promise about one
+file and one target, never a document the browser may send back. Any change of
+file, target, mode or the system-tiddler switch invalidates the preview, so a
+plan on screen always describes the request that follows it.
+
+**The routes live under `/api`, not `/admin`.** `/admin/:op/:tab` is the
+generic JSON record route: it claims every two-segment `/admin/...` path and
+parses the body as JSON, which turned the first multipart upload into
+`MALFORMED_JSON`. Under `/api` the body format belongs to the route, and the
+security checks stay the same as everywhere else (`X-Requested-With`, referer
+`/`, authenticated user).
+
+**Who may do what.** A new wiki goes through `assertWikiCreationAllowed()`, the
+own-wiki limit of the one-click creation included. An existing wiki is checked
+with the same `RecipeResolver.assertRecipe()` and `canWriteBag()` as saving a
+tiddler, a bag from `readonlyBags` is refused even for an administrator, and
+`state.asserted` is set *before* `state.$transaction()` — the two routes
+learned that from the CLI work, where the transaction complained about it.
+Replacing additionally needs `C_admin` on the write bag (or the site admin or
+the owner), because it deletes what is not in the file; a merge only needs
+write access and never writes a snapshot. The snapshot list and the restore
+sit behind the same gate as the replace that created them, and a restore only
+accepts bags under `snapshots/<slug>/`.
+
+**New wiki, existing wiki.** For a new wiki the dialog offers a name and a
+slug; the preview shows the slug the wiki will actually get (the server appends
+a number when the slug is taken) and the import sends exactly that slug, so a
+concurrent wiki cannot be overwritten between the two calls. The template is
+the same `DEFAULT_TEMPLATE` ("Blank Template") the one-click creation uses,
+and the bag gets the same personal namespace. `WikiShell.ts` holds that shell
+so CLI and dialog cannot drift apart.
+
+**System tiddlers.** They are skipped by default, as in §84; the checkbox
+"Also import system tiddlers" opts in, and the list of what the file contains
+is shown below the plan. Plugins are never imported, also with the checkbox
+on.
+
+**Snapshots.** Every replace writes a snapshot; the dialog lists the snapshots
+of the target wiki with timestamp, tiddler count and origin and restores one
+after a confirmation — and a restore is itself undoable, because it snapshots
+first.
+
+**Files.**
+- `new-managers/WikiFileRoutes.ts`: the four routes, the upload reader with the
+  running byte limit, the target resolution and the plan summaries.
+- `new-managers/WikiShell.ts`: bag + recipe + starter tiddlers, shared with the
+  CLI.
+- `new-managers/TabDataAdapter.ts`: `assertWikiCreationAllowed()`,
+  `newWikiAdminRole()`, `newWikiSlug()`, reused by `AdminCreateWiki`.
+- `ServerState.ts`: `wikiFileSizeLimit` (`MWS_WIKI_FILE_SIZE_LIMIT`), so the
+  dialog and the CLI accept the same files.
+- `admin-vanilla/src/wiki-file-import.tsx`: the dialog.
+- `admin-vanilla/src/helpers.tsx`: the error formatting and `prettifyBytes()`
+  moved out of `app.tsx` and `user-files.tsx` so all three panels share them,
+  plus the German messages for the server reasons of the new routes.
+
+**Verified** on the dev instance with `curl`, using the same requests the
+dialog sends (`multipart/form-data` field `file`, JSON body `{snapshot}` for a
+restore), against `editions/bedienungsanleitung/output/index.html` and a
+modified copy of it; the store was backed up before and restored afterwards:
+- New wiki via `PUT /api/wiki-file/import?create=1` → `49 written`, slug
+  `mws-bedienungsanleitung`, bag
+  `editions/01a09c6c-e744-716e-ae43-73c4d6393f1c/mws-bedienungsanleitung`,
+  owner `admin`, 51 tiddlers (49 plus `$:/SiteTitle`, `$:/DefaultTiddlers`),
+  `GET /wiki/mws-bedienungsanleitung` renders with
+  `<title>MWS Bedienungsanleitung</title>`.
+- Replace → `1 created, 1 updated, 48 unchanged, 0 deleted`, snapshot with 51
+  tiddlers; the preview of the same file afterwards reports `0` created and
+  `0` updated.
+- `include-system=1` → 57 instead of 49 tiddlers, the system list shows the
+  eight `$:/` tiddlers of the file.
+- `Schüler 1` with `B_write` on the bag: merge `200` (`2 written`, no
+  snapshot), replace `403` with "Replacing the wiki … needs administrator
+  rights (C_admin) on its write bag. A merge is enough to add tiddlers."; the
+  snapshot list is `403` for the same reason.
+- No session → `403` "User not authenticated"; plain HTML → `400`
+  `NOT_A_TIDDLYWIKI`; unknown wiki → `404`; a taken slug → `409`; with
+  `MWS_WIKI_FILE_SIZE_LIMIT=100000` → `413` with the limit in the details.
+- Restore with the dialog's body → `1 written, 1 deleted, 50 unchanged` and a
+  new snapshot of 52 tiddlers; a snapshot of a foreign wiki prefix → `403`.
+- `npm run tsc2` and `cd packages/admin-vanilla && npm run tsc` clean,
+  `npm run build` succeeds; the served admin bundle contains the dialog and
+  both language variants of its strings.
+
+**Not verified by clicking.** The dialog was exercised through its requests,
+not with a mouse: the dropdown entry, the file picker, the plan display and the
+restore button still need one manual pass in a browser.
+
+Not part of this section: the wiki-file list in "My Files" and the migration of
+existing `user_file` HTML attachments into a bag.
+
 ## 84. Feature: import a single-file TiddlyWiki 5 into a wiki (CLI)
 
 A wiki that exists only as one `index.html` can now be taken over by MWS. The
@@ -9563,6 +9664,113 @@ Warnung wirklich verschwunden ist, kann nur der Lauf auf GitHub zeigen — nach
 dem Push ist sie es: der Lauf ist grün und die Annotation über `node20` nicht
 mehr vorhanden, nur noch der Hinweis, dass `ubuntu-latest` ab 19.10.2026 auf
 Ubuntu 26 migriert.
+
+## 85. Feature: "Wiki-Datei übernehmen" in der Admin-App (Dialog, Routen)
+
+Der Wiki-Dateien-Import aus §84 ist jetzt aus der Admin-App erreichbar. Der
+Einstieg sitzt im vorhandenen Dropdown **"Wiki erstellen"** als **"Wiki-Datei
+übernehmen"**: gespeicherte `index.html` hochladen, nachsehen, was passieren
+würde, und erst dann schreiben.
+
+**Zwei Schritte, nie einer.** Der Dialog fragt den Server, was eine Datei
+*tun würde* (`PUT /api/wiki-file/inspect`), und schreibt erst nach einer
+ausdrücklichen Bestätigung (`PUT /api/wiki-file/import`). Beide Aufrufe
+schicken denselben Multipart-Upload, und beide lassen den Plan serverseitig
+neu berechnen — die Vorschau ist eine Zusage für *eine* Datei und *ein* Ziel,
+nie ein Dokument, das der Browser zurückschicken dürfte. Jede Änderung an
+Datei, Ziel, Modus oder am Systemtiddler-Schalter verwirft die Vorschau, damit
+der angezeigte Plan immer den folgenden Request beschreibt.
+
+**Die Routen liegen unter `/api`, nicht unter `/admin`.** `/admin/:op/:tab` ist
+die generische JSON-Datensatzroute: Sie beansprucht jeden zweiteiligen
+`/admin/...`-Pfad und liest den Body als JSON — aus dem ersten
+Multipart-Upload wurde so `MALFORMED_JSON`. Unter `/api` gehört das
+Body-Format zur Route, und die Sicherheitsprüfungen bleiben dieselben wie
+sonst (`X-Requested-With`, Referer `/`, angemeldete Person).
+
+**Wer was darf.** Eine neue Wiki läuft durch `assertWikiCreationAllowed()`,
+inklusive des eigenen Wiki-Limits der Ein-Klick-Erstellung. Eine bestehende
+Wiki wird mit demselben `RecipeResolver.assertRecipe()` und `canWriteBag()`
+geprüft wie das Speichern eines Tiddlers, ein Bag aus `readonlyBags` wird auch
+für Administratoren abgelehnt, und `state.asserted` wird *vor*
+`state.$transaction()` gesetzt — das haben die beiden Routen aus der
+CLI-Arbeit gelernt, wo die Transaktion sich darüber beschwert hat. Ein Ersetzen
+braucht zusätzlich `C_admin` auf dem Schreib-Bag (oder die Site-Administration
+oder den Eigentümer), weil es löscht, was nicht in der Datei steht; ein
+Zusammenführen braucht nur Schreibrecht und schreibt nie einen Snapshot.
+Snapshots auflisten und wiederherstellen liegen hinter derselben Schranke wie
+das Ersetzen, das sie erzeugt hat, und ein Restore akzeptiert nur Bags unter
+`snapshots/<slug>/`.
+
+**Neue Wiki, bestehende Wiki.** Für eine neue Wiki bietet der Dialog einen
+Namen und einen Slug an; die Vorschau zeigt den Slug, den die Wiki tatsächlich
+bekommt (der Server hängt eine Zahl an, wenn der Slug vergeben ist), und der
+Import schickt genau diesen Slug — so kann zwischen den beiden Aufrufen keine
+fremde Wiki überschrieben werden. Als Vorlage dient dieselbe
+`DEFAULT_TEMPLATE` ("Blank Template") wie bei der Ein-Klick-Erstellung, und
+der Bag bekommt denselben persönlichen Namensraum. `WikiShell.ts` bündelt
+diese Schale, damit CLI und Dialog nicht auseinanderlaufen können.
+
+**Systemtiddler.** Sie werden wie in §84 standardmäßig ausgelassen; das
+Kästchen "Auch Systemtiddler importieren" schaltet sie hinzu, und unter dem
+Plan steht, welche die Datei enthält. Plugins werden nie importiert, auch bei
+aktivem Kästchen nicht.
+
+**Snapshots.** Jedes Ersetzen schreibt einen Snapshot; der Dialog listet die
+Snapshots der Zielwiki mit Zeitstempel, Tiddlerzahl und Herkunft und stellt
+einen nach einer Rückfrage wieder her — auch ein Restore ist rückholbar, weil
+er zuerst selbst einen Snapshot schreibt.
+
+**Dateien.**
+- `new-managers/WikiFileRoutes.ts`: die vier Routen, der Upload-Leser mit
+  laufender Bytegrenze, die Zielauflösung und die Plan-Zusammenfassungen.
+- `new-managers/WikiShell.ts`: Bag + Rezept + Starter-Tiddler, mit der CLI
+  geteilt.
+- `new-managers/TabDataAdapter.ts`: `assertWikiCreationAllowed()`,
+  `newWikiAdminRole()`, `newWikiSlug()`, auch von `AdminCreateWiki` genutzt.
+- `ServerState.ts`: `wikiFileSizeLimit` (`MWS_WIKI_FILE_SIZE_LIMIT`), damit
+  Dialog und CLI dieselben Dateien annehmen.
+- `admin-vanilla/src/wiki-file-import.tsx`: der Dialog.
+- `admin-vanilla/src/helpers.tsx`: Fehlerauswertung und `prettifyBytes()` aus
+  `app.tsx` und `user-files.tsx` herausgezogen, damit alle drei Bereiche sie
+  teilen, plus die deutschen Meldungen zu den Servergründen der neuen Routen.
+
+**Verifiziert** auf der Dev-Instanz mit `curl`, mit denselben Requests, die
+der Dialog schickt (Multipart-Feld `file`, JSON-Body `{snapshot}` für ein
+Restore), gegen `editions/bedienungsanleitung/output/index.html` und eine
+geänderte Kopie davon; der Store wurde davor gesichert und danach wiederher-
+gestellt:
+- Neue Wiki über `PUT /api/wiki-file/import?create=1` → `49 written`, Slug
+  `mws-bedienungsanleitung`, Bag
+  `editions/01a09c6c-e744-716e-ae43-73c4d6393f1c/mws-bedienungsanleitung`,
+  Eigentümer `admin`, 51 Tiddler (49 plus `$:/SiteTitle`,
+  `$:/DefaultTiddlers`); `GET /wiki/mws-bedienungsanleitung` rendert mit
+  `<title>MWS Bedienungsanleitung</title>`.
+- Replace → `1 created, 1 updated, 48 unchanged, 0 deleted`, Snapshot mit 51
+  Tiddlern; die Vorschau derselben Datei meldet danach `0` erstellt und `0`
+  geändert.
+- `include-system=1` → 57 statt 49 Tiddler, die Systemliste zeigt die acht
+  `$:/`-Tiddler der Datei.
+- `Schüler 1` mit `B_write` auf dem Bag: Merge `200` (`2 written`, kein
+  Snapshot), Replace `403` mit "Replacing the wiki … needs administrator
+  rights (C_admin) on its write bag. A merge is enough to add tiddlers."; auch
+  die Snapshot-Liste ist aus demselben Grund `403`.
+- Ohne Session → `403` "User not authenticated"; einfaches HTML → `400`
+  `NOT_A_TIDDLYWIKI`; unbekannte Wiki → `404`; vergebener Slug → `409`; mit
+  `MWS_WIKI_FILE_SIZE_LIMIT=100000` → `413` mit der Grenze in den Details.
+- Restore mit dem Body des Dialogs → `1 written, 1 deleted, 50 unchanged` und
+  ein neuer Snapshot mit 52 Tiddlern; ein Snapshot mit fremdem Wiki-Präfix →
+  `403`.
+- `npm run tsc2` und `cd packages/admin-vanilla && npm run tsc` sauber,
+  `npm run build` erfolgreich; das ausgelieferte Admin-Bundle enthält den
+  Dialog und beide Sprachfassungen seiner Texte.
+
+**Nicht durch Anklicken geprüft.** Der Dialog wurde über seine Requests
+getestet, nicht mit der Maus: Dropdown-Eintrag, Dateiauswahl, Plan-Anzeige und
+Restore-Knopf brauchen noch einen manuellen Durchgang im Browser.
+
+Nicht Teil dieses Abschnitts: die Wiki-Dateiliste in "Meine Dateien" und die
+Migration bestehender `user_file`-HTML-Anhänge in einen Bag.
 
 ## 84. Feature: eine Single-File-TiddlyWiki-5 in ein Wiki importieren (CLI)
 

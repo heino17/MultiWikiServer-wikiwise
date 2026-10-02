@@ -31,10 +31,21 @@ Markers used below:
 - ✅ Import wiki folder to recipe or bag — `new-commands/load-wiki-folder.ts`
 - ✅ Import a single-file TiddlyWiki 5 — `import-wiki-file`, parser in
   `new-managers/WikiFileImport.ts` ([§84](CHANGELOG.md))
-- ◐ The admin dialog for it (upload, preview, confirmation for system
-  tiddlers) and the wiki-file list in "My Files" are the next phase; the
-  programmatic entry points (`planWikiFileImport`, `applyWikiFileImport`,
-  `restoreSnapshotBag`) are already there
+- ✅ The admin dialog for it: "Take over a wiki file" in the "Create a wiki"
+  dropdown, upload → preview → confirmation, system-tiddler opt-in and the
+  snapshot list with restore, behind `/api/wiki-file/*`
+  ([§85](CHANGELOG.md))
+- ◐ The wiki-file list in "My Files" and the migration of existing
+  `user_file` HTML attachments into a bag are still open
+- ⚖️ The wiki-file routes live under `/api`, not under `/admin`: the generic
+  record route `/admin/:op/:tab` claims every two-segment `/admin/...` path and
+  parses its body as JSON, which made every multipart upload a
+  `MALFORMED_JSON`. Do not move them back without changing that route
+  ([§85](CHANGELOG.md))
+- ⚖️ A merge needs write access to the write bag, a replace needs `C_admin` on
+  it (or the owner or the site admin), because a replace deletes what the file
+  does not contain. The snapshot list and the restore sit behind the same gate
+  as the replace that created them ([§85](CHANGELOG.md))
 - ⚖️ A replace writes only the default write bag of the target wiki and takes a
   snapshot into a hidden bag first, because MWS has no content history. The
   snapshot bag is not referenced by any recipe and is pruned to the last 10 per

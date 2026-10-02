@@ -83,6 +83,17 @@ declare module "@tiddlywiki/server" {
 
     "TW5DOCS_NOT_FOUND":
     SendErrorItem<404, null>
+
+    /** The uploaded file is not a TiddlyWiki we can read. */
+    "WIKI_FILE_REJECTED":
+    SendErrorItem<400, { code: string; reason: string }>
+
+    /** The file is fine, but the wiki, slug or bag it should go into is not usable. */
+    "WIKI_FILE_INVALID":
+    SendErrorItem<400 | 404 | 409, { reason: string }>
+
+    "WIKI_FILE_TOO_LARGE":
+    SendErrorItem<413, { reason: string; maxBytes: number }>
   }
 }
 SendError.oninstance.push(e => {
@@ -129,6 +140,9 @@ SendError.oninstance.push(e => {
     case "TIDDLER_WIRE_FORMAT_UNKNOWN":
     case "WRITE_NOT_PERMITTED":
     case "ACCESS_DENIED":
+    case "WIKI_FILE_INVALID":
+    case "WIKI_FILE_REJECTED":
+    case "WIKI_FILE_TOO_LARGE":
       { e.skiplog = true; break; }
     case "INVALID_BODY_FORMAT": // a bug if this throws
     case "HOST_NOT_RECOGNIZED": // misconfigured server if this throws
