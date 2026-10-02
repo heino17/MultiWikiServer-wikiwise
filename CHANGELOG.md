@@ -4626,6 +4626,49 @@ GitHub can show whether the warning is really gone — and after the push it is:
 the run is green and the annotation about `node20` is no longer there, only the
 notice that `ubuntu-latest` migrates to Ubuntu 26 from 19.10.2026.
 
+## 91. Spanish `#many`: the last open plural case
+
+§89 left Spanish `many` open with an argument: it fires from `1000000` upwards
+and wants a *de* before the noun, and a `#many` that covered the bare count
+nouns but not the phrases with an article would be worse than none. That sets
+the condition — cover everything or nothing — and this section covers it.
+
+**The category is narrower than §89 said.** Spanish `many` does not fire from
+`1000000` upwards; `Intl.PluralRules("es").select()` answers `many` only for
+exact integer multiples of one million — `1000000`, `2000000`, `21000000` — and
+`other` for `999999`, `1500000` and every non-multiple. So §89 overstated the
+reach, and by accident in the useful direction: the set CLDR wants a variant
+for is exactly the set Spanish wants a *de* for, *un millón de archivos* and
+*veintiún millones de archivos*. A count of `1500000` stays in `other` and
+keeps the plain form; that is a CLDR boundary the app cannot widen.
+
+**Twelve keys need the variant, four must not have it.** All sixteen `{count}`
+keys were classified by whether a noun follows the number in the Spanish text.
+Twelve do, including the two with an article — `Mostrar los {count} títulos
+eliminados` and `Encuentra todos los {count} animales.` — and those get a
+`#many` sibling with *de* inserted right after `{count}`: `{count} de
+archivos`, `Mostrar los {count} de títulos eliminados`, `Instantánea {name} con
+{count} de tiddlers`. Four have nothing after the number — `Deleted: {count}`,
+`Unchanged: {count}`, `Written: {count}` and `System tiddlers in the file
+({count})` — and a `#many` there would only copy the base key, because
+*Escritos: 1.000.000* is already right and *1.000.000 de escritos* would be
+wrong. A redundant variant would break the §89 rule that the base key holds the
+`many` form, so those four ship nothing.
+
+**Verified.** Bundling the real `t()` and rendering all sixteen keys at `0`,
+`1`, `2`, `21`, `999999`, `1000000`, `1500000`, `2000000` and `21000000` gives
+144 combinations in which no number is lost and no key falls back to its bare
+name. The assertion is the two-part rule the translations encode: *de* appears
+exactly when the category is `many` **and** a noun follows the number — the
+first attempt at that assertion was wrong and flagged twelve correct strings,
+since it demanded *de* for `Written: {count}`. English is untouched, 144 of 144
+combinations keep their number. Spanish is now the only file shipping `#many`
+(12 entries), the eight base key sets are still the same 639, no variant lost
+its base, and `npm run tsc2`, the admin typecheck and `npm run build` are clean.
+The `t()` doc comment, which listed the shipped categories, now names Spanish
+`#many` and the *de* convention, and states why a partial `#many` is worse than
+none.
+
 ## 90. Cleanup: twelve orphan keys out, two missing keys in
 
 §89 ended on `{count} new`, an orphan in all eight locale files with no caller.
@@ -4739,7 +4782,7 @@ count nouns but not the phrases with an article would be worse than none, so
 Spanish ships no `#many`. And `{count} new` is an orphan: it was used by the
 pinboard tab until the unread label became `{count} new notes`, and it is still
 in all eight files with no caller. Both are noted rather than silently absorbed;
-§90 removes the orphan, the Spanish `#many` stays open.
+§90 removes the orphan and §91 adds the Spanish `#many`.
 
 ## 88. Bug fix: the Russian plural for "animal" dropped the number
 
@@ -9941,6 +9984,55 @@ dem Push ist sie es: der Lauf ist grün und die Annotation über `node20` nicht
 mehr vorhanden, nur noch der Hinweis, dass `ubuntu-latest` ab 19.10.2026 auf
 Ubuntu 26 migriert.
 
+## 91. Spanisches `#many`: der letzte offene Pluralfall
+
+§89 hat Spanisch `many` mit einem Argument offen gelassen: es greife ab
+`1000000` und verlange ein *de* vor dem Nomen, und ein `#many`, das die
+einfachen Zählnomen deckt, aber nicht die Wendungen mit Artikel, wäre
+schlechter als gar keines. Damit stand die Bedingung fest — alles oder nichts —
+und dieser Abschnitt liefert das Ganze.
+
+**Die Kategorie ist enger, als §89 sagte.** Spanisch `many` greift nicht ab
+`1000000` aufwärts; `Intl.PluralRules("es").select()` antwortet `many` nur für
+exakte ganzzahlige Vielfache einer Million — `1000000`, `2000000`,
+`21000000` — und `other` für `999999`, `1500000` und jedes andere
+Nichtvielfache.
+§89 hat also zu weit gegriffen, zufällig in die nützliche Richtung: Die Menge,
+für die CLDR eine Variante will, ist genau die Menge, für die Spanisch ein *de*
+will, *un millón de archivos* und *veintiún millones de archivos*. Eine Zahl
+`1500000` bleibt in `other` und behält die schlichte Form; das ist eine
+CLDR-Grenze, die die App nicht erweitern kann.
+
+**Zwölf Schlüssel brauchen die Variante, vier dürfen sie nicht haben.** Alle
+sechzehn `{count}`-Schlüssel wurden danach sortiert, ob im spanischen Text ein
+Nomen auf die Zahl folgt. Bei zwölf ist das so, auch bei den beiden mit
+Artikel — `Mostrar los {count} títulos eliminados` und `Encuentra todos los
+{count} animales.` — und diese bekommen ein `#many` als Geschwister mit *de*
+direkt hinter `{count}`: `{count} de archivos`, `Mostrar los {count} de títulos
+eliminados`, `Instantánea {name} con {count} de tiddlers`. Bei vier steht hinter
+der Zahl nichts — `Deleted: {count}`, `Unchanged: {count}`, `Written: {count}`
+und `System tiddlers in the file ({count})` — und ein `#many` würde dort nur den
+Basisschlüssel kopieren, denn *Escritos: 1.000.000* ist bereits richtig und
+*1.000.000 de escritos* wäre falsch. Eine überflüssige Variante würde die
+§89-Regel brechen, dass der Basisschlüssel die `many`-Form hält, also liefern
+diese vier nichts.
+
+**Geprüft.** Das echte `t()` gebündelt und alle sechzehn Schlüssel bei `0`, `1`,
+`2`, `21`, `999999`, `1000000`, `1500000`, `2000000` und `21000000` gerendert
+ergibt 144 Kombinationen, in denen keine Zahl verloren geht und kein Schlüssel
+auf seinen nackten Namen zurückfällt. Geprüft wird die zweiteilige Regel, die
+die Übersetzungen kodieren: *de* steht genau dann, wenn die Kategorie `many`
+ist **und** ein Nomen auf die Zahl folgt — der erste Versuch dieser Assertion
+war falsch und meldete zwölf richtige Zeichenketten, weil er *de* auch für
+`Written: {count}` verlangte. Englisch bleibt unberührt, 144 von 144
+Kombinationen behalten ihre Zahl. Spanisch ist jetzt die einzige Datei mit
+`#many` (12
+Einträge), die acht Basisschlüsselmengen sind weiterhin dieselben 639, keine
+Variante hat ihre Basis verloren, und `npm run tsc2`, der Admin-Typecheck und
+`npm run build` sind sauber. Der `t()`-Dok-Kommentar, der die gelieferten
+Kategorien aufzählte, nennt jetzt das spanische `#many` und die *de*-Regel und
+sagt, warum ein unvollständiges `#many` schlechter ist als keines.
+
 ## 90. Aufräumen: zwölf Waisen raus, zwei fehlende Schlüssel rein
 
 §89 endete auf `{count} new`, einer Waise in allen acht Sprachdateien ohne
@@ -10061,8 +10153,8 @@ einfachen Zählnomen deckt, aber nicht die Wendungen mit Artikel, wäre schlecht
 als gar keines; deshalb liefert Spanisch kein `#many`. Und `{count} new` ist ein
 Waisen: der Pinnwand-Tab benutzte es, bis das Ungelesen-Label zu
 `{count} new notes` wurde, und es steht noch in allen acht Dateien ohne
-Aufrufer. Beides ist vermerkt und nicht stillschweigend aufgenommen; §90 entfernt
-die Waise, das spanische `#many` bleibt offen.
+Aufrufer. Beides ist vermerkt und nicht stillschweigend aufgenommen; §90 entfernt die
+Waise, §91 ergänzt das spanische `#many`.
 
 ## 88. Bugfix: die russische Mehrzahl von „Tier" ließ die Zahl weg
 

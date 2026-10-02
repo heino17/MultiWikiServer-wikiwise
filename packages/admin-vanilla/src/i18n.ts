@@ -104,9 +104,10 @@ export function getStoredLocale(): LocaleCode | null {
  * the key `${key}#<plural category>` exists, that variant wins; otherwise the
  * base key is used. Categories follow Intl.PluralRules, and the app ships
  * `#one` for every language that has such a category (`en`, `de`, `es`, `fr`,
- * `ru`) plus `#few` for Russian, the only supported language that has `few`.
- * German `1` therefore resolves `#one` and everything else falls back to the
- * base key. Convention:
+ * `ru`), `#few` for Russian, the only supported language that has `few`, and
+ * `#many` for Spanish, where the category covers exact multiples of a million
+ * and Spanish wants a `de` before the noun. German `1` therefore resolves
+ * `#one` and everything else falls back to the base key. Convention:
  *
  *   en: "{count} notes": "{count} notes",
  *       "{count} notes#one": "{count} note",
@@ -115,6 +116,15 @@ export function getStoredLocale(): LocaleCode | null {
  *   ru: "{count} notes": "{count} заметок",
  *       "{count} notes#one": "{count} заметка",
  *       "{count} notes#few": "{count} заметки",
+ *   es: "{count} notes": "{count} notas",
+ *       "{count} notes#one": "{count} nota",
+ *       "{count} notes#many": "{count} de notas",
+ *
+ * A `#many` is only worth shipping when it covers every key of that language
+ * that can reach the category, including the ones with an article; a partial
+ * set is worse than none. Keys where the number stands alone without a noun
+ * afterwards (`Written: {count}`) need no variant — the base key already is the
+ * `many` form there.
  *
  * The base key therefore has to be the form used for `many`/`other`, not for
  * `one` — Russian would read "1 заметок" otherwise. Pass `count` as a number,
