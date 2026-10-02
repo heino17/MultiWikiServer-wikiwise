@@ -4626,6 +4626,47 @@ GitHub can show whether the warning is really gone — and after the push it is:
 the run is green and the annotation about `node20` is no longer there, only the
 notice that `ubuntu-latest` migrates to Ubuntu 26 from 19.10.2026.
 
+## 87. Bug fix: the wiki-file dialog only spoke German and English
+
+`AGENTS.md` says the admin app is bilingual by contract, which was read as "two
+languages" instead of "DE and EN are the two that *must* exist". The app has had
+eight languages since §14, and the wiki-file dialog from §84/§85/§86 shipped with
+83 strings in `de.ts` and `en.ts` only. `t()` falls back to the key itself when
+a dictionary has no entry, so every other language saw the English source text:
+the menu entry read *Take over a wiki file* instead of *Wiki-Datei übernehmen*,
+and so did the whole dialog — every hint, every plan row, every error message and
+the restore confirmation.
+
+All 83 keys are now in `es`, `fr`, `ja`, `ko`, `ru` and `zh-cn` as well, which
+brings the eight dictionaries to 653 keys each with no gaps in either direction.
+No placeholder was dropped or invented: every `{count}`, `{slug}`, `{date}` and
+`{name}` in a translation matches its English key, checked by comparing the
+placeholder sets of all 498 new entries. The `\u2026` and `\n\n` escapes were
+taken over in the same source form the English file uses, so the keys are
+character-identical rather than merely equal-looking.
+
+The terminology follows what each language already used elsewhere in the app and
+not a fresh gloss: *bag*, *tiddler* and *wiki* stay as they were
+(`tiddler`/`tiddler`/`ティドラー`/`티들러`/`тайдлер`/`条目`), snapshots are
+`instantánea`/`instantané`/`スナップショット`/`스냅샷`/`снимок`/`快照`, and
+Russian takes *вики* where the other languages take *wiki*. German plural forms
+keep the file's convention of `{count} Tiddler` for both numbers, which is what
+the app has done since §14.
+
+**Verified.** `cd packages/admin-vanilla && npx tsc --noEmit` and
+`npm run build` clean; all eight files parse as TypeScript and none has a
+duplicate key. The built artifact contains all six new sets — a straight
+`grep` on the minified bundle does not find them, because esbuild escapes
+non-ASCII, so the check ran against the sourcemap's `sourcesContent`. A
+placeholder audit over all 653 keys reports only deliberate identicals
+(proper nouns such as `Wiki`, `TiddlyWiki {version}`, `Slug`, `Plugins`) and no
+placeholder mismatch.
+
+Not part of this section: `"Find all {count} animals.#one"` in `ru.ts` drops the
+`{count}` that its English key carries. It is dead demo text from §14 — the login
+puzzle uses `"Find all {count} animals."`, with a period — so nothing renders
+wrong today, but it is a real defect in that plural variant.
+
 ## 86. Bug fix: three things a single-file wiki import got wrong
 
 The import from §84 and §85 was compared against a real file — a `index.html`
@@ -9750,6 +9791,49 @@ Warnung wirklich verschwunden ist, kann nur der Lauf auf GitHub zeigen — nach
 dem Push ist sie es: der Lauf ist grün und die Annotation über `node20` nicht
 mehr vorhanden, nur noch der Hinweis, dass `ubuntu-latest` ab 19.10.2026 auf
 Ubuntu 26 migriert.
+
+## 87. Bugfix: der Wiki-Dateien-Dialog sprach nur Deutsch und Englisch
+
+`AGENTS.md` sagt, die Admin-App sei "bilingual by contract" — das wurde als
+"zwei Sprachen" gelesen statt als "DE und EN sind die zwei, die es geben muss".
+Die App hat seit §14 acht Sprachen, und der Wiki-Dateien-Dialog aus
+§84/§85/§86 kam mit 83 Texten in `de.ts` und `en.ts` daher. `t()` fällt auf den
+Schlüssel selbst zurück, wenn ein Wörterbuch keinen Eintrag hat, und so sah
+jede andere Sprache den englischen Quelltext: Der Menüeintrag las *Take over a
+wiki file* statt *Wiki-Datei übernehmen* — und mit ihm der ganze Dialog, jeder
+Hinweis, jede Planzeile, jede Fehlermeldung und die Restore-Bestätigung.
+
+Alle 83 Schlüssel stehen jetzt auch in `es`, `fr`, `ja`, `ko`, `ru` und
+`zh-cn`, womit die acht Wörterbücher je 653 Schlüssel haben, ohne Lücke in
+beide Richtungen. Kein Platzhalter ist verlorengegangen oder erfunden worden:
+Jedes `{count}`, `{slug}`, `{date}` und `{name}` in einer Übersetzung passt zu
+seinem englischen Schlüssel, geprüft durch Vergleich der Platzhaltermengen über
+alle 498 neuen Einträge. Die Escapes `\u2026` und `\n\n` wurden in derselben
+Quellform übernommen, in der die englische Datei sie führt, damit die Schlüssel
+zeichengleich und nicht bloß gleich aussehend sind.
+
+Die Terminologie folgt dem, was die jeweilige Sprache an anderer Stelle in der
+App schon verwendet, und keiner neuen Überschreibung: *bag*, *tiddler* und
+*wiki* bleiben wie sie waren (`tiddler`/`tiddler`/`ティドラー`/`티들러`/
+`тайдлер`/`条目`), Snapshots heißen `instantánea`/`instantané`/`スナップショット`/
+`스냅샷`/`снимок`/`快照`, und Russisch nimmt *вики*, wo die anderen Sprachen
+*wiki* sagen. Die deutsche Mehrzahlform behält die Konvention der Datei,
+`{count} Tiddler` für beide Zahlen, wie seit §14.
+
+**Verifiziert.** `cd packages/admin-vanilla && npx tsc --noEmit` und
+`npm run build` sauber; alle acht Dateien werden als TypeScript geparst, keine
+hat einen doppelten Schlüssel. Das gebaute Artefakt enthält alle sechs neuen
+Mengen — ein direktes `grep` im minimierten Bundle findet sie nicht, weil esbuild
+Nicht-ASCII escaped, deshalb lief die Prüfung gegen das `sourcesContent` der
+Sourcemap. Eine Platzhalterprüfung über alle 653 Schlüssel meldet nur
+gewollte Gleichheiten (Eigennamen wie `Wiki`, `TiddlyWiki {version}`, `Slug`,
+`Plugins`) und keine Abweichung.
+
+Nicht Teil dieses Abschnitts: `"Find all {count} animals.#one"` in `ru.ts`
+verliert das `{count}`, das sein englischer Schlüssel hat. Das ist toter
+Demo-Text aus §14 — das Login-Rätsel benutzt `"Find all {count} animals."`, mit
+Punkt —, es erscheint also heute nichts falsch, aber es ist ein echter Fehler in
+dieser Pluralvariante.
 
 ## 86. Bugfix: drei Dinge, die der Single-File-Import falsch gemacht hat
 
