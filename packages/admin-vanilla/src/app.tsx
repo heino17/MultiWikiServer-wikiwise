@@ -2017,7 +2017,7 @@ export class App extends JSXElement {
                   <h3>{t("Blobs & files")}</h3>
                   {(() => {
                     const blobs = this.storageInfo.blobs;
-                    const files = (count: number) => t("{count} files", { count: count.toLocaleString() });
+                    const files = (count: number) => t("{count} files", { count });
                     return (
                       <div class="storage-blobs-grid">
                         <div class="storage-blob-tile is-blobs">
@@ -2083,8 +2083,8 @@ export class App extends JSXElement {
                             {preview.total.count === 0
                               ? t("Nothing to clean up.")
                               : preview.dryRun
-                                ? t("Found {count} candidates with {bytes} in total.", { count: preview.total.count.toLocaleString(), bytes: prettifyBytes(preview.total.bytes) })
-                                : t("Removed {count} candidates with {bytes} in total.", { count: preview.total.count.toLocaleString(), bytes: prettifyBytes(preview.total.bytes) })}
+                                ? t("Found {count} candidates with {bytes} in total.", { count: preview.total.count, bytes: prettifyBytes(preview.total.bytes) })
+                                : t("Removed {count} candidates with {bytes} in total.", { count: preview.total.count, bytes: prettifyBytes(preview.total.bytes) })}
                           </p>
                           <div class="storage-cleanup-cats">
                             {category(t("Stale inbox"), preview.categories.inbox)}
