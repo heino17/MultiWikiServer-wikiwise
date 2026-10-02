@@ -3,6 +3,7 @@ import { dist_resolve } from "@tiddlywiki/server";
 import { readFileSync } from "fs";
 import { TW } from "tiddlywiki";
 import { SessionManager, SessionManagerObject } from "./new-managers/sessions";
+import { DEFAULT_WIKI_FILE_SIZE_LIMIT } from "./new-managers/WikiFileImport";
 import { applyInstallDefaults } from "./new-managers/PrefsRoutes";
 import { PluginCache } from "./plugin-cache/PluginCache";
 import { createPasswordService } from "./services/PasswordService";
@@ -30,6 +31,11 @@ export class ServerState {
    * Enforced while streaming, so no buffer needs to be held in memory.
    * Configurable via MWS_USERFILE_SIZE_LIMIT (defaults to 100 MB). */
   userFileSizeLimit = 100 * 1024 * 1024;
+  /** Maximum size in bytes for a single imported wiki file (a single-file
+   * TiddlyWiki `.html`). Enforced while streaming the upload.
+   * Configurable via MWS_WIKI_FILE_SIZE_LIMIT (defaults to 50 MB, see
+   * DEFAULT_WIKI_FILE_SIZE_LIMIT). */
+  wikiFileSizeLimit = DEFAULT_WIKI_FILE_SIZE_LIMIT;
   enableDocsRoute = false;
 
   // fieldModules;
@@ -112,6 +118,13 @@ export class ServerState {
     const sizeLimit = Number.parseInt(process.env.MWS_USERFILE_SIZE_LIMIT ?? "", 10);
     if (Number.isFinite(sizeLimit) && sizeLimit > 0) {
       this.userFileSizeLimit = sizeLimit;
+    }
+
+    // Same environment variable the import-wiki-file command reads, so the
+    // admin dialog and the CLI accept exactly the same files.
+    const wikiFileLimit = Number.parseInt(process.env.MWS_WIKI_FILE_SIZE_LIMIT ?? "", 10);
+    if (Number.isFinite(wikiFileLimit) && wikiFileLimit > 0) {
+      this.wikiFileSizeLimit = wikiFileLimit;
     }
 
     this.enableDocsRoute = !!process.env.ENABLE_DOCS_ROUTE;

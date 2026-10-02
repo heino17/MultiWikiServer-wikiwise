@@ -27,6 +27,7 @@ import {
   type ListSortDirection,
 } from "./list-view";
 import { t } from "./i18n";
+import { prettifyBytes } from "./helpers";
 
 export interface UserFilesPanelProps {
   /** Fired with the total number of shown files whenever the list changes.
@@ -283,18 +284,6 @@ export class UserFilesPanel extends JSXElement {
     } finally {
       this.loading = false;
     }
-  };
-
-  private readonly prettifyBytes = (bytes: number) => {
-    if (!bytes || bytes < 1024) return `${bytes || 0} B`;
-    const units = ["KB", "MB", "GB", "TB"];
-    let value = bytes / 1024;
-    let unit = 0;
-    while (value >= 1024 && unit < units.length - 1) {
-      value /= 1024;
-      unit++;
-    }
-    return `${value.toFixed(1)} ${units[unit]}`;
   };
 
   private readonly uploadFile = async (file: File | null | undefined) => {
@@ -869,7 +858,7 @@ export class UserFilesPanel extends JSXElement {
                     </td>
                     {this.isAdminView() ? <td>{file.owner || "—"}</td> : null}
                     <td>{file.type}</td>
-                    <td>{this.prettifyBytes(file.sizeBytes)}</td>
+                    <td>{prettifyBytes(file.sizeBytes)}</td>
                     <td>{new Date(file.createdAt).toLocaleString()}</td>
                     <td class="user-files-actions">
                       <button
@@ -947,7 +936,7 @@ export class UserFilesPanel extends JSXElement {
                       <td><strong class="user-files-name">{file.filename}</strong></td>
                       <td>{file.owner || "—"}</td>
                       <td>{file.type}</td>
-                      <td>{this.prettifyBytes(file.sizeBytes)}</td>
+                      <td>{prettifyBytes(file.sizeBytes)}</td>
                       <td>{new Date(file.createdAt).toLocaleString()}</td>
                       <td class="user-files-actions">
                         <button

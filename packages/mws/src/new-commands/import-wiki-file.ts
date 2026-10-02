@@ -3,7 +3,7 @@ import { IdString } from "@mws/admin-vanilla/src/definition/tabs";
 import { readFileSync } from "fs";
 import * as path from "path";
 import { serverEvents } from "@tiddlywiki/events";
-import { DEFAULT_TEMPLATE, toMappingRows } from "../new-managers";
+import { DEFAULT_TEMPLATE } from "../new-managers";
 import {
 	WikiImportMode,
 	WikiImportPlan,
@@ -12,8 +12,8 @@ import {
 	defaultWriteTargetBag,
 	planWikiFileImport,
 } from "../new-managers/importWikiFile";
+import { createWikiShell, writeStarterTiddlers } from "../new-managers/WikiShell";
 import {
-	DEFAULT_WIKI_FILE_SIZE_LIMIT,
 	ParsedWikiFile,
 	WikiFileError,
 	formatBytes,
@@ -21,8 +21,6 @@ import {
 	parseWikiFile,
 } from "../new-managers/WikiFileImport";
 import { bootTiddlyWikiVersion } from "../plugin-cache";
-import { BagDataAdapter, RecipeDataAdapter } from "../new-managers/TabDataAdapter";
-import { WikiStore } from "../new-managers/RecipeResolver";
 
 serverEvents.on("cli.register", (commands) => {
 	commands[info.name] = { info, Command: ImportWikiFileCommand };
@@ -94,7 +92,7 @@ export class ImportWikiFileCommand extends BaseCommand<[string], ImportWikiFileO
 		const templateName = this.options["template-name"]?.[0] ?? DEFAULT_TEMPLATE;
 		const fileName = path.basename(filePath);
 		const html = readFileSync(filePath, "utf8");
-		const sizeLimit = this.sizeLimit();
+		const sizeLimit = this.config.wikiFileSizeLimit;
 
 		let parsed: ParsedWikiFile;
 		try {
@@ -119,15 +117,16 @@ export class ImportWikiFileCommand extends BaseCommand<[string], ImportWikiFileO
 
 			if (create && !dryRun) {
 				slug = this.newSlug(parsed);
-				target = await createWikiShell(prisma, {
+				const shell = await createWikiShell(prisma, {
+					user: adminUser,
 					slug,
-					parsed,
 					bagName: this.options["bag-name"]?.[0] ?? `editions/${slug}`,
-					displayName: this.options["display-name"]?.[0],
+					displayName: this.options["display-name"]?.[0] ?? parsed.siteTitle ?? slug,
 					templateName,
-					ownerRoles: this.options["owner-roles"] ?? [],
-					recipeUsers: this.options["recipe-users"] ?? [],
+					adminRoleNames: this.options["owner-roles"] ?? [],
+					readerRoleNames: this.options["recipe-users"] ?? [],
 				});
+				target = { recipeId: shell.recipeId, bagId: shell.bagId, bagName: shell.bagName };
 			} else {
 				const resolved = await resolveTarget(prisma, {
 					create,
@@ -155,7 +154,11 @@ export class ImportWikiFileCommand extends BaseCommand<[string], ImportWikiFileO
 			});
 
 			if (create) {
-				await writeStarterTiddlers(prisma, { target, parsed });
+				await writeStarterTiddlers(prisma, {
+					target,
+					parsed,
+					displayName: this.options["display-name"]?.[0] ?? parsed.siteTitle ?? slug,
+				});
 				console.log(`created the wiki "${slug}" (bag "${target.bagName}")`);
 			}
 
@@ -169,11 +172,6 @@ export class ImportWikiFileCommand extends BaseCommand<[string], ImportWikiFileO
 		});
 
 		return null;
-	}
-
-	private sizeLimit(): number {
-		const limit = Number.parseInt(process.env.MWS_WIKI_FILE_SIZE_LIMIT ?? "", 10);
-		return Number.isFinite(limit) && limit > 0 ? limit : DEFAULT_WIKI_FILE_SIZE_LIMIT;
 	}
 
 	/**
@@ -273,94 +271,6 @@ async function resolveTarget(prisma: PrismaTxnClient, options: {
 		},
 		slug,
 	};
-}
-
-/**
- * Creates the bag and the recipe of a new wiki. Its starter tiddlers are
- * written after the import, so the plan does not see them as tiddlers the file
- * is missing. A new wiki stays private, like a wiki created in the admin app.
- */
-async function createWikiShell(prisma: PrismaTxnClient, options: {
-	slug: string;
-	parsed: ParsedWikiFile;
-	bagName: string;
-	displayName?: string;
-	templateName: string;
-	ownerRoles: string[];
-	recipeUsers: string[];
-}): Promise<WikiImportTarget> {
-
-	if (await prisma.recipe.findUnique({ where: { slug: options.slug }, select: { id: true } })) {
-		throw `A wiki with the slug "${options.slug}" already exists. Use --wiki ${options.slug} to import into it.`;
-	}
-
-	const displayName = options.displayName ?? options.parsed.siteTitle ?? options.slug;
-
-	const bag = await new BagDataAdapter({ isAdmin: true } as any).saveRow(prisma, {
-		id: new IdString(""),
-		name: options.bagName,
-		description: `Tiddler storage for the wiki "${displayName}"`,
-		bagPermissions: options.ownerRoles.map(role => ({ level: "C_admin" as const, role })),
-	});
-
-	const template = await prisma.template.findUnique({
-		where: { name: options.templateName },
-		select: { name: true },
-	});
-	if (!template) throw `Template ${options.templateName} does not exist.`;
-
-	await new RecipeDataAdapter({ isAdmin: true } as any).saveRow(prisma, {
-		id: new IdString(""),
-		slug: options.slug,
-		templateName: template.name,
-		displayName,
-		description: "",
-		plugins: [],
-		readonlyBags: [],
-		writablePrefixBags: toMappingRows({ "": options.bagName }),
-		recipeAdmins: options.ownerRoles,
-		recipeUsers: options.recipeUsers,
-		cspAllow: [],
-		landingVisible: false,
-	});
-
-	return { bagId: new IdString(bag.id.toString()), bagName: options.bagName };
-}
-
-/**
- * A new wiki needs a title and a list of tiddlers to open with. Both come from
- * the file when it has them; --include-system already imported them.
- */
-async function writeStarterTiddlers(prisma: PrismaTxnClient, options: {
-	target: WikiImportTarget;
-	parsed: ParsedWikiFile;
-}) {
-	const bagId = new IdString(options.target.bagId.toString());
-	const store = new WikiStore(prisma);
-	const displayName = options.parsed.siteTitle;
-
-	const siteTitle = await prisma.tiddler.findUnique({
-		where: { bag_id_title: { bag_id: IdString.cast(bagId), title: "$:/SiteTitle" } },
-		select: { title: true },
-	});
-	if (!siteTitle) {
-		await store.saveTiddler({
-			bag_id: bagId,
-			fields: {
-				title: "$:/SiteTitle",
-				text: displayName ?? options.target.bagName.replace(/^editions\//, ""),
-				type: "text/vnd.tiddlywiki",
-			},
-		});
-	}
-
-	const defaultTiddlers = options.parsed.systemTiddlers.find(t => t.title === "$:/DefaultTiddlers");
-	if (defaultTiddlers && !await prisma.tiddler.findUnique({
-		where: { bag_id_title: { bag_id: IdString.cast(bagId), title: "$:/DefaultTiddlers" } },
-		select: { title: true },
-	})) {
-		await store.saveTiddler({ bag_id: bagId, fields: defaultTiddlers });
-	}
 }
 
 function slugify(value: string): string {

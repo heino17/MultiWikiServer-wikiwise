@@ -54,9 +54,11 @@ import {
   type ListViewState,
 } from "./list-view";
 import { t } from "./i18n";
+import { formatStorageErrorForDisplay, getErrorMessage, prettifyBytes, renderErrorBanner } from "./helpers";
 import { getEffectiveTheme, toggleTheme, type ThemeMode } from "./theme";
 import "./pinboard";
 import "./user-files";
+import { WikiFileImportDialog } from "./wiki-file-import";
 import "./hero-locale-select";
 
 // Installation-wide feature defaults administered on the "Settings" page
@@ -290,95 +292,6 @@ function getFieldGroups(tab: TabDefinition, section: FieldSection, fields: Field
 
 export function uniqueLines(values: readonly string[]): string[] {
   return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
-}
-
-function getErrorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error ? error.message : fallback;
-}
-
-type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
-
-// Server `details.reason`-→ i18n-Schlüssel für die gängigen Admin-Operationen.
-const STORAGE_ERROR_REASON_KEYS: Record<string, string> = {
-  "User not authenticated": "User not authenticated.",
-  "User is not an admin": "User is not an admin.",
-  "Only the user who created the bag (or the site admin 'admin') may edit it.": "Only the user who created the bag may edit it.",
-  "You must be an admin to manage user accounts.": "You must be an admin to manage user accounts.",
-  "Only the user who created the wiki (or the site admin 'admin') may delete it.": "Only the user who created the wiki may delete it.",
-  "Only the user who created this role (or the site admin 'admin') may delete it.": "Only the user who created this role may delete it.",
-  "Only the user who created this bag (or the site admin 'admin') may delete it.": "Only the user who created this bag may delete it.",
-  "This bag is used by a wiki recipe and cannot be deleted on its own.": "This bag is used by a wiki recipe and cannot be deleted.",
-  "The site admin account 'admin' cannot be deleted.": "The site admin account cannot be deleted.",
-  "Only the user who created this account (or the site admin 'admin') may delete it.": "Only the user who created this account may delete it.",
-  "You must be an admin to edit other users": "You must be an admin to edit other users.",
-  "You must be an admin to edit roles": "You must be an admin to edit roles.",
-  "Your administrator has not allowed you to create your own wikis.": "Your administrator has not allowed you to create your own wikis.",
-};
-
-// Variablen Gründe (mit dynamischen Rollen-/Tab-Namen) per Präfix:
-const STORAGE_ERROR_REASON_PREFIX_KEYS: ReadonlyArray<readonly [string, string]> = [
-  ["You are not allowed to assign the", "You are not allowed to assign this role."],
-  ["The system role '", "System roles cannot be deleted."],
-  ["Only the user who created this ", "Only the user who created this entry may edit it."],
-  ["You don't have permission to create ", "You do not have permission to create this entry."],
-  ["You don't have permission to modify ", "You do not have permission to modify this entry."],
-  ["You have reached your limit of", "You have reached your own wiki limit."],
-];
-
-// Fallback je `reason`-Code, wenn keine Detail-Nachricht bekannt ist:
-const GENERIC_ERROR_REASON_KEYS: Record<string, string> = {
-  "ACCESS_DENIED": "Access denied.",
-  "RECORD_KEY_NOT_FOUND": "The record was not found.",
-  "RECORD_NOT_FOUND": "The record was not found.",
-  "RECIPE_NO_READ_PERMISSION": "You do not have permission to open this wiki.",
-  "BAG_NO_READ_PERMISSION": "You do not have permission to open this wiki.",
-  "RECIPE_NOT_FOUND": "The wiki was not found.",
-};
-
-function formatStorageErrorForDisplay(storageError: string, translate: TranslateFn): string {
-  if (!storageError) return storageError;
-
-  try {
-    const parsed = JSON.parse(storageError) as {
-      reason?: unknown;
-      details?: { reason?: unknown; prettyErrors?: unknown };
-    };
-    const detailReason = typeof parsed.details?.reason === "string" ? parsed.details.reason : "";
-    const reasonCode = typeof parsed.reason === "string" ? parsed.reason : "";
-    const prettyText = typeof parsed.details?.prettyErrors === "string"
-      ? parsed.details.prettyErrors
-      : "";
-
-    if (detailReason) {
-      const exact = STORAGE_ERROR_REASON_KEYS[detailReason];
-      if (exact) return translate(exact);
-      const prefixed = STORAGE_ERROR_REASON_PREFIX_KEYS.find(([prefix]) => detailReason.startsWith(prefix));
-      if (prefixed) return translate(prefixed[1]);
-    }
-    if (prettyText.trim()) return prettyText;
-    if (reasonCode) {
-      const generic = GENERIC_ERROR_REASON_KEYS[reasonCode];
-      if (generic) return translate(generic);
-      return detailReason || `${translate("The request could not be completed.")} (${reasonCode})`;
-    }
-  } catch {
-    // Keep the original storage error text when it's not valid JSON.
-  }
-
-  return storageError;
-}
-
-function renderErrorBanner(message: string, dismissAction?: { label: string; onclick: () => void } | null) {
-  if (!message) return null;
-  return (
-    <div class="error-banner" role="alert" aria-live="polite">
-      <span class="error-banner-icon" aria-hidden="true"><MaterialSymbol icon={warningIcon} /></span>
-      <p class="error-banner-message">{message}</p>
-      {dismissAction ? (
-        <button class="ghost-button error-banner-dismiss" type="button" onclick={dismissAction.onclick}>{dismissAction.label}</button>
-      ) : null}
-    </div>
-  );
 }
 
 // #region - AppStore
@@ -1347,6 +1260,8 @@ export class App extends JSXElement {
   @state() accessor newWikiName = "";
   @state() accessor newWikiBusy = false;
   @state() accessor newWikiError = "";
+  /** Wiki-Datei-Dialog (Import aus einer gespeicherten Single-File-Wiki). */
+  @state() accessor wikiFileImportOpen = false;
   @state() accessor themeMode: ThemeMode = getEffectiveTheme();
   @state() accessor thumbnailSrc = "";
   /** 1-based page of the paginated "Wikis" list. Reset on every tab switch;
@@ -1522,6 +1437,20 @@ export class App extends JSXElement {
     this.newWikiOpen = false;
   };
 
+  private readonly openWikiFileImport = () => {
+    this.wikiFileImportOpen = true;
+  };
+
+  private readonly closeWikiFileImport = () => {
+    this.wikiFileImportOpen = false;
+  };
+
+  /** An import writes into another wiki and a restore rewrites one: both
+   *  change bags and tiddlers, so the wikis list is stale afterwards. */
+  private readonly wikiFileImportDone = () => {
+    void this.store.reload();
+  };
+
   private readonly submitNewWiki = async () => {
     const displayName = this.newWikiName.trim();
     if (!displayName || this.newWikiBusy) return;
@@ -1547,18 +1476,6 @@ export class App extends JSXElement {
       this.newWikiBusy = false;
     }
   };
-
-  private prettifyBytes(bytes: number) {
-    if (!bytes || bytes < 1024) return `${bytes || 0} B`;
-    const units = ["KB", "MB", "GB", "TB"];
-    let value = bytes / 1024;
-    let unit = 0;
-    while (value >= 1024 && unit < units.length - 1) {
-      value /= 1024;
-      unit++;
-    }
-    return `${value.toFixed(1)} ${units[unit]}`;
-  }
 
   private readonly loadBackups = async () => {
     if (!embeddedServerResponse.userState.isAdmin) return;
@@ -1891,7 +1808,7 @@ export class App extends JSXElement {
               <small>{this.storageLoading
                 ? t("Loading…")
                 : this.storageInfo
-                  ? this.prettifyBytes(this.storageInfo.disk.usedBytes)
+                  ? prettifyBytes(this.storageInfo.disk.usedBytes)
                   : ""}</small>
             </button>
           ) : null}
@@ -1963,7 +1880,7 @@ export class App extends JSXElement {
                         title={t("Download backup")}
                       >
                         <strong>{backup.name}</strong>
-                        <small>{new Date(backup.createdAt).toLocaleString()} · {this.prettifyBytes(backup.sizeBytes)}</small>
+                        <small>{new Date(backup.createdAt).toLocaleString()} · {prettifyBytes(backup.sizeBytes)}</small>
                       </a>
                       <button
                         class="backup-delete-button"
@@ -2005,6 +1922,15 @@ export class App extends JSXElement {
                       disabled={isLoadingData || perTabStore.isOpeningItem || perTabStore.isSaving}
                     >{t("Defined wiki creation")}</button>
                   ) : null}
+                  {/* Anyone who may write tiddlers may merge a file into a
+                      wiki; the import itself checks the rest again. */}
+                  <button
+                    class="create-wiki-action"
+                    type="button"
+                    role="menuitem"
+                    onclick={() => { this.openWikiFileImport(); this.closeCreateWikiMenu(); }}
+                    disabled={isLoadingData}
+                  >{t("Take over a wiki file")}</button>
                 </div>
               </details>
             ) : null}
@@ -2059,13 +1985,13 @@ export class App extends JSXElement {
                     return (
                       <div class="storage-usage-block">
                         <strong class="storage-usage-text">
-                          {this.prettifyBytes(usedBytes)} {t("of")} {this.prettifyBytes(totalBytes)} ({percent}%)
+                          {prettifyBytes(usedBytes)} {t("of")} {prettifyBytes(totalBytes)} ({percent}%)
                         </strong>
                         <div class="storage-progress" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
                           <div class={`storage-progress-bar ${statusClass}`} style={{ width: `${percent}%` }} />
                         </div>
                         <p class={`storage-status-label ${statusClass}`}>{statusLabel}</p>
-                        <p class="storage-free-text">{t("{free} free", { free: this.prettifyBytes(this.storageInfo.disk.availableBytes) })}</p>
+                        <p class="storage-free-text">{t("{free} free", { free: prettifyBytes(this.storageInfo.disk.availableBytes) })}</p>
                       </div>
                     );
                   })()}
@@ -2101,22 +2027,22 @@ export class App extends JSXElement {
                         </div>
                         <div class="storage-blob-tile is-store">
                           <p class="storage-blob-label">{t("File store")}</p>
-                          <strong class="storage-blob-value">{this.prettifyBytes(blobs.blobBytes)}</strong>
+                          <strong class="storage-blob-value">{prettifyBytes(blobs.blobBytes)}</strong>
                           <p class="storage-blob-sub">{t("Size of binary content (base64 encoded)")}</p>
                         </div>
                         <div class="storage-blob-tile is-content">
                           <p class="storage-blob-label">{t("Wiki content")}</p>
-                          <strong class="storage-blob-value">{this.prettifyBytes(blobs.contentBytes)}</strong>
+                          <strong class="storage-blob-value">{prettifyBytes(blobs.contentBytes)}</strong>
                           <p class="storage-blob-sub">{t("All tiddler content and metadata")}</p>
                         </div>
                         <div class="storage-blob-tile is-disk">
                           <p class="storage-blob-label">{t("Attachments on disk")}</p>
-                          <strong class="storage-blob-value">{this.prettifyBytes(blobs.storeFiles.totalSizeBytes)}</strong>
+                          <strong class="storage-blob-value">{prettifyBytes(blobs.storeFiles.totalSizeBytes)}</strong>
                           <p class="storage-blob-sub">{files(blobs.storeFiles.files)} {t("in store/files/")}</p>
                         </div>
                         <div class="storage-blob-tile is-inbox">
                           <p class="storage-blob-label">{t("Inbox")}</p>
-                          <strong class="storage-blob-value">{this.prettifyBytes(blobs.inbox.totalSizeBytes)}</strong>
+                          <strong class="storage-blob-value">{prettifyBytes(blobs.inbox.totalSizeBytes)}</strong>
                           <p class="storage-blob-sub">{files(blobs.inbox.files)} {t("in store/inbox/")}</p>
                         </div>
                         <div class="storage-blob-tile is-orphan">
@@ -2148,7 +2074,7 @@ export class App extends JSXElement {
                         <div class="storage-cleanup-cat">
                           <span class="storage-cleanup-cat-label">{label}</span>
                           <span class="storage-cleanup-cat-count">{data.count.toLocaleString()}</span>
-                          <span class="storage-cleanup-cat-bytes">{this.prettifyBytes(data.bytes)}</span>
+                          <span class="storage-cleanup-cat-bytes">{prettifyBytes(data.bytes)}</span>
                         </div>
                       );
                       return (
@@ -2157,8 +2083,8 @@ export class App extends JSXElement {
                             {preview.total.count === 0
                               ? t("Nothing to clean up.")
                               : preview.dryRun
-                                ? t("Found {count} candidates with {bytes} in total.", { count: preview.total.count.toLocaleString(), bytes: this.prettifyBytes(preview.total.bytes) })
-                                : t("Removed {count} candidates with {bytes} in total.", { count: preview.total.count.toLocaleString(), bytes: this.prettifyBytes(preview.total.bytes) })}
+                                ? t("Found {count} candidates with {bytes} in total.", { count: preview.total.count.toLocaleString(), bytes: prettifyBytes(preview.total.bytes) })
+                                : t("Removed {count} candidates with {bytes} in total.", { count: preview.total.count.toLocaleString(), bytes: prettifyBytes(preview.total.bytes) })}
                           </p>
                           <div class="storage-cleanup-cats">
                             {category(t("Stale inbox"), preview.categories.inbox)}
@@ -2201,9 +2127,9 @@ export class App extends JSXElement {
                           <tr key={user.username}>
                             <td><strong class="storage-user-name">{user.username}</strong></td>
                             <td>{user.wikiCount.toLocaleString()}</td>
-                            <td>{this.prettifyBytes(user.wikiContentBytes)}</td>
-                            <td>{this.prettifyBytes(user.fileStoreBytes)}</td>
-                            <td class="storage-user-total">{this.prettifyBytes(user.totalBytes)}</td>
+                            <td>{prettifyBytes(user.wikiContentBytes)}</td>
+                            <td>{prettifyBytes(user.fileStoreBytes)}</td>
+                            <td class="storage-user-total">{prettifyBytes(user.totalBytes)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -2232,7 +2158,7 @@ export class App extends JSXElement {
                             <td>{t(cat.category)}</td>
                             <td>{cat.files}</td>
                             <td>{cat.directories}</td>
-                            <td>{this.prettifyBytes(cat.totalSizeBytes)}</td>
+                            <td>{prettifyBytes(cat.totalSizeBytes)}</td>
                             <td>{cat.lastModified ? new Date(cat.lastModified).toLocaleString() : "—"}</td>
                           </tr>
                         ))}
@@ -2467,6 +2393,17 @@ export class App extends JSXElement {
         {perTabStore.isOpen ? (
           <RecordModalElement
             store={perTabStore}
+          />
+        ) : null}
+
+        {this.wikiFileImportOpen ? (
+          <WikiFileImportDialog
+            wikis={(this.store.state.itemsByTab.wikis ?? []).map(wiki => ({
+              slug: wiki.slug,
+              displayName: wiki.displayName || wiki.slug,
+            }))}
+            onClose={this.closeWikiFileImport}
+            onDone={this.wikiFileImportDone}
           />
         ) : null}
 
