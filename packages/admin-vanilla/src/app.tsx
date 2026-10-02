@@ -748,11 +748,11 @@ class FieldBlockElement<T> extends JSXElement {
 }
 
 export function getAdminRecordValue(field: FieldDefinition | ColumnDefinition, draft: AdminRecord) {
-  if (!(field.key in draft)) throw new Error("The field " + field.key + " is not defined in the draft record");
+  if (!(field.key in draft)) throw new Error(t("The field {key} is not defined in the draft record", { key: field.key }));
   return (draft as any)[field.key];
 }
 export function setAdminRecordValue(field: FieldDefinition | ColumnDefinition, draft: AdminRecord, value: unknown, init: boolean) {
-  if (!init && !(field.key in draft)) throw new Error("The field " + field.key + " is not defined in the draft record");
+  if (!init && !(field.key in draft)) throw new Error(t("The field {key} is not defined in the draft record", { key: field.key }));
   (draft as any)[field.key] = value;
 }
 

@@ -4626,6 +4626,56 @@ GitHub can show whether the warning is really gone — and after the push it is:
 the run is green and the annotation about `node20` is no longer there, only the
 notice that `ubuntu-latest` migrates to Ubuntu 26 from 19.10.2026.
 
+## 90. Cleanup: twelve orphan keys out, two missing keys in
+
+§89 ended on `{count} new`, an orphan in all eight locale files with no caller.
+Deleting one stale key is cheap, but only if you know it is the only one — and
+the first attempt to find that out was wrong by a wide margin. Counting the
+string literals handed to `t()` reports 189 unused keys, and the list is full of
+labels that are plainly on screen: `Storage overview`, `Access denied.`,
+`Light theme`. The admin app is data-driven: the tab definitions, field
+definitions and error-code maps in `src/definition/*.ts` and `src/helpers.tsx`
+carry the English text as plain data and pass it to `t()` at render time
+(`t(selectedTab.eyebrow)`, `t(field.description)`, `t(reason)`). So "not passed
+to `t()` as a literal" is not the same as "unused". A key only counts as an
+orphan when its exact string appears nowhere in the source at all, and that test
+leaves **13**, not 189.
+
+**One of the thirteen was not an orphan but a bug.**
+`The field {key} is not defined in the draft record` was translated in all eight
+languages, while `getAdminRecordValue` and `setAdminRecordValue` built the very
+same sentence by concatenation — `"The field " + field.key + " is not defined in
+the draft record"` — and threw that English text. Eight translations of a
+message nobody could ever read. Both call sites now call `t()` with the `{key}`
+param, so the defensive error arrives in the reader's language.
+
+**The other twelve were genuine leftovers**, every one of them superseded by a
+longer or more precise key: `Storage status` → `Disk storage status`, `Caution`
+and `Important notice` → the news-style levels `neutral`, `info`, `success`,
+`warning`, `danger`, `A visitor's own language or theme choice always wins.` →
+the same sentence plus `Feature switches apply to everyone.`, `Default bag`,
+`Prefix rules` and `Bag` → longer field labels, the two
+`You must be an admin to … teacher capabilities.` sentences → generic permission
+messages, and `Enter password`, `Settings saved.`, `{count} new`. All twelve are
+gone from all eight files: 96 entries, the same twelve in each.
+
+**The same audit turned up the opposite defect: two keys in use but never
+translated.** `t("Audience")` is the tooltip on a pinboard note's scope,
+`t("Size")` the column header of the user file table; `t()` fell back to the
+key, so both read in English in all eight languages. They are in now —
+`Audience` becomes *Sichtbarkeit*, *Público*, *Public*, *閲覧対象*, and `Size`
+becomes *Größe*, *Tamaño*, *Taille*, *Размер*. The tooltip was the one place
+where the literal reading of *Audience* was wrong in most languages: the label
+next to it names who sees the note, so German says *Sichtbarkeit* and not
+*Publikum*.
+
+**Verified.** Bundling the real `t()` with esbuild and rendering all three keys
+in all eight locales yields 24 correct strings, among them *Das Feld slug ist im
+Entwurf nicht definiert* and its seven translations. All eight files again hold
+exactly the same 639 base keys, no file has a duplicate key, no `#variant` lost
+its base, the placeholder comparison finds no deviation, no string literal
+passed to `t()` lacks a translation, and `npm run tsc2`, the admin typecheck
+and `npm run build` are clean.
 ## 89. Bug fix: numbers did not follow the language they were counted in
 
 §88 fixed a Russian animal text that dropped its `{count}` and closed by
@@ -4688,7 +4738,8 @@ count in this app plausibly reaches that, and a `#many` that covers the bare
 count nouns but not the phrases with an article would be worse than none, so
 Spanish ships no `#many`. And `{count} new` is an orphan: it was used by the
 pinboard tab until the unread label became `{count} new notes`, and it is still
-in all eight files with no caller. Both are noted rather than silently absorbed.
+in all eight files with no caller. Both are noted rather than silently absorbed;
+§90 removes the orphan, the Spanish `#many` stays open.
 
 ## 88. Bug fix: the Russian plural for "animal" dropped the number
 
@@ -9890,6 +9941,60 @@ dem Push ist sie es: der Lauf ist grün und die Annotation über `node20` nicht
 mehr vorhanden, nur noch der Hinweis, dass `ubuntu-latest` ab 19.10.2026 auf
 Ubuntu 26 migriert.
 
+## 90. Aufräumen: zwölf Waisen raus, zwei fehlende Schlüssel rein
+
+§89 endete auf `{count} new`, einer Waise in allen acht Sprachdateien ohne
+Aufrufer. Einen veralteten Schlüssel zu löschen ist billig — aber nur, wenn man
+weiß, dass er der einzige ist, und der erste Versuch, das herauszufinden, lag
+weit daneben. Zählt man die Stringliterale, die an `t()` übergeben werden,
+meldet das 189 unbenutzte Schlüssel, und auf der Liste stehen offensichtlich
+sichtbare Labels: `Storage overview`, `Access denied.`, `Light theme`. Die
+Admin-App ist datengetrieben: die Tab-Definitionen, Felddefinitionen und
+Fehlercode-Maps in `src/definition/*.ts` und `src/helpers.tsx` tragen den
+englischen Text als einfache Daten und übergeben ihn erst beim Rendern an
+`t()` (`t(selectedTab.eyebrow)`, `t(field.description)`, `t(reason)`).
+„Nicht mit einem Literal an `t()` übergeben" ist also nicht dasselbe wie
+„ungenutzt". Ein Schlüssel gilt erst dann als Waise, wenn sein exakter Text
+nirgends im Quelltext vorkommt, und dieser Test lässt **13** übrig, nicht 189.
+
+**Eine der dreizehn war keine Waise, sondern ein Fehler.** Das Feld
+`The field {key} is not defined in the draft record` war in allen acht
+Sprachen übersetzt, während `getAdminRecordValue` und `setAdminRecordValue`
+genau denselben Satz durch Verkettung bauten — `"The field " + field.key + "
+is not defined in the draft record"` — und diesen englischen Text warfen. Acht
+Übersetzungen einer Meldung, die niemand lesen konnte. Beide Aufrufer rufen
+jetzt `t()` mit dem Parameter `{key}`, damit der defensive Fehler in der
+Sprache der lesenden Person ankommt.
+
+**Die anderen zwölf waren echte Altlasten**, jede davon durch einen längeren
+oder genaueren Schlüssel abgelöst: `Storage status` → `Disk storage status`,
+`Caution` und `Important notice` → die Meldungsstufen `neutral`, `info`,
+`success`, `warning`, `danger`, `A visitor's own language or theme choice
+always wins.` → derselbe Satz plus `Feature switches apply to everyone.`,
+`Default bag`, `Prefix rules` und `Bag` → längere Feldlabels, die beiden
+`You must be an admin to … teacher capabilities.` → generische
+Berechtigungsmeldungen, dazu `Enter password`, `Settings saved.` und
+`{count} new`. Alle zwölf sind aus allen acht Dateien entfernt: 96 Einträge,
+in jeder Datei dieselben zwölf.
+
+**Dieselbe Prüfung hat den entgegengesetzten Fehler gefunden: zwei benutzte,
+aber nie übersetzte Schlüssel.** `t("Audience")` ist der Tooltip am
+Sichtbarkeitsbereich einer Pinnwand-Notiz, `t("Size")` die Spaltenüberschrift
+der Dateiliste; `t()` fiel auf den Schlüssel zurück, also stand beides in
+allen acht Sprachen auf Englisch. Beide sind jetzt vorhanden — `Audience` wird
+zu *Sichtbarkeit*, *Público*, *Public*, *閲覧対象*, `Size` zu *Größe*,
+*Tamaño*, *Taille*, *Размер*. Beim Tooltip war die wörtliche Lesart von
+*Audience* in den meisten Sprachen falsch: die Beschriftung daneben nennt, wer
+die Notiz sieht, deshalb sagt Deutsch *Sichtbarkeit* und nicht *Publikum*.
+
+**Geprüft.** Das echte `t()` mit esbuild gebündelt und alle drei Schlüssel in
+allen acht Locales gerendert ergibt 24 richtige Zeichenketten, darunter *Das
+Feld slug ist im Entwurf nicht definiert* und seine sieben Übersetzungen. Alle
+acht Dateien enthalten wieder genau dieselben 639 Basisschlüssel, keine Datei
+hat einen doppelten Schlüssel, keine `#variante` hat ihre Basis verloren, der
+Platzhaltervergleich findet keine Abweichung, kein an `t()` übergebenes
+Stringliteral ohne Übersetzung, und `npm run tsc2`, der Admin-Typecheck und
+`npm run build` sind sauber.
 ## 89. Bugfix: Zahlen folgten nicht der Sprache, in der sie gezählt wurden
 
 §88 hat einen russischen Tiertext korrigiert, der sein `{count}` verlor, und
@@ -9956,7 +10061,8 @@ einfachen Zählnomen deckt, aber nicht die Wendungen mit Artikel, wäre schlecht
 als gar keines; deshalb liefert Spanisch kein `#many`. Und `{count} new` ist ein
 Waisen: der Pinnwand-Tab benutzte es, bis das Ungelesen-Label zu
 `{count} new notes` wurde, und es steht noch in allen acht Dateien ohne
-Aufrufer. Beides ist vermerkt und nicht stillschweigend aufgenommen.
+Aufrufer. Beides ist vermerkt und nicht stillschweigend aufgenommen; §90 entfernt
+die Waise, das spanische `#many` bleibt offen.
 
 ## 88. Bugfix: die russische Mehrzahl von „Tier" ließ die Zahl weg
 
