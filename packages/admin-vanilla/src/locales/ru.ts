@@ -36,7 +36,7 @@ export const ruStrings: Record<string, string> = {
   "Login options": "Параметры входа",
   "Tap all the animals": "Нажмите на всех животных",
   "Find all {count} animals.": "Найдите всех {count} животных.",
-  "Find all {count} animals.#one": "Найдите одно животное.",
+  "Find all {count} animals.#one": "Найдите {count} животное.",
   "That is not an animal.": "Это не животное.",
   "Well done! You are definitely human.": "Отлично! Ты точно человек.",
   "New puzzle": "Новая загадка",
