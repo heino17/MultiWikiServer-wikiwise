@@ -11,8 +11,8 @@ Wenn eine Wiki bisher nur als eine einzige `index.html` auf einem Rechner oder U
 * Öffne die ''Admin-Seite'' und klicke im Dropdown ''Wiki erstellen'' auf ''Wiki-Datei übernehmen''.
 * Wähle die gespeicherte `index.html` der Wiki aus. Sie muss mit ''TiddlyWiki 5'' gespeichert worden sein.
 * Wähle das Ziel: eine ''neue Wiki'' (mit Name und Slug) oder eine ''bestehende Wiki''.
-* Klicke auf ''Datei prüfen''. Der Server liest die Datei ein und zeigt, was passieren würde: neue, geänderte, unveränderte und gelöschte Tiddler, die enthaltenen Systemtiddler und die ausgelassenen Plugins. Es wird dabei noch ''nichts'' geschrieben.
-* Möchtest Du die Layout-, Tag- und Theme-Einstellungen der alten Wiki ($:/)-Tiddler) mitnehmen, setze das Kästchen ''Auch Systemtiddler importieren''.
+* Klicke auf ''Datei prüfen''. Der Server liest die Datei ein und zeigt, was passieren würde: neue, geänderte, unveränderte und gelöschte Tiddler, die enthaltenen Systemtiddler, die ausgelassenen Plugins, den Sitzungszustand der Datei und die Sprache. Es wird dabei noch ''nichts'' geschrieben. Die gelöschten Tiddler stehen in roter Hervorhebung mit ihren Titeln, denn sie sind der einzige Teil der Übernahme, der Arbeit vernichten kann.
+* Möchtest Du die Layout-, Tag- und Theme-Einstellungen der alten Wiki ($:/)-Tiddler) mitnehmen, setze das Kästchen ''Auch Systemtiddler importieren''. Nur dann kommt auch das ''Sprachpaket'' der Wiki mit; ohne dieses Kästchen bleibt die Sprache der Ziel-Wiki stehen.
 * Erst ''Jetzt importieren'' schreibt. Bei einer bestehenden Wiki entscheidest Du vorher, ob ''Ersetzen'' (die Wiki wird zur Datei, vorher wird ein Snapshot angelegt) oder ''Zusammenführen'' (nur neue und geänderte Tiddler werden geschrieben, es wird nichts gelöscht) verwendet wird.
 
 !! Rechte
@@ -21,8 +21,13 @@ Wenn eine Wiki bisher nur als eine einzige `index.html` auf einem Rechner oder U
 * ''Ersetzen'' löscht Tiddler und braucht deshalb Administratorrechte auf dem Bag der Wiki.
 * Ein Klick auf den ''Zurücksetzen''-Knopf bei einem Snapshot holt den alten Stand zurück. Auch das ist rückholbar, weil vorher wieder ein Snapshot angelegt wird.
 
+!! Sprache
+
+Die Wiki-Datei nennt in `$:/language` ihre Sprache. Ein Tiddler, der auf ein Sprachpaket zeigt, das weder die Datei noch der Core (etwa `$:/languages/en-GB`) noch die Ziel-Wiki enthält, wird nicht übernommen: Die Wiki behält ihre Sprache, statt auf ein Paket zu zeigen, das es nicht gibt. Steht das Sprachpaket in der Datei, reist es mit den Systemtiddlern mit.
+
 !! Was nicht übernommen wird
 
-* Plugins, Themes, Bibliotheken und Sprachpakete: die come aus dem Rezept der Wiki ([[Bags und Rollen]]).
+* Der Core, Plugins, Themes und Bibliotheken: die kommen aus dem Rezept der Wiki ([[Bags und Rollen]]). ''Sprachpakete'' sind die Ausnahme, weil MWS sie im Bag hält und nicht im Rezept.
+* Der Sitzungszustand des Browsers, der die Datei gespeichert hat: offene Tabs und Entwürfe (`$:/StoryList`, `$:/temp/`, `$:/state/`), das Request-Log, der Plugin-Cache, `$:/HistoryList`, `$:/Import`, `$:/build` und `$:/isEncrypted`. Diese Tiddler gehören zu einer Sitzung und nicht zu einer Wiki; der Plan nennt sie einzeln.
 * TiddlyWiki-2-Dateien, passwortgeschützte Dateien und Dateien ohne Tiddler werden mit einer klaren Meldung abgelehnt.
 * Sehr große Dateien: Die Grenze des Servers liegt bei 50 MB (geändert über `MWS_WIKI_FILE_SIZE_LIMIT`).

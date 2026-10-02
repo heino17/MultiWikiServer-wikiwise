@@ -297,8 +297,21 @@ function printPlan(plan: WikiImportPlan, dryRun: boolean) {
 			+ printTitles(plan.keptSystemTitles));
 	}
 	if (plan.skippedPluginTitles.length) {
-		console.log(`  ${plan.skippedPluginTitles.length} plugin tiddler(s) never imported `
-			+ `(the wiki's plugins come from its recipe): ${printTitles(plan.skippedPluginTitles)}`);
+		console.log(`  ${plan.skippedPluginTitles.length} core plugin/theme/library tiddler(s) never imported `
+			+ `(a wiki gets them from its recipe): ${printTitles(plan.skippedPluginTitles)}`);
+	}
+	if (plan.language) {
+		const pack = plan.language.packTitle ? ` (pack ${plan.language.packTitle} comes with the file)` : "";
+		console.log(plan.language.delivered
+			? `  language: ${plan.language.wanted}${pack}`
+			: `  language: ${plan.language.wanted} is not taken over - ${plan.language.reason}`);
+	}
+	for (const row of plan.dropped) {
+		console.log(`  ${row.title} not written: ${row.reason}`);
+	}
+	if (plan.skippedTransientTitles.length) {
+		console.log(`  ${plan.skippedTransientTitles.length} session/build tiddler(s) dropped `
+			+ `(they belong to one browser session, not to the wiki): ${printTitles(plan.skippedTransientTitles)}`);
 	}
 	if (plan.mode === "replace" && plan.existingCount > 0) {
 		console.log(`  a replace copies "${plan.target.bagName}" into a snapshot bag first`);

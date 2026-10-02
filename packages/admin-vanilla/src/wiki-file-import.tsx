@@ -55,6 +55,15 @@ interface InspectResponse {
     keptSystem: SampleList;
     skippedSystem: number;
     skippedPlugins: SampleList;
+    skippedTransient: SampleList;
+    language: {
+      wanted: string;
+      packTitle?: string;
+      delivered: boolean;
+      reasonCode?: "not-wanted" | "no-pack";
+      reason?: string;
+    } | null;
+    dropped: { title: string; reason: string }[];
     snapshots: boolean;
   };
   system: {
@@ -318,13 +327,27 @@ export class WikiFileImportDialog extends JSXElement {
             <span class="wiki-file-plan-label">{t("Unchanged tiddlers")}</span>
             <strong class="wiki-file-plan-count">{plan.unchanged.toLocaleString()}</strong>
           </div>
-          {plan.mode === "replace" ? this.sampleLine(t("Tiddlers not in the file"), plan.deleted) : null}
+          {plan.mode === "replace" && plan.deleted.count ? (
+            <div class="wiki-file-plan-row wiki-file-plan-warn">
+              <span class="wiki-file-plan-label">{t("Deleted: tiddlers not in the file")}</span>
+              <strong class="wiki-file-plan-count">{plan.deleted.count.toLocaleString()}</strong>
+              <span class="wiki-file-plan-hint">{t("These tiddlers leave the wiki")}</span>
+              {plan.deleted.titles.length ? (
+                <details class="wiki-file-plan-samples" open>
+                  <summary>{t("Show the {count} deleted titles", { count: plan.deleted.titles.length })}</summary>
+                  <ul>
+                    {plan.deleted.titles.map(title => <li key={title}><code>{title}</code></li>)}
+                  </ul>
+                </details>
+              ) : null}
+            </div>
+          ) : null}
           {plan.skippedSystem || !this.includeSystem ? (
             <div class="wiki-file-plan-row">
               <span class="wiki-file-plan-label">{t("System tiddlers left out")}</span>
               <strong class="wiki-file-plan-count">{plan.skippedSystem.toLocaleString()}</strong>
               <span class="wiki-file-plan-hint">
-                {this.includeSystem ? t("Plugins are never imported") : t("Turn them on above to import them")}
+                {this.includeSystem ? t("A language pack is one of them") : t("Turn them on above to import them")}
               </span>
             </div>
           ) : null}
@@ -332,6 +355,31 @@ export class WikiFileImportDialog extends JSXElement {
             t("System tiddlers kept from the wiki"), plan.keptSystem,
           ) : null}
           {plan.skippedPlugins.count ? this.sampleLine(t("Plugins left out"), plan.skippedPlugins) : null}
+          {plan.skippedTransient.count ? this.sampleLine(
+            t("Session state dropped"), plan.skippedTransient,
+          ) : null}
+          {plan.language ? (
+            <div class="wiki-file-plan-row">
+              <span class="wiki-file-plan-label">{t("Language of the file")}</span>
+              <strong class="wiki-file-plan-count">
+                <code>{plan.language.wanted}</code>
+              </strong>
+              <span class="wiki-file-plan-hint">
+                {plan.language.delivered
+                  ? (plan.language.packTitle
+                    ? t("The language pack comes with the file")
+                    : t("The wiki already has this language"))
+                  : (plan.language.reasonCode === "not-wanted"
+                    ? t("Turn on the system tiddlers above to take the language over")
+                    : t("The wiki keeps its own language: the file has no language pack for it"))}
+              </span>
+            </div>
+          ) : null}
+          {plan.dropped.map(row => (
+            <p class="wiki-file-dropped" key={row.title}>
+              <code>{row.title}</code> {t("is not written")}: {row.reason}
+            </p>
+          ))}
         </div>
         {plan.snapshots ? (
           <p class="wiki-file-snapshot-hint">

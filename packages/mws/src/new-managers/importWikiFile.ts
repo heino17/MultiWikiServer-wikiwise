@@ -41,6 +41,8 @@ export interface WikiImportPlan {
   skippedSystemTitles: string[];
   /** Plugin titles left out; plugins never enter a bag, not even on request. */
   skippedPluginTitles: string[];
+  /** Session and build state that was dropped while reading the file. */
+  skippedTransientTitles: string[];
   /** How many tiddlers the file offers for writing. */
   fileTiddlerCount: number;
   /** Tiddlers currently in the target bag. */
@@ -56,6 +58,33 @@ export interface WikiImportPlan {
    * they are never deleted just because an uploaded file has none.
    */
   keptSystemTitles: string[];
+  /** What happens to the file's language. */
+  language?: WikiImportPlanLanguage;
+  /**
+   * Titles the file offers that are deliberately not written, each with the
+   * reason. The write step skips them, so the plan and the write cannot drift
+   * apart.
+   */
+  dropped: { title: string; reason: string }[];
+}
+
+/**
+ * The language of the file and what the target wiki makes of it. Language packs
+ * are the one plugin type a file may bring (MWS keeps them in the bag, not in
+ * the recipe), but a file can name a language it does not ship - then
+ * $:/language would point at nothing and the plugin switcher would quietly fall
+ * back to English.
+ */
+export interface WikiImportPlanLanguage {
+  wanted: string;
+  /** The pack that comes with the file. */
+  packTitle?: string;
+  /** Whether the wiki speaks this language after the import. */
+  delivered: boolean;
+  /** Why not, when delivered is false: the system tiddlers are off, or the pack is missing. */
+  reasonCode?: "not-wanted" | "no-pack";
+  /** The same, said for a person. */
+  reason?: string;
 }
 
 export interface WikiImportResult {
@@ -90,7 +119,12 @@ export async function planTiddlers(prisma: PrismaTxnClient, options: {
   const created: string[] = [];
   const updated: string[] = [];
   const unchanged: string[] = [];
+  const dropped = options.file?.dropped ?? [];
+  const droppedTitles = new Set(dropped.map(row => row.title));
   for (const tiddler of tiddlers) {
+    // A dropped title is left alone completely: it is neither written nor
+    // counted, and it stays in existingByTitle so a replace cannot claim it.
+    if (droppedTitles.has(tiddler.title)) continue;
     const before = existingByTitle.get(tiddler.title);
     if (!before) {
       created.push(tiddler.title);
@@ -117,6 +151,7 @@ export async function planTiddlers(prisma: PrismaTxnClient, options: {
     includeSystem: !!options.file?.includeSystem,
     skippedSystemTitles: options.file?.skippedSystemTitles ?? [],
     skippedPluginTitles: options.file?.skippedPluginTitles ?? [],
+    skippedTransientTitles: options.file?.skippedTransientTitles ?? [],
     fileTiddlerCount: tiddlers.length,
     existingCount: existing.length,
     created: created.sort(),
@@ -124,6 +159,51 @@ export async function planTiddlers(prisma: PrismaTxnClient, options: {
     unchanged,
     deleted,
     keptSystemTitles,
+    dropped,
+    ...(options.file?.language ? { language: options.file.language } : {}),
+  };
+}
+
+/**
+ * Decides what becomes of the file's $:/language. A $:/language that points at a
+ * pack nobody has would leave the wiki quietly in English, so in that case the
+ * wish is dropped and the reason is reported - the target keeps its own language.
+ */
+async function resolveLanguage(prisma: PrismaTxnClient, options: {
+  parsed: ParsedWikiFile;
+  target: WikiImportTarget;
+  includeSystem: boolean;
+}): Promise<{ language?: WikiImportPlanLanguage; dropped: { title: string; reason: string }[] }> {
+  const { parsed, target, includeSystem } = options;
+  if (!parsed.language) return { dropped: [] };
+  const { wanted, packTitle, inCore } = parsed.language;
+  if (!includeSystem) {
+    // Nothing of the file's settings travels, so the target keeps its language.
+    return {
+      language: {
+        wanted,
+        ...(packTitle ? { packTitle } : {}),
+        delivered: false,
+        reasonCode: "not-wanted",
+        reason: "The file's system tiddlers are not imported, so the wiki keeps its own language.",
+      },
+      dropped: [],
+    };
+  }
+  const alreadyThere = await prisma.tiddler.findFirst({
+    where: { bag_id: IdString.cast(target.bagId), title: wanted },
+    select: { title: true },
+  });
+  if (packTitle || inCore || alreadyThere) {
+    return {
+      language: { wanted, ...(packTitle ? { packTitle } : {}), delivered: true },
+      dropped: [],
+    };
+  }
+  const reason = `The file wants the language "${wanted}" but does not contain the language pack, and the target wiki does not have it either. The wiki keeps its own language.`;
+  return {
+    language: { wanted, delivered: false, reasonCode: "no-pack", reason },
+    dropped: [{ title: "$:/language", reason }],
   };
 }
 
@@ -137,13 +217,22 @@ export async function planWikiFileImport(prisma: PrismaTxnClient, options: {
   mode: WikiImportMode;
   includeSystem?: boolean;
 }): Promise<WikiImportPlan> {
+  const includeSystem = !!options.includeSystem;
+  const { language: _fileLanguage, ...parsedFile } = options.parsed;
+  const { language, dropped } = await resolveLanguage(prisma, {
+    parsed: options.parsed,
+    target: options.target,
+    includeSystem,
+  });
   return planTiddlers(prisma, {
     tiddlers: options.parsed.tiddlers,
     target: options.target,
     mode: options.mode,
     file: {
-      ...options.parsed,
-      includeSystem: options.includeSystem,
+      ...parsedFile,
+      includeSystem,
+      dropped,
+      ...(language ? { language } : {}),
     },
   });
 }
@@ -186,8 +275,9 @@ export async function applyTiddlers(prisma: PrismaTxnClient, options: {
   }
 
   // Unchanged tiddlers keep their row and their revision: the file agrees with
-  // what is stored, so there is nothing to write.
-  const skip = new Set(plan.unchanged);
+  // what is stored, so there is nothing to write. The same holds for what the
+  // plan deliberately left out.
+  const skip = new Set([...plan.unchanged, ...plan.dropped.map(row => row.title)]);
   let written = 0;
   for (const fields of options.tiddlers) {
     if (skip.has(fields.title)) continue;

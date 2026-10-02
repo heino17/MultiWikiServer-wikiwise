@@ -52,11 +52,27 @@ Markers used below:
   wiki. Do not re-open this as "just delete the tiddlers" — the restore command
   depends on that bag, and open tabs are updated through `WikiStore` events
   ([§84](CHANGELOG.md))
-- ⚖️ Plugin-, theme-, library- and language-tiddlers of an imported file are
-  never written into a bag: the plugins of a wiki come from its recipe, and
-  `$:/core` alone is megabytes. `$:/` tiddlers are skipped unless the operator
-  opts in, and a replace never *deletes* the `$:/` tiddlers of the target bag.
-  Both rules are deliberate, not an oversight
+- ⚖️ Core plugin, theme and library tiddlers of an imported file are never
+  written into a bag: the plugins of a wiki come from its recipe, and `$:/core`
+  alone is megabytes. ``A language pack is the exception``, because MWS keeps
+  language plugins in the bag and not in the recipe — the recipe's plugin list
+  is empty for the wikis MWS creates, the language is a property of the wiki
+  and not of the installation. It travels under the same opt-in as every other
+  `$:/` tiddler, and `$:/language` itself is only written when the wiki can
+  speak the language afterwards (pack in the file, in the core, or in the target
+  bag), otherwise the target keeps its own language
+  ([§86](CHANGELOG.md))
+- ⚖️ `$:/` tiddlers are skipped unless the operator opts in, and a replace never
+  *deletes* the `$:/` tiddlers of the target bag. Both rules are deliberate, not
+  an oversight
+- ⚖️ The session state of the browser that saved a file is dropped before the
+  opt-in is even looked at — `$:/StoryList`, `$:/temp/`, `$:/state/`,
+  `$:/status/`, `$:/HistoryList`, `$:/Import`, `$:/build`, `$:/isEncrypted` — the
+  same list TiddlyWiki's own import deselects (`core/modules/upgraders/
+  system.js`). `$:/status/` is in it because the syncer reads `$:/status/UserName`
+  from there, so an imported one would sign every later save with a stranger's
+  name. A replace names the titles it deletes, because that is the one part of
+  the takeover that can destroy work ([§86](CHANGELOG.md))
 - ✗ Support includeWikis
 - ✗ Automated export
 
