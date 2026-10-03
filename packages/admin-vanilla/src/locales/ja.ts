@@ -651,6 +651,8 @@ export const jaStrings: Record<string, string> = {
   "Every import that replaces a wiki writes one first. Only the newest {keep} of each wiki are kept — delete what you no longer need.": "ウィキを置き換えるインポートは、その前に必ずスナップショットを1件書き込みます。ウィキごとに最新{keep}件だけが残ります。不要なものはここで削除してください。",
   "Every import that replaces a wiki writes one first. Delete what you no longer need.": "ウィキを置き換えるインポートは、その前に必ずスナップショットを1件書き込みます。不要なものはここで削除してください。",
   "Show snapshots and tidy up": "スナップショットを見て整理する",
+  "Show details": "詳細を表示",
+  "Hide details": "詳細を隠す",
   "Loading snapshots\u2026": "スナップショットを読み込み中…",
   "No snapshots yet. The first one is written by the next import.": "スナップショットはまだありません。次回のインポートで最初のものが作成されます。",
   "{count} tiddlers": "ティドラー {count} 件",

@@ -682,6 +682,8 @@ export const enStrings: Record<string, string> = {
   "Every import that replaces a wiki writes one first. Only the newest {keep} of each wiki are kept — delete what you no longer need.": "Every import that replaces a wiki writes one first. Only the newest {keep} of each wiki are kept — delete what you no longer need.",
   "Every import that replaces a wiki writes one first. Delete what you no longer need.": "Every import that replaces a wiki writes one first. Delete what you no longer need.",
   "Show snapshots and tidy up": "Show snapshots and tidy up",
+  "Show details": "Show details",
+  "Hide details": "Hide details",
   "Loading snapshots\u2026": "Loading snapshots\u2026",
   "No snapshots yet. The first one is written by the next import.": "No snapshots yet. The first one is written by the next import.",
   "{count} tiddlers": "{count} tiddlers",

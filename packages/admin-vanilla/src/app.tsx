@@ -1272,6 +1272,8 @@ export class App extends JSXElement {
   @state() accessor snapshotCounts: { slug: string; displayName: string; count: number }[] = [];
   @state() accessor snapshotKeep = 0;
   @state() accessor snapshotCountsLoading = false;
+  /** Der Hinweis ist eingeklappt; nur die Kopfzeile mit der Summe ist da. */
+  @state() accessor snapshotHintOpen = false;
   @state() accessor themeMode: ThemeMode = getEffectiveTheme();
   @state() accessor thumbnailSrc = "";
   /** 1-based page of the paginated "Wikis" list. Reset on every tab switch;
@@ -1427,40 +1429,54 @@ export class App extends JSXElement {
     const rest = rows.length - shown.length;
     return (
       <div class="field-callout snapshot-hint">
-        <p class="snapshot-hint-head">
+        <button
+          class="snapshot-hint-head"
+          type="button"
+          aria-expanded={this.snapshotHintOpen ? "true" : "false"}
+          aria-controls="snapshot-hint-body"
+          title={this.snapshotHintOpen ? t("Hide details") : t("Show details")}
+          onclick={() => {
+            this.snapshotHintOpen = !this.snapshotHintOpen;
+          }}
+        >
           <MaterialSymbol icon={historyIcon} />
-          {t("Your wikis hold {count} snapshots — the way back to an earlier state.", { count: total })}
-        </p>
-        <p class="snapshot-hint-wikis">
-          {shown.map(row => (
-            <button
-              key={row.slug}
-              class="snapshot-hint-wiki"
-              type="button"
-              title={t("Show the snapshots of \"{wiki}\"", { wiki: row.displayName })}
-              onclick={() => this.openSnapshotRestore(row.slug)}
-            >
-              {row.displayName}
-              <span class="snapshot-hint-count">{row.count}</span>
-            </button>
-          ))}
-          {rest > 0 ? <span class="snapshot-hint-rest">{t("{count} more", { count: rest })}</span> : null}
-        </p>
-        <p class="snapshot-hint-detail">
-          {this.snapshotKeep > 0
-            ? t("Every import that replaces a wiki writes one first. Only the newest {keep} of each wiki are kept — delete what you no longer need.", { keep: this.snapshotKeep })
-            : t("Every import that replaces a wiki writes one first. Delete what you no longer need.")}
-        </p>
-        <p class="snapshot-hint-actions">
-          <button
-            class="primary-button"
-            type="button"
-            onclick={() => this.openSnapshotRestore(shown[0]?.slug ?? "")}
-          >
-            <MaterialSymbol icon={historyIcon} />
-            {t("Show snapshots and tidy up")}
-          </button>
-        </p>
+          <span>{t("Your wikis hold {count} snapshots — the way back to an earlier state.", { count: total })}</span>
+          <span class="snapshot-hint-toggle"><MaterialSymbol icon={expandIcon} /></span>
+        </button>
+        {this.snapshotHintOpen
+          ? <div class="snapshot-hint-body" id="snapshot-hint-body">
+            <p class="snapshot-hint-wikis">
+              {shown.map(row => (
+                <button
+                  key={row.slug}
+                  class="snapshot-hint-wiki"
+                  type="button"
+                  title={t("Show the snapshots of \"{wiki}\"", { wiki: row.displayName })}
+                  onclick={() => this.openSnapshotRestore(row.slug)}
+                >
+                  {row.displayName}
+                  <span class="snapshot-hint-count">{row.count}</span>
+                </button>
+              ))}
+              {rest > 0 ? <span class="snapshot-hint-rest">{t("{count} more", { count: rest })}</span> : null}
+            </p>
+            <p class="snapshot-hint-detail">
+              {this.snapshotKeep > 0
+                ? t("Every import that replaces a wiki writes one first. Only the newest {keep} of each wiki are kept — delete what you no longer need.", { keep: this.snapshotKeep })
+                : t("Every import that replaces a wiki writes one first. Delete what you no longer need.")}
+            </p>
+            <p class="snapshot-hint-actions">
+              <button
+                class="primary-button"
+                type="button"
+                onclick={() => this.openSnapshotRestore(shown[0]?.slug ?? "")}
+              >
+                <MaterialSymbol icon={historyIcon} />
+                {t("Show snapshots and tidy up")}
+              </button>
+            </p>
+          </div>
+          : null}
       </div>
     );
   };

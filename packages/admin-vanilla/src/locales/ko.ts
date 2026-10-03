@@ -651,6 +651,8 @@ export const koStrings: Record<string, string> = {
   "Every import that replaces a wiki writes one first. Only the newest {keep} of each wiki are kept — delete what you no longer need.": "위키를 대체하는 모든 가져오기는 먼저 스냅샷을 하나 기록합니다. 위키별 최신 {keep}개만 남습니다. 더 이상 필요 없는 것은 여기에서 삭제하세요.",
   "Every import that replaces a wiki writes one first. Delete what you no longer need.": "위키를 대체하는 모든 가져오기는 먼저 스냅샷을 하나 기록합니다. 더 이상 필요 없는 것은 여기에서 삭제하세요.",
   "Show snapshots and tidy up": "스냅샷 보기 및 정리",
+  "Show details": "세부 정보 표시",
+  "Hide details": "세부 정보 숨기기",
   "Loading snapshots\u2026": "스냅샷 불러오는 중…",
   "No snapshots yet. The first one is written by the next import.": "아직 스냅샷이 없습니다. 첫 스냅샷은 다음 가져오기에서 만들어집니다.",
   "{count} tiddlers": "티들러 {count}개",

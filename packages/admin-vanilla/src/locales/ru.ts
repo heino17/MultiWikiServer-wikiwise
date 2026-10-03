@@ -668,6 +668,8 @@ export const ruStrings: Record<string, string> = {
   "Every import that replaces a wiki writes one first. Only the newest {keep} of each wiki are kept — delete what you no longer need.": "Каждый импорт, заменяющий вики, сначала создаёт моментальный снимок. Хранятся только {keep} самых новых снимков каждой вики — удалите то, что больше не нужно.",
   "Every import that replaces a wiki writes one first. Delete what you no longer need.": "Каждый импорт, заменяющий вики, сначала создаёт моментальный снимок. Удалите то, что больше не нужно.",
   "Show snapshots and tidy up": "Показать моментальные снимки и убраться",
+  "Show details": "Показать подробности",
+  "Hide details": "Скрыть подробности",
   "Loading snapshots\u2026": "Загрузка снимков…",
   "No snapshots yet. The first one is written by the next import.": "Снимков пока нет. Первый появится при следующем импорте.",
   "{count} tiddlers": "{count} тайдлеров",
