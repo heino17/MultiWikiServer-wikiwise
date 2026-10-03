@@ -4707,6 +4707,41 @@ tsc2`, the admin typecheck, `npm run build` and the i18n audit (648 keys per
 language, no orphans, no duplicates, no invented placeholders, no literal `t()`
 without an entry) are clean.
 
+## 99. Cleanup: the copy-pasted CSS block at the end of `app.inline.css`
+
+**Why.** §98 left a note about duplicated rules further down `app.inline.css` and
+guessed which ones they were. The guess was half wrong, so it was worth doing
+properly: `app.inline.css` now has a small parser in the history of this file
+rather than a grep, because the grep sees 25 duplicate selectors and the real
+number is seven — and a naive count is exactly what produced the wrong note.
+
+Three of the seven are not duplicates at all and stay untouched: the dark theme
+variables are split across two places (`html[data-theme="dark"]` at one line and
+the `--note-bg-*` additions some 800 lines later, both inside the same
+`prefers-color-scheme: dark` query), and `.user-files-actions` has two rules with
+disjoint properties. Removing either half would take a colour or a layout with it.
+
+Four really were duplicated. `.error-banner` was declaration-for-declaration
+identical to its copy, so the copy is gone. `.ghost-button`, `.close-button` and
+`.primary-button` were subtler: the pasted copies were *supersets* — they carried
+`border: 0; cursor: pointer` and `border: 1px solid var(--color-border-soft)` on
+top of the originals. Deleting them would have brought the browser's default
+button border back, so those declarations were moved into the first, tab-indented
+rule instead. The stale `/* border: 0; */` comment in `.primary-button` went with
+it; the rule is now the one the grouped selector at the top of the file agrees
+with.
+
+**Verified.** Computed styles were captured from the running admin before and
+after — 7 selectors (including all four touched ones) times 18 properties,
+compared property by property: **0 differences**. The snapshot hint still measures
+44px closed and 165px open, the "tidy up" button keeps its 1px border, its cursor
+and its 306px width, the wiki chip still opens the dialog with its 4 rows, and no
+console or page errors appear. `npm run build` and the admin typecheck are clean.
+
+The pinboard block further up is indented with spaces while the rest of the file
+uses tabs. That is left alone on purpose: it is a whole section, it changes nothing,
+and reindenting it would bury this cleanup in noise.
+
 ## 98. Feature: the snapshot hint folds away, the sum stays
 
 **Why.** The hint of §97 answered the right question but spent 122px on it, and
@@ -9705,6 +9740,44 @@ tsc2`, der Admin-Typecheck, `npm run build` und das i18n-Audit (648 Schlüssel j
 Sprache, keine Waisen, keine Dubletten, keine erfundenen Platzhalter, kein
 literaler `t()` ohne Eintrag) sind sauber.
 
+
+## 99. Aufräumen: der kopierte CSS-Block am Ende von `app.inline.css`
+
+**Why.** §98 hat eine Notiz über doppelte Regeln weiter unten in
+`app.inline.css` hinterlassen und geraten, welche es sind. Die Hälfte des Raten
+war falsch — es lohnt also, es richtig zu machen: In `app.inline.css` steht jetzt
+ein kleiner Parser in der Historie dieser Datei statt eines Greps, denn das Grep
+sieht 25 doppelte Selektoren und die wirkliche Zahl ist sieben. Eine grobe Zählung
+ist genau das, was die falsche Notiz erzeugt hat.
+
+Drei der sieben sind gar keine Duplikate und bleiben unangetastet: die Variablen
+des dunklen Themes sind auf zwei Stellen verteilt (`html[data-theme="dark"]` an
+einer Zeile und die `--note-bg-*`-Ergänzungen rund 800 Zeilen später, beide in
+derselben `prefers-color-scheme: dark`-Abfrage), und `.user-files-actions` hat
+zwei Regeln mit disjunkten Eigenschaften. Eine der Hälften zu löschen würde eine
+Farbe oder ein Layout mitnehmen.
+
+Vier waren wirklich doppelt. `.error-banner` war deklarationsweise identisch mit
+seiner Kopie, die Kopie ist weg. `.ghost-button`, `.close-button` und
+`.primary-button` sind subtiler: Die eingefügten Kopien waren *Obermengen* — sie
+trugen `border: 0; cursor: pointer` beziehungsweise
+`border: 1px solid var(--color-border-soft)` zusätzlich zu den Originalen. Sie zu
+löschen hätte den Standardrahmen des Browsers zurückgebracht, also sind diese
+Deklarationen in die erste, mit Tabs eingerückte Regel umgezogen. Der veraltete
+Kommentar `/* border: 0; */` in `.primary-button` ist mit verschwunden; die Regel
+ist jetzt die, mit der der gruppierte Selektor am Dateianfang übereinstimmt.
+
+**Verified.** Die berechneten Stile wurden aus dem laufenden Admin vor und nach dem
+Eingriff ausgelesen — 7 Selektoren (darunter alle vier berührten) mal 18
+Eigenschaften, Eigenschaft für Eigenschaft verglichen: **0 Unterschiede**. Der
+Snapshot-Hinweis misst weiter 44px zu und 165px auf, der Aufräum-Knopf behält
+seinen 1px-Rahmen, seinen Zeiger-Cursor und seine 306px Breite, der Wiki-Chip öffnet
+weiter den Dialog mit seinen 4 Zeilen, und es erscheinen keine Konsolen- oder
+Seitenfehler. `npm run build` und der Admin-Typecheck sind sauber.
+
+Der Pinnwand-Block weiter oben ist mit Leerzeichen eingerückt, der Rest der Datei
+mit Tabs. Das bleibt absichtlich so: Es ist ein ganzer Abschnitt, es ändert nichts,
+und eine Umformatierung würde diese Aufräumarbeit in Rauschen begraben.
 
 ## 98. Feature: der Snapshot-Hinweis klappt sich weg, die Summe bleibt
 

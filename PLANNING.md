@@ -136,10 +136,18 @@ Markers used below:
 - ⚖️ `.field-callout` was defined twice in `app.inline.css`, the second copy
   pasted in further down with spaces instead of tabs. It was declaration-for-
   declaration identical, won on source order, and silently overrode the snapshot
-  hint for one section; the copy is gone (§98). `pinboard-hint`, `error-banner`
-  and `primary-button` are duplicated the same way in that block and were left
-  alone — check this before adding a rule for any of them, or delete them in a
-  commit of its own
+  hint for one section. The whole pasted block is gone now (§98, §99): the extra
+  declarations of `.ghost-button`, `.close-button` and `.primary-button` were
+  moved into their first rules, because the copies were supersets and deleting
+  them would have brought the browser's default button border back. Three
+  apparent duplicates are *not* duplicates and are deliberately left alone — the
+  dark theme variables are split across two places in the same
+  `prefers-color-scheme: dark` query, and `.user-files-actions` has two rules
+  with disjoint properties. Check this before touching any of them; a grep counts
+  25 duplicate selectors, the real number was 7
+- ◐ The pinboard block in `app.inline.css` is indented with spaces, the rest of
+  the file with tabs. Harmless, but every future edit there has to decide which
+  convention it follows
 - ⚖️ The session state of the browser that saved a file is dropped before the
   opt-in is even looked at — `$:/StoryList`, `$:/temp/`, `$:/state/`,
   `$:/status/`, `$:/HistoryList`, `$:/Import`, `$:/build`, `$:/isEncrypted` — the
