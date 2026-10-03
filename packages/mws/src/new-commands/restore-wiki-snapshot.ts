@@ -85,7 +85,9 @@ export class RestoreWikiSnapshotCommand extends BaseCommand<[string], RestoreWik
 
 			const tiddlers = await readSnapshotTiddlers(prisma, snapshotBagName);
 
-			const plan = await planTiddlers(prisma, { tiddlers, target, mode: "replace" });
+			// A snapshot is a complete copy of the wiki's own bag: the restore
+			// reproduces it exactly, system tiddlers included.
+			const plan = await planTiddlers(prisma, { tiddlers, target, mode: "replace", keepTargetSystem: false });
 			console.log(`${this.options["dry-run"] ? "would restore" : "restoring"} ${tiddlers.length} tiddler(s) `
 				+ `from "${snapshotBagName}" into "${bagName}": ${plan.created.length} new, `
 				+ `${plan.updated.length} changed, ${plan.unchanged.length} unchanged, ${plan.deleted.length} deleted`);

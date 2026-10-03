@@ -59,6 +59,7 @@ import { getEffectiveTheme, toggleTheme, type ThemeMode } from "./theme";
 import "./pinboard";
 import "./user-files";
 import { WikiFileImportDialog } from "./wiki-file-import";
+import { SnapshotRestoreDialog } from "./snapshot-restore";
 import "./hero-locale-select";
 
 // Installation-wide feature defaults administered on the "Settings" page
@@ -1262,6 +1263,10 @@ export class App extends JSXElement {
   @state() accessor newWikiError = "";
   /** Wiki-Datei-Dialog (Import aus einer gespeicherten Single-File-Wiki). */
   @state() accessor wikiFileImportOpen = false;
+  /** Snapshot-Dialog (eigenes Fenster, nicht im Import-Dialog versteckt). */
+  @state() accessor snapshotRestoreOpen = false;
+  /** Wiki, die der Snapshot-Dialog vorwählen soll. */
+  @state() accessor snapshotRestoreSlug = "";
   @state() accessor themeMode: ThemeMode = getEffectiveTheme();
   @state() accessor thumbnailSrc = "";
   /** 1-based page of the paginated "Wikis" list. Reset on every tab switch;
@@ -1443,6 +1448,19 @@ export class App extends JSXElement {
 
   private readonly closeWikiFileImport = () => {
     this.wikiFileImportOpen = false;
+  };
+
+  /** Two modals would stack, so the import dialog steps aside for the restore
+   *  dialog and hands over the wiki it just wrote. */
+  private readonly openSnapshotRestore = (slug = "") => {
+    this.wikiFileImportOpen = false;
+    this.snapshotRestoreSlug = slug;
+    this.snapshotRestoreOpen = true;
+  };
+
+  private readonly closeSnapshotRestore = () => {
+    this.snapshotRestoreOpen = false;
+    this.snapshotRestoreSlug = "";
   };
 
   /** An import writes into another wiki and a restore rewrites one: both
@@ -1931,6 +1949,16 @@ export class App extends JSXElement {
                     onclick={() => { this.openWikiFileImport(); this.closeCreateWikiMenu(); }}
                     disabled={isLoadingData}
                   >{t("Take over a wiki file")}</button>
+                  {/* A restore needs no file and no name, it only needs a wiki
+                      that already exists. It gets its own entry instead of a
+                      list hidden inside the import dialog. */}
+                  <button
+                    class="create-wiki-action"
+                    type="button"
+                    role="menuitem"
+                    onclick={() => { this.openSnapshotRestore(); this.closeCreateWikiMenu(); }}
+                    disabled={isLoadingData}
+                  >{t("Restore a snapshot")}</button>
                 </div>
               </details>
             ) : null}
@@ -2403,6 +2431,19 @@ export class App extends JSXElement {
               displayName: wiki.displayName || wiki.slug,
             }))}
             onClose={this.closeWikiFileImport}
+            onDone={this.wikiFileImportDone}
+            onRestoreSnapshots={this.openSnapshotRestore}
+          />
+        ) : null}
+
+        {this.snapshotRestoreOpen ? (
+          <SnapshotRestoreDialog
+            wikis={(this.store.state.itemsByTab.wikis ?? []).map(wiki => ({
+              slug: wiki.slug,
+              displayName: wiki.displayName || wiki.slug,
+            }))}
+            initialSlug={this.snapshotRestoreSlug}
+            onClose={this.closeSnapshotRestore}
             onDone={this.wikiFileImportDone}
           />
         ) : null}

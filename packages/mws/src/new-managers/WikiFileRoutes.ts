@@ -24,7 +24,7 @@ import { RecipeResolver } from "./RecipeResolver";
 import { WikiImportMode, WikiImportPlan, WikiImportTarget, applyWikiFileImport, defaultWriteTargetBag, planWikiFileImport, restoreSnapshotBag } from "./importWikiFile";
 import { assertWikiCreationAllowed, defaultBagName, newWikiAdminRole, newWikiSlug, sanitizeSlugPart } from "./TabDataAdapter";
 import { ParsedWikiFile, WikiFileError, formatBytes, inspectWikiFile, parseWikiFile } from "./WikiFileImport";
-import { listSnapshotBags, snapshotBagPrefix } from "./WikiSnapshotBag";
+import { DEFAULT_SNAPSHOT_KEEP, deleteSnapshotBag, listSnapshotBags, snapshotStampOf } from "./WikiSnapshotBag";
 import { createWikiShell, writeStarterTiddlers } from "./WikiShell";
 
 /** How many titles of a list the dialog shows before it only counts the rest. */
@@ -119,7 +119,8 @@ async function readUploadedWikiFile(state: ServerRequest<"stream">): Promise<{ f
 /** Parses the file, or answers with a message the person who picked it can act on. */
 async function parseUpload(state: ServerRequest, html: string, options: {
   includeSystem: boolean;
-  /** The version the target wiki or template uses, for a file version that is not installed. */
+  includePlugins: boolean;
+  /** The version the target wiki or template uses; the plugins are checked against it. */
   fallbackVersion?: string;
 }): Promise<{ parsed: ParsedWikiFile; readWith: string }> {
   try {
@@ -127,6 +128,8 @@ async function parseUpload(state: ServerRequest, html: string, options: {
     const { $tw, version } = await bootForParsing(state, info.twVersion, options.fallbackVersion);
     const parsed = parseWikiFile($tw, html, {
       includeSystem: options.includeSystem,
+      includePlugins: options.includePlugins,
+      targetVersion: options.fallbackVersion,
       sizeLimit: state.config.wikiFileSizeLimit,
     });
     return { parsed, readWith: version };
@@ -284,10 +287,13 @@ function planSummary(plan: WikiImportPlan) {
     /** Left out because they are system tiddlers. */
     skippedSystem: plan.skippedSystemTitles.length,
     /**
-     * Core plugins, themes and libraries never enter a bag; only the language
-     * pack does, because MWS keeps language packs in the bag, not the recipe.
+     * Core plugins, themes and libraries enter a bag only when the operator
+     * asked for them and they are the version the wiki runs.
      */
-    skippedPlugins: sample(plan.skippedPluginTitles),
+    keptPlugins: sample(plan.keptPluginTitles),
+    /** Left out, with the reason the dialog turns into a sentence. */
+    skippedPlugins: sample(plan.skippedPlugins.map(row => row.title)),
+    skippedPluginReasons: plan.skippedPlugins,
     /** Session and build state the file carries, dropped while reading it. */
     skippedTransient: sample(plan.skippedTransientTitles),
     /** What becomes of the file's language. */
@@ -326,7 +332,7 @@ function systemSummary(parsed: ParsedWikiFile) {
 }
 
 const QUERY_KEYS: string[] = [
-  "create", "wiki", "slug", "bag", "merge", "include-system", "template", "display-name", "snapshot-keep",
+  "create", "wiki", "slug", "bag", "merge", "include-system", "include-plugins", "template", "display-name", "snapshot-keep",
 ];
 
 /** Upload → preview. Nothing is written. */
@@ -344,6 +350,7 @@ export const AdminWikiFileInspect = zodRoute({
 
     const create = flag(state, "create");
     const includeSystem = flag(state, "include-system");
+    const includePlugins = flag(state, "include-plugins");
     const mode: WikiImportMode = flag(state, "merge") ? "merge" : "replace";
     const templateName = state.query.get("template") || DEFAULT_TEMPLATE;
     const wikiSlug = state.query.get("wiki") || undefined;
@@ -358,7 +365,7 @@ export const AdminWikiFileInspect = zodRoute({
     const fallbackVersion = create
       ? await templateParserVersion(state, templateName)
       : (wikiSlug ? await wikiParserVersion(state, wikiSlug) : undefined);
-    const { parsed, readWith } = await parseUpload(state, html, { includeSystem, fallbackVersion });
+    const { parsed, readWith } = await parseUpload(state, html, { includeSystem, includePlugins, fallbackVersion });
 
     const targetOptions = {
       requestedSlug: state.query.get("slug") || undefined,
@@ -378,6 +385,7 @@ export const AdminWikiFileInspect = zodRoute({
       target: resolved.target,
       mode,
       includeSystem,
+      includePlugins,
     });
 
     return {
@@ -390,6 +398,7 @@ export const AdminWikiFileInspect = zodRoute({
         templateName: create ? templateName : null,
       },
       includeSystem,
+      includePlugins,
       plan: planSummary(plan),
       system: systemSummary(parsed),
     };
@@ -410,6 +419,7 @@ export const AdminWikiFileImport = zodRoute({
 
     const create = flag(state, "create");
     const includeSystem = flag(state, "include-system");
+    const includePlugins = flag(state, "include-plugins");
     const mode: WikiImportMode = flag(state, "merge") ? "merge" : "replace";
     const templateName = state.query.get("template") || DEFAULT_TEMPLATE;
     const wikiSlug = state.query.get("wiki") || undefined;
@@ -423,7 +433,7 @@ export const AdminWikiFileImport = zodRoute({
     const fallbackVersion = create
       ? await templateParserVersion(state, templateName)
       : (wikiSlug ? await wikiParserVersion(state, wikiSlug) : undefined);
-    const { parsed } = await parseUpload(state, html, { includeSystem, fallbackVersion });
+    const { parsed } = await parseUpload(state, html, { includeSystem, includePlugins, fallbackVersion });
 
     const targetOptions = {
       requestedSlug: state.query.get("slug") || undefined,
@@ -459,7 +469,7 @@ export const AdminWikiFileImport = zodRoute({
         target = { recipeId: shell.recipeId, bagId: shell.bagId, bagName: shell.bagName };
       }
 
-      const plan = await planWikiFileImport(prisma, { parsed, target, mode, includeSystem });
+      const plan = await planWikiFileImport(prisma, { parsed, target, mode, includeSystem, includePlugins });
       const written = await applyWikiFileImport(prisma, {
         parsed,
         plan,
@@ -522,6 +532,9 @@ export const AdminWikiFileSnapshots = zodRoute({
     return {
       slug: resolved.slug,
       bagName: resolved.bagName,
+      // The dialog states the rule instead of letting it be a surprise when a
+      // snapshot disappears from the list.
+      keep: DEFAULT_SNAPSHOT_KEEP,
       snapshots: snapshots.map(snapshot => ({
         bagName: snapshot.bagName,
         created: snapshot.created,
@@ -556,9 +569,7 @@ export const AdminWikiFileRestore = zodRoute({
     // Only a snapshot of this wiki may be restored into it — otherwise a bag
     // admin of one wiki could read another wiki's tiddlers by restoring its
     // snapshot here.
-    const prefix = snapshotBagPrefix(slug);
-    const stamp = snapshot.startsWith(prefix) ? snapshot.slice(prefix.length) : "";
-    if (!stamp || stamp.includes("/")) {
+    if (!snapshotStampOf(slug, snapshot)) {
       throw new SendError("ACCESS_DENIED", 403, { reason: "This snapshot does not belong to that wiki." });
     }
 
@@ -596,5 +607,52 @@ export const AdminWikiFileRestore = zodRoute({
         }
         : null,
     };
+  },
+});
+
+/**
+ * Deletes one snapshot of a wiki.
+ *
+ * Behind the same gate as the restore, even though it writes nothing: the
+ * snapshot is the only way back out of a bad import, so who may throw it away
+ * is the same question as who may use it. Deleting does not shorten the list —
+ * the retention rule counts snapshots, not rows — so the next import simply
+ * writes into a freed slot.
+ */
+export const AdminWikiFileSnapshotDelete = zodRoute({
+  method: ["PUT"],
+  path: "/api/wiki-file/snapshot/delete",
+  bodyFormat: "json",
+  securityChecks: { requestedWithHeader: true },
+  zodPathParams: z => ({}),
+  zodQueryKeys: ["wiki"],
+  zodRequestBody: z => z.object({
+    snapshot: z.string().min(1),
+  }),
+  inner: async (state) => {
+    state.okUser();
+    state.assertReferer(["/"]);
+
+    const slug = state.query.get("wiki");
+    if (!slug) throw new SendError("ARGUMENT_REQUIRED", 400, { name: "wiki" });
+    const { snapshot } = state.data;
+
+    // The same guard as the restore: only a snapshot of this wiki may be named
+    // here, and only its stamp — no path may lead out of its own prefix.
+    if (!snapshotStampOf(slug, snapshot)) {
+      throw new SendError("ACCESS_DENIED", 403, { reason: "This snapshot does not belong to that wiki." });
+    }
+
+    const resolved = await resolveWikiTarget(state, state.engine, { mode: "replace", wikiSlug: slug });
+    state.asserted = true;
+
+    const deleted = await state.$transaction(async (prisma) => {
+      const known = (await listSnapshotBags(prisma, resolved.slug)).some(row => row.bagName === snapshot);
+      if (!known) throw new SendError("WIKI_FILE_INVALID", 404, { reason: "There is no such snapshot." });
+      return deleteSnapshotBag(prisma, snapshot);
+    });
+    if (!deleted) throw new SendError("WIKI_FILE_INVALID", 404, { reason: "There is no such snapshot." });
+
+    return { slug: resolved.slug, deleted: snapshot };
   },
 });

@@ -32,9 +32,18 @@ Markers used below:
 - ✅ Import a single-file TiddlyWiki 5 — `import-wiki-file`, parser in
   `new-managers/WikiFileImport.ts` ([§84](CHANGELOG.md))
 - ✅ The admin dialog for it: "Take over a wiki file" in the "Create a wiki"
-  dropdown, upload → preview → confirmation, system-tiddler opt-in and the
-  snapshot list with restore, behind `/api/wiki-file/*`
-  ([§85](CHANGELOG.md))
+  dropdown, upload → preview → confirmation, system-tiddler opt-in, behind
+  `/api/wiki-file/*` ([§85](CHANGELOG.md))
+- ✅ The snapshot list left that dialog: it was only reachable after picking an
+  existing wiki *and* inspecting a file, and the restore button was a bare
+  icon. "Restore a snapshot" in the same dropdown opens its own dialog with a
+  wiki picker, a written restore button and an inline confirmation; the import
+  dialog keeps only an undo button in its result
+  ([§92](CHANGELOG.md))
+- ✅ A snapshot can be deleted from the restore dialog, behind the same gate as
+  the restore and with its own inline confirmation, and the retention rule
+  stands written under the list instead of letting snapshots quietly vanish
+  from it ([§93](CHANGELOG.md))
 - ◐ The wiki-file list in "My Files" and the migration of existing
   `user_file` HTML attachments into a bag are still open
 - ⚖️ The wiki-file routes live under `/api`, not under `/admin`: the generic
@@ -52,19 +61,60 @@ Markers used below:
   wiki. Do not re-open this as "just delete the tiddlers" — the restore command
   depends on that bag, and open tabs are updated through `WikiStore` events
   ([§84](CHANGELOG.md))
-- ⚖️ Core plugin, theme and library tiddlers of an imported file are never
-  written into a bag: the plugins of a wiki come from its recipe, and `$:/core`
-  alone is megabytes. ``A language pack is the exception``, because MWS keeps
+- ⚖️ A wiki takes its snapshots with it: deleting a wiki drops the snapshot bags
+  of that slug in the same transaction. They belong to no recipe, so nothing
+  else would ever touch them, and the restore dialog cannot name a wiki that no
+  longer exists — up to ten full copies of a deleted wiki would otherwise sit in
+  the store with no way to reach them. Note that snapshots are keyed by slug,
+  not by wiki identity: a wiki recreated under a name it had before inherits the
+  old snapshots, and restoring one writes that old content into the new wiki
+  ([§93](CHANGELOG.md))
+- ⚖️ Core plugin, theme and library tiddlers of an imported file are written
+  into a bag **only when the operator asks for them and only when the plugin's
+  own `version` is the version the target wiki runs**; by default they are left
+  out, because the plugins of a wiki come from its recipe and `$:/core` alone is
+  megabytes. The version test is deliberately on `version` and not on
+  `core-version`: the latter only says which cores a plugin accepts
+  (`">=5.0.0"` for the stock core) and would let anything through, while a core
+  from another release breaks the wiki in a way no snapshot brings back. A
+  plugin that names no version cannot be checked and therefore stays out.
+  ``A language pack is not part of this opt-in``, because MWS keeps
   language plugins in the bag and not in the recipe — the recipe's plugin list
   is empty for the wikis MWS creates, the language is a property of the wiki
   and not of the installation. It travels under the same opt-in as every other
   `$:/` tiddler, and `$:/language` itself is only written when the wiki can
   speak the language afterwards (pack in the file, in the core, or in the target
   bag), otherwise the target keeps its own language
-  ([§86](CHANGELOG.md))
+  ([§86](CHANGELOG.md), [§94](CHANGELOG.md))
+- ⚖️ An imported core plugin travels with the wiki, but it does not necessarily
+  run: a template with `externalPlugins` serves its plugins from the
+  installation's cache as `$tw.preloadTiddler` scripts, and `loadTiddlersBrowser`
+  puts them into the store *after* the DOM store, so the cached copy wins. The
+  imported copy is what the bag holds, what the snapshots carry and what another
+  installation reads; with `externalPlugins` off the bag copy is the one that
+  boots. Do not "fix" this by reordering the boot — the cache copy is what the
+  client plugin of the installation is built against
+  ([§94](CHANGELOG.md))
 - ⚖️ `$:/` tiddlers are skipped unless the operator opts in, and a replace never
   *deletes* the `$:/` tiddlers of the target bag. Both rules are deliberate, not
   an oversight
+- ⚖️ …with one exception, and it is a *restore*: it deletes `$:/` tiddlers like
+  any other. The rule above protects the wiki from a file that stays silent
+  about its own settings; a snapshot is not silent about them, it is the wiki's
+  own former state including them. Treating a restore like an import left
+  everything the wiki had gained since the snapshot standing, so a restored
+  wiki was a mixture of the wiki and the snapshot — and only for system
+  tiddlers, which made it look like a random defect rather than a rule
+  ([§96](CHANGELOG.md))
+- ⚖️ `$:/DefaultTiddlers` is the one system tiddler MWS also takes from the core
+  of an uploaded file, and it does so *without* the system-tiddler opt-in. A
+  single-file TiddlyWiki practically never keeps the start page in its store —
+  the stock edition leaves it in `$:/core`, where it reads `GettingStarted` —
+  so reading only the store left every such import on whatever MWS wrote when
+  the wiki was created (`Willkommen`), a title the file never had. The result
+  looked like a broken import while the import itself was correct. The core is
+  only consulted when the file's store says nothing about it
+  ([§95](CHANGELOG.md))
 - ⚖️ The session state of the browser that saved a file is dropped before the
   opt-in is even looked at — `$:/StoryList`, `$:/temp/`, `$:/state/`,
   `$:/status/`, `$:/HistoryList`, `$:/Import`, `$:/build`, `$:/isEncrypted` — the
