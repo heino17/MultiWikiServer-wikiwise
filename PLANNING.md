@@ -126,6 +126,20 @@ Markers used below:
 - ◐ The hint is a box above the list, not a count per row. Rows won the argument
   about clutter, but they would also be the better place if the wikis page ever
   grows a column of its own ([§97](CHANGELOG.md))
+- ⚖️ The hint shows only its head line by default and opens on a click. Closed it
+  is 44px instead of 165px, which is the point: the number is what has to be seen,
+  the wikis are what has to be reachable. The price is that "tidy up" is now two
+  clicks away instead of one — accepted, because a permanent 165px box above a list
+  that is itself mostly names is the bigger cost. The open state is not remembered
+  between visits, on purpose: a hint that reopens itself has stopped being one
+  ([§98](CHANGELOG.md))
+- ⚖️ `.field-callout` was defined twice in `app.inline.css`, the second copy
+  pasted in further down with spaces instead of tabs. It was declaration-for-
+  declaration identical, won on source order, and silently overrode the snapshot
+  hint for one section; the copy is gone (§98). `pinboard-hint`, `error-banner`
+  and `primary-button` are duplicated the same way in that block and were left
+  alone — check this before adding a rule for any of them, or delete them in a
+  commit of its own
 - ⚖️ The session state of the browser that saved a file is dropped before the
   opt-in is even looked at — `$:/StoryList`, `$:/temp/`, `$:/state/`,
   `$:/status/`, `$:/HistoryList`, `$:/Import`, `$:/build`, `$:/isEncrypted` — the

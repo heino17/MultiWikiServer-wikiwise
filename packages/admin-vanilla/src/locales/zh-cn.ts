@@ -651,6 +651,8 @@ export const zhCnStrings: Record<string, string> = {
   "Every import that replaces a wiki writes one first. Only the newest {keep} of each wiki are kept — delete what you no longer need.": "每次替换维基的导入都会先写入一个快照。每个维基只保留最新的 {keep} 个——不需要的请在此删除。",
   "Every import that replaces a wiki writes one first. Delete what you no longer need.": "每次替换维基的导入都会先写入一个快照。不需要的请在此删除。",
   "Show snapshots and tidy up": "查看快照并清理",
+  "Show details": "显示详情",
+  "Hide details": "隐藏详情",
   "Loading snapshots\u2026": "正在加载快照…",
   "No snapshots yet. The first one is written by the next import.": "还没有快照。下一次导入会创建第一个。",
   "{count} tiddlers": "{count} 个条目",

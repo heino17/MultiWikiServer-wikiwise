@@ -678,6 +678,8 @@ export const deStrings: Record<string, string> = {
   "Every import that replaces a wiki writes one first. Only the newest {keep} of each wiki are kept — delete what you no longer need.": "Jeder Import, der eine Wiki ersetzt, legt vorher einen an. Von jeder Wiki bleiben nur die neuesten {keep} — löschen Sie, was Sie nicht mehr brauchen.",
   "Every import that replaces a wiki writes one first. Delete what you no longer need.": "Jeder Import, der eine Wiki ersetzt, legt vorher einen an. Löschen Sie, was Sie nicht mehr brauchen.",
   "Show snapshots and tidy up": "Snapshots ansehen und aufräumen",
+  "Show details": "Mehr anzeigen",
+  "Hide details": "Weniger anzeigen",
   "Loading snapshots\u2026": "Snapshots werden geladen\u2026",
   "No snapshots yet. The first one is written by the next import.": "Noch keine Snapshots. Der erste entsteht beim nächsten Import.",
   "{count} tiddlers": "{count} Tiddler",

@@ -2474,16 +2474,16 @@ table.value-table td {
 /* The snapshot hint sits above the wikis list, so it stays quiet: one line of
    headline, the wikis as buttons, and the explanation in the muted colour the
    callout already uses. */
+/* .field-callout is a two-column grid, which would lay this out as a 2x2
+   block. The hint is one column, and the children keep the full width so the
+   toggle stays at the right edge in both states instead of jumping next to
+   the text when it opens. */
 .snapshot-hint {
 	margin-bottom: 8px;
 	padding: 10px 12px;
 	border-radius: 10px;
-	/* .field-callout is a two-column grid, which lays four children out as a
-	   2x2 block instead of four lines. The hint is one column, and the button
-	   in it keeps its own width rather than stretching. */
 	display: flex;
 	flex-direction: column;
-	align-items: flex-start;
 }
 
 /* Both icons sit in text that has no intrinsic size for them; without this the
@@ -2495,12 +2495,47 @@ table.value-table td {
 	flex: 0 0 auto;
 }
 
+/* The head is the toggle, so it is a real button: reachable by keyboard, and
+   it announces its state. It looks like the line of text it replaced. */
 .snapshot-hint-head {
 	display: flex;
 	align-items: center;
 	gap: 8px;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: none;
 	color: var(--color-text-strong) !important;
+	font: inherit;
 	font-weight: 600;
+	text-align: left;
+	cursor: pointer;
+}
+
+.snapshot-hint-head:hover {
+	color: var(--color-accent-label) !important;
+}
+
+.snapshot-hint-head > span:first-of-type {
+	flex: 1 1 auto;
+}
+
+/* Pushed to the far right, so the row reads as "click me" without a border. */
+.snapshot-hint-toggle {
+	display: flex;
+	flex: 0 0 auto;
+	margin-left: auto;
+	transition: transform 120ms ease;
+}
+
+.snapshot-hint-head[aria-expanded="true"] .snapshot-hint-toggle {
+	transform: rotate(180deg);
+}
+
+.snapshot-hint-head:focus-visible {
+	outline: 2px solid var(--color-accent-fill);
+	outline-offset: 3px;
+	border-radius: 4px;
 }
 
 .snapshot-hint-head material-symbol svg {
@@ -4037,21 +4072,6 @@ html[data-theme="dark"] .pinboard-note-actions {
   border-radius: 16px;
   background: color-mix(in srgb, var(--color-danger) 9%, var(--color-surface-field));
   border: 1px solid var(--color-border-danger);
-}
-
-.field-callout {
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: var(--color-surface-field);
-  border: 1px solid var(--color-border-soft);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) max-content;
-}
-
-.field-callout p {
-  margin: 0;
-  color: var(--color-text-muted);
-  line-height: 1.6;
 }
 
 .primary-button {

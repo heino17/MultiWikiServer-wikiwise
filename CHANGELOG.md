@@ -4707,6 +4707,40 @@ tsc2`, the admin typecheck, `npm run build` and the i18n audit (648 keys per
 language, no orphans, no duplicates, no invented placeholders, no literal `t()`
 without an entry) are clean.
 
+## 98. Feature: the snapshot hint folds away, the sum stays
+
+**Why.** The hint of §97 answered the right question but spent 122px on it, and
+on a narrow screen it pushed the wikis it talks about further down the page. What
+the eye needs first is a single number — "4 snapshots" — and everything else is
+detail that only matters once you decide to deal with it. So the hint now shows
+only its head line by default, and the head line is what you click.
+
+The head is a real `<button>`, not a click handler on a paragraph: it is reachable
+by keyboard, carries `aria-expanded` and `aria-controls`, and a chevron on the far
+right rotates when it opens. Two new strings came with it ("Show details" /
+"Hide details"), because a title tooltip that says nothing about what will happen
+is worse than none.
+
+No new icon: `keyboard_arrow_down.svg` was already imported as `expandIcon` for
+the pinboard and is now used for the chevron too.
+
+**Verified.** In the browser, with 4 snapshots on `neues-admin-empty`: closed 44px,
+open 165px, the head stays 1408px wide in both states and the chevron keeps its
+13px distance from the right edge instead of jumping next to the text; click, second
+click and Enter all toggle, `aria-expanded` follows, and the wiki chip still opens
+the snapshot dialog. At 420px the closed head wraps to 59px and the open one is
+222px — no overflow, the chips stay inside. `npm run tsc2`, the admin typecheck,
+`npm run build` and the i18n audit are clean.
+
+The head came out content-width at first and the chevron jumped left when the hint
+opened. `.field-callout` was defined **twice** in `app.inline.css`, the second copy
+pasted in further down with spaces instead of tabs, and it won on source order —
+so the hint was a two-column grid all along and `display: flex` never applied. The
+second copy was declaration-for-declaration identical to the first, so it was
+deleted instead of worked around; the layout is unchanged without it. The rest of
+that pasted block (`.pinboard-hint`, `.error-banner`, `.primary-button`) is still
+duplicated and still harmless.
+
 ## 97. Feature: the wikis page says how many snapshots are lying around
 
 **Why.** A snapshot is written on every import that replaces a wiki, and nobody
@@ -9671,6 +9705,42 @@ tsc2`, der Admin-Typecheck, `npm run build` und das i18n-Audit (648 Schlüssel j
 Sprache, keine Waisen, keine Dubletten, keine erfundenen Platzhalter, kein
 literaler `t()` ohne Eintrag) sind sauber.
 
+
+## 98. Feature: der Snapshot-Hinweis klappt sich weg, die Summe bleibt
+
+**Why.** Der Hinweis aus §97 beantwortet die richtige Frage, kostet dafür aber
+122px — und auf einem schmalen Schirm schiebt er genau die Wikis, über die er
+redet, weiter nach unten. Was das Auge zuerst braucht, ist eine einzige Zahl —
+„4 Snapshots" — und alles andere ist Detail, das erst interessiert, wenn man sich
+daran machen will. Der Hinweis zeigt deshalb von Haus aus nur seine Kopfzeile, und
+die Kopfzeile ist das, was man anklickt.
+
+Die Kopfzeile ist ein echtes `<button>` und kein Klickhandler auf einem Absatz: per
+Tastatur erreichbar, mit `aria-expanded` und `aria-controls`, und ein Chevron am
+rechten Rand dreht sich beim Öffnen. Zwei neue Texte sind dazugekommen („Mehr
+anzeigen" / „Weniger anzeigen"), weil ein Tooltip, der nicht sagt, was passiert,
+schlimmer ist als keiner.
+
+Kein neues Symbol: `keyboard_arrow_down.svg` war als `expandIcon` für die Pinnwand
+schon importiert und dient jetzt auch als Chevron.
+
+**Verified.** Im Browser, mit 4 Snapshots auf `neues-admin-empty`: zu 44px, auf
+165px, die Kopfzeile bleibt in beiden Zuständen 1408px breit und der Chevron
+behält seine 13px Abstand zum rechten Rand, statt beim Öffnen neben den Text zu
+springen; Klick, zweiter Klick und Enter schalten um, `aria-expanded` läuft mit,
+und der Wiki-Chip öffnet weiter das Snapshot-Fenster. Bei 420px bricht die
+geschlossene Kopfzeile auf 59px um, die offene ist 222px hoch — kein Überlauf, die
+Chips bleiben drin. `npm run tsc2`, der Admin-Typecheck, `npm run build` und das
+i18n-Audit sind sauber.
+
+Die Kopfzeile war zuerst textbreit und der Chevron sprang nach links, wenn der
+Hinweis aufging. `.field-callout` stand **zweimal** in `app.inline.css`, die zweite
+Kopie weiter unten mit Leerzeichen statt Tabs eingefügt, und die gewann nach
+Quellreihenfolge — der Hinweis war also die ganze Zeit ein zweispaltiges Grid und
+`display: flex` griff nie. Die zweite Kopie war deklarationsweise mit der ersten
+identisch und wurde deshalb gelöscht statt herumzuarbeiten; ohne sie sieht es
+genauso aus. Der Rest dieses kopierten Blocks (`.pinboard-hint`, `.error-banner`,
+`.primary-button`) ist weiterhin doppelt und weiterhin harmlos.
 
 ## 97. Feature: die Wikis-Seite sagt, wie viele Snapshots herumliegen
 

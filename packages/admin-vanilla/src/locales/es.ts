@@ -675,6 +675,8 @@ export const esStrings: Record<string, string> = {
   "Every import that replaces a wiki writes one first. Only the newest {keep} of each wiki are kept — delete what you no longer need.": "Cada importación que reemplaza una wiki escribe una primero. De cada wiki solo se conservan las {keep} más recientes: borre lo que ya no necesite.",
   "Every import that replaces a wiki writes one first. Delete what you no longer need.": "Cada importación que reemplaza una wiki escribe una primero. Borre lo que ya no necesite.",
   "Show snapshots and tidy up": "Ver instantáneas y ordenar",
+  "Show details": "Mostrar detalles",
+  "Hide details": "Ocultar detalles",
   "Loading snapshots\u2026": "Cargando instantáneas…",
   "No snapshots yet. The first one is written by the next import.": "Todavía no hay instantáneas. La primera la crea la próxima importación.",
   "{count} tiddlers": "{count} tiddlers",
