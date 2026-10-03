@@ -168,6 +168,81 @@ client, three maintenance commits behind it.
 
 ---
 
+## Release 0.5.0 — 2026-10-03
+
+13 commits since 0.4.1. A minor release: MWS can take over a single-file
+TiddlyWiki 5, snapshots get a dialog of their own, and the admin app's numbers
+finally follow the language they are counted in.
+
+**Added**
+
+- **A single-file TiddlyWiki 5 can be taken over by MWS** (§84). `import-wiki-file`
+  reads a saved `index.html` on the server and writes down what it *would* do —
+  new, changed, unchanged, deleted — before it does anything. It boots the real
+  TiddlyWiki 5 that the plugin cache already keeps, so both storage forms are
+  read, the JSON script and the classic `storeArea` div. A TiddlyWiki 2 file and a
+  password-protected one are refused with a wording that says what to do about it.
+- **The same thing from the admin app** (§85): "Take over a wiki file" in the
+  "Create a wiki" dropdown does upload → preview → confirmation, in two requests
+  that never share a document — the preview is recomputed server-side, so it
+  always describes the request that follows. A new wiki shows the slug it will
+  really get; an existing wiki is written with the rights a tiddler save needs,
+  and a replace needs `C_admin` on the write bag, because it deletes what the
+  file does not contain.
+- **Snapshots get their own dialog** (§92, §93): "Restore a snapshot" lists the
+  snapshots of a wiki with date, tiddler count and origin, restores one after an
+  inline confirmation instead of a browser alert, deletes one behind the same
+  gate, and states the retention rule under the list — *Only the newest 10
+  snapshots are kept* — so a snapshot that falls off the end does not look like a
+  mistake. Deleting a wiki takes its snapshots with it in the same transaction.
+- **A file's core plugins, themes and libraries can be imported** (§94), behind
+  an opt-in and only when the plugin's own `version` is the version the target
+  wiki runs. A core from another release breaks a wiki in a way no snapshot
+  brings back.
+- **The wikis page says how many snapshots are lying around** (§97), and the
+  hint folds away so the sum stays while the detail gets out of the way (§98).
+
+**Fixed**
+
+- An imported wiki kept a start page that pointed nowhere (§95).
+- Restoring a snapshot left the wiki in a mixture with it (§96).
+- Three things the single-file import got wrong (§86): the browser session's
+  `$:/StoryList`, drafts and request log were imported along with the content, a
+  German wiki arrived in English because its language pack was left out, and a
+  replace counted the tiddlers it deletes without naming them.
+- The wiki-file dialog spoke only German and English (§87); all eight languages
+  have it now.
+- Numbers did not follow the language they were counted in (§88, §89): `count`
+  was handed to `t()` preformatted in three places, so no plural was ever
+  selected, and ten texts had no `#one` in four languages — English said *1
+  files*.
+- The Spanish `#many` was left open with a single argument and is now either
+  delivered or deliberately not, with the reason written down (§91).
+
+**Maintenance**
+
+- Twelve unused translation keys removed, two used-but-untranslated ones added
+  (§90). `The field {key} is not defined in the draft record` existed in eight
+  languages while the code threw the English string away.
+- The copy-pasted CSS block at the end of `app.inline.css` cleaned up, with a
+  computed-style comparison over seven selectors showing no visual change (§99).
+- This changelog's English half caught up: §§83–§91 had existed only in German
+  and §93 in neither language, though the work it describes has been shipped
+  since 0.4.0.
+
+**Operating notes**
+
+- No migration, no schema change; the 0.2.x data-folder rule and the API are
+  unchanged.
+- The first start after the update builds a fresh plugin cache under
+  `cache/mws/0.5.0/client`; `cache/mws/0.4.1/` is left untouched and can be
+  deleted. `tw5/` is versioned by TiddlyWiki, not by MWS, so an existing
+  installation keeps its TiddlyWiki.
+- The admin bundle is rebuilt, so a running admin app should be reloaded. The
+  wiki-side syncer is not touched in this release.
+
+---
+
 ## 1. Missing dependency: `escape-string-regexp`
 
 **Files:** `package.json` (root)
@@ -5750,6 +5825,87 @@ drei Wartungs-Commits dahinter.
   werden.
 - Der Syncer in der Wiki ist Client-seitiger Code: ein offener Wiki-Tab braucht
   ein Neuladen für das neue Verhalten.
+
+---
+
+## Release 0.5.0 — 2026-10-03
+
+13 Commits seit 0.4.1. Ein Minor-Release: MWS kann eine Single-File-TiddlyWiki-5
+übernehmen, Snapshots bekommen einen eigenen Dialog, und die Zahlen in der
+Admin-App folgen endlich der Sprache, in der sie gezählt werden.
+
+**Neu**
+
+- **Eine Single-File-TiddlyWiki-5 lässt sich von MWS übernehmen** (§84).
+  `import-wiki-file` liest eine gespeicherte `index.html` auf dem Server und
+  schreibt auf, was es *tun würde* — neu, geändert, unverändert, gelöscht —,
+  bevor es etwas tut. Dafür bootet es das echte TiddlyWiki 5, das der
+  Plugin-Cache ohnehin hält, sodass beide Speicherformen gelesen werden, das
+  JSON-Skript und das klassische `storeArea`-Div. Eine TiddlyWiki-2-Datei und
+  eine passwortgeschützte werden mit einer Formulierung abgelehnt, die sagt, was
+  zu tun ist.
+- **Dasselbe aus der Admin-App** (§85): „Wiki-Datei übernehmen" im Dropdown
+  „Wiki erstellen" macht Hochladen → Vorschau → Bestätigung, in zwei Requests,
+  die nie ein Dokument teilen — die Vorschau wird serverseitig neu berechnet und
+  beschreibt damit immer den folgenden Request. Eine neue Wiki zeigt den Slug,
+  den sie wirklich bekommt; eine bestehende wird mit den Rechten geschrieben,
+  die auch ein Tiddler-Speichern braucht, und ein Ersetzen braucht `C_admin` auf
+  dem Schreib-Bag, weil es löscht, was die Datei nicht enthält.
+- **Snapshots bekommen einen eigenen Dialog** (§92, §93): „Snapshot
+  zurückspielen" listet die Snapshots einer Wiki mit Datum, Tiddlerzahl und
+  Herkunft, spielt einen nach einer inline-Bestätigung zurück statt nach einem
+  Browser-Alarm, löscht einen hinter derselben Schranke und schreibt die
+  Aufbewahrungsregel unter die Liste — *Nur die neuesten 10 Snapshots bleiben
+  erhalten* —, damit ein weggefallener Snapshot nicht wie ein Fehler aussieht.
+  Eine gelöschte Wiki nimmt ihre Snapshots in derselben Transaktion mit.
+- **Plugins, Themes und Bibliotheken der Datei lassen sich importieren** (§94),
+  hinter einem Opt-in und nur wenn die eigene `version` des Plugins die Version
+  ist, die die Zielwiki fährt. Ein Core aus einem anderen Release bringt eine
+  Wiki auf eine Weise kaputt, die kein Snapshot zurückholt.
+- **Die Wikis-Seite sagt, wie viele Snapshots herumliegen** (§97), und der
+  Hinweis klappt weg, damit die Summe bleibt und die Details aus dem Weg gehen
+  (§98).
+
+**Behoben**
+
+- Eine importierte Wiki behielt eine Startseite, auf die nirgends zeigte (§95).
+- Ein zurückgespielter Snapshot ließ die Wiki in einem Mischzustand (§96).
+- Drei Dinge, die der Single-File-Import falsch gemacht hat (§86): die
+  `$:/StoryList`, die Entwürfe und das Request-Log der Browser-Sitzung wurden
+  mit dem Inhalt importiert, eine deutsche Wiki kam auf Englisch an, weil ihr
+  Sprachpaket liegen blieb, und ein Ersetzen zählte die Tiddler, die es löscht,
+  ohne sie zu benennen.
+- Der Wiki-Dateien-Dialog sprach nur Deutsch und Englisch (§87); alle acht
+  Sprachen haben ihn jetzt.
+- Zahlen folgten nicht der Sprache, in der sie gezählt wurden (§88, §89): `count`
+  wurde an drei Stellen vorformatiert an `t()` übergeben, sodass nie eine
+  Pluralvariante gewählt wurde, und zehn Texten hatten in vier Sprachen kein
+  `#one` — Englisch sagte *1 files*.
+- Das spanische `#many` stand mit einem einzigen Argument offen und ist jetzt
+  entweder geliefert oder mit Begründung bewusst nicht (§91).
+
+**Wartung**
+
+- Zwölf ungenutzte Übersetzungsschlüssel raus, zwei benutzte, aber nie
+  übersetzte rein (§90). `The field {key} is not defined in the draft record`
+  gab es in acht Sprachen, während der Code den englischen Text wegwarf.
+- Der kopierte CSS-Block am Ende von `app.inline.css` aufgeräumt, mit einem
+  Vergleich der berechneten Stile über sieben Selektoren ohne sichtbare Änderung
+  (§99).
+- Die englische Hälfte dieses Changelogs aufgeholt: §§83–§91 gab es nur auf
+  Deutsch und §93 in keiner Sprache, obwohl die Arbeit darin seit 0.4.0
+  ausgeliefert ist.
+
+**Betriebshinweise**
+
+- Keine Migration, keine Schemaänderung; die 0.2.x-Datenordnerregel und die API
+  bleiben unverändert.
+- Der erste Start nach dem Update baut einen frischen Plugin-Cache unter
+  `cache/mws/0.5.0/client`; `cache/mws/0.4.1/` bleibt unberührt und kann
+  gelöscht werden. `tw5/` ist nach TiddlyWiki versioniert, nicht nach MWS, eine
+  vorhandene Installation behält also ihr TiddlyWiki.
+- Das Admin-Bundle wird neu gebaut, eine laufende Admin-App sollte neu geladen
+  werden. Der Wiki-Syncer ist in diesem Release nicht angefasst.
 
 ---
 
