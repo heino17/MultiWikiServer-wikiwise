@@ -2471,6 +2471,96 @@ table.value-table td {
 	line-height: 1.35;
 }
 
+/* The snapshot hint sits above the wikis list, so it stays quiet: one line of
+   headline, the wikis as buttons, and the explanation in the muted colour the
+   callout already uses. */
+.snapshot-hint {
+	margin-bottom: 8px;
+	padding: 10px 12px;
+	border-radius: 10px;
+	/* .field-callout is a two-column grid, which lays four children out as a
+	   2x2 block instead of four lines. The hint is one column, and the button
+	   in it keeps its own width rather than stretching. */
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+}
+
+/* Both icons sit in text that has no intrinsic size for them; without this the
+   one inside the button grows the row to the width of the card. */
+.snapshot-hint material-symbol svg {
+	width: 18px;
+	height: 18px;
+	fill: currentColor;
+	flex: 0 0 auto;
+}
+
+.snapshot-hint-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--color-text-strong) !important;
+	font-weight: 600;
+}
+
+.snapshot-hint-head material-symbol svg {
+	width: 18px;
+	height: 18px;
+	fill: currentColor;
+}
+
+.snapshot-hint-wikis {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 8px !important;
+}
+
+/* A wiki name is a button because it opens that wiki's snapshots; the pill
+   shape is the one the wikis list already uses for a badge, so it reads as
+   "something about this wiki" and not as a link into the wiki itself. */
+.snapshot-hint-wiki {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 9px;
+	border: 1px solid var(--color-border-soft);
+	border-radius: 999px;
+	background: var(--color-surface-pill);
+	color: var(--color-text-strong);
+	font: inherit;
+	font-size: 0.82rem;
+	line-height: 1.4;
+	cursor: pointer;
+}
+
+.snapshot-hint-wiki:hover {
+	border-color: var(--color-accent-label);
+}
+
+.snapshot-hint-count {
+	padding: 0 6px;
+	border-radius: 999px;
+	background: var(--color-surface-field);
+	color: var(--color-text-strong);
+	font-variant-numeric: tabular-nums;
+}
+
+.snapshot-hint-rest {
+	align-self: center;
+	font-size: 0.82em;
+}
+
+.snapshot-hint-detail {
+	margin-top: 8px !important;
+	font-size: 0.82em;
+	line-height: 1.35;
+}
+
+.snapshot-hint-actions {
+	margin-top: 10px !important;
+}
+
 .error-banner {
 	padding: 12px 16px;
 	border-radius: 16px;

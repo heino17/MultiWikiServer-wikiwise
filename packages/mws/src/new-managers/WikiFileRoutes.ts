@@ -24,7 +24,7 @@ import { RecipeResolver } from "./RecipeResolver";
 import { WikiImportMode, WikiImportPlan, WikiImportTarget, applyWikiFileImport, defaultWriteTargetBag, planWikiFileImport, restoreSnapshotBag } from "./importWikiFile";
 import { assertWikiCreationAllowed, defaultBagName, newWikiAdminRole, newWikiSlug, sanitizeSlugPart } from "./TabDataAdapter";
 import { ParsedWikiFile, WikiFileError, formatBytes, inspectWikiFile, parseWikiFile } from "./WikiFileImport";
-import { DEFAULT_SNAPSHOT_KEEP, deleteSnapshotBag, listSnapshotBags, snapshotStampOf } from "./WikiSnapshotBag";
+import { DEFAULT_SNAPSHOT_KEEP, countSnapshotBags, deleteSnapshotBag, listSnapshotBags, snapshotStampOf } from "./WikiSnapshotBag";
 import { createWikiShell, writeStarterTiddlers } from "./WikiShell";
 
 /** How many titles of a list the dialog shows before it only counts the rest. */
@@ -542,6 +542,103 @@ export const AdminWikiFileSnapshots = zodRoute({
         sourceBagName: snapshot.sourceBagName,
         count: snapshot.count,
       })),
+    };
+  },
+});
+
+/**
+ * How many snapshots the wikis of this person hold, for the hint in the wikis
+ * tab. The names come from the client rather than from a query of our own: the
+ * wikis tab already knows which wikis this person may see.
+ *
+ * This route deliberately does *not* go through `resolveWikiTarget`. That one
+ * calls `RecipeResolver.assertRecipe`, which answers a wiki the person may not
+ * see with the same 404 as a wiki that does not exist — and it does so by
+ * ending the response, not by throwing something catchable. One such wiki in
+ * the middle of the list would take the whole answer with it, which is the
+ * opposite of what an overview may do. So the gate is rebuilt here from the
+ * pure predicates (`canWriteBag`, `mayReplace`), which answer a question
+ * instead of writing a response.
+ *
+ * A wiki that fails the gate is left out silently: its count is not reported,
+ * so nothing about a foreign wiki can be learned from it. Because the gate
+ * demands write and admin rights, "left out" is also the answer for somebody
+ * who may see the wiki but not restore it — they get no line about it.
+ */
+export const AdminWikiFileSnapshotCounts = zodRoute({
+  method: ["GET"],
+  path: "/api/wiki-file/snapshot-counts",
+  bodyFormat: "ignore",
+  securityChecks: { requestedWithHeader: true },
+  zodPathParams: z => ({}),
+  zodQueryKeys: ["wikis"],
+  inner: async (state) => {
+    state.okUser();
+    state.assertReferer(["/", "/admin"]);
+    state.asserted = true;
+
+    // Slugs are slugs, so a comma separates them and nothing else can.
+    const asked = (state.query.get("wikis") ?? "").split(",").map(s => s.trim()).filter(Boolean).slice(0, 200);
+    const roleIds = state.user.roles.map(role => role.role_id);
+
+    const counts: { slug: string; displayName: string; count: number }[] = [];
+    for (const slug of asked) {
+      const recipe = await state.engine.recipe.findUnique({
+        where: { slug },
+        select: {
+          id: true,
+          slug: true,
+          plugins: true,
+          template_id: true,
+          owner_user_id: true,
+          definition: true,
+          permissions: {
+            where: { role_id: { in: roleIds } },
+            select: { role_id: true, level: true },
+          },
+          recipe_bags: {
+            orderBy: { priority: "asc" },
+            select: {
+              bag_id: true,
+              priority: true,
+              is_writable: true,
+              prefix: true,
+              bag: {
+                select: {
+                  name: true,
+                  owner_user_id: true,
+                  permissions: {
+                    where: { role_id: { in: roleIds } },
+                    orderBy: { level: "desc" },
+                    select: { role_id: true, level: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+      if (!recipe) continue;
+
+      const bagName = defaultWriteTargetBag(recipe);
+      if (!bagName) continue;
+      const rb = recipe.recipe_bags.find(row => row.bag.name === bagName);
+      if (!rb) continue;
+      // The same two gates the restore itself applies, in the same order.
+      if (!rb.is_writable || recipe.definition?.readonlyBags?.includes(bagName)) continue;
+      if (!new RecipeResolver(recipe, null, state.user).canWriteBag(rb)) continue;
+      if (!mayReplace(state, recipe, rb)) continue;
+
+      const count = await countSnapshotBags(state.engine, slug);
+      if (count > 0) counts.push({ slug, displayName: recipe.definition?.displayName || slug, count });
+    }
+    counts.sort((left, right) => right.count - left.count || left.slug.localeCompare(right.slug));
+
+    return {
+      counts,
+      total: counts.reduce((sum, row) => sum + row.count, 0),
+      // The dialog states the rule; the hint does not have to repeat it.
+      keep: DEFAULT_SNAPSHOT_KEEP,
     };
   },
 });

@@ -4707,6 +4707,52 @@ tsc2`, the admin typecheck, `npm run build` and the i18n audit (648 keys per
 language, no orphans, no duplicates, no invented placeholders, no literal `t()`
 without an entry) are clean.
 
+## 97. Feature: the wikis page says how many snapshots are lying around
+
+**Why.** A snapshot is written on every import that replaces a wiki, and nobody
+notices them afterwards: they have no place in the list of wikis, no entry in the
+menu you would think of, and their only way back is a dialog behind three clicks.
+So a teacher who imported ten files in a row has ten copies of every wiki and no
+indication of it. The information existed, it was just never asked for.
+
+Counting per row was the obvious first idea and was dropped on purpose: a second
+number on every line competes with the name and the size, and it would have to be
+hidden whenever it is zero, which is the normal case. One hint above the list
+says the sum, names the wikis involved, and disappears completely when there is
+nothing to report.
+
+`GET /api/wiki-file/snapshot-counts?wikis=a,b` returns `{counts, total, keep}` for
+up to 200 slugs in one request, because the alternative is one request per wiki on
+every visit of every admin page.
+
+`resolveWikiTarget` is deliberately *not* used here. Its `assertRecipe()` ends the
+request with an empty response when a wiki is missing or not accessible, so one
+invisible wiki would have emptied the whole hint; the route therefore asks the same
+two questions directly (`RecipeResolver.canWriteBag()`, `mayReplace()`) and skips
+what the user may not replace. A hint must not report that something exists which
+the reader is not allowed to see.
+
+**Verified.** In the browser: 5 snapshots over `neues-admin-empty` produce a hint of
+122px height directly above the list, no overlap; clicking the wiki chip and the
+button both open the snapshot dialog with that wiki preselected and its 5 rows;
+after removing the snapshots the hint is gone entirely. Without a session the
+route answers 403 `ACCESS_DENIED`, a teacher gets `{"counts":[],"total":0}` and no
+hint at all. `npm run tsc2`, the admin typecheck, `npm run build` and the i18n
+audit (668 keys per language) are clean.
+
+Two things only the browser could have told us. `.field-callout` is a grid with
+two columns, so the four children of the hint were laid out as a 2x2 block and
+the box grew to 383px — it is a flex column now. And the icon inside the button had
+no intrinsic size, which stretched its grid row to 313px; both icons are fixed to
+18px.
+
+The first wording of the hint was wrong about the storage. It said the older
+snapshots "stay in the database until you delete them here", but `createSnapshotBag`
+calls `pruneSnapshotBags()` and drops everything below the newest {keep} on its
+own — a hint promising storage that does not exist is worse than no hint. It now
+says that only the newest {keep} of each wiki are kept and that the rest is worth
+deleting.
+
 ## 96. Bug fix: restoring a snapshot left the wiki in a mixture with it
 
 **Why.** Restoring a snapshot produced a wiki that was neither the snapshot nor
@@ -9625,6 +9671,55 @@ tsc2`, der Admin-Typecheck, `npm run build` und das i18n-Audit (648 Schlüssel j
 Sprache, keine Waisen, keine Dubletten, keine erfundenen Platzhalter, kein
 literaler `t()` ohne Eintrag) sind sauber.
 
+
+## 97. Feature: die Wikis-Seite sagt, wie viele Snapshots herumliegen
+
+**Why.** Ein Snapshot entsteht bei jedem Import, der eine Wiki ersetzt, und
+anschließend bemerkt ihn niemand: er hat keinen Platz in der Wikis-Liste, keinen
+Eintrag in dem Menü, in dem man ihn suchen würde, und nur einen Weg zurück – ein
+Fenster hinter drei Klicks. Wer zehn Dateien nacheinander importiert hat, hat
+zehn Kopien jeder Wiki und keinen Hinweis darauf. Die Information gab es, es
+wurde nur nie abgefragt.
+
+Zählen pro Zeile war die naheliegende erste Idee und wurde bewusst verworfen: eine
+zweite Zahl auf jeder Zeile konkurriert mit Name und Größe, und sie müsste
+ausgeblendet werden, sobald sie null ist — und das ist der Normalfall. Ein Hinweis
+über der Liste nennt die Summe, benennt die betroffenen Wikis und verschwindet
+ganz, wenn es nichts zu melden gibt.
+
+`GET /api/wiki-file/snapshot-counts?wikis=a,b` liefert `{counts, total, keep}` für
+bis zu 200 Slugs in einer Anfrage, weil die Alternative eine Anfrage je Wiki bei
+jedem Besuch jeder Admin-Seite wäre.
+
+`resolveWikiTarget` wird hier bewusst *nicht* benutzt. Dessen `assertRecipe()`
+beendet die Anfrage mit einer leeren Antwort, wenn eine Wiki fehlt oder nicht
+zugänglich ist — eine unsichtbare Wiki hätte damit den ganzen Hinweis geleert.
+Die Route fragt dieselben beiden Sachen deshalb direkt (`RecipeResolver.
+canWriteBag()`, `mayReplace()`) und überspringt, was der Nutzer nicht ersetzen
+darf. Ein Hinweis darf nicht melden, dass es etwas gibt, das der Leser nicht sehen
+darf.
+
+**Verified.** Im Browser: 5 Snapshots über `neues-admin-empty` ergeben einen Hinweis
+von 122px Höhe direkt über der Liste, ohne Überlappung; Klick auf Wiki-Chip und
+auf den Knopf öffnen beide das Snapshot-Fenster mit vorausgewählter Wiki und
+ihren 5 Zeilen; nach dem Entfernen der Snapshots ist der Hinweis ganz weg. Ohne
+Sitzung antwortet die Route 403 `ACCESS_DENIED`, eine Lehrkraft bekommt
+`{"counts":[],"total":0}` und gar keinen Hinweis. `npm run tsc2`, der
+Admin-Typecheck, `npm run build` und das i18n-Audit (668 Schlüssel je Sprache)
+sind sauber.
+
+Zwei Dinge konnte nur der Browser sagen. `.field-callout` ist ein Grid mit zwei
+Spalten, damit lagen die vier Kinder des Hinweises als 2x2-Block und die Box wuchs
+auf 383px — sie ist jetzt eine Flex-Spalte. Und dem Symbol im Knopf fehlte die
+eigene Größe, was seine Grid-Zeile auf 313px dehnte; beide Symbole sind auf 18px
+festgelegt.
+
+Die erste Fassung des Hinweises loggte falsch über den Speicher. Sie sagte, ältere
+Snapshots „bleiben in der Datenbank, bis Sie sie hier löschen" — `createSnapshotBag`
+ruft aber `pruneSnapshotBags()` auf und wirft alles unterhalb der neuesten {keep}
+selbst weg; ein Hinweis, der Speicher verspricht, den es nicht gibt, ist schlimmer
+als gar keiner. Jetzt steht dort, dass von jeder Wiki nur die neuesten {keep}
+bleiben und der Rest löschenswert ist.
 
 ## 96. Bugfix: Zurückspielen eines Snapshots hinterließ eine Mischung aus Wiki und Snapshot
 
