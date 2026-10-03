@@ -41,6 +41,7 @@ import { Debug } from "@prisma/client/runtime/client";
 import { WikiStore } from "./RecipeResolver";
 import { SessionManager } from "./sessions";
 import { deleteThumbnail } from "./WikiThumbnailRoutes";
+import { pruneSnapshotBags } from "./WikiSnapshotBag";
 import { HIDDEN_PREFIX } from "./LandingRoutes";
 import type { PasswordService } from "../services/PasswordService";
 
@@ -1888,7 +1889,14 @@ export const AdminDeleteWiki = zodRoute({
           await prisma.bag.delete({ where: { id: bag_id } });
       }
 
-      return { slug, deleted: true };
+      // The snapshots of this wiki go with it. They belong to no recipe, so
+      // nothing above would touch them, and the restore dialog cannot even
+      // name them any more — a deleted wiki would leave up to `keep` full
+      // copies of its content behind with no way to reach them. keep = 0 is
+      // the retention rule with nothing to keep.
+      const droppedSnapshots = await pruneSnapshotBags(prisma, slug, 0);
+
+      return { slug, deleted: true, droppedSnapshots };
     });
 
     // drop the cached preview as soon as the wiki is gone (before any pending

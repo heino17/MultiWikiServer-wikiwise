@@ -49,6 +49,19 @@ export interface WikiFileInfo {
   sizeBytes: number;
 }
 
+/**
+ * Why a plugin tiddler of the file did not go into the bag. The reason codes
+ * are for the dialog, which translates them; the sentences next to them are
+ * for the CLI and for anyone reading the plan as text.
+ */
+export type WikiFilePluginSkipCode = "not-wanted" | "no-version" | "version-mismatch";
+
+export interface WikiFilePluginSkip {
+  title: string;
+  reasonCode: WikiFilePluginSkipCode;
+  reason: string;
+}
+
 export interface ParsedWikiFile extends WikiFileInfo {
   /** The tiddlers to be written, system tiddlers filtered unless asked for. */
   tiddlers: TiddlerFields[];
@@ -58,10 +71,16 @@ export interface ParsedWikiFile extends WikiFileInfo {
   pluginTiddlers: TiddlerFields[];
   /** The titles that were left out because they are system tiddlers. */
   skippedSystemTitles: string[];
-  /** The plugin titles that were left out. */
-  skippedPluginTitles: string[];
+  /** The plugin titles that will be written into the bag. */
+  keptPluginTitles: string[];
+  /** The plugin titles that were left out, each with the reason. */
+  skippedPlugins: WikiFilePluginSkip[];
   /** The session and build state that was dropped, never importable. */
   skippedTransientTitles: string[];
+  /** Whether the operator asked for the file's plugins at all. */
+  includePlugins: boolean;
+  /** The TiddlyWiki version the plugin versions were checked against. */
+  targetVersion: string;
   /** The file's own $:/SiteTitle, used as the display name of a new wiki. */
   siteTitle?: string;
   /** The language the file wants, and the pack it carries for it, if any. */
@@ -86,16 +105,24 @@ export interface WikiFileLanguage {
 /**
  * A single-file TiddlyWiki carries its whole core in the file: the store of a
  * freshly built wiki holds $:/core (over 2 MB of plugin text) plus the themes as
- * plugin-type tiddlers. In MWS the plugin set belongs to the recipe, so a bag
- * must never take a core plugin, theme or library from an uploaded file, no
- * matter what the operator asked for.
+ * plugin-type tiddlers. In MWS the plugin set belongs to the recipe, so by
+ * default a bag takes none of them.
  *
- * Language packs are the exception, and they are not a compromise: MWS keeps
- * language plugins in the bag, not in the recipe (a recipe's plugin list is
- * empty for the wikis MWS creates), because the language is a property of the
- * wiki and not of the installation. Without the pack a German single-file wiki
- * would arrive with $:/language pointing at $:/languages/de-DE, and the plugin
- * switcher would fall back to en-GB without a word.
+ * The operator can ask for them anyway ("import the file's plugins"), and then
+ * the rule is a version check rather than a blanket no: a plugin may only enter
+ * a bag when its own `version` is the version the target wiki runs. $:/core is
+ * the whole kernel, and a core from another release would break the wiki in a
+ * way no snapshot brings back, because the recipe and the client plugin of the
+ * installation are built for one version. Identical text changes nothing, so
+ * the cheap case - the file was saved by the same release - still works.
+ *
+ * Language packs are not part of that opt-in. MWS keeps language plugins in the
+ * bag and not in the recipe (a recipe's plugin list is empty for the wikis MWS
+ * creates), because the language is a property of the wiki and not of the
+ * installation. They travel under the system-tiddler opt-in, and $:/language
+ * itself is only written when the wiki can speak the language afterwards (pack
+ * in the file, in the core, or in the target bag), otherwise the target keeps
+ * its own language.
  */
 const PLUGIN_TYPES = new Set(["plugin", "theme", "library", "language"]);
 
@@ -129,9 +156,81 @@ function isPluginTiddler(fields: TiddlerFields): boolean {
   return typeof type === "string" && PLUGIN_TYPES.has(type);
 }
 
-/** A language pack, the one plugin type an uploaded file may contribute. */
+/**
+ * `$:/DefaultTiddlers` names the tiddlers a fresh wiki opens with, and a
+ * single-file TiddlyWiki practically never keeps it in its store: the stock
+ * edition leaves it in the core, where it reads "GettingStarted". So an
+ * uploaded file that carries its core hands MWS the start page inside that
+ * plugin, while a file without it says nothing at all. Reading only the store
+ * would leave every such import on whatever MWS wrote when the wiki was
+ * created ("Willkommen"), pointing at a tiddler the file never had — which
+ * looks like a broken import even though the import itself was correct.
+ *
+ * This is the one system tiddler MWS takes from the core of the file, and only
+ * when the file offers nothing itself, because the alternative is a start page
+ * that names a tiddler nobody can open.
+ */
+const CORE_DEFAULT_TIDDLERS = "$:/DefaultTiddlers";
+
+/** The core plugin of the file, which is where the start page usually hides. */
+function findCorePlugin(pluginTiddlers: readonly TiddlerFields[]): TiddlerFields | undefined {
+  return pluginTiddlers.find(t => t.title === "$:/core");
+}
+
+/**
+ * One tiddler's text out of a plugin's payload. A plugin is JSON of the shape
+ * `{"tiddlers": {...}}`, and its own field text is empty — the payload holds
+ * everything. A payload that is not that shape (a broken or repacked plugin)
+ * yields nothing rather than throwing: the caller then keeps what it had.
+ */
+function readCoreText(core: TiddlerFields, title: string): string | undefined {
+  const text = typeof core.text === "string" ? core.text : "";
+  if (!text) return undefined;
+  let payload: { tiddlers?: Record<string, { text?: unknown }> };
+  try {
+    payload = JSON.parse(text) as typeof payload;
+  } catch {
+    return undefined;
+  }
+  const found = payload?.tiddlers?.[title];
+  const value = typeof found?.text === "string" ? found.text.trim() : "";
+  return value || undefined;
+}
+
+/** A language pack, the one plugin type that never needs the plugin opt-in. */
 function isLanguagePack(fields: TiddlerFields): boolean {
   return fields["plugin-type"] === "language";
+}
+
+/**
+ * Whether a plugin of the file may enter the bag, and why not if it may not.
+ *
+ * The test is the plugin's own `version` field against the version the target
+ * wiki runs - not `core-version`, which only says which cores the plugin
+ * accepts (">=5.0.0" for the stock core) and would let anything through. A
+ * plugin without a version cannot be checked at all, so it stays out.
+ */
+export function checkPluginVersion(
+  fields: TiddlerFields,
+  targetVersion: string,
+): { ok: true } | { ok: false; reasonCode: Exclude<WikiFilePluginSkipCode, "not-wanted">; reason: string } {
+  const title = String(fields.title ?? "");
+  const version = typeof fields.version === "string" ? fields.version.trim() : "";
+  if (!version) {
+    return {
+      ok: false,
+      reasonCode: "no-version",
+      reason: `The plugin "${title}" names no version, so it cannot be checked against TiddlyWiki ${targetVersion}.`,
+    };
+  }
+  if (version !== targetVersion) {
+    return {
+      ok: false,
+      reasonCode: "version-mismatch",
+      reason: `The plugin "${title}" is version ${version}; the wiki runs TiddlyWiki ${targetVersion}. A wiki takes a plugin only when it is the version the wiki itself runs.`,
+    };
+  }
+  return { ok: true };
 }
 
 const META_TAG = /<meta\b[^>]*>/gi;
@@ -222,11 +321,22 @@ export function inspectWikiFile(html: string, options: { sizeLimit?: number } = 
 export function parseWikiFile($tw: TW, html: string, options: {
   /** Also return the $:/ tiddlers. They configure the whole wiki and are off by default. */
   includeSystem?: boolean;
+  /**
+   * Also return the core plugins, themes and libraries, but only those whose own
+   * version is `targetVersion`. Off by default.
+   */
+  includePlugins?: boolean;
+  /** The TiddlyWiki version the target wiki runs; the plugins are checked against it. */
+  targetVersion?: string;
   sizeLimit?: number;
   tiddlerLimit?: number;
 } = {}): ParsedWikiFile {
   const info = inspectWikiFile(html, { sizeLimit: options.sizeLimit });
   const tiddlerLimit = options.tiddlerLimit ?? DEFAULT_WIKI_FILE_TIDDLER_LIMIT;
+  const includePlugins = !!options.includePlugins;
+  // Without a version to check against, no plugin may travel: an unchecked
+  // kernel in a bag is exactly what the opt-in is there to prevent.
+  const targetVersion = options.targetVersion ?? "";
 
   const found = $tw.wiki.deserializeTiddlers("", html, undefined, {
     deserializer: "text/html",
@@ -243,7 +353,8 @@ export function parseWikiFile($tw: TW, html: string, options: {
   const systemTiddlers: TiddlerFields[] = [];
   const pluginTiddlers: TiddlerFields[] = [];
   const skippedSystemTitles: string[] = [];
-  const skippedPluginTitles: string[] = [];
+  const keptPluginTitles: string[] = [];
+  const skippedPlugins: WikiFilePluginSkip[] = [];
   const skippedTransientTitles: string[] = [];
   let siteTitle: string | undefined;
   let languageWanted: string | undefined;
@@ -275,9 +386,24 @@ export function parseWikiFile($tw: TW, html: string, options: {
         systemTiddlers.push(tiddler);
         if (options.includeSystem) tiddlers.push(tiddler);
         else skippedSystemTitles.push(title);
-      } else {
-        skippedPluginTitles.push(title);
+        continue;
       }
+      // Core, theme and library plugins: opt-in, and only at the wiki's version.
+      if (!includePlugins) {
+        skippedPlugins.push({
+          title,
+          reasonCode: "not-wanted",
+          reason: `The plugin "${title}" is not imported unless the file's plugins are asked for. A wiki gets its plugins from its recipe.`,
+        });
+        continue;
+      }
+      const check = checkPluginVersion(tiddler, targetVersion);
+      if (!check.ok) {
+        skippedPlugins.push({ title, reasonCode: check.reasonCode, reason: check.reason });
+        continue;
+      }
+      keptPluginTitles.push(title);
+      tiddlers.push(tiddler);
       continue;
     }
     systemTiddlers.push(tiddler);
@@ -297,6 +423,27 @@ export function parseWikiFile($tw: TW, html: string, options: {
     inCore: !!$tw.wiki.getTiddler(languageWanted),
   } : undefined;
 
+  // The start page out of the core, for the case see CORE_DEFAULT_TIDDLERS.
+  // Only when the file's store says nothing: a file that names its own start
+  // page in the store has already had its say in the loop above.
+  let defaultTiddlersFromCore: string | undefined;
+  if (!systemTiddlers.some(t => t.title === CORE_DEFAULT_TIDDLERS)) {
+    const core = findCorePlugin(pluginTiddlers);
+    const fromCore = core ? readCoreText(core, CORE_DEFAULT_TIDDLERS) : undefined;
+    if (fromCore) {
+      defaultTiddlersFromCore = fromCore;
+      systemTiddlers.push({
+        title: CORE_DEFAULT_TIDDLERS,
+        text: fromCore,
+        type: "text/vnd.tiddlywiki",
+      });
+      // It is a setting of the whole wiki, so it travels with the system
+      // opt-in like every other one — and on its own, because a start page that
+      // names a tiddler nobody can open is the one thing worse than the wrong one.
+      tiddlers.push({ title: CORE_DEFAULT_TIDDLERS, text: fromCore, type: "text/vnd.tiddlywiki" });
+    }
+  }
+
   tiddlers.sort((a, b) => a.title.localeCompare(b.title));
 
   if (!tiddlers.length && !systemTiddlers.length) {
@@ -315,8 +462,11 @@ export function parseWikiFile($tw: TW, html: string, options: {
     systemTiddlers,
     pluginTiddlers,
     skippedSystemTitles,
-    skippedPluginTitles,
+    keptPluginTitles,
+    skippedPlugins,
     skippedTransientTitles,
+    includePlugins,
+    targetVersion,
     siteTitle,
     language,
   };

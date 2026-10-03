@@ -5158,6 +5158,10 @@ odt-preview-document {
 }
 
 .wiki-file-notice {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
 	padding: 10px 14px;
 	border-radius: 12px;
 	background: color-mix(in srgb, var(--color-success) 12%, var(--color-surface-field));
@@ -5226,8 +5230,22 @@ odt-preview-document {
 .wiki-file-preview h4 material-symbol,
 .wiki-file-result h4 material-symbol,
 .wiki-file-snapshots h4 material-symbol {
+	display: inline-flex;
+	width: 20px;
+	height: 20px;
 	font-size: 20px;
 	color: var(--color-accent-heading);
+}
+
+/* `MaterialSymbol` wirft width/height aus dem SVG, damit es über CSS
+   skaliert. Ohne eigene Größe ist die Breite undefiniert und ein Inline-SVG
+   nimmt den Container ein — in einem Block-Also die volle Dialogbreite. */
+.wiki-file-preview h4 material-symbol svg,
+.wiki-file-result h4 material-symbol svg,
+.wiki-file-snapshots h4 material-symbol svg {
+	width: 20px;
+	height: 20px;
+	fill: currentColor;
 }
 
 .wiki-file-preview-target,
@@ -5336,7 +5354,51 @@ odt-preview-document {
 	overflow-wrap: anywhere;
 }
 
-.wiki-file-snapshot-list {
+.wiki-file-notice material-symbol,
+.wiki-file-result-snapshot material-symbol {
+	display: inline-flex;
+	width: 20px;
+	height: 20px;
+	flex: none;
+}
+
+.wiki-file-notice material-symbol svg,
+.wiki-file-result-snapshot material-symbol svg {
+	width: 20px;
+	height: 20px;
+	fill: currentColor;
+}
+
+.wiki-file-result-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 4px;
+}
+
+/* A button that carries an icon next to its label needs the two apart; the
+   icon itself is sized below. */
+.wiki-file-result-actions button,
+.snapshot-row-actions button {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.wiki-file-result-actions material-symbol {
+	display: inline-flex;
+	width: 18px;
+	height: 18px;
+	flex: none;
+}
+
+.wiki-file-result-actions material-symbol svg {
+	width: 18px;
+	height: 18px;
+	fill: currentColor;
+}
+
+.snapshot-list {
 	display: grid;
 	gap: 8px;
 	margin: 0;
@@ -5344,8 +5406,11 @@ odt-preview-document {
 	list-style: none;
 }
 
-.wiki-file-snapshot-list li {
+/* A row grows into the confirmation panel, so it stacks instead of sitting
+   side by side with the button that opened it. */
+.snapshot-list li {
 	display: flex;
+	flex-wrap: wrap;
 	gap: 12px;
 	align-items: center;
 	justify-content: space-between;
@@ -5354,14 +5419,70 @@ odt-preview-document {
 	border-radius: 12px;
 }
 
-.wiki-file-snapshot-main {
+.snapshot-main {
 	display: grid;
 	gap: 2px;
 	min-width: 0;
 }
 
-.wiki-file-snapshot-main small {
+/* Restore and delete sit side by side and wrap as one unit, so the row keeps
+   its date on one line even on a narrow dialog. */
+.snapshot-row-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+}
+
+.snapshot-row-actions material-symbol {
+	display: inline-flex;
+	width: 18px;
+	height: 18px;
+	flex: none;
+}
+
+.snapshot-row-actions material-symbol svg {
+	width: 18px;
+	height: 18px;
+	fill: currentColor;
+}
+
+.snapshot-main small {
 	color: var(--color-text-muted);
 	overflow-wrap: anywhere;
+}
+
+.snapshot-confirm {
+	flex-basis: 100%;
+	display: grid;
+	gap: 8px;
+	margin-top: 4px;
+	padding: 12px;
+	border-radius: 12px;
+	background: var(--color-surface-field);
+}
+
+.snapshot-confirm-question {
+	margin: 0;
+	font-weight: 600;
+}
+
+.snapshot-confirm-detail {
+	margin: 0;
+	font-size: 0.9rem;
+	color: var(--color-text-muted);
+	overflow-wrap: anywhere;
+}
+
+.snapshot-confirm-hint {
+	margin: 0;
+	font-size: 0.88rem;
+	color: var(--color-text-muted);
+}
+
+.snapshot-confirm-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
 }
 /* #endregion wiki file import */

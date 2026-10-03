@@ -4626,650 +4626,208 @@ GitHub can show whether the warning is really gone — and after the push it is:
 the run is green and the annotation about `node20` is no longer there, only the
 notice that `ubuntu-latest` migrates to Ubuntu 26 from 19.10.2026.
 
-## 91. Spanish `#many`: the last open plural case
-
-§89 left Spanish `many` open with an argument: it fires from `1000000` upwards
-and wants a *de* before the noun, and a `#many` that covered the bare count
-nouns but not the phrases with an article would be worse than none. That sets
-the condition — cover everything or nothing — and this section covers it.
-
-**The category is narrower than §89 said.** Spanish `many` does not fire from
-`1000000` upwards; `Intl.PluralRules("es").select()` answers `many` only for
-exact integer multiples of one million — `1000000`, `2000000`, `21000000` — and
-`other` for `999999`, `1500000` and every non-multiple. So §89 overstated the
-reach, and by accident in the useful direction: the set CLDR wants a variant
-for is exactly the set Spanish wants a *de* for, *un millón de archivos* and
-*veintiún millones de archivos*. A count of `1500000` stays in `other` and
-keeps the plain form; that is a CLDR boundary the app cannot widen.
-
-**Twelve keys need the variant, four must not have it.** All sixteen `{count}`
-keys were classified by whether a noun follows the number in the Spanish text.
-Twelve do, including the two with an article — `Mostrar los {count} títulos
-eliminados` and `Encuentra todos los {count} animales.` — and those get a
-`#many` sibling with *de* inserted right after `{count}`: `{count} de
-archivos`, `Mostrar los {count} de títulos eliminados`, `Instantánea {name} con
-{count} de tiddlers`. Four have nothing after the number — `Deleted: {count}`,
-`Unchanged: {count}`, `Written: {count}` and `System tiddlers in the file
-({count})` — and a `#many` there would only copy the base key, because
-*Escritos: 1.000.000* is already right and *1.000.000 de escritos* would be
-wrong. A redundant variant would break the §89 rule that the base key holds the
-`many` form, so those four ship nothing.
-
-**Verified.** Bundling the real `t()` and rendering all sixteen keys at `0`,
-`1`, `2`, `21`, `999999`, `1000000`, `1500000`, `2000000` and `21000000` gives
-144 combinations in which no number is lost and no key falls back to its bare
-name. The assertion is the two-part rule the translations encode: *de* appears
-exactly when the category is `many` **and** a noun follows the number — the
-first attempt at that assertion was wrong and flagged twelve correct strings,
-since it demanded *de* for `Written: {count}`. English is untouched, 144 of 144
-combinations keep their number. Spanish is now the only file shipping `#many`
-(12 entries), the eight base key sets are still the same 639, no variant lost
-its base, and `npm run tsc2`, the admin typecheck and `npm run build` are clean.
-The `t()` doc comment, which listed the shipped categories, now names Spanish
-`#many` and the *de* convention, and states why a partial `#many` is worse than
-none.
-
-## 90. Cleanup: twelve orphan keys out, two missing keys in
-
-§89 ended on `{count} new`, an orphan in all eight locale files with no caller.
-Deleting one stale key is cheap, but only if you know it is the only one — and
-the first attempt to find that out was wrong by a wide margin. Counting the
-string literals handed to `t()` reports 189 unused keys, and the list is full of
-labels that are plainly on screen: `Storage overview`, `Access denied.`,
-`Light theme`. The admin app is data-driven: the tab definitions, field
-definitions and error-code maps in `src/definition/*.ts` and `src/helpers.tsx`
-carry the English text as plain data and pass it to `t()` at render time
-(`t(selectedTab.eyebrow)`, `t(field.description)`, `t(reason)`). So "not passed
-to `t()` as a literal" is not the same as "unused". A key only counts as an
-orphan when its exact string appears nowhere in the source at all, and that test
-leaves **13**, not 189.
-
-**One of the thirteen was not an orphan but a bug.**
-`The field {key} is not defined in the draft record` was translated in all eight
-languages, while `getAdminRecordValue` and `setAdminRecordValue` built the very
-same sentence by concatenation — `"The field " + field.key + " is not defined in
-the draft record"` — and threw that English text. Eight translations of a
-message nobody could ever read. Both call sites now call `t()` with the `{key}`
-param, so the defensive error arrives in the reader's language.
-
-**The other twelve were genuine leftovers**, every one of them superseded by a
-longer or more precise key: `Storage status` → `Disk storage status`, `Caution`
-and `Important notice` → the news-style levels `neutral`, `info`, `success`,
-`warning`, `danger`, `A visitor's own language or theme choice always wins.` →
-the same sentence plus `Feature switches apply to everyone.`, `Default bag`,
-`Prefix rules` and `Bag` → longer field labels, the two
-`You must be an admin to … teacher capabilities.` sentences → generic permission
-messages, and `Enter password`, `Settings saved.`, `{count} new`. All twelve are
-gone from all eight files: 96 entries, the same twelve in each.
-
-**The same audit turned up the opposite defect: two keys in use but never
-translated.** `t("Audience")` is the tooltip on a pinboard note's scope,
-`t("Size")` the column header of the user file table; `t()` fell back to the
-key, so both read in English in all eight languages. They are in now —
-`Audience` becomes *Sichtbarkeit*, *Público*, *Public*, *閲覧対象*, and `Size`
-becomes *Größe*, *Tamaño*, *Taille*, *Размер*. The tooltip was the one place
-where the literal reading of *Audience* was wrong in most languages: the label
-next to it names who sees the note, so German says *Sichtbarkeit* and not
-*Publikum*.
-
-**Verified.** Bundling the real `t()` with esbuild and rendering all three keys
-in all eight locales yields 24 correct strings, among them *Das Feld slug ist im
-Entwurf nicht definiert* and its seven translations. All eight files again hold
-exactly the same 639 base keys, no file has a duplicate key, no `#variant` lost
-its base, the placeholder comparison finds no deviation, no string literal
-passed to `t()` lacks a translation, and `npm run tsc2`, the admin typecheck
-and `npm run build` are clean.
-## 89. Bug fix: numbers did not follow the language they were counted in
-
-§88 fixed a Russian animal text that dropped its `{count}` and closed by
-pointing at what the fix had made visible: Russian `2` read *2 заметок* where
-Russian wants *2 заметки*, because `few` is a separate `Intl.PluralRules`
-category and the app shipped `#one` variants only. Filling in the Russian `few`
-forms turned out to be the small half of the job. Chasing it turned up three
-more defects of the same kind, all of them now fixed.
-
-**`count` was passed as a pre-formatted string in three places.**
-`app.tsx` handed `t("{count} files", { count: count.toLocaleString() })` and the
-two candidate lines to the storage panel. So `typeof count` was not `"number"`,
-`t()` never looked for a plural variant at all, and those three strings were
-wrong in every language, including English. The call sites now pass the number,
-and `t()` formats numeric params itself with `value.toLocaleString(locale)`
-during interpolation — that keeps the thousands separator those tiles are there
-for, and it means a caller cannot silently forget the plural by formatting too
-early.
-
-**Ten strings had no `#one` in `en`, `de`, `es` or `fr`.** `{count} files`,
-`{count} items`, `{count} wikis in total`, `Show {count} titles`,
-`Show the {count} deleted titles`, `System tiddlers in the file ({count})`,
-`Snapshot {name} with {count} tiddlers`, the two candidate lines, and for
-Spanish and French also `Deleted: {count}`, `Unchanged: {count}` and
-`Written: {count}`. English — the default, and the language the keys are
-written in — said **1 files** and **Found 1 candidates**. All of them have the
-singular now.
-
-**Which categories a file ships is decided by the language, not by symmetry.**
-`Intl.PluralRules` gives `ja`, `ko` and `zh-cn` exactly one category for whole
-numbers, so their `#one` entries can never be selected and none were added.
-Russian is the only supported language with `few`, so the eight `#few` entries
-all go into `ru.ts`. German needs no variant at all for *Titel* and
-*Systemtiddler*, which are invariant, and Spanish none for invariable words like
-`вики`. The base key therefore has to hold the `many`/`other` form —
-Russian `{count} notes` is *заметок*, not *заметка* — and that rule is now
-written down in the `t()` doc comment together with the category table.
-
-Word order follows the language, not the English original: German *Die
-gelöschten Titel zeigen* becomes *1 gelöschten Titel zeigen* rather than *Die 1
-gelöschten Titel*, because the article and the adjective ending belong to the
-plural. No language gets a determiner in front of a numeral, so the English
-singulars read *Show 1 title* and *Found 1 candidate* rather than *Show the 1
-title*, and the French ones read *Afficher 0 titre*, since French also takes the
-singular at `0`.
-
-**Verified** by bundling the real `t()` with esbuild and calling it: every one
-of the 16 plural-sensitive strings in all eight locales, at
-`0, 1, 2, 3, 5, 11, 21, 22, 25` and `1000000` — the interesting corners, since
-Russian `one` covers `21` and `101` but not `11`, `few` covers `2` through `4`
-but not `22` alone, and both agree with `many` on `5`. No number is lost in any
-of the 1280 combinations and no locale falls back to the bare key. The 649 base
-keys are identical across all eight files, no file has a duplicate key, and a
-placeholder comparison of all 662 entries finds no deviation. `npm run tsc2`,
-`cd packages/admin-vanilla && npx tsc --noEmit` and `npm run build` are clean.
-
-Two things this deliberately does not do. Spanish `many` fires from `1000000`
-upwards and wants a *de* before the noun — *1.000.000 de archivos* — but no
-count in this app plausibly reaches that, and a `#many` that covers the bare
-count nouns but not the phrases with an article would be worse than none, so
-Spanish ships no `#many`. And `{count} new` is an orphan: it was used by the
-pinboard tab until the unread label became `{count} new notes`, and it is still
-in all eight files with no caller. Both are noted rather than silently absorbed;
-§90 removes the orphan and §91 adds the Spanish `#many`.
-
-## 88. Bug fix: the Russian plural for "animal" dropped the number
-
-§87 added the missing 83 strings to the six languages that did not have them
-yet, and its placeholder audit turned up a defect in a line that had been there
-since §14: `"Find all {count} animals.#one"` in `ru.ts` read *Найдите одно
-животное.* — one animal, with the `{count}` left out. Every other one of the
-eight languages keeps it.
-
-One character plus a space: *Найдите {count} животное.* Nothing in `i18n.ts`
-needed touching, because `t()` already interpolates every param in the variant
-it picked. The wording had to stay in the nominative singular, since that is
-what `Intl.PluralRules("ru")` asks for, and Russian's `one` category is not only
-`1` — it is every number ending in `1` except `11`, so the same string serves
-`21` and `101`.
-
-**Verified.** Not by reading the line, but by bundling the real `t()` with
-esbuild and calling it: `t("Find all {count} animals.", { count })` across
-`0, 1, 2, 3, 5, 11, 21, 22, 25, 101` in all eight locales, asserting that the
-rendered string contains the number that was passed in. Zero lost. The `#one`
-cases read *Найдите 1 животное.*, *Найдите 21 животное.*, *Найдите 101
-животное.*, and everything else falls through to the base key. The same harness
-over `{count} notes` and `{count} new notes` passes in all eight languages too.
-`npm run tsc2`, `cd packages/admin-vanilla && npx tsc --noEmit` and
-`npm run build` are clean, and the placeholder audit over all 653 keys now
-reports no deviation in any of the eight files.
-
-One thing that harness also made visible, which §87 did not catch and this
-section does not fix: Russian `2` reads *2 заметок* where it should read *2
-заметки*. `few` is a separate `Intl.PluralRules` category and the app ships
-`#one` variants only, so `2`–`4` fall through to the base key. The lookup in
-`t()` would already honour a `#few` entry without any code change; what is
-missing is the Russian `few` form for every plural noun in the files, which is a
-translation job rather than a bug fix.
-
-## 87. Bug fix: the wiki-file dialog only spoke German and English
-
-`AGENTS.md` says the admin app is bilingual by contract, which was read as "two
-languages" instead of "DE and EN are the two that *must* exist". The app has had
-eight languages since §14, and the wiki-file dialog from §84/§85/§86 shipped with
-83 strings in `de.ts` and `en.ts` only. `t()` falls back to the key itself when
-a dictionary has no entry, so every other language saw the English source text:
-the menu entry read *Take over a wiki file* instead of *Wiki-Datei übernehmen*,
-and so did the whole dialog — every hint, every plan row, every error message and
-the restore confirmation.
-
-All 83 keys are now in `es`, `fr`, `ja`, `ko`, `ru` and `zh-cn` as well, which
-brings the eight dictionaries to 653 keys each with no gaps in either direction.
-No placeholder was dropped or invented: every `{count}`, `{slug}`, `{date}` and
-`{name}` in a translation matches its English key, checked by comparing the
-placeholder sets of all 498 new entries. The `\u2026` and `\n\n` escapes were
-taken over in the same source form the English file uses, so the keys are
-character-identical rather than merely equal-looking.
-
-The terminology follows what each language already used elsewhere in the app and
-not a fresh gloss: *bag*, *tiddler* and *wiki* stay as they were
-(`tiddler`/`tiddler`/`ティドラー`/`티들러`/`тайдлер`/`条目`), snapshots are
-`instantánea`/`instantané`/`スナップショット`/`스냅샷`/`снимок`/`快照`, and
-Russian takes *вики* where the other languages take *wiki*. German plural forms
-keep the file's convention of `{count} Tiddler` for both numbers, which is what
-the app has done since §14.
-
-**Verified.** `cd packages/admin-vanilla && npx tsc --noEmit` and
-`npm run build` clean; all eight files parse as TypeScript and none has a
-duplicate key. The built artifact contains all six new sets — a straight
-`grep` on the minified bundle does not find them, because esbuild escapes
-non-ASCII, so the check ran against the sourcemap's `sourcesContent`. A
-placeholder audit over all 653 keys reports only deliberate identicals
-(proper nouns such as `Wiki`, `TiddlyWiki {version}`, `Slug`, `Plugins`) and no
-placeholder mismatch.
-
-Not part of this section: `"Find all {count} animals.#one"` in `ru.ts` drops the
-`{count}` that its English key carries. It is dead demo text from §14 — the login
-puzzle uses `"Find all {count} animals."`, with a period — so nothing renders
-wrong today, but it is a real defect in that plural variant.
-
-## 86. Bug fix: three things a single-file wiki import got wrong
-
-The import from §84 and §85 was compared against a real file — a `index.html`
-saved from TiddlyWiki 5.4.1, 2.6 MB, 17 tiddlers, all of them `$:/`. Three
-things did not survive the comparison, and all three are fixed.
-
-**Session state was being imported.** The store of that file holds
-`$:/StoryList`, `$:/temp/...`, `$:/state/tab-...`, `$:/state/plugin-info-...`,
-`$:/HistoryList`, `$:/Import`, `$:/build`, `$:/isEncrypted` and
-`$:/status/...`: the tabs, the drafts, the request log and the plugin cache of
-the browser session that saved the file. Importing them put a stranger's open
-tabs into a wiki and left a stale `$:/StoryList` as the wiki's story river. Our
-importer took 11 of these 13 tiddlers with it. TiddlyWiki's own import does not
-ask about them — `core/modules/upgraders/system.js` deselects this list — and
-that list is now what `TRANSIENT_TITLES` and `TRANSIENT_PREFIXES` hold: the
-seven titles `$:/build`, `$:/HistoryList`, `$:/Import`, `$:/isEncrypted`,
-`$:/StoryList` and the prefixes `$:/state/`, `$:/status/`, `$:/temp/`. They are
-dropped before the system-tiddler switch, because they are junk either way, and
-they are named in the plan so that a skipped tiddler is visible and not merely
-absent. The same file now yields three tiddlers instead of thirteen, and the
-eleven named ones.
-
-**A German wiki arrived in English.** `$:/language` was imported, but its
-language pack was not: it is a `plugin-type: language` tiddler, and the
-importer dropped every plugin because in MWS the plugin set belongs to the
-recipe. That is right for `$:/core` and the themes — 2 MB of core per bag would
-be nonsense — but wrong for the language, because MWS keeps *language* plugins
-in the bag and not in the recipe (a recipe's plugin list is empty for the wikis
-MWS creates, the language is a property of the wiki and not of the
-installation). So the wiki ended up with `$:/language` pointing at
-`$:/languages/de-DE` and no such pack in the bag, and the plugin switcher fell
-back to en-GB without a word. A language pack is now the one plugin type that
-may travel, subject to the same system-tiddler switch as every other `$:/`
-tiddler. `$:/language` itself is only written when the wiki can actually speak
-the language afterwards: the pack comes with the file, the core already has it
-(`$:/languages/en-GB`), or the target bag has it. Otherwise `$:/language` is
-left alone and the plan says so — the wiki keeps its own language instead of
-being pointed at a pack that does not exist.
-
-**A replace destroyed tiddlers without naming them.** The plan counted what a
-replace deletes and the dialog called it "Tiddlers not in the file". For the one
-operation that can lose work that is not one click too few. The plan carries the
-titles, the route returns all of them (not a twelve-item sample: the count is
-bounded by the file's tiddler limit anyway), the CLI prints them, and the dialog
-gives the row a warning background with the titles in an open list. It is the
-only red row in the plan.
-
-Strings in both languages; `Plugins are never imported` and
-`Plugins left out` are now `A language pack is one of them` and
-`Core plugins, themes and libraries left out`, because plugins are no longer a
-flat no. The stale "the file's settings do not travel" wording of the language
-rows is gone with it.
-
-**Verified.** `empty.html` through `import-wiki-file`, before and after, and
-`npm run tsc2`, `cd packages/admin-vanilla && npx tsc --noEmit`, `npm run
-build`, `git diff --check` clean:
-
-- `--include-system` on `empty.html`: `3 tiddler(s)` where it was `13`, the
-  three being `$:/config/Plugins/Disabled/$:/languages/de-AT`, `$:/language`
-  and the pack `$:/languages/de-DE`; `11 session/build tiddler(s) dropped`
-  named in full.
-- `language: $:/languages/en-GB` — the core has it, so `$:/language` travels.
-- A copy of the file pointing at `$:/languages/fr-FR`: `2 new`, `$:/language`
-  not in the list and not taken over -
-  `The file wants the language "$:/languages/fr-FR" but does not contain the
-  language pack, and the target wiki does not have it either. The wiki keeps
-  its own language.` The reason
-  codes are for the dialog; the CLI and the plan print the sentence.
-- A copy pointing at `$:/languages/de-DE`, which the file does carry: `pack
-  $:/languages/de-DE comes with the file`, `$:/language` written.
-- Without `--include-system`: `0 new`, `3 system tiddler(s) left out`, the
-  language not taken over and the wiki keeps its own.
-- End to end into a wiki created by the command, then served:
-  `GET /wiki/de-test` returns `200` and 375 KB, and the browser store contains
-  `$:/language` → `$:/languages/de-DE` with the pack's 1072 tiddlers —
-  `$:/language/Buttons/Cancel/Hint` is "Abbrechen", the file's `en-GB` setting
-  is gone. The same wiki before the fix held `$:/language` → `$:/languages/en-GB`.
-- Deletions: a replace that drops one content tiddler reports `1 deleted: Charlie` and writes a snapshot; one that drops twenty reports `20 deleted`
-  with all twenty in the plan and the first twelve in the terminal.
-- The store was restored from its backup afterwards: 15 wikis, 15 bags, no
-  snapshots, no test wikis.
-
-Not part of this section: `$:/core/modules/` tiddlers (they are system
-tiddlers like any other and travel only with the switch), and the wiki-file
-list in "My Files".
-
-## 85. Feature: "Take over a wiki file" in the admin app (dialog, routes)
-
-The wiki-file import of §84 is now reachable from the admin app. The entry sits
-in the existing **"Create a wiki"** dropdown as **"Take over a wiki file"**, so
-it needs no new navigation: upload a saved `index.html`, read what would happen,
-then write it.
-
-**Two steps, never one.** The dialog asks the server what a file *would* do
-(`PUT /api/wiki-file/inspect`) and only writes after an explicit confirmation
-(`PUT /api/wiki-file/import`). Both calls send the same multipart upload, and
-both build the plan again on the server — the preview is a promise about one
-file and one target, never a document the browser may send back. Any change of
-file, target, mode or the system-tiddler switch invalidates the preview, so a
-plan on screen always describes the request that follows it.
-
-**The routes live under `/api`, not `/admin`.** `/admin/:op/:tab` is the
-generic JSON record route: it claims every two-segment `/admin/...` path and
-parses the body as JSON, which turned the first multipart upload into
-`MALFORMED_JSON`. Under `/api` the body format belongs to the route, and the
-security checks stay the same as everywhere else (`X-Requested-With`, referer
-`/`, authenticated user).
-
-**Who may do what.** A new wiki goes through `assertWikiCreationAllowed()`, the
-own-wiki limit of the one-click creation included. An existing wiki is checked
-with the same `RecipeResolver.assertRecipe()` and `canWriteBag()` as saving a
-tiddler, a bag from `readonlyBags` is refused even for an administrator, and
-`state.asserted` is set *before* `state.$transaction()` — the two routes
-learned that from the CLI work, where the transaction complained about it.
-Replacing additionally needs `C_admin` on the write bag (or the site admin or
-the owner), because it deletes what is not in the file; a merge only needs
-write access and never writes a snapshot. The snapshot list and the restore
-sit behind the same gate as the replace that created them, and a restore only
-accepts bags under `snapshots/<slug>/`.
-
-**New wiki, existing wiki.** For a new wiki the dialog offers a name and a
-slug; the preview shows the slug the wiki will actually get (the server appends
-a number when the slug is taken) and the import sends exactly that slug, so a
-concurrent wiki cannot be overwritten between the two calls. The template is
-the same `DEFAULT_TEMPLATE` ("Blank Template") the one-click creation uses,
-and the bag gets the same personal namespace. `WikiShell.ts` holds that shell
-so CLI and dialog cannot drift apart.
-
-**System tiddlers.** They are skipped by default, as in §84; the checkbox
-"Also import system tiddlers" opts in, and the list of what the file contains
-is shown below the plan. Plugins are never imported, also with the checkbox
-on.
-
-**Snapshots.** Every replace writes a snapshot; the dialog lists the snapshots
-of the target wiki with timestamp, tiddler count and origin and restores one
-after a confirmation — and a restore is itself undoable, because it snapshots
-first.
-
-**Files.**
-- `new-managers/WikiFileRoutes.ts`: the four routes, the upload reader with the
-  running byte limit, the target resolution and the plan summaries.
-- `new-managers/WikiShell.ts`: bag + recipe + starter tiddlers, shared with the
-  CLI.
-- `new-managers/TabDataAdapter.ts`: `assertWikiCreationAllowed()`,
-  `newWikiAdminRole()`, `newWikiSlug()`, reused by `AdminCreateWiki`.
-- `ServerState.ts`: `wikiFileSizeLimit` (`MWS_WIKI_FILE_SIZE_LIMIT`), so the
-  dialog and the CLI accept the same files.
-- `admin-vanilla/src/wiki-file-import.tsx`: the dialog.
-- `admin-vanilla/src/helpers.tsx`: the error formatting and `prettifyBytes()`
-  moved out of `app.tsx` and `user-files.tsx` so all three panels share them,
-  plus the German messages for the server reasons of the new routes.
-
-**Verified** on the dev instance with `curl`, using the same requests the
-dialog sends (`multipart/form-data` field `file`, JSON body `{snapshot}` for a
-restore), against `editions/bedienungsanleitung/output/index.html` and a
-modified copy of it; the store was backed up before and restored afterwards:
-- New wiki via `PUT /api/wiki-file/import?create=1` → `49 written`, slug
-  `mws-bedienungsanleitung`, bag
-  `editions/01a09c6c-e744-716e-ae43-73c4d6393f1c/mws-bedienungsanleitung`,
-  owner `admin`, 51 tiddlers (49 plus `$:/SiteTitle`, `$:/DefaultTiddlers`),
-  `GET /wiki/mws-bedienungsanleitung` renders with
-  `<title>MWS Bedienungsanleitung</title>`.
-- Replace → `1 created, 1 updated, 48 unchanged, 0 deleted`, snapshot with 51
-  tiddlers; the preview of the same file afterwards reports `0` created and
-  `0` updated.
-- `include-system=1` → 57 instead of 49 tiddlers, the system list shows the
-  eight `$:/` tiddlers of the file.
-- `Schüler 1` with `B_write` on the bag: merge `200` (`2 written`, no
-  snapshot), replace `403` with "Replacing the wiki … needs administrator
-  rights (C_admin) on its write bag. A merge is enough to add tiddlers."; the
-  snapshot list is `403` for the same reason.
-- No session → `403` "User not authenticated"; plain HTML → `400`
-  `NOT_A_TIDDLYWIKI`; unknown wiki → `404`; a taken slug → `409`; with
-  `MWS_WIKI_FILE_SIZE_LIMIT=100000` → `413` with the limit in the details.
-- Restore with the dialog's body → `1 written, 1 deleted, 50 unchanged` and a
-  new snapshot of 52 tiddlers; a snapshot of a foreign wiki prefix → `403`.
-- `npm run tsc2` and `cd packages/admin-vanilla && npm run tsc` clean,
-  `npm run build` succeeds; the served admin bundle contains the dialog and
-  both language variants of its strings.
-
-**Not verified by clicking.** The dialog was exercised through its requests,
-not with a mouse: the dropdown entry, the file picker, the plan display and the
-restore button still need one manual pass in a browser.
-
-Not part of this section: the wiki-file list in "My Files" and the migration of
-existing `user_file` HTML attachments into a bag.
-
-## 84. Feature: import a single-file TiddlyWiki 5 into a wiki (CLI)
-
-A wiki that exists only as one `index.html` can now be taken over by MWS. The
-point of the feature is not "any HTML file becomes a wiki", but: a wiki saved
-with TiddlyWiki 5 can be handed to MWS without a detour through a folder of
-`.tid` files.
-
-**Why a server-side parser and not the client.** MWS does not depend on
-`tiddlywiki` as an npm package, but it already boots a real TiddlyWiki 5 at
-runtime — `plugin-cache/index.ts` resolves the version and boots
-`<wikiPath>/tw5/<version>`. That instance is used here with
-`$tw.wiki.deserializeTiddlers("", html, undefined, {deserializer: "text/html"})`,
-which is the call `core-server/commands/import.js:34` makes. The
-`text/html` deserializer is the important part: it reads both store shapes,
-the JSON `tiddlywiki-tiddler-store` script and the classic `storeArea`
-div. `application/json` is wrong, and without an explicit deserializer the
-store falls through to the catch-all branch and the whole file becomes a
-single tiddler.
-
-**What is recognised and what is refused** (`WikiFileImport.ts`):
-`application-name` must be `TiddlyWiki`, `tiddlywiki-version` must be there,
-and a store must exist. A TiddlyWiki 2 file is recognised before that check by
-its version script — it deserves "save it with TiddlyWiki 5 first", not "this
-is not a TiddlyWiki". Password-protected files are refused with that wording,
-an empty store is refused ("nothing to import"), and both the byte limit
-(`MWS_WIKI_FILE_SIZE_LIMIT`, default 50 MB) and a tiddler limit (default 20 000)
-are enforced. An `external-core` marker is reported as `tw5x` and read with
-the installed core, because that is what it is.
-
-**System tiddlers and plugins.** `$:/` tiddlers configure the wiki as a whole,
-so they are skipped by default and `--include-system` opts in explicitly (the
-admin dialog of a later phase will ask). Plugin-, theme-, library- and
-language-tiddlers are *never* imported — in the test file `$:/core` alone is
-2 MB of plugin text, and the plugins of a wiki come from its recipe. The
-default write bag of the wiki is the only target; recipe, ACLs and plugin
-list stay untouched.
-
-**Replace is a snapshot first.** MWS has no content history, so a replace
-copies the bag into a hidden bag `snapshots/<slug>/<UTC timestamp>`
-(`WikiSnapshotBag.ts`) before the first write. It is not referenced by any
-recipe, so it never appears as wiki content, and it is pruned to
-`--snapshot-keep` (default 10) per wiki. `restore-wiki-snapshot` reads it back
-and is itself undoable, because a restore takes a snapshot first, too.
-
-**What a replace never deletes.** The `$:/` tiddlers of the target bag are
-kept even when the file has none — `$:/SiteTitle` and `$:/DefaultTiddlers`
-belong to MWS, and wiping them because an uploaded file lacks one is never
-what the operator meant. They are listed in the preview as
-`kept as they are`.
-
-**Files.**
-- `new-managers/WikiFileImport.ts`: validation, store detection, parser, the
-  system/plugin filter.
-- `new-managers/WikiSnapshotBag.ts`: snapshot bags, metadata, pruning.
-- `new-managers/importWikiFile.ts`: plan (create/update/unchanged/delete),
-  apply, restore.
-- `new-commands/import-wiki-file.ts`, `new-commands/restore-wiki-snapshot.ts`:
-  the CLI, registered in `new-commands/index.ts`.
-
-**Verified** against `editions/bedienungsanleitung/output/index.html`
-(2.5 MB, 5.4.1, JSON store) on the dev instance, the database backed up before
-the run and restored afterwards:
-- `--create --slug import-test` → `49 new`, wiki `import-test` with bag
-  `editions/import-test`, `ADMIN` with `B_write` on the recipe and `C_admin`
-  on the bag, 51 tiddlers (49 content plus `$:/SiteTitle` and
-  `$:/DefaultTiddlers`); largest tiddler 891 bytes, so no plugin slipped in.
-- `--dry-run` on the same file → `48 unchanged, 0 changed` — the round trip
-  through the database is byte-exact.
-- A second file (built with `tiddlywiki --build index`, one tiddler added, two
-  deleted, one changed) → `1 new, 47 changed, 2 deleted` in the preview, and
-  after the real run `2 system tiddler(s) kept as they are`. Re-running gives
-  `48 unchanged`.
-- Snapshot `snapshots/import-test/20261001T173119355Z` held the 51 previous
-  tiddlers plus five `$:/mws/snapshot/*` metadata tiddlers, is in no
-  `recipe_bag`, and `restore-wiki-snapshot … --list` finds it. The restore
-  brought back 51 tiddlers including `Backup` and `Autosave`, dropped
-  `Import-Test-Geändert`, and put the pre-restore state into its own snapshot.
-- Errors: plain HTML → "no application-name meta tag"; TW2 file → the TW2
-  hint; encrypted store → the password hint; store marker in a text example →
-  empty store refused. A bag listed in the recipe's `readonlyBags` is refused
-  even for the CLI ("is a read-only bag of the wiki"), and `--snapshot-keep 0`
-  is refused, because a replace without its own safety copy is not a replace.
-- Two bugs the verification found: `$:/SiteTitle` and `$:/DefaultTiddlers` were
-  listed as deleted by a replace (now kept and reported as `kept as they are`),
-  and `--include-system` only *reported* the system tiddlers without importing
-  them (now 56 instead of 48 tiddlers in the plan).
-- `GET /recipe/import-test/store.json` (anonymous read granted for the test)
-  served 56 tiddlers, and `GET /wiki/import-test` rendered with
-  `<title>MWS Bedienungsanleitung</title>`. The 101 `tiddler_event` rows of
-  the target bag are the server side of the live update of open tabs.
-- A second, smaller round trip on three tiddlers after the shared snapshot
-  reader replaced the duplicated one: create → `0 new, 0 changed, 3 unchanged`
-  on the next dry-run → change one tiddler and delete another → `1 written,
-  1 deleted, 1 unchanged` with a snapshot → restore brings `T3` and the old
-  `T2` text back → `--snapshot-keep 1` drops the two older snapshots and
-  names them.
-- `npm run tsc2` clean, `npm run build` succeeds; the dev store was compared
-  table by table against the backup afterwards and is unchanged.
-
-Not part of this section: the admin dialog (upload, preview, confirmation),
-the wiki-file list in "My Files", and the migration of existing `user_file`
-HTML attachments into a bag. `restoreSnapshotBag` in `importWikiFile.ts` is
-the programmatic entry point for that phase; the CLI uses the command for now.
-
-## 83. Bug fix: one connection alert instead of a flood (Issue #139)
-
-Upstream issue #139: when the network disappears, the wiki stacks alert after
-alert. Before this change it was reproducible in the browser and measurable.
-
-**Measured before** on an isolated instance
-(`/tmp/opencode/mws-sim`, port 5099, Playwright aborting `/updates`): the first
-alert only appeared after 61.9 s — the syncer polls every 60 s — and then the
-two `displayError` calls of one failed poll each raised their own alert into
-the normal logger `syncer-browser-multiwikiclient`, because the multiwikiclient
-adaptor reported a request that never reached the server as a plain `Error`.
-The count of the first alert grew from 1 to 10, a new `/updates` request went
-out every 5 s, and after the network came back both alerts stayed on screen
-during the 40 s that were watched.
-
-**Four causes, all of them ours.**
-
-1. `httpRequest` in `plugins/client/src/new-multiwikiclientadaptor.ts` uses
-   `XMLHttpRequest` and does not reject: a request that never reached the server
-   answers with status `0`. `recipeRequest` turned every non-ok answer into
-   `Server returned 0: (no reason)`, indistinguishable from a real server
-   error — so the syncer never saw a connection error.
-2. `displayError` only recognises the legacy core string
-   `XMLHttpRequest: 0`, which this adaptor never produces. It also alerts
-   twice, because the failed poll reports the error twice: once from the
-   task, once from `syncFromServerTask`. `Logger.alert` only *counts*
-   duplicates of identical text, so both remain visible.
-3. The retry interval stayed at 5 s, no matter how long the failure lasted.
-4. The syncer copy in `plugins/client/tiddlers/syncer/syncer.js` cleared the
-   connection alerts in `updateDirtyStatus` as soon as the wiki was not dirty.
-   For an anonymous reader that is true immediately, so an alert that had just
-   been raised was thrown away again.
-
-**The fix.** A `NetworkError` with `isNetworkError` marks what never reached
-the server; status `0` is such a case, every other status stays a normal
-`Error` with the server's reason. `isConnectionError()` recognises the marker
-next to the legacy string, and one alert per outage is raised through
-`loggerConnection` — with new German and English wording in
-`MWS/Syncer/NetworkErrorAlert`. A working task resets the alert, the backoff
-`[1,2,6,12]` of the 5 s base interval makes the retries 5/10/30/60 s, and
-`updateDirtyStatus` no longer clears anything.
-
-**Measured after**, same scenario: first alert at 60.1 s, exactly one alert
-with count 1 across 100 s of outage, requests at 60.1, 65.1, 75.1 and 107.1 s,
-and the alert gone at the first successful poll after the network returned.
-A server that answers `503` still produces the ordinary syncer alerts and no
-connection alert.
-
-**The measurement is a script:** `scripts/syncer-alert-sim.mjs` (Playwright,
-`playwright-core`, the Chromium from the Playwright cache). Defaults are 20 ×
-5 s outage and 16 × 5 s recovery; the recovery window has to outlast the 60 s
-backoff, because the attempt that clears the alert is the one after it.
-`MWS_URL`, `MWS_WIKI`, `MWS_ABORT_REASON` (default `failed`) and the sample
-counts are environment variables, `--help` lists them.
-
-Not verified: real sleep/wake on a laptop — that belongs to the maintainer.
-
-## Privacy / Datenschutz
-
-- **No external fonts/assets:** The admin interface loads neither Google
-  Fonts nor Material Icons fonts from third-party servers. The icons are
-  embedded SVGs (`@material-symbols/svg-400`); the Roboto variable font
-  (latin/latin-ext, normal/italic) is served locally from
-  `packages/admin-vanilla/public/fonts/` (→ `/fonts/*.woff2`). This
-  eliminates, for example, the Google Fonts-dependent cookie notice.
-  Roboto is licensed under the **SIL Open Font License 1.1**; the license
-  is included as `OFL.txt` alongside
-  `packages/admin-vanilla/public/fonts/` (unmodified use, no Reserved Font
-  Names affected).
-- **Cookie notice (consent banner, category-based):** A notice fades in at
-  the bottom of the screen. Categories: `essential` (session cookie
-  `session`, technically required, always on), `preferences` (stored locally
-  in `localStorage`: design/language, always on) and `external` (third-party
-  services such as Google Fonts — **off by default**, loaded only after
-  separate consent). Buttons: "Accept all cookies", "Necessary cookies only"
-  and "Cookie settings" (detail panel with toggles). The state is stored as a
-  versioned object in `localStorage` (`mws-cookie-consent`,
-  `{version:"v2",…}`); the old `v1` assumption is migrated conservatively
-  (external=false, no asking again). Implementation: `consent.ts` (central
-  API: `getConsent`, `hasConsent`, `setExternalConsent`, `onConsentChange`,
-  `applyExternalStylesheet` as the future integration point for external
-  resources), `cookie-consent.tsx` + `.cookie-consent` in
-  `app.inline.css`, included globally in `main.tsx` (landing page, login,
-  admin app). Consent can be changed at any time:
-  `openCookieConsent(true)` in `cookie-consent.tsx` reopens the banner
-  directly on the settings panel; reachable via "Cookie settings" in the
-  footer of the start page — the same footer was also carried over into the
-  admin view (for this reason, the former cookie icon button in the admin
-  header was dropped). In addition, the embedded server response now
-  provides `mwsVersion` for the version display in the footer.
-- **Legal notice (own page, no modal):** For live operations, the app
-  provides a public page under `/legal-notice` (equally available to
-  anonymous and logged-in visitors). The content is a single Markdown
-  textarea in the admin "settings" (`admin.legalNotice`), deliberately
-  **one** for all languages — whoever needs it enters the text in their own
-  language. It is rendered with the same escaped mini-markdown as the
-  welcome/news text: raw HTML tags (`<b>`, `<center>`, …) appear as literal
-  text and are never injected as active elements (defense-in-depth). The page
-  header shows the "Back to wiki overview" button for everyone. The
-  on/off toggle `admin.showLegalNotice` (default: on, also during install
-  seeding): when disabled, the "Legal notice" links disappear from the
-  footers of the start page and the admin app, the `GET /api/legal-notice`
-  API returns `content: null`, and a direct call to `/legal-notice` falls
-  back to login/overview. Implementation: `legal-notice.tsx`
-  (component + `.legal-notice-card` in `app.inline.css`),
-  `LegalNoticeRoute` in `LandingRoutes.ts`, `admin.legalNotice`/
-  `admin.showLegalNotice` in `PrefsRoutes.ts`, text + toggle in
-  `app-settings.tsx`, "Legal notice" link in `app-landing.tsx` and
-  `app.tsx`.
-
----
-
-## Operations / Outlook
-
-- Start via `npm start` (`scripts.mjs` → `tsup` + `mws.dev.mjs`), in
-  production operations via `pm2 startup`.
-- Default login after `init-store`: `admin` / `1234` (password thereafter
-
----
-
+## 92. Snapshots get their own dialog: "Restore a snapshot"
+
+**Why.** The snapshot list of §85 lived inside "Take over a wiki file". That
+made it hard to find on purpose and easy to reach by accident: it appeared only
+after picking an existing wiki *and* pressing "Check the file", so looking at the
+history of a wiki required an import first. The list itself was never the
+problem, the entrance was. Two details made it worse — the restore button was a
+bare icon whose meaning had to be guessed from a tooltip, and the confirmation
+was a `globalThis.confirm` alert that looked nothing like the admin app around it.
+
+**What.** A second entry in the "Create a wiki" dropdown opens
+`SnapshotRestoreDialog` (`packages/admin-vanilla/src/snapshot-restore.tsx`): its
+own modal with a wiki picker, the snapshot list and the sentence that explains
+what a restore does. A row shows date, tiddler count and origin, and carries a
+written button "Restore this snapshot" instead of an icon. Clicking it expands
+that row into an inline confirmation naming the wiki, the date, the count and
+the fact that the current content is saved first, then offers "Keep the current
+state" and "Restore now". The browser alert is gone.
+
+The file dialog loses the snapshot list altogether, together with
+`loadSnapshots`, `restore`, the `snapshots`/`snapshotsBusy`/`restoring`/`notice`
+state and the whole `renderSnapshots` block. What is left is one undo button in
+the result: after an import it reads "Restore a snapshot" and hands the imported
+slug to the new dialog through `onRestoreSnapshots`. Two modals would stack, so
+the import dialog steps aside — `openSnapshotRestore` closes it. The preview
+hint was reworded because it pointed at a list "below" that no longer exists.
+`PLANNING.md` records the move; the ⚖️ entries about the routes, the gate and
+the snapshot bag are untouched.
+
+**"Open the wiki" opens a new tab.** A restore throws the admin app away — the
+wiki itself is the next thing one wants to see, and its history is what the
+restore just changed. Both links, the one in the restore dialog and the one in
+the import result, therefore carry `target="_blank"` with
+`rel="noopener noreferrer"`, the same pair the wiki cards on the start page use
+(`app-landing.tsx`). The dialog stays where it is; the wiki opens beside it.
+
+The server side did not change: same `GET /api/wiki-file/snapshots`, same
+`PUT /api/wiki-file/restore`, same permission — only those who may replace see
+snapshots at all.
+
+**i18n.** Eleven new keys in all eight languages, one reworded, one obsolete
+removed with the alert, which leaves the eight base key sets at the same 648.
+
+**The icons needed a size of their own.** `MaterialSymbol` strips `width` and
+`height` from the SVG so that CSS can scale it, which means every occurrence has
+to declare its own dimensions — `font-size` does not size an SVG. The new notice
+carried an icon into `.wiki-file-notice`, which is not a flex container, so the
+SVG took its undefined default and filled the whole card: 189 px of icon in a
+752 px dialog for the undo button, and full width for the notice. Measuring all
+`material-symbol` in both dialogs also turned up two icons from §85 that were
+0 × 0 — the heading icons and the one on the snapshot line, which had only ever
+had a `font-size`. All of them are sized now: 20 px for headings, notice and
+snapshot line, 18 px for buttons, following the convention the other 30 icon
+rules already use.
+
+**Verified.** Headless Chromium against the dev instance, `fetch` stubbed: both
+wikis in the picker and `initialSlug` preselecting `testwiki`; two rows with
+German dates, "412 Tiddler" through the `#one` rule, and the second row falling
+back to `sourceBagName` when `source` is empty; clicking the restore button
+expanding the confirmation with both buttons; "Restore now" sending
+`PUT /api/wiki-file/restore?wiki=testwiki` with
+`{"snapshot":"snapshot-wiki-20260102T101500000Z"}`, reporting "Die Wiki
+\"testwiki\" wurde vom 2.1.2026, 11:15:00 zurückgesetzt." with a "Wiki öffnen"
+link, closing the panel and firing `onDone`. The file dialog: no
+`.wiki-file-snapshots`, no icon-only restore button, requests to `inspect` and
+`import` only — the `snapshots` request is gone — the new hint, and the undo
+button calling `onRestoreSnapshots("testwiki")`. Every `material-symbol` in both
+dialogs measures 20 × 20 or 18 × 18 afterwards, none 0. No exceptions in the
+console.
+Both "Open the wiki" links measure `href="/wiki/testwiki"`, `target="_blank"`
+and `rel="noopener noreferrer"`; headless Chromium does not list the tab a
+`_blank` click opens, so the effect was proven with the counterpart: an anchor
+without `target` navigates the current tab (`/login` → `/main.js`), the same
+anchor with `target="_blank"` leaves it on `/login`.
+The dropdown entry itself needs a login, and the dev store has no password at
+hand, so it was checked in the bundle: the compiled button carries
+`onclick:()=>{this.openSnapshotRestore(),this.closeCreateWikiMenu()}`. `npm run
+tsc2`, the admin typecheck, `npm run build` and the i18n audit (648 keys per
+language, no orphans, no duplicates, no invented placeholders, no literal `t()`
+without an entry) are clean.
+
+## 96. Bug fix: restoring a snapshot left the wiki in a mixture with it
+
+**Why.** Restoring a snapshot produced a wiki that was neither the snapshot nor
+the wiki it had been: tiddlers that the wiki had gained after the snapshot was
+taken were still there afterwards, and in the browser they showed up as leftovers
+of a version that was supposed to be gone.
+
+The reason was one rule, applied too widely. A replace — and a restore is a
+replace — never *deletes* `$:/` tiddlers of the target bag, because those tiddlers
+configure the wiki as a whole and an uploaded file that stays silent about them
+must not wipe them. A restore is not such a file. A snapshot is a complete copy
+of that wiki's own bag, `$:/` tiddlers included; it is not a source that stays
+silent, it is the wiki's own former state. So the rule protected exactly the
+things a restore is supposed to remove.
+
+What made it hard to see was the asymmetry. An ordinary tiddler created after the
+snapshot *was* deleted; a system tiddler created after the snapshot stayed. Two
+tiddlers, same age, same bag, opposite outcomes — so a restore looked like it
+worked most of the time and mixed leftovers in the rest.
+
+**What.** `planTiddlers()` grew a `keepTargetSystem` option, default `true`, and
+both restore paths — `restoreSnapshotBag()` for the admin dialog and the
+`restore-wiki-snapshot` command — pass `false`. Everything else is untouched: an
+import still keeps the `$:/` tiddlers of the target bag and still reports them as
+`keptSystemTitles`. A restore therefore *replaces* the bag instead of merging into
+it, and a restored wiki is byte-for-byte the snapshot's content.
+
+**Verified.** `empty_deutsch.html` into `wiki-schuler-2`, then three tiddlers
+created afterwards — `NormalerArtefakt`, `$:/SystemArtefakt`,
+`$:/ArtefaktNachSnapshot` — then the restore of the earlier snapshot: `4 deleted`
+instead of the `1 deleted` of before, all three leftovers gone, and the bag
+compared field by field against the snapshot's content: identical. The import
+path was re-checked in the same store and still reports the 12 system tiddlers of
+the wiki as `kept as they are`. `npm run tsc2`, the admin typecheck,
+`npm run build` and the i18n audit are clean; the dev store was restored
+afterwards.
+
+## 95. Bug fix: an imported wiki kept a start page that pointed nowhere
+
+**Why.** Importing a single-file TiddlyWiki into a wiki MWS had created left
+the wiki on its own welcome page. The plan said `$:/DefaultTiddlers` was
+"kept as it is", the wiki opened `Willkommen` — and `Willkommen` was gone,
+because the file had replaced the bag. Nothing was wrong with the import; the
+start page was. `Willkommen` is what MWS writes into every wiki it creates
+(`TabDataAdapter.ts`), so it was never the file's opinion about a start page.
+
+The file does have an opinion, but not where the parser was looking. A
+single-file TiddlyWiki practically never keeps `$:/DefaultTiddlers` in its
+store: the stock edition leaves it in `$:/core`, where it reads
+`GettingStarted`. Reading only the store therefore found nothing and kept the
+MWS value, and the wiki opened a title no file had ever mentioned.
+
+**What.** `parseWikiFile` reads `$:/DefaultTiddlers` out of the core the file
+carries, but only when the file's own store says nothing about it — a file that
+names its own start page has already had its say. The value is then treated as
+a system tiddler of the file, so it travels *without* needing the
+system-tiddler opt-in: a start page naming a tiddler nobody can open is the one
+thing worse than the wrong one. `readCoreText()` parses the plugin payload
+(`{"tiddlers": {...}}`) and yields nothing for a payload that is not that shape,
+so a repacked or broken core leaves the previous behaviour alone.
+
+Only `$:/DefaultTiddlers` gets this treatment. `$:/SiteTitle` is not moved into
+the bag by the parser either — the import dialog reads it for the display name,
+and `WikiShell` writes it — and the other core settings are not start pages.
+
+**Verified.** `empty_deutsch.html` (5.4.1, no `$:/DefaultTiddlers` in the store,
+`$:/core` carries `GettingStarted`) into `wiki-schuler-2`: the plan reports
+`$:/DefaultTiddlers` as `changed` instead of keeping it, `Willkommen` lands in
+`deleted`, and the bag afterwards holds `$:/DefaultTiddlers = GettingStarted`
+with no `Willkommen` left. Against the running dev instance the wiki index
+serves `$:/DefaultTiddlers` with `GettingStarted`, and the core it already
+loads carries the `GettingStarted` tiddler itself, so the page renders rather
+than falling back to an empty wiki. `npm run tsc2`, the admin typecheck,
+`npm run build` and the i18n audit are clean; the dev store was restored
+afterwards. A file whose store *does* carry `$:/DefaultTiddlers` is unaffected —
+the core is not consulted.
+
+## 94. Feature: import a file's core plugins, themes and libraries with version checking
+
+**Why.** §86 deliberately forbade writing core plugins, themes and libraries
+into a bag, because the plugins of a wiki come from its recipe and `$:/core`
+alone is megabytes. A single-file wiki may nevertheless be meant to *be* that
+version: a restored snapshot should be indistinguishable, and someone who saves
+an empty.html of the same release may want the bag to hold what the file has.
+The reactivation asked for a narrow, opt-in way that cannot let a 5.3.0 core
+into a 5.4.1 wiki.
+
+**What.** A new `include-plugins` flag. When set, `parseWikiFile` takes an
+opt-in and a `targetVersion`; language packs are not affected. For non-language
+plugin tiddlers ($:/core, themes, libraries) the parser:
+- keeps a plugin in the bag only when its own `version` equals `targetVersion`,
+- rejects a plugin with no `version` ("no-version"),
+- rejects a plugin whose `version` differs ("version-mismatch"),
+- reports rejected ones with a short reason in the plan.
+
+The CLI (`import-wiki-file`) and the REST routes (`/api/wiki-file/inspect` and
+`/api/wiki-file/import`) accept `?include-plugins=1`. The admin dialog shows a
+new checkbox: "Also import the file's plugins: core, themes and libraries",
+explaining that only those at the wiki's version travel with it, into snapshots
+and another installation; the running wiki loads plugins from the installation's
+cache so the cache copy wins when `externalPlugins` is true. The preview lists
+kept plugins and shows reasons for skipped ones ("not asked for", "no version",
+"different version"). The new export structure includes `includePlugins` and
+`keptPluginTitles` and `skippedPlugins` (each with `title`, `reasonCode`,
+`reason`).
+
+**The shadowing is deliberate.** With `externalPlugins: true` (Blank Template)
+the loaded page includes the cache versions as `$tw.preloadTiddler` scripts and
+the DOM store's copies of `$:/core` etc. are replaced by the cache copies after
+`loadTiddlersBrowser()`; the bag copy is still carried into snapshots and
+survives a move to another installation. With `externalPlugins` off the bag
+copy is what boots. No boot reordering was made — the cache copy is what the
+client plugin of this installation expects.
+
+**Verified.** `empty.html` (5.4.1) with `--include-plugins` writes `$:/core`,
+`$:/themes/tiddlywiki/snowwhite`, `$:/themes/tiddlywiki/vanilla` into the bag;
+without it none. A mismatch file where `$:/core` becomes `5.3.0` writes the two
+themes but leaves `$:/core` out with the exact reason. A file with no version
+field on the core is rejected with "names no version". `npm run tsc2`, the admin
+typecheck, `npm run build` and the i18n audit all clean; the store used for the
+live test was restored.
 # 🇩🇪 CHANGELOG – MultiWikiServer-wikiwise
 
 Dokumentation der Änderungen am MultiWikiServer-wikiwise-Fork von heino17.
@@ -9983,6 +9541,219 @@ Warnung wirklich verschwunden ist, kann nur der Lauf auf GitHub zeigen — nach
 dem Push ist sie es: der Lauf ist grün und die Annotation über `node20` nicht
 mehr vorhanden, nur noch der Hinweis, dass `ubuntu-latest` ab 19.10.2026 auf
 Ubuntu 26 migriert.
+
+## 92. Snapshots bekommen ihr eigenes Fenster: „Snapshot wiederherstellen"
+
+**Warum.** Die Snapshot-Liste aus §85 steckte in „Wiki-Datei übernehmen". Damit
+war sie gezielt schwer zu finden und versehentlich leicht zu treffen: Sie erschien
+erst, nachdem eine bestehende Wiki gewählt *und* „Datei prüfen" gedrückt war —
+man brauchte also einen Import, um überhaupt in die Historie einer Wiki zu
+sehen. Die Liste war nie das Problem, der Einstieg war es. Zwei Details
+verschärften es: Der Wiederherstellen-Knopf war ein nacktes Symbol, dessen
+Bedeutung man am Tooltip erraten musste, und die Bestätigung war ein
+`globalThis.confirm`-Alert, der überhaupt nicht in die Admin-Oberfläche passte.
+
+**Was.** Ein zweiter Eintrag im „Wiki anlegen"-Menü öffnet
+`SnapshotRestoreDialog` (`packages/admin-vanilla/src/snapshot-restore.tsx`): ein
+eigenes Fenster mit Wiki-Auswahl, Snapshot-Liste und dem Satz, der erklärt, was
+ein Restore tut. Eine Zeile zeigt Datum, Tiddlerzahl und Herkunft und trägt einen
+beschrifteten Knopf „Diesen Snapshot wiederherstellen" statt eines Symbols. Ein
+Klick darauf klappt die Zeile zu einer Bestätigung auf, die Wiki, Datum, Anzahl
+und den Hinweis auf den Sicherheits-Snapshot nennt, und bietet „Aktuellen Stand
+behalten" und „Jetzt wiederherstellen". Der Browser-Alert ist weg.
+
+Der Datei-Dialog verliert die Snapshot-Liste samt `loadSnapshots`, `restore`, den
+States `snapshots`/`snapshotsBusy`/`restoring`/`notice` und dem ganzen Block
+`renderSnapshots`. Übrig bleibt ein Undo-Knopf im Ergebnisbereich: Nach einem
+Import steht dort „Snapshot wiederherstellen" und übergibt die importierte Slug
+über `onRestoreSnapshots` an das neue Fenster. Zwei Modalitäten würden sich
+stapeln, deshalb tritt der Import-Dialog zurück — `openSnapshotRestore` schließt
+ihn. Der Hinweis in der Vorschau wurde umformuliert, weil er auf eine Liste
+„unten" verwies, die es nicht mehr gibt. `PLANNING.md` hält die Verlagerung
+fest; die ⚖️-Einträge zu Routen, Berechtigung und Snapshot-Bag bleiben
+unberührt.
+
+**„Wiki öffnen" öffnet einen neuen Tab.** Ein Restore wirft die Admin-Oberfläche
+beiseite — die Wiki selbst ist das Nächste, was man sehen will, und ihre Historie
+hat der Restore gerade verändert. Beide Links tragen deshalb `target="_blank"`
+mit `rel="noopener noreferrer"`, das gleiche Paar wie die Wiki-Karten auf der
+Startseite (`app-landing.tsx`). Das Fenster bleibt stehen, die Wiki öffnet sich
+daneben.
+
+Serverseitig ändert sich nichts: gleiches `GET /api/wiki-file/snapshots`, gleiches
+`PUT /api/wiki-file/restore`, gleiche Berechtigung — wer nicht ersetzen darf,
+sieht ohnehin keine Snapshots.
+
+**i18n.** Elf neue Schlüssel in allen acht Sprachen, einer umformuliert, einer
+mit dem Alert überflüssig — die acht Basisschlüsselmengen bleiben dieselben 648.
+
+**Die Icons brauchten eine eigene Größe.** `MaterialSymbol` entfernt `width` und
+`height` aus dem SVG, damit es über CSS skaliert — jedes Vorkommen muss die
+Maße also selbst setzen, denn `font-size` skaliert kein SVG. Die neue Meldung
+brachte ein Icon in `.wiki-file-notice`, und das ist kein Flex-Container: Das SVG
+fiel damit auf seinen undefinierten Standard zurück und füllte die ganze Karte —
+189 px Icon in einem 752-px-Dialog beim Undo-Knopf, volle Breite bei der Meldung.
+Beim Messen aller `material-symbol` in beiden Fenstern kamen zusätzlich zwei
+Icons aus §85 heraus, die 0 × 0 groß waren: die Icons in den Überschriften und das
+auf der Snapshot-Zeile, die es nie anders als nur mit `font-size` gab. Alle sind
+jetzt vermessen: 20 px für Überschriften, Meldung und Snapshot-Zeile, 18 px für
+Knöpfe, nach der Konvention, die die anderen 30 Icon-Regeln schon benutzen.
+
+**Geprüft.** Headless Chromium gegen die Dev-Instanz, `fetch` gestubbt: beide
+Wikis in der Auswahl und `initialSlug` wählt `testwiki` vor; zwei Zeilen mit
+deutschen Daten, „412 Tiddler" über die `#one`-Regel und einem Rückfall auf
+`sourceBagName`, wenn `source` leer ist; ein Klick auf den Restore-Knopf klappt
+die Bestätigung mit beiden Knöpfen auf; „Jetzt wiederherstellen" sendet
+`PUT /api/wiki-file/restore?wiki=testwiki` mit
+`{"snapshot":"snapshot-wiki-20260102T101500000Z"}`, meldet „Die Wiki
+\"testwiki\" wurde vom 2.1.2026, 11:15:00 zurückgesetzt." mit „Wiki öffnen",
+schließt das Panel und löst `onDone` aus. Der Datei-Dialog: kein
+`.wiki-file-snapshots`, kein Knopf ohne Text, nur Aufrufe an `inspect` und
+`import` — die `snapshots`-Anfrage ist weg — der neue Hinweistext und der
+Undo-Knopf mit `onRestoreSnapshots("testwiki")`. Jedes `material-symbol` in beiden
+Fenstern misst danach 20 × 20 oder 18 × 18, keines 0. Keine Ausnahmen in der
+Konsole.
+Beide „Wiki öffnen"-Links messen `href="/wiki/testwiki"`, `target="_blank"` und
+`rel="noopener noreferrer"`; Headless Chromium listet den Tab, den ein
+`_blank`-Klick öffnet, nicht auf. Deshalb wurde die Wirkung am Gegenbeispiel
+geprüft: Ein Anker ohne `target` navigiert den aktuellen Tab (`/login` →
+`/main.js`), derselbe Anker mit `target="_blank"` lässt ihn auf `/login`.
+Der Menüeintrag selbst liegt hinter dem Login, und für den Dev-Store lag kein
+Passwort vor, deshalb wurde er im Bundle geprüft: Der übersetzte Knopf trägt
+`onclick:()=>{this.openSnapshotRestore(),this.closeCreateWikiMenu()}`. `npm run
+tsc2`, der Admin-Typecheck, `npm run build` und das i18n-Audit (648 Schlüssel je
+Sprache, keine Waisen, keine Dubletten, keine erfundenen Platzhalter, kein
+literaler `t()` ohne Eintrag) sind sauber.
+
+
+## 96. Bugfix: Zurückspielen eines Snapshots hinterließ eine Mischung aus Wiki und Snapshot
+
+**Warum.** Nach dem Zurückspielen eines Snapshots war die Wiki weder der
+Snapshot noch die Wiki, die es vorher war: Tiddler, die die Wiki seit der
+Aufnahme des Snapshots dazugekommen waren, standen danach noch da und zeigten
+sich im Browser als Reste einer Version, die eigentlich verschwunden sein
+sollte.
+
+Der Grund war eine Regel, die zu breit angewandt wurde. Ein Replace — und ein
+Restore ist ein Replace — löscht die `$:/`-Tiddler des Zielbags nie, weil diese
+Tiddler die Wiki als Ganzes konfigurieren und eine hochgeladene Datei, die dazu
+schweigt, sie nicht wegwischen darf. Ein Restore ist keine solche Datei. Ein
+Snapshot ist eine vollständige Kopie des Bags dieser Wiki, `$:/`-Tiddler
+eingeschlossen; er ist keine schweigende Quelle, er ist der frühere Zustand der
+Wiki selbst. Die Regel schützte also genau das, was ein Restore entfernen soll.
+
+Schwer zu sehen war die Asymmetrie. Ein gewöhnlicher Tiddler, der nach dem
+Snapshot entstanden war, *wurde* gelöscht; ein Systemtiddler, der nach dem
+Snapshot entstanden war, blieb. Zwei Tiddler, gleich alt, gleicher Bag,
+gegensätzliches Ergebnis — so wirkte ein Restore, als klappt er meistens und
+mischte im Rest der Fälle Reste hinein.
+
+**Was.** `planTiddlers()` bekam die Option `keepTargetSystem`, Standard `true`,
+und beide Restore-Pfade — `restoreSnapshotBag()` für den Admin-Dialog und der
+Befehl `restore-wiki-snapshot` — reichen `false` weiter. Alles andere bleibt
+unberührt: Ein Import behält die `$:/`-Tiddler des Zielbags weiter und meldet sie
+weiterhin als `keptSystemTitles`. Ein Restore *ersetzt* den Bag damit, statt in
+ihn hineinzumergen, und eine zurückgespielte Wiki ist Feld für Feld der Inhalt
+des Snapshots.
+
+**Verifikation.** `empty_deutsch.html` nach `wiki-schuler-2`, danach drei
+nachträglich angelegte Tiddler — `NormalerArtefakt`, `$:/SystemArtefakt`,
+`$:/ArtefaktNachSnapshot` —, dann das Zurückspielen des früheren Snapshots:
+`4 deleted` statt der bisherigen `1 deleted`, alle drei Reste weg, und der Bag
+Feld für Feld mit dem Snapshot-Inhalt verglichen: identisch. Der Import-Pfad
+wurde im selben Store nachgeprüft und meldet die 12 Systemtiddler der Wiki
+weiterhin als „kept as they are“. `npm run tsc2`, Admin-Typecheck,
+`npm run build` und i18n-Audit sind sauber; der Dev-Store wurde danach
+zurückgesetzt.
+
+## 95. Bugfix: eine importierte Wiki behielt eine Startseite, die ins Leere zeigte
+
+**Warum.** Der Import einer Single-File-TiddlyWiki in eine von MWS angelegte Wiki
+ließ die Wiki auf ihrer eigenen Willkommensseite stehen. Der Plan meldete
+`$:/DefaultTiddlers` als „behalten wie er ist“, die Wiki öffnete `Willkommen` —
+und `Willkommen` war weg, weil die Datei den Bag ersetzt hatte. Am Import war
+nichts falsch; an der Startseite. `Willkommen` ist, was MWS in jede selbst
+angelegte Wiki schreibt (`TabDataAdapter.ts`), also war es nie die Aussage der
+Datei über eine Startseite.
+
+Eine Aussage hat die Datei durchaus, nur nicht dort, wo der Parser gesucht
+hat. Eine Single-File-TiddlyWiki führt `$:/DefaultTiddlers` praktisch nie in
+ihrem Store: Die Standard-Edition lässt es in `$:/core`, wo
+`GettingStarted` steht. Wer nur den Store liest, findet also nichts und behält
+den MWS-Wert — und die Wiki öffnet einen Titel, den keine Datei je erwähnt
+hatte.
+
+**Was.** `parseWikiFile` liest `$:/DefaultTiddlers` aus dem Core, den die Datei
+mitbringt — aber nur, wenn der Store der Datei dazu schweigt; eine Datei, die
+ihre eigene Startseite nennt, hat sich schon Gehorsam verschafft. Der Wert wird
+dann als Systemtiddler der Datei behandelt und reist deshalb *ohne* das
+Systemtiddler-Opt-in: Eine Startseite, die einen Tiddler nennt, den niemand öffnen kann, ist das
+Einzige, was schlimmer ist als die falsche. `readCoreText()`
+liest die Plugin-Nutzlast (`{"tiddlers": {...}}`) und liefert für eine
+Nutzlast, die nicht diese Form hat, nichts — ein umgepackter oder kaputter Core
+lässt also das alte Verstehen stehen.
+
+Nur `$:/DefaultTiddlers` bekommt diese Behandlung. `$:/SiteTitle` wird vom
+Parser ebenfalls nicht in den Bag geschrieben — der Import-Dialog liest es für
+den Anzeigenamen, und `WikiShell` schreibt es —, und die übrigen
+Core-Einstellungen sind keine Startseiten.
+
+**Verifikation.** `empty_deutsch.html` (5.4.1, kein `$:/DefaultTiddlers` im
+Store, `$:/core` trägt `GettingStarted`) nach `wiki-schuler-2`: Der Plan meldet
+`$:/DefaultTiddlers` als `changed`, statt es zu behalten, `Willkommen` steht
+unter `deleted`, und der Bag enthält danach `$:/DefaultTiddlers = GettingStarted`
+ohne `Willkommen`. Gegen die laufende Dev-Instanz liefert der Wiki-Index
+`$:/DefaultTiddlers` mit `GettingStarted`, und der Core, den die Wiki ohnehin
+lädt, enthält den Tiddler `GettingStarted` selbst — die Seite rendert also, statt
+auf eine leere Wiki zurückzufallen. `npm run tsc2`, Admin-Typecheck,
+`npm run build` und i18n-Audit sind sauber; der Dev-Store wurde danach
+zurückgesetzt. Eine Datei, deren Store `$:/DefaultTiddlers` doch enthält, ist
+unberührt — der Core wird dann nicht befragt.
+
+## 94. Feature: Plugins, Themes und Bibliotheken der Datei importieren – mit Versionsprüfung
+
+**Warum.** §86 verbot es bisher, Core-Plugins, Themes und Bibliotheken in einen
+Bag zu schreiben, weil die Plugins einer Wiki aus ihrem Rezept kommen und schon
+`$:/core` allein Megabyte groß ist. Ein Einzeldatei-Wiki kann aber genau jene
+Version sein, die man wiederherstellen will: ein Snapshot soll
+unterscheidungslos wieder einsatzfähig sein, und wer eine `empty.html` derselben
+Release importiert, will die Plugins der Datei im Bag finden.
+
+**Was.** Ein neuer Schalter `include-plugins`. Bei Aktivierung nimmt
+`parseWikiFile` ein Opt-in und eine `targetVersion` entgegen; Sprachpakete sind
+nicht betroffen. Bei Nicht-Sprach-Plugins ($:/core, Themes, Bibliotheken) gilt:
+- nur wenn das Plugin selbst `version` genau gleich `targetVersion` ist, wird es
+  in den Bag geschrieben,
+- Plugins ohne `version` werden abgewiesen ("keine Version"),
+- Plugins mit abweichender `version` werden abgewiesen ("Versionsunterschied"),
+- die Gründe stehen im Plan.
+
+CLI (`import-wiki-file`), die REST-Routen (`/api/wiki-file/inspect` und
+`/api/wiki-file/import`) akzeptieren `?include-plugins=1`. Der
+Admin-Dialog zeigt ein neues Kontrollkästchen „Auch die Plugins der Datei
+importieren: Core, Themes und Bibliotheken“ mit dem Hinweis, dass nur die zur
+Versionsnummer der Wiki passenden mitreisen – in Snapshots und in eine andere
+Installation. Die Vorschau listet übernommene Plugins und zeigt für
+ausgelassene den Grund („nicht angefordert“, „keine Version“,
+„andere Version“). Die Antwort enthält `includePlugins`, `keptPluginTitles`
+und `skippedPlugins` (mit `title`, `reasonCode`, `reason`).
+
+**Das Shadowing ist beabsichtigt.** Bei `externalPlugins: true` (Blank Template)
+lädt die Seite die Cache-Versionen als `$tw.preloadTiddler`-Skripte; der
+DOM-Store wird nach `loadTiddlersBrowser()` durch die Cache-Kopien ersetzt. Die
+im Bag liegende Kopie reist trotzdem mit (Snapshots, andere Installation). Bei
+`externalPlugins: false` bootet die Wiki aus dem Bag. Die Bootreihenfolge wurde
+nicht geändert – der Cache ist diejenige Kopie, für die das Client-Plugin der
+Installation gebaut ist.
+
+**Verifikation.** `empty.html` (5.4.1) mit `--include-plugins` schreibt
+`$:/core`, `$:/themes/tiddlywiki/snowwhite` und
+`$:/themes/tiddlywiki/vanilla` in den Bag; ohne den Schalter bleibt alles weg.
+Ein Muster mit `$:/core` auf `5.3.0` schreibt die beiden Themes, lässt `$:/core`
+jedoch mit Begründung weg. Ein File ohne `version` beim Core wird mit dem
+entsprechenden Grund abgewiesen. `npm run tsc2`, Admin-Typecheck, `npm run build`
+und i18n-Audit sind sauber; der Dev-Store wurde nach dem Test zurückgesetzt.
+
 
 ## 91. Spanisches `#many`: der letzte offene Pluralfall
 

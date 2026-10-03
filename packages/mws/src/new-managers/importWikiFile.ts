@@ -1,7 +1,7 @@
 import { IdString } from "@mws/admin-vanilla/src/definition/tabs";
 import { ServerRequest } from "@tiddlywiki/server";
 import { TiddlerFields } from "tiddlywiki";
-import { ParsedWikiFile, WikiFileStore } from "./WikiFileImport";
+import { ParsedWikiFile, WikiFilePluginSkip, WikiFileStore } from "./WikiFileImport";
 import { WikiStore } from "./RecipeResolver";
 import {
   SnapshotBag,
@@ -37,10 +37,14 @@ export interface WikiImportPlan {
   store: WikiFileStore;
   sizeBytes: number;
   includeSystem: boolean;
+  /** Whether the file's core plugins were asked for and written. */
+  includePlugins: boolean;
   /** Titles left out because they are system tiddlers. */
   skippedSystemTitles: string[];
-  /** Plugin titles left out; plugins never enter a bag, not even on request. */
-  skippedPluginTitles: string[];
+  /** Plugin titles written into the bag, at the wiki's own version. */
+  keptPluginTitles: string[];
+  /** Plugin titles left out, each with the reason. */
+  skippedPlugins: WikiFilePluginSkip[];
   /** Session and build state that was dropped while reading the file. */
   skippedTransientTitles: string[];
   /** How many tiddlers the file offers for writing. */
@@ -107,8 +111,16 @@ export async function planTiddlers(prisma: PrismaTxnClient, options: {
   target: WikiImportTarget;
   mode: WikiImportMode;
   file?: Partial<WikiImportPlan> & { includeSystem?: boolean };
+  /**
+   * Whether the target's own `$:/` tiddlers survive a replace. True for an
+   * import, where they configure the wiki as a whole and a file that stays
+   * silent about them must not wipe them. False for a restore, which has to
+   * reproduce the snapshot instead of merging into the wiki.
+   */
+  keepTargetSystem?: boolean;
 }): Promise<WikiImportPlan> {
   const { tiddlers, target, mode } = options;
+  const keepTargetSystem = options.keepTargetSystem ?? true;
 
   const existing = await prisma.tiddler.findMany({
     where: { bag_id: IdString.cast(target.bagId) },
@@ -136,10 +148,15 @@ export async function planTiddlers(prisma: PrismaTxnClient, options: {
     existingByTitle.delete(tiddler.title);
   }
   // Whatever is left in the bag is not in the file: a replace deletes it, a
-  // merge keeps it. System tiddlers are never deleted (see WikiImportPlan).
+  // merge keeps it. An import protects the target's system tiddlers, a restore
+  // does not (see keepTargetSystem).
   const missing = Array.from(existingByTitle.keys());
-  const deleted = mode === "replace" ? missing.filter(title => !title.startsWith("$:/")).sort() : [];
-  const keptSystemTitles = missing.filter(title => title.startsWith("$:/")).sort();
+  const deleted = mode === "replace"
+    ? (keepTargetSystem ? missing.filter(title => !title.startsWith("$:/")) : missing).sort()
+    : [];
+  const keptSystemTitles = !keepTargetSystem || options.file?.includeSystem
+    ? []
+    : missing.filter(title => title.startsWith("$:/")).sort();
 
   return {
     target,
@@ -149,8 +166,10 @@ export async function planTiddlers(prisma: PrismaTxnClient, options: {
     store: options.file?.store ?? "json",
     sizeBytes: options.file?.sizeBytes ?? 0,
     includeSystem: !!options.file?.includeSystem,
+    includePlugins: !!options.file?.includePlugins,
     skippedSystemTitles: options.file?.skippedSystemTitles ?? [],
-    skippedPluginTitles: options.file?.skippedPluginTitles ?? [],
+    keptPluginTitles: options.file?.keptPluginTitles ?? [],
+    skippedPlugins: options.file?.skippedPlugins ?? [],
     skippedTransientTitles: options.file?.skippedTransientTitles ?? [],
     fileTiddlerCount: tiddlers.length,
     existingCount: existing.length,
@@ -216,6 +235,8 @@ export async function planWikiFileImport(prisma: PrismaTxnClient, options: {
   target: WikiImportTarget;
   mode: WikiImportMode;
   includeSystem?: boolean;
+  /** Only used when the parsed file does not know it; the parse decides. */
+  includePlugins?: boolean;
 }): Promise<WikiImportPlan> {
   const includeSystem = !!options.includeSystem;
   const { language: _fileLanguage, ...parsedFile } = options.parsed;
@@ -231,6 +252,7 @@ export async function planWikiFileImport(prisma: PrismaTxnClient, options: {
     file: {
       ...parsedFile,
       includeSystem,
+      includePlugins: options.includePlugins ?? !!parsedFile.includePlugins,
       dropped,
       ...(language ? { language } : {}),
     },
@@ -332,7 +354,16 @@ export async function restoreSnapshotBag(prisma: PrismaTxnClient, options: {
 }): Promise<WikiImportResult> {
   const tiddlers = await readSnapshotTiddlers(prisma, options.snapshotBagName);
 
-  const plan = await planTiddlers(prisma, { tiddlers, target: options.target, mode: "replace" });
+  // A snapshot is a complete copy of this wiki's own bag, so the restore has to
+  // reproduce it exactly - system tiddlers included. Leaving the ones the wiki
+  // has gained since the snapshot behind is what made a restore look like a
+  // mixture of the wiki and the snapshot.
+  const plan = await planTiddlers(prisma, {
+    tiddlers,
+    target: options.target,
+    mode: "replace",
+    keepTargetSystem: false,
+  });
 
   return applyTiddlers(prisma, {
     tiddlers,

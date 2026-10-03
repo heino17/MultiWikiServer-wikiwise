@@ -43,6 +43,7 @@ const info: CommandInfo = {
 		["bag-name <string>", "Bag to write into (default: the wiki's own default write target)."],
 		["merge", "Only add and update tiddlers; keep the tiddlers the file does not contain."],
 		["include-system", "Also import the file's $:/ system tiddlers."],
+		["include-plugins", "Also import the file's core plugins, themes and libraries, but only those that are the version the wiki runs."],
 		["dry-run", "Only report what would change."],
 		["snapshot-keep <number>", "How many snapshots to keep per wiki (default 10)."],
 	],
@@ -59,6 +60,7 @@ type ImportWikiFileOptions = {
 	"bag-name"?: [string];
 	"merge"?: boolean;
 	"include-system"?: boolean;
+	"include-plugins"?: boolean;
 	"dry-run"?: boolean;
 	"snapshot-keep"?: [string];
 };
@@ -81,6 +83,7 @@ export class ImportWikiFileCommand extends BaseCommand<[string], ImportWikiFileO
 
 		const mode: WikiImportMode = this.options["merge"] ? "merge" : "replace";
 		const includeSystem = !!this.options["include-system"];
+		const includePlugins = !!this.options["include-plugins"];
 		const dryRun = !!this.options["dry-run"];
 		const snapshotKeep = this.options["snapshot-keep"]?.[0];
 		// A replace always keeps the copy it just made, otherwise there is nothing
@@ -98,7 +101,17 @@ export class ImportWikiFileCommand extends BaseCommand<[string], ImportWikiFileO
 		try {
 			const fileInfo = inspectWikiFile(html, { sizeLimit });
 			const $tw = await this.bootForImport(fileInfo.twVersion, wikiSlug, templateName);
-			parsed = parseWikiFile($tw, html, { includeSystem, sizeLimit });
+			// The plugins of the file are only welcome when they are the version
+			// the wiki will run, not the version the file was saved with.
+			const targetVersion = (wikiSlug
+				? await this.templateVersionOfWiki(wikiSlug)
+				: await this.templateVersion(templateName)) ?? "";
+			parsed = parseWikiFile($tw, html, {
+				includeSystem,
+				includePlugins,
+				targetVersion,
+				sizeLimit,
+			});
 		} catch (error) {
 			if (error instanceof WikiFileError) throw `${fileName}: ${error.message}`;
 			throw error;
@@ -139,7 +152,7 @@ export class ImportWikiFileCommand extends BaseCommand<[string], ImportWikiFileO
 				slug = resolved.slug;
 			}
 
-			const plan = await planWikiFileImport(prisma, { parsed, target, mode, includeSystem });
+			const plan = await planWikiFileImport(prisma, { parsed, target, mode, includeSystem, includePlugins });
 			printPlan(plan, dryRun);
 
 			if (dryRun) return;
@@ -296,9 +309,12 @@ function printPlan(plan: WikiImportPlan, dryRun: boolean) {
 		console.log(`  ${plan.keptSystemTitles.length} system tiddler(s) of the wiki kept as they are: `
 			+ printTitles(plan.keptSystemTitles));
 	}
-	if (plan.skippedPluginTitles.length) {
-		console.log(`  ${plan.skippedPluginTitles.length} core plugin/theme/library tiddler(s) never imported `
-			+ `(a wiki gets them from its recipe): ${printTitles(plan.skippedPluginTitles)}`);
+	if (plan.keptPluginTitles.length) {
+		console.log(`  ${plan.keptPluginTitles.length} core plugin/theme/library tiddler(s) written into the bag: `
+			+ printTitles(plan.keptPluginTitles));
+	}
+	for (const skip of plan.skippedPlugins) {
+		console.log(`  plugin left out: ${skip.reason}`);
 	}
 	if (plan.language) {
 		const pack = plan.language.packTitle ? ` (pack ${plan.language.packTitle} comes with the file)` : "";

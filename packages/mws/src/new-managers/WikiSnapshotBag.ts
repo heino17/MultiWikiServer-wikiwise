@@ -39,6 +39,20 @@ export function snapshotBagPrefix(slug: string): string {
   return `${SNAPSHOT_BAG_PREFIX}${slug}/`;
 }
 
+/**
+ * The guard the restore and the delete route share: a snapshot may only be
+ * touched under the prefix of its own wiki, so an administrator of one wiki
+ * cannot read another wiki's tiddlers by naming its bag here. Returns the
+ * stamp, or null when the name belongs to another wiki or to a wiki further
+ * down the path.
+ */
+export function snapshotStampOf(slug: string, bagName: string): string | null {
+  const prefix = snapshotBagPrefix(slug);
+  if (!bagName.startsWith(prefix)) return null;
+  const stamp = bagName.slice(prefix.length);
+  return stamp && !stamp.includes("/") ? stamp : null;
+}
+
 /** A fixed-width UTC stamp, so bag names sort chronologically. */
 function snapshotStamp(date: Date): string {
   const pad = (n: number, len = 2) => String(n).padStart(len, "0");
@@ -146,6 +160,20 @@ export async function pruneSnapshotBags(prisma: PrismaTxnClient, slug: string, k
     await dropBag(prisma, row.id);
   }
   return stale.map(row => row.name);
+}
+
+/**
+ * Drops one snapshot bag. The caller has checked the name against the wiki and
+ * against the stored list; this only refuses a bag that is not a snapshot, so a
+ * mistyped name can never take a wiki's own bag with it.
+ */
+export async function deleteSnapshotBag(prisma: PrismaTxnClient, bagName: string): Promise<boolean> {
+  const meta = await readSnapshotMeta(prisma, bagName);
+  if (!meta) return false;
+  const bagId = await bagIdOfName(prisma, bagName);
+  if (!bagId) return false;
+  await dropBag(prisma, bagId.toString());
+  return true;
 }
 
 export async function listSnapshotBags(prisma: PrismaTxnClient, slug?: string): Promise<SnapshotBag[]> {

@@ -2,7 +2,7 @@ import { customElement, JSXElement, state } from "@tiddlywiki/jsx-lit";
 import closeIcon from "@material-symbols/svg-400/outlined/close.svg";
 import uploadIcon from "@material-symbols/svg-400/outlined/upload.svg";
 import historyIcon from "@material-symbols/svg-400/outlined/history.svg";
-import restoreIcon from "@material-symbols/svg-400/outlined/replay.svg";
+import restoreIcon from "@material-symbols/svg-400/outlined/settings_backup_restore.svg";
 import { MaterialSymbol } from "./material-symbol";
 import { t } from "./i18n";
 import { formatStorageErrorForDisplay, prettifyBytes, renderErrorBanner } from "./helpers";
@@ -12,9 +12,12 @@ export interface WikiFileImportProps {
    *  store internals; the app filters it to what the person may see. */
   wikis: readonly { slug: string; displayName: string }[];
   onClose: () => void;
-  /** Fired after a successful import or restore so the app can reload its
-   *  lists: both operations change the target wiki behind the dialog. */
+  /** Fired after a successful import so the app can reload its lists: the
+   *  import changes the target wiki behind the dialog. */
   onDone: () => void;
+  /** Called with the imported wiki when the person wants to undo the import.
+   *  The app closes this dialog and opens the snapshot dialog for that wiki. */
+  onRestoreSnapshots: (slug: string) => void;
 }
 
 interface SampleList {
@@ -43,6 +46,7 @@ interface InspectResponse {
     templateName: string | null;
   };
   includeSystem: boolean;
+  includePlugins: boolean;
   plan: {
     mode: string;
     bagName: string;
@@ -54,7 +58,9 @@ interface InspectResponse {
     deleted: SampleList;
     keptSystem: SampleList;
     skippedSystem: number;
+    keptPlugins: SampleList;
     skippedPlugins: SampleList;
+    skippedPluginReasons: { title: string; reasonCode: "not-wanted" | "no-version" | "version-mismatch"; reason: string }[];
     skippedTransient: SampleList;
     language: {
       wanted: string;
@@ -79,14 +85,6 @@ interface ImportResponse {
   create: boolean;
   result: { written: number; deleted: number; unchanged: number };
   snapshot: { bagName: string; created: string; count: number } | null;
-}
-
-interface SnapshotRow {
-  bagName: string;
-  created: string;
-  source: string;
-  sourceBagName: string;
-  count: number;
 }
 
 type TargetKind = "new" | "existing";
@@ -129,21 +127,17 @@ export class WikiFileImportDialog extends JSXElement {
   @state() accessor slug = "";
   @state() accessor mode: ImportMode = "replace";
   @state() accessor includeSystem = false;
+  @state() accessor includePlugins = false;
   @state() accessor busy = false;
   @state() accessor error = "";
-  @state() accessor notice = "";
   @state() accessor preview: InspectResponse | null = null;
   @state() accessor imported: ImportResponse | null = null;
-  @state() accessor snapshots: SnapshotRow[] | null = null;
-  @state() accessor snapshotsBusy = false;
-  @state() accessor restoring = "";
 
   connectedCallback(): void {
     super.connectedCallback();
     // Default to the first wiki the person may see; a "new wiki" import is the
     // rarer case and needs a name anyway.
     if (!this.wikiSlug && this.props?.wikis?.length) this.wikiSlug = this.props.wikis[0].slug;
-    if (this.targetKind === "existing") void this.loadSnapshots();
   }
 
   /** Any change to the question invalidates the answer: the preview must not
@@ -152,7 +146,6 @@ export class WikiFileImportDialog extends JSXElement {
     this.preview = null;
     this.imported = null;
     this.error = "";
-    this.notice = "";
   };
 
   private readonly query = (): URLSearchParams => {
@@ -169,6 +162,7 @@ export class WikiFileImportDialog extends JSXElement {
       if (this.mode === "merge") params.set("merge", "1");
     }
     if (this.includeSystem) params.set("include-system", "1");
+    if (this.includePlugins) params.set("include-plugins", "1");
     return params;
   };
 
@@ -182,7 +176,6 @@ export class WikiFileImportDialog extends JSXElement {
     if (!this.file || this.busy) return;
     this.busy = true;
     this.error = "";
-    this.notice = "";
     this.imported = null;
     try {
       const response = await wikiFileApiJson(
@@ -190,7 +183,6 @@ export class WikiFileImportDialog extends JSXElement {
         { method: "PUT", body: this.uploadBody() },
       ) as InspectResponse;
       this.preview = response;
-      if (this.targetKind === "existing") await this.loadSnapshots();
     } catch (error) {
       this.preview = null;
       this.error = error instanceof Error ? error.message : t("The wiki file could not be read.");
@@ -203,7 +195,6 @@ export class WikiFileImportDialog extends JSXElement {
     if (!this.file || !this.preview || this.busy) return;
     this.busy = true;
     this.error = "";
-    this.notice = "";
     try {
       const response = await wikiFileApiJson(
         `/api/wiki-file/import?${this.query().toString()}`,
@@ -211,10 +202,7 @@ export class WikiFileImportDialog extends JSXElement {
       ) as ImportResponse;
       this.imported = response;
       this.props.onDone();
-      if (this.targetKind === "existing") {
-        this.wikiSlug = response.slug;
-        await this.loadSnapshots();
-      }
+      if (this.targetKind === "existing") this.wikiSlug = response.slug;
     } catch (error) {
       this.error = error instanceof Error ? error.message : t("The wiki file could not be imported.");
       // The reason is usually a stale target (slug taken, rights changed), so
@@ -225,62 +213,10 @@ export class WikiFileImportDialog extends JSXElement {
     }
   };
 
-  private readonly loadSnapshots = async () => {
-    const slug = this.wikiSlug;
-    if (!slug) return;
-    this.snapshotsBusy = true;
-    try {
-      const response = await wikiFileApiJson(
-        `/api/wiki-file/snapshots?wiki=${encodeURIComponent(slug)}`,
-      ) as { snapshots?: SnapshotRow[] };
-      this.snapshots = response?.snapshots ?? [];
-    } catch {
-      // Only administrators may replace, and only they see snapshots. A
-      // person who may only merge simply has no list here.
-      this.snapshots = null;
-    } finally {
-      this.snapshotsBusy = false;
-    }
-  };
-
-  private readonly restore = async (snapshot: SnapshotRow) => {
-    if (this.busy || !this.wikiSlug) return;
-    const confirmed = globalThis.confirm(
-      t("Restore the wiki \"{slug}\" to the snapshot of {date}?\n\nThe current content is saved as a new snapshot first.",
-        { slug: this.wikiSlug, date: new Date(snapshot.created).toLocaleString() }),
-    );
-    if (!confirmed) return;
-    this.busy = true;
-    this.restoring = snapshot.bagName;
-    this.error = "";
-    this.notice = "";
-    try {
-      await wikiFileApiJson(`/api/wiki-file/restore?wiki=${encodeURIComponent(this.wikiSlug)}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ snapshot: snapshot.bagName }),
-      });
-      this.notice = t("The wiki \"{slug}\" was restored from {date}.", {
-        slug: this.wikiSlug,
-        date: new Date(snapshot.created).toLocaleString(),
-      });
-      this.preview = null;
-      this.props.onDone();
-      await this.loadSnapshots();
-    } catch (error) {
-      this.error = error instanceof Error ? error.message : t("The snapshot could not be restored.");
-    } finally {
-      this.restoring = "";
-      this.busy = false;
-    }
-  };
-
   private readonly setTargetKind = (kind: TargetKind) => {
     if (kind === this.targetKind) return;
     this.targetKind = kind;
-    this.snapshots = null;
     this.invalidate();
-    if (kind === "existing" && this.wikiSlug) void this.loadSnapshots();
   };
 
   private readonly setMode = (mode: ImportMode) => {
@@ -351,10 +287,42 @@ export class WikiFileImportDialog extends JSXElement {
               </span>
             </div>
           ) : null}
-          {this.includeSystem && plan.keptSystem.count ? this.sampleLine(
+          {!this.includeSystem && plan.keptSystem.count ? this.sampleLine(
             t("System tiddlers kept from the wiki"), plan.keptSystem,
           ) : null}
-          {plan.skippedPlugins.count ? this.sampleLine(t("Plugins left out"), plan.skippedPlugins) : null}
+          {plan.keptPlugins.count ? this.sampleLine(
+            t("Plugins written into the wiki"), plan.keptPlugins,
+          ) : null}
+          {plan.skippedPlugins.count ? (
+            <div class="wiki-file-plan-row">
+              <span class="wiki-file-plan-label">{t("Plugins left out")}</span>
+              <strong class="wiki-file-plan-count">{plan.skippedPlugins.count.toLocaleString()}</strong>
+              <span class="wiki-file-plan-hint">
+                {this.includePlugins
+                  ? t("Not the version the wiki runs")
+                  : t("Turn them on above to import them")}
+              </span>
+              {plan.skippedPlugins.titles.length ? (
+                <details class="wiki-file-plan-samples" open>
+                  <summary>{t("Show {count} titles", { count: plan.skippedPlugins.titles.length })}</summary>
+                  <ul>
+                    {plan.skippedPluginReasons.map(row => (
+                      <li key={row.title}>
+                        <code>{row.title}</code>
+                        <span class="wiki-file-system-text">
+                          {row.reasonCode === "not-wanted"
+                            ? t("The file's plugins were not asked for")
+                            : row.reasonCode === "no-version"
+                              ? t("The plugin names no version, so it cannot be checked")
+                              : t("Another version than the wiki runs")}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ) : null}
+            </div>
+          ) : null}
           {plan.skippedTransient.count ? this.sampleLine(
             t("Session state dropped"), plan.skippedTransient,
           ) : null}
@@ -383,7 +351,7 @@ export class WikiFileImportDialog extends JSXElement {
         </div>
         {plan.snapshots ? (
           <p class="wiki-file-snapshot-hint">
-            {t("Before anything is written, the current content of the bag is copied into a snapshot. Snapshots can be restored below.")}
+            {t("Before anything is written, the current content of the bag is copied into a snapshot. If the import was wrong, you can set the wiki back to it afterwards.")}
           </p>
         ) : null}
         {preview.system.count ? (
@@ -426,46 +394,28 @@ export class WikiFileImportDialog extends JSXElement {
             })}
           </p>
         ) : null}
-        <a class="ghost-button" href={pathPrefix + "/wiki/" + encodeURIComponent(imported.slug)}>
-          {t("Open the wiki")}
-        </a>
-      </section>
-    );
-  }
-
-  private renderSnapshots() {
-    if (this.targetKind !== "existing" || !this.wikiSlug) return null;
-    if (this.snapshots === null) return null;
-    return (
-      <section class="wiki-file-snapshots">
-        <h4>
-          <MaterialSymbol icon={historyIcon} />
-          {t("Snapshots of this wiki")}
-        </h4>
-        {this.snapshotsBusy ? <p class="wiki-file-muted">{t("Loading snapshots…")}</p> : null}
-        {!this.snapshotsBusy && !this.snapshots.length ? (
-          <p class="wiki-file-muted">{t("No snapshots yet. The first one is written by the next import.")}</p>
-        ) : null}
-        <ul class="wiki-file-snapshot-list">
-          {this.snapshots.map(snapshot => (
-            <li key={snapshot.bagName}>
-              <div class="wiki-file-snapshot-main">
-                <strong>{new Date(snapshot.created).toLocaleString()}</strong>
-                <small>{t("{count} tiddlers", { count: snapshot.count })} · {snapshot.source || snapshot.sourceBagName}</small>
-              </div>
-              <button
-                class="ghost-button"
-                type="button"
-                title={t("Restore this snapshot")}
-                aria-label={t("Restore this snapshot")}
-                onclick={() => void this.restore(snapshot)}
-                disabled={this.busy}
-              >
-                <MaterialSymbol icon={restoreIcon} />
-              </button>
-            </li>
-          ))}
-        </ul>
+        <div class="wiki-file-result-actions">
+          {/* Wie die Wiki-Karten auf der Startseite: der Dialog bleibt stehen,
+              die Wiki kommt in einen eigenen Tab. */}
+          <a
+            class="ghost-button"
+            href={pathPrefix + "/wiki/" + encodeURIComponent(imported.slug)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {t("Open the wiki")}
+          </a>
+          {imported.snapshot ? (
+            <button
+              class="ghost-button"
+              type="button"
+              onclick={() => this.props.onRestoreSnapshots(imported.slug)}
+            >
+              <MaterialSymbol icon={restoreIcon} />
+              {t("Restore a snapshot")}
+            </button>
+          ) : null}
+        </div>
       </section>
     );
   }
@@ -492,7 +442,6 @@ export class WikiFileImportDialog extends JSXElement {
           <div class="modal-layout">
             <div class="field-stack modal-main wiki-file-fields">
               {this.error ? renderErrorBanner(formatStorageErrorForDisplay(this.error, t)) : null}
-              {this.notice ? <div class="wiki-file-notice">{this.notice}</div> : null}
 
               <div class="field-block">
                 <div class="field-editor">
@@ -589,9 +538,7 @@ export class WikiFileImportDialog extends JSXElement {
                       class="field-select"
                       onchange={(event) => {
                         this.wikiSlug = (event.target as HTMLSelectElement).value;
-                        this.snapshots = null;
                         this.invalidate();
-                        void this.loadSnapshots();
                       }}
                       disabled={busy || !wikis.length}
                     >
@@ -645,9 +592,24 @@ export class WikiFileImportDialog extends JSXElement {
                 {t("Also import system tiddlers (titles starting with $:/): layout, tags, themes of the old wiki")}
               </label>
 
+              <label class="wiki-file-checkbox">
+                <input
+                  type="checkbox"
+                  checked={this.includePlugins}
+                  onchange={(event) => {
+                    this.includePlugins = (event.target as HTMLInputElement).checked;
+                    this.invalidate();
+                  }}
+                  disabled={busy}
+                />
+                {t("Also import the file's plugins: core, themes and libraries")}
+                <span class="wiki-file-muted">
+                  {t("Only those that are the version the wiki runs. The copy travels with the wiki, into its snapshots and into another installation; while the wiki loads its plugins from the installation's cache, the running wiki keeps using those.")}
+                </span>
+              </label>
+
               {this.renderPreview()}
               {this.renderResult()}
-              {this.renderSnapshots()}
             </div>
           </div>
 
