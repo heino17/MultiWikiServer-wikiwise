@@ -5000,12 +5000,11 @@ confirmation names the wiki and the date rather than a bare count.
 four security steps as the restore in the same order, `snapshotStampOf` is the
 only path check and it rejects a foreign prefix before anything is read, the
 delete runs inside a transaction after `state.asserted`, and
-`pruneSnapshotBags(prisma, slug, 0)` is reached from the wiki delete. What is
-**not** verified here: the delete button in the browser, the inline confirmation,
-and that a pruned snapshot really disappears from the list — this section was
-written after the fact from the implementation and the regression checks, so the
-manual pass through the dialog is still owed. `npm run tsc2` and `npm run build`
-are clean.
+`pruneSnapshotBags(prisma, slug, 0)` is reached from the wiki delete. Then
+clicked through in a browser: the row expands into the inline confirmation —
+"Delete this snapshot?", the warning about the only copy, "Keep it" and "Delete
+it" — and an eleventh snapshot does fall off the end, ten bags left in the store.
+`npm run tsc2` and `npm run build` are clean.
 
 ## 92. Snapshots get their own dialog: "Restore a snapshot"
 
@@ -5081,11 +5080,11 @@ and `rel="noopener noreferrer"`; headless Chromium does not list the tab a
 `_blank` click opens, so the effect was proven with the counterpart: an anchor
 without `target` navigates the current tab (`/login` → `/main.js`), the same
 anchor with `target="_blank"` leaves it on `/login`.
-The dropdown entry itself needs a login, and the dev store has no password at
-hand, so it was checked in the bundle: the compiled button carries
-`onclick:()=>{this.openSnapshotRestore(),this.closeCreateWikiMenu()}`. `npm run
-tsc2`, the admin typecheck, `npm run build` and the i18n audit (648 keys per
-language, no orphans, no duplicates, no invented placeholders, no literal `t()`
+The dropdown entry itself opens the dialog when signed in — it was clicked, not
+only read out of the bundle, which is what the compiled button
+`onclick:()=>{this.openSnapshotRestore(),this.closeCreateWikiMenu()}` promised.
+`npm run tsc2`, the admin typecheck, `npm run build` and the i18n audit (648 keys
+per language, no orphans, no duplicates, no invented placeholders, no literal `t()`
 without an entry) are clean.
 
 ## 91. The Spanish `#many`: the last open plural case
@@ -5500,9 +5499,11 @@ store was backed up before and restored afterwards:
   `npm run build` successful; the delivered admin bundle contains the dialog and
   both language versions of its texts.
 
-**Not verified by clicking.** The dialog was tested through its requests, not
-with the mouse: dropdown entry, file selection, plan display and restore button
-still need a manual pass in the browser.
+**Clicked through.** The dialog was tested through its requests first, then with
+the mouse: the dropdown entry "Upload a wiki file" opens it, the saved
+`index.html` of a TiddlyWiki 5 wiki is picked, the plan is shown before anything
+is written, and the import lands — the snapshot it leaves behind names its
+origin, which is how the next dialog was reached.
 
 Not part of this section: the wiki-file list in "My files" and the migration of
 existing `user_file` HTML attachments into a bag.
@@ -10778,11 +10779,10 @@ vier Sicherheitsschritte in derselben Reihenfolge wie das Zurückspielen,
 `snapshotStampOf` ist die einzige Pfadprüfung und weist einen fremden Präfix ab,
 bevor irgendetwas gelesen wird, das Löschen läuft nach `state.asserted` in einer
 Transaktion, und `pruneSnapshotBags(prisma, slug, 0)` wird vom Wiki-Löschen
-erreicht. Was **nicht** geprüft ist: der Lösch-Knopf im Browser, die
-inline-Bestätigung, und dass ein weggeräumter Snapshot wirklich aus der Liste
-verschwindet — dieser Abschnitt ist nachträglich aus der Umsetzung und den
-Regressionsprüfungen geschrieben, der manuelle Durchgang durch den Dialog steht
-noch aus. `npm run tsc2` und `npm run build` sind sauber.
+erreicht. Und dann im Browser durchgeklickt: die Zeile klappt in die
+inline-Bestätigung auf — „Diesen Snapshot löschen?", die Warnung zur letzten
+Kopie, „Behalten" und „Löschen" —, und ein elfter Snapshot fällt wirklich weg,
+zehn Bags bleiben im Store. `npm run tsc2` und `npm run build` sind sauber.
 
 ## 92. Snapshots bekommen ihr eigenes Fenster: „Snapshot wiederherstellen"
 
@@ -10860,12 +10860,12 @@ Beide „Wiki öffnen"-Links messen `href="/wiki/testwiki"`, `target="_blank"` u
 `_blank`-Klick öffnet, nicht auf. Deshalb wurde die Wirkung am Gegenbeispiel
 geprüft: Ein Anker ohne `target` navigiert den aktuellen Tab (`/login` →
 `/main.js`), derselbe Anker mit `target="_blank"` lässt ihn auf `/login`.
-Der Menüeintrag selbst liegt hinter dem Login, und für den Dev-Store lag kein
-Passwort vor, deshalb wurde er im Bundle geprüft: Der übersetzte Knopf trägt
-`onclick:()=>{this.openSnapshotRestore(),this.closeCreateWikiMenu()}`. `npm run
-tsc2`, der Admin-Typecheck, `npm run build` und das i18n-Audit (648 Schlüssel je
-Sprache, keine Waisen, keine Dubletten, keine erfundenen Platzhalter, kein
-literaler `t()` ohne Eintrag) sind sauber.
+Der Menüeintrag selbst öffnet im angemeldeten Zustand den Dialog — er wurde
+angeklickt, nicht nur aus dem Bundle gelesen, und genau das hatte der übersetzte
+Knopf `onclick:()=>{this.openSnapshotRestore(),this.closeCreateWikiMenu()}`
+versprochen. `npm run tsc2`, der Admin-Typecheck, `npm run build` und das
+i18n-Audit (648 Schlüssel je Sprache, keine Waisen, keine Dubletten, keine
+erfundenen Platzhalter, kein literaler `t()` ohne Eintrag) sind sauber.
 
 
 ## 91. Spanisches `#many`: der letzte offene Pluralfall
@@ -11309,9 +11309,11 @@ gestellt:
   `npm run build` erfolgreich; das ausgelieferte Admin-Bundle enthält den
   Dialog und beide Sprachfassungen seiner Texte.
 
-**Nicht durch Anklicken geprüft.** Der Dialog wurde über seine Requests
-getestet, nicht mit der Maus: Dropdown-Eintrag, Dateiauswahl, Plan-Anzeige und
-Restore-Knopf brauchen noch einen manuellen Durchgang im Browser.
+**Durchgeklickt.** Der Dialog wurde zuerst über seine Requests getestet, dann mit
+der Maus: Der Dropdown-Eintrag "Upload a wiki file" öffnet ihn, die gespeicherte
+`index.html` einer TiddlyWiki-5-Wiki wird gewählt, der Plan steht, bevor
+irgendetwas geschrieben wird, und der Import kommt an — der Snapshot, den er
+hinterlässt, nennt seinen Ursprung, und so wurde der nächste Dialog erreicht.
 
 Nicht Teil dieses Abschnitts: die Wiki-Dateiliste in "Meine Dateien" und die
 Migration bestehender `user_file`-HTML-Anhänge in einen Bag.
