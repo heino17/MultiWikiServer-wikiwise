@@ -46,7 +46,7 @@ Every release contains a ready-to-install package. Download it, install it into 
 folder of your choice, and nothing has to be compiled:
 
 - `mkdir my-folder && cd my-folder`
-- `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.4.1/mws-wikiwise-0.4.1.tgz`
+- `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.5.0/mws-wikiwise-0.5.0.tgz`
 - `npx mws init-data-folder`
 - `npx mws update-tiddlywiki`
 - `npx mws init-store`
@@ -64,7 +64,7 @@ The download is an ordinary npm package, so `npm` resolves and installs all
 dependencies for you. Verify it before you trust it:
 
 ```
-sha256sum mws-wikiwise-0.4.1.tgz
+sha256sum mws-wikiwise-0.5.0.tgz
 ```
 
 The expected checksum is printed in the release notes. A mismatch means the file
@@ -90,9 +90,9 @@ listener config if you want a different port/prefix, see `mws.dev.mjs`).
 For your own data folder, independent of the development wiki, build a package once
 and install it into a new folder:
 
-- `npm pack` – creates `mws-wikiwise-0.4.1.tgz`
+- `npm pack` – creates `mws-wikiwise-0.5.0.tgz`
 - `mkdir my-folder && cp create-package/files/* my-folder/`
-- `cd my-folder && npm install ../mws-wikiwise-0.4.1.tgz`
+- `cd my-folder && npm install ../mws-wikiwise-0.5.0.tgz`
 - `npx mws update-tiddlywiki`
 - `npx mws init-store`
 - `npx mws listen --listener` – serves on <http://localhost:8080/>
@@ -270,7 +270,7 @@ Jedes Release enthält ein fertiges Paket. Herunterladen, in einen Ordner deiner
 installieren – kompilieren musst du nichts:
 
 - `mkdir mein-ordner && cd mein-ordner`
-- `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.4.1/mws-wikiwise-0.4.1.tgz`
+- `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.5.0/mws-wikiwise-0.5.0.tgz`
 - `npx mws init-data-folder`
 - `npx mws update-tiddlywiki`
 - `npx mws init-store`
@@ -289,7 +289,7 @@ Der Download ist ein ganz normales npm-Paket, `npm` löst also alle Abhängigkei
 dich auf. Prüfe die Datei, bevor du ihr vertraust:
 
 ```
-sha256sum mws-wikiwise-0.4.1.tgz
+sha256sum mws-wikiwise-0.5.0.tgz
 ```
 
 Die erwartete Prüfsumme steht in den Release-Notizen. Bei Abweichung wurde die Datei
@@ -316,9 +316,9 @@ Erklärung in `mws.dev.mjs`).
 Für einen eigenen Datenordner, unabhängig vom Entwicklungs-Wiki, einmal ein Paket bauen
 und in einen neuen Ordner installieren:
 
-- `npm pack` – erzeugt `mws-wikiwise-0.4.1.tgz`
+- `npm pack` – erzeugt `mws-wikiwise-0.5.0.tgz`
 - `mkdir mein-ordner && cp create-package/files/* mein-ordner/`
-- `cd mein-ordner && npm install ../mws-wikiwise-0.4.1.tgz`
+- `cd mein-ordner && npm install ../mws-wikiwise-0.5.0.tgz`
 - `npx mws update-tiddlywiki`
 - `npx mws init-store`
 - `npx mws listen --listener` – liefert auf <http://localhost:8080/>

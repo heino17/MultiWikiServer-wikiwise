@@ -85,7 +85,7 @@ async function runner(arg) {
         const packageJson = JSON.parse(readFileSync("package.json").toString());
         const packageVersion = packageJson.version;
         // await start(`npm install --save-prefix="~" @tiddlywiki/mws@latest`, [], {}, { cwd: "tests" })
-        await start(`npm install ./tiddlywiki-mws-${packageVersion}.tgz`, [], {}, { cwd: "tests" });
+        await start(`npm install ./mws-wikiwise-${packageVersion}.tgz`, [], {}, { cwd: "tests" });
         await start("npx mws update-tiddlywiki", [], {}, { cwd: "tests" });
         await start("npx mws init-store", [], {}, { cwd: "tests" });
         await start("npx mws listen --listener host=:: port=8080", [], {}, { cwd: "tests" });
