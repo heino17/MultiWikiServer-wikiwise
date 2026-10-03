@@ -4626,87 +4626,6 @@ GitHub can show whether the warning is really gone — and after the push it is:
 the run is green and the annotation about `node20` is no longer there, only the
 notice that `ubuntu-latest` migrates to Ubuntu 26 from 19.10.2026.
 
-## 92. Snapshots get their own dialog: "Restore a snapshot"
-
-**Why.** The snapshot list of §85 lived inside "Take over a wiki file". That
-made it hard to find on purpose and easy to reach by accident: it appeared only
-after picking an existing wiki *and* pressing "Check the file", so looking at the
-history of a wiki required an import first. The list itself was never the
-problem, the entrance was. Two details made it worse — the restore button was a
-bare icon whose meaning had to be guessed from a tooltip, and the confirmation
-was a `globalThis.confirm` alert that looked nothing like the admin app around it.
-
-**What.** A second entry in the "Create a wiki" dropdown opens
-`SnapshotRestoreDialog` (`packages/admin-vanilla/src/snapshot-restore.tsx`): its
-own modal with a wiki picker, the snapshot list and the sentence that explains
-what a restore does. A row shows date, tiddler count and origin, and carries a
-written button "Restore this snapshot" instead of an icon. Clicking it expands
-that row into an inline confirmation naming the wiki, the date, the count and
-the fact that the current content is saved first, then offers "Keep the current
-state" and "Restore now". The browser alert is gone.
-
-The file dialog loses the snapshot list altogether, together with
-`loadSnapshots`, `restore`, the `snapshots`/`snapshotsBusy`/`restoring`/`notice`
-state and the whole `renderSnapshots` block. What is left is one undo button in
-the result: after an import it reads "Restore a snapshot" and hands the imported
-slug to the new dialog through `onRestoreSnapshots`. Two modals would stack, so
-the import dialog steps aside — `openSnapshotRestore` closes it. The preview
-hint was reworded because it pointed at a list "below" that no longer exists.
-`PLANNING.md` records the move; the ⚖️ entries about the routes, the gate and
-the snapshot bag are untouched.
-
-**"Open the wiki" opens a new tab.** A restore throws the admin app away — the
-wiki itself is the next thing one wants to see, and its history is what the
-restore just changed. Both links, the one in the restore dialog and the one in
-the import result, therefore carry `target="_blank"` with
-`rel="noopener noreferrer"`, the same pair the wiki cards on the start page use
-(`app-landing.tsx`). The dialog stays where it is; the wiki opens beside it.
-
-The server side did not change: same `GET /api/wiki-file/snapshots`, same
-`PUT /api/wiki-file/restore`, same permission — only those who may replace see
-snapshots at all.
-
-**i18n.** Eleven new keys in all eight languages, one reworded, one obsolete
-removed with the alert, which leaves the eight base key sets at the same 648.
-
-**The icons needed a size of their own.** `MaterialSymbol` strips `width` and
-`height` from the SVG so that CSS can scale it, which means every occurrence has
-to declare its own dimensions — `font-size` does not size an SVG. The new notice
-carried an icon into `.wiki-file-notice`, which is not a flex container, so the
-SVG took its undefined default and filled the whole card: 189 px of icon in a
-752 px dialog for the undo button, and full width for the notice. Measuring all
-`material-symbol` in both dialogs also turned up two icons from §85 that were
-0 × 0 — the heading icons and the one on the snapshot line, which had only ever
-had a `font-size`. All of them are sized now: 20 px for headings, notice and
-snapshot line, 18 px for buttons, following the convention the other 30 icon
-rules already use.
-
-**Verified.** Headless Chromium against the dev instance, `fetch` stubbed: both
-wikis in the picker and `initialSlug` preselecting `testwiki`; two rows with
-German dates, "412 Tiddler" through the `#one` rule, and the second row falling
-back to `sourceBagName` when `source` is empty; clicking the restore button
-expanding the confirmation with both buttons; "Restore now" sending
-`PUT /api/wiki-file/restore?wiki=testwiki` with
-`{"snapshot":"snapshot-wiki-20260102T101500000Z"}`, reporting "Die Wiki
-\"testwiki\" wurde vom 2.1.2026, 11:15:00 zurückgesetzt." with a "Wiki öffnen"
-link, closing the panel and firing `onDone`. The file dialog: no
-`.wiki-file-snapshots`, no icon-only restore button, requests to `inspect` and
-`import` only — the `snapshots` request is gone — the new hint, and the undo
-button calling `onRestoreSnapshots("testwiki")`. Every `material-symbol` in both
-dialogs measures 20 × 20 or 18 × 18 afterwards, none 0. No exceptions in the
-console.
-Both "Open the wiki" links measure `href="/wiki/testwiki"`, `target="_blank"`
-and `rel="noopener noreferrer"`; headless Chromium does not list the tab a
-`_blank` click opens, so the effect was proven with the counterpart: an anchor
-without `target` navigates the current tab (`/login` → `/main.js`), the same
-anchor with `target="_blank"` leaves it on `/login`.
-The dropdown entry itself needs a login, and the dev store has no password at
-hand, so it was checked in the bundle: the compiled button carries
-`onclick:()=>{this.openSnapshotRestore(),this.closeCreateWikiMenu()}`. `npm run
-tsc2`, the admin typecheck, `npm run build` and the i18n audit (648 keys per
-language, no orphans, no duplicates, no invented placeholders, no literal `t()`
-without an entry) are clean.
-
 ## 99. Cleanup: the copy-pasted CSS block at the end of `app.inline.css`
 
 **Why.** §98 left a note about duplicated rules further down `app.inline.css` and
@@ -4943,6 +4862,732 @@ themes but leaves `$:/core` out with the exact reason. A file with no version
 field on the core is rejected with "names no version". `npm run tsc2`, the admin
 typecheck, `npm run build` and the i18n audit all clean; the store used for the
 live test was restored.
+## 93. Snapshots can be deleted, and the retention rule says so
+
+**Why.** §84 put the snapshot bags under `--snapshot-keep` (default 10) and §92
+gave the list a dialog of its own. Two things were still missing, and both of them
+are about trust in what the list shows. A snapshot that has fallen off the end
+silently is indistinguishable from a mistake: nobody can tell from the list whether
+the eleventh snapshot of yesterday is gone because of the rule or because
+something went wrong. And a snapshot bag belongs to no recipe, so nothing in the
+store would ever reach it again — up to ten full copies of a deleted wiki would
+sit there with no way to name them.
+
+**The retention rule is stated where the list is.** The list route answers `keep`
+next to the rows (`DEFAULT_SNAPSHOT_KEEP`), and the dialog writes it under the
+list: "Only the newest `{count}` snapshots are kept. Older ones are dropped
+automatically." The rule belongs to the server and is only stated by the
+client — `keep: DEFAULT_SNAPSHOT_KEEP` carries the comment that the dialog states
+the rule so the hint does not have to repeat it — and it is shown only when
+`keep > 0` and the list is not empty, because a rule about keeping things reads
+oddly under an empty list. The §92 dialog got both in the same commit; this
+section is what `PLANNING.md` points at for them.
+
+**A snapshot can be deleted, behind the same gate as the restore.**
+`AdminWikiFileSnapshotDelete` (`WikiFileRoutes.ts`) is a `PUT` on
+`/api/wiki-file/snapshot/delete` with the JSON body `{ snapshot }` and the
+`wiki` query, doing exactly what the restore does and nothing less: `state.okUser()`,
+`state.assertReferer(["/"])`, a missing slug is `ARGUMENT_REQUIRED`, and the
+prefix guard `snapshotStampOf(slug, snapshot)` answers `403` with "This snapshot
+does not belong to that wiki." The comment above it is the one from the restore
+and it is the reason for the guard: a bag admin of one wiki must not be able to
+read another wiki's tiddlers by deleting or restoring its snapshot here. Then
+`resolveWikiTarget(state, state.engine, { mode: "replace", wikiSlug: slug })` and
+`state.asserted = true` — set *before* `state.$transaction()`, the order the
+§85 routes learned the hard way — and an unknown stamp is `404` "There is no such
+snapshot." The answer is `{ slug, deleted: snapshot }`.
+
+In the dialog a row carries a delete button next to the restore one, with
+`title` and `aria-label` "Delete this snapshot", and the row expands into an
+inline confirmation rather than a browser alert: "Delete this snapshot?", the
+warning "A deleted snapshot cannot be recovered, and this is the only copy left
+of this state.", and the buttons "Keep it" and "Delete it", with "Deleting…"
+while it runs and "The snapshot could not be deleted." on failure. `confirmKind`
+is `"restore" | "delete"`, so the two confirmations share one expansion and
+cannot be confused with each other.
+
+**A wiki takes its snapshots with it.** In `/admin/wiki/delete` the snapshot bags
+of that slug fall in the same transaction as the recipe, the bags and the
+landing-page flag: `pruneSnapshotBags(prisma, slug, 0)` — `keep = 0` is the
+retention rule with nothing to keep. It sits there with a comment saying why it
+cannot be left to the loop above: the bags of a deleted wiki belong to no recipe,
+so that loop never sees them, and the restore dialog cannot even name them any
+more. The answer gains a `droppedSnapshots` list, so the client can say what went.
+
+⚖️ **Snapshots are keyed by slug, not by wiki identity.** A wiki recreated under
+a name it had before inherits the old snapshots, and restoring one writes that
+old content into the new wiki. This is deliberate — the alternative is a wiki
+identity in every snapshot name, which the recipe does not have to offer and the
+slug already is — but it is the one sharp edge here, and it is why the restore
+confirmation names the wiki and the date rather than a bare count.
+
+**Verified.** Read from the code, not by clicking: the route carries the same
+four security steps as the restore in the same order, `snapshotStampOf` is the
+only path check and it rejects a foreign prefix before anything is read, the
+delete runs inside a transaction after `state.asserted`, and
+`pruneSnapshotBags(prisma, slug, 0)` is reached from the wiki delete. What is
+**not** verified here: the delete button in the browser, the inline confirmation,
+and that a pruned snapshot really disappears from the list — this section was
+written after the fact from the implementation and the regression checks, so the
+manual pass through the dialog is still owed. `npm run tsc2` and `npm run build`
+are clean.
+
+## 92. Snapshots get their own dialog: "Restore a snapshot"
+
+**Why.** The snapshot list of §85 lived inside "Take over a wiki file". That
+made it hard to find on purpose and easy to reach by accident: it appeared only
+after picking an existing wiki *and* pressing "Check the file", so looking at the
+history of a wiki required an import first. The list itself was never the
+problem, the entrance was. Two details made it worse — the restore button was a
+bare icon whose meaning had to be guessed from a tooltip, and the confirmation
+was a `globalThis.confirm` alert that looked nothing like the admin app around it.
+
+**What.** A second entry in the "Create a wiki" dropdown opens
+`SnapshotRestoreDialog` (`packages/admin-vanilla/src/snapshot-restore.tsx`): its
+own modal with a wiki picker, the snapshot list and the sentence that explains
+what a restore does. A row shows date, tiddler count and origin, and carries a
+written button "Restore this snapshot" instead of an icon. Clicking it expands
+that row into an inline confirmation naming the wiki, the date, the count and
+the fact that the current content is saved first, then offers "Keep the current
+state" and "Restore now". The browser alert is gone.
+
+The file dialog loses the snapshot list altogether, together with
+`loadSnapshots`, `restore`, the `snapshots`/`snapshotsBusy`/`restoring`/`notice`
+state and the whole `renderSnapshots` block. What is left is one undo button in
+the result: after an import it reads "Restore a snapshot" and hands the imported
+slug to the new dialog through `onRestoreSnapshots`. Two modals would stack, so
+the import dialog steps aside — `openSnapshotRestore` closes it. The preview
+hint was reworded because it pointed at a list "below" that no longer exists.
+`PLANNING.md` records the move; the ⚖️ entries about the routes, the gate and
+the snapshot bag are untouched.
+
+**"Open the wiki" opens a new tab.** A restore throws the admin app away — the
+wiki itself is the next thing one wants to see, and its history is what the
+restore just changed. Both links, the one in the restore dialog and the one in
+the import result, therefore carry `target="_blank"` with
+`rel="noopener noreferrer"`, the same pair the wiki cards on the start page use
+(`app-landing.tsx`). The dialog stays where it is; the wiki opens beside it.
+
+The server side did not change: same `GET /api/wiki-file/snapshots`, same
+`PUT /api/wiki-file/restore`, same permission — only those who may replace see
+snapshots at all.
+
+**i18n.** Eleven new keys in all eight languages, one reworded, one obsolete
+removed with the alert, which leaves the eight base key sets at the same 648.
+
+**The icons needed a size of their own.** `MaterialSymbol` strips `width` and
+`height` from the SVG so that CSS can scale it, which means every occurrence has
+to declare its own dimensions — `font-size` does not size an SVG. The new notice
+carried an icon into `.wiki-file-notice`, which is not a flex container, so the
+SVG took its undefined default and filled the whole card: 189 px of icon in a
+752 px dialog for the undo button, and full width for the notice. Measuring all
+`material-symbol` in both dialogs also turned up two icons from §85 that were
+0 × 0 — the heading icons and the one on the snapshot line, which had only ever
+had a `font-size`. All of them are sized now: 20 px for headings, notice and
+snapshot line, 18 px for buttons, following the convention the other 30 icon
+rules already use.
+
+**Verified.** Headless Chromium against the dev instance, `fetch` stubbed: both
+wikis in the picker and `initialSlug` preselecting `testwiki`; two rows with
+German dates, "412 Tiddler" through the `#one` rule, and the second row falling
+back to `sourceBagName` when `source` is empty; clicking the restore button
+expanding the confirmation with both buttons; "Restore now" sending
+`PUT /api/wiki-file/restore?wiki=testwiki` with
+`{"snapshot":"snapshot-wiki-20260102T101500000Z"}`, reporting "Die Wiki
+\"testwiki\" wurde vom 2.1.2026, 11:15:00 zurückgesetzt." with a "Wiki öffnen"
+link, closing the panel and firing `onDone`. The file dialog: no
+`.wiki-file-snapshots`, no icon-only restore button, requests to `inspect` and
+`import` only — the `snapshots` request is gone — the new hint, and the undo
+button calling `onRestoreSnapshots("testwiki")`. Every `material-symbol` in both
+dialogs measures 20 × 20 or 18 × 18 afterwards, none 0. No exceptions in the
+console.
+Both "Open the wiki" links measure `href="/wiki/testwiki"`, `target="_blank"`
+and `rel="noopener noreferrer"`; headless Chromium does not list the tab a
+`_blank` click opens, so the effect was proven with the counterpart: an anchor
+without `target` navigates the current tab (`/login` → `/main.js`), the same
+anchor with `target="_blank"` leaves it on `/login`.
+The dropdown entry itself needs a login, and the dev store has no password at
+hand, so it was checked in the bundle: the compiled button carries
+`onclick:()=>{this.openSnapshotRestore(),this.closeCreateWikiMenu()}`. `npm run
+tsc2`, the admin typecheck, `npm run build` and the i18n audit (648 keys per
+language, no orphans, no duplicates, no invented placeholders, no literal `t()`
+without an entry) are clean.
+
+## 91. The Spanish `#many`: the last open plural case
+
+§89 had left Spanish `many` open with one argument: that it starts at `1000000`
+and demands a *de* before the noun, and that a `#many` covering the simple count
+nouns but not the phrases with an article would be worse than none. So the
+condition was fixed — all or nothing — and this section delivers the whole.
+
+**The category is narrower than §89 said.** Spanish `many` does not start at
+`1000000` upwards; `Intl.PluralRules("es").select()` answers `many` only for exact
+integer multiples of a million — `1000000`, `2000000`, `21000000` — and `other`
+for `999999`, `1500000` and every other non-multiple. §89 therefore reached too
+far, by chance in the useful direction: the set for which CLDR wants a variant is
+exactly the set for which Spanish wants a *de*, *un millón de archivos* and
+*veintiún millones de archivos*. A number `1500000` stays in `other` and keeps the
+plain form; that is a CLDR boundary the app cannot widen.
+
+**Twelve keys need the variant, four may not have it.** All sixteen `{count}`
+keys were then sorted by whether a noun follows the number in the Spanish text.
+For twelve it does, also for the two with an article —
+`Mostrar los {count} títulos eliminados` and
+`Encuentra todos los {count} animales.` — and those get a `#many` as sibling
+with *de* directly behind `{count}`: `{count} de archivos`,
+`Mostrar los {count} de títulos eliminados`,
+`Instantánea {name} con {count} de tiddlers`. For four nothing follows the number
+— `Deleted: {count}`, `Unchanged: {count}`, `Written: {count}` and
+`System tiddlers in the file ({count})` — and a `#many` there would only copy the
+base key, because *Escritos: 1.000.000* is already right and *1.000.000 de
+escritos* would be wrong. A redundant variant would break the §89 rule that the
+base key holds the `many` form, so these four deliver nothing.
+
+**Verified.** The real `t()` bundled and all sixteen keys rendered at `0`, `1`,
+`2`, `21`, `999999`, `1000000`, `1500000`, `2000000` and `21000000` gives 144
+combinations in which no number gets lost and no key falls back to its bare name.
+What is checked is the two-part rule that encodes the translations: *de* stands
+exactly when the category is `many` **and** a noun follows the number — the first
+attempt at this assertion was wrong and reported twelve correct strings, because
+it also demanded *de* for `Written: {count}`. English stays untouched, 144 of 144
+combinations keep their number. Spanish is now the only file with a `#many` (12
+entries), the eight base key sets are still the same 639, no variant has lost its
+base, and `npm run tsc2`, the admin typecheck and `npm run build` are clean. The
+`t()` doc comment that listed the delivered categories now names the Spanish
+`#many` and the *de* rule and says why an incomplete `#many` is worse than none.
+
+## 90. Cleanup: twelve orphans out, two missing keys in
+
+§89 ended on `{count} new`, an orphan in all eight language files without a
+caller. Deleting a stale key is cheap — but only if you know it is the only one,
+and the first attempt at finding that out was wildly off. If you count the string
+literals passed to `t()`, it reports 189 unused keys, and the list contains
+obviously visible labels: `Storage overview`, `Access denied.`, `Light theme`.
+The admin app is data-driven: the tab definitions, field definitions and error
+code maps in `src/definition/*.ts` and `src/helpers.tsx` carry the English text
+as plain data and only pass it to `t()` when rendering
+(`t(selectedTab.eyebrow)`, `t(field.description)`, `t(reason)`). "Not passed to
+`t()` as a literal" is therefore not the same as "unused". A key only counts as an
+orphan when its exact text occurs nowhere in the source, and that test leaves
+**13**, not 189.
+
+**One of the thirteen was not an orphan but a mistake.** The field
+`The field {key} is not defined in the draft record` was translated in all eight
+languages, while `getAdminRecordValue` and `setAdminRecordValue` build exactly
+the same sentence by concatenation — `"The field " + field.key + " is not defined
+in the draft record"` — and threw that English text away. Eight translations of a
+message nobody could read. Both callers now call `t()` with the parameter
+`{key}`, so the defensive error arrives in the language of the reading person.
+
+**The other twelve were real old weight**, each replaced by a longer or more
+precise key: `Storage status` → `Disk storage status`, `Caution` and
+`Important notice` → the message levels `neutral`, `info`, `success`, `warning`,
+`danger`, `A visitor's own language or theme choice always wins.` → the same
+sentence plus `Feature switches apply to everyone.`, `Default bag`,
+`Prefix rules` and `Bag` → longer field labels, the two
+`You must be an admin to … teacher capabilities.` → generic permission messages,
+plus `Enter password`, `Settings saved.` and `{count} new`. All twelve are
+removed from all eight files: 96 entries, the same twelve in every file.
+
+**The same check found the opposite mistake: two used but never translated
+keys.** `t("Audience")` is the tooltip on the visibility area of a pinboard
+note, `t("Size")` the column heading of the file list; `t()` fell back to the key
+itself, so both stood in English in all eight languages. Both are there now —
+`Audience` becomes *Sichtbarkeit*, *Público*, *Public*, *閲覧対象*, `Size` becomes
+*Größe*, *Tamaño*, *Taille*, *Размер*. For the tooltip the literal reading of
+*Audience* was wrong in most languages: the label next to it names who sees the
+note, which is why German says *Sichtbarkeit* and not *Publikum*.
+
+**Verified.** The real `t()` bundled with esbuild and all three keys rendered in
+all eight locales give 24 correct strings, among them *Das Feld slug ist im
+Entwurf nicht definiert* and its seven translations. All eight files contain
+exactly the same 639 base keys again, no file has a duplicate key, no `#variante`
+has lost its base, the placeholder comparison finds no deviation, no string
+literal passed to `t()` without a translation, and `npm run tsc2`, the admin
+typecheck and `npm run build` are clean.
+
+## 89. Bug fix: numbers did not follow the language they were counted in
+
+§88 had corrected a Russian animal text that lost its `{count}`, and referred in
+passing to what the fix made visible: Russian read `2` as *2 заметок*, where
+Russian wants *2 заметки*, because `few` is a category of its own in
+`Intl.PluralRules`, and the app only delivered `#one` variants. Filling in the
+Russian `few` forms was the small part of the work. Anyone who follows that up
+runs into three more errors of the same kind — all three are fixed.
+
+**`count` was passed as a preformatted string in three places.** `app.tsx`
+passed `t("{count} files", { count: count.toLocaleString() })` and the two
+candidate lines to the storage display. `typeof count` was therefore not
+`"number"`, `t()` did not even look for a plural variant, and these three texts
+were wrong in every language, including English. The callers now pass the number,
+and `t()` formats numeric parameters itself with `value.toLocaleString(locale)` —
+so the thousands separator that these tiles show at all stays, and a caller can no
+longer lose the plural by formatting too early.
+
+**Ten texts had no `#one` in `en`, `de`, `es` or `fr`.** `{count} files`,
+`{count} items`, `{count} wikis in total`, `Show {count} titles`,
+`Show the {count} deleted titles`, `System tiddlers in the file ({count})`,
+`Snapshot {name} with {count} tiddlers`, the two candidate lines and for Spanish
+and French additionally `Deleted: {count}`, `Unchanged: {count}` and
+`Written: {count}`. English — the source and the language the keys are written
+in — said **1 files** and **Found 1 candidates**. All of them have the singular
+now.
+
+**Which categories a file brings along is decided by the language and not by
+symmetry.** `Intl.PluralRules` gives `ja`, `ko` and `zh-cn` exactly one category
+for integers, so their existing `#one` entries can never be chosen, and none was
+added. Russian is the only supported language with `few`, so all eight `#few`
+entries live in `ru.ts`. German needs no variant at all for *Titel* and
+*Systemtiddler*, because they are invariant, and Spanish none for invariant words
+like `wikis` either. The base key must therefore hold the `many`/`other` form — in
+Russian `{count} notes` is *заметок*, not *заметка* — and that rule now stands in
+the doc
+comment of `t()` next to the category table.
+
+Word order follows the language and not the English original: German *Die
+gelöschten Titel zeigen* becomes *1 gelöschten Titel zeigen* and not *Die 1
+gelöschten Titel*, because article and adjective ending belong to the plural. No
+language gets an article before a digit, so the English singulars read *Show 1
+title* and *Found 1 candidate* instead of *Show the 1 title*, and the French
+*Afficher 0 titre*, because French also takes the singular at `0`.
+
+**Verified** by bundling the real `t()` with esbuild and calling it: each of the
+16 plural-relevant texts in all eight locales, at `0, 1, 2, 3, 5, 11, 21, 22, 25`
+and `1000000` — the interesting corners, because Russian folds `21` and `101` into
+`one` but not `11`, `few` covers `2` to `4` but not `22` alone, and `many` is
+equal at `5` with both. In none of the 1280 combinations does a number get lost,
+and no language falls back to the bare key. The 649 base keys are identical
+across all eight files, no file has a duplicate key, and a placeholder comparison
+of all 662 entries finds no deviation. `npm run tsc2`,
+`cd packages/admin-vanilla && npx tsc --noEmit` and `npm run build` are clean.
+
+Two things this section deliberately does not do. Spanish `many` starts at
+`1000000` and demands a *de* before the noun — *1.000.000 de archivos* — but no
+number in this app plausibly reaches that, and a `#many` that covers the simple
+count nouns but not the phrases with an article would be worse than none; so
+Spanish delivers no `#many`. And `{count} new` is an orphan: the pinboard tab
+used it until the unread label became `{count} new notes`, and it still stands in
+all eight files without a caller. Both are noted and not silently taken up; §90
+removes the orphan, §91 adds the Spanish `#many`.
+
+## 88. Bug fix: the Russian plural of "animal" left out the number
+
+§87 had added the missing 83 texts to the six languages that did not have them
+yet, and the placeholder check found in passing a mistake that had stood there
+since §14: `"Find all {count} animals.#one"` in `ru.ts` read *Найдите одно
+животное.* — one animal, without the `{count}`. The other seven languages carry
+it all.
+
+One character plus a space: *Найдите {count} животное.* In `i18n.ts` nothing had
+to be changed, because `t()` already interpolates every parameter in the chosen
+variant. The wording had to stay in the nominative singular, because that is
+exactly what `Intl.PluralRules("ru")` demands, and Russian has the category
+`one` not only at `1` — but at every number ending in `1`, except `11`. The same
+string therefore also serves `21` and `101`.
+
+**Verified.** Not by reading the line, but by bundling the real `t()` with
+esbuild and calling it: `t("Find all {count} animals.", { count })` for
+`0, 1, 2, 3, 5, 11, 21, 22, 25, 101` in all eight locales, with the assertion
+that the produced text contains the passed number. Zero lost. The `#one` cases
+read *Найдите 1 животное.*, *Найдите 21 животное.*, *Найдите 101 животное.*,
+everything else falls back to the base key. The same checking machinery over
+`{count} notes` and `{count} new notes` passes in all eight languages too.
+`npm run tsc2`, `cd packages/admin-vanilla && npx tsc --noEmit` and `npm run build`
+are clean, and the placeholder check over all 653 keys reports no deviation in
+any of the eight files any more.
+
+A side effect of this checking machinery also became visible, which §87 did not
+find and which this section does not fix: Russian reads `2` as *2 заметок*, where
+*2 заметки* would have to stand. `few` is a category of its own in
+`Intl.PluralRules`, and the app delivers only `#one` variants, so `2` to `4` fall
+back to the base key. The lookup in `t()` would already honour a `#few` entry
+without any code change; what is missing is the Russian `few` form for every
+plural noun in the files, and that is a translation task, not a bug fix.
+
+## 87. Bug fix: the wiki-file dialog only spoke German and English
+
+`AGENTS.md` says the admin app is "bilingual by contract" — that was read as
+"two languages" instead of "DE and EN are the two that have to exist". The app
+has had eight languages since §14, and the wiki-file dialog from
+§84/§85/§86 came with 83 texts in `de.ts` and `en.ts`. `t()` falls back to the
+key itself when a dictionary has no entry, and so every other language saw the
+English source text: the menu entry read *Take over a wiki file* instead of
+*Wiki-Datei übernehmen* — and with it the whole dialog, every hint, every plan
+line, every error message and the restore confirmation.
+
+All 83 keys now also stand in `es`, `fr`, `ja`, `ko`, `ru` and `zh-cn`, which
+brings the eight dictionaries to 653 keys each, without a gap in either direction.
+No placeholder was lost or invented: every `{count}`, `{slug}`, `{date}` and
+`{name}` in a translation matches its English key, checked by comparing the
+placeholder sets over all 498 new entries. The escapes `\u2026` and `\n\n` were
+taken over in the same source form in which the English file carries them, so
+that the keys are identical character by character and not merely equal in
+appearance.
+
+The terminology follows what the respective language already uses elsewhere in
+the app, and no new override: *bag*, *tiddler* and *wiki* stay as they were
+(`tiddler`/`tiddler`/`ティドラー`/`티들러`/`тайдлер`/`条目`), snapshots are called
+`instantánea`/`instantané`/`スナップショット`/`스냅샷`/`снимок`/`快照`, and Russian
+takes *вики* where the other languages say *wiki*. The German plural form keeps
+the convention of the file, `{count} Tiddler` for both numbers, as since §14.
+
+**Verified.** `cd packages/admin-vanilla && npx tsc --noEmit` and `npm run build`
+clean; all eight files are parsed as TypeScript, none has a duplicate key. The
+built artefact contains all six new sets — a direct `grep` in the minified bundle
+does not find them, because esbuild escapes non-ASCII, so the check ran against
+the `sourcesContent` of the sourcemap. A placeholder check over all 653 keys
+reports only intended equalities (proper names like `Wiki`, `TiddlyWiki
+{version}`, `Slug`, `Plugins`) and no deviation.
+
+Not part of this section: `"Find all {count} animals.#one"` in `ru.ts` loses the
+`{count}` that its English key has. That is dead demo text from §14 — the login
+riddle uses `"Find all {count} animals."`, with a period — so nothing wrong
+appears today, but it is a real mistake in that plural variant.
+
+## 86. Bug fix: three things the single-file import got wrong
+
+The import from §84 and §85 was checked against a real file — an `index.html`
+saved with TiddlyWiki 5.4.1, 2.6 MB, 17 tiddlers, all `$:/`. Three things did not
+survive the comparison, all three are fixed.
+
+**Session state was imported.** That file's store contains `$:/StoryList`,
+`$:/temp/...`, `$:/state/tab-...`, `$:/state/plugin-info-...`, `$:/HistoryList`,
+`$:/Import`, `$:/build`, `$:/isEncrypted` and `$:/status/...`: the tabs, the
+drafts, the request log and the plugin cache of the browser session that saved
+the file. Our importer took 11 of those 13 tiddlers along, so the open tabs of a
+stranger ended up in the wiki and a stale `$:/StoryList` became the story river
+of the wiki. TiddlyWiki's own import does not ask about them —
+`core/modules/upgraders/system.js` deselects exactly this list — and exactly
+this list now stands in `TRANSIENT_TITLES` and `TRANSIENT_PREFIXES`: the five
+titles `$:/build`, `$:/HistoryList`, `$:/Import`, `$:/isEncrypted`,
+`$:/StoryList` and the prefixes `$:/state/`, `$:/status/`, `$:/temp/`. They fall
+away already before the system tiddler switch, because they are rubbish either
+way, and they are named in the plan so that a skipped tiddler is visible and not
+merely missing. The same file therefore supplies three tiddlers instead of
+thirteen, the other eleven by name.
+
+**A German wiki arrived in English.** `$:/language` was imported, its language
+pack was not: that is a `plugin-type: language` tiddler, and the importer dropped
+every plugin because in MWS the plugin set belongs to the recipe. For `$:/core`
+and the themes that is right — 2 MB of core per bag would be nonsense — but for
+the language it is not, because MWS keeps *language* plugins in the bag and not
+in the recipe (the plugin list of a recipe is empty for the wikis MWS creates, the
+language is a property of the wiki and not of the installation). So the wiki
+remained with `$:/language` → `$:/languages/de-DE` without such a pack in the
+bag, and the plugin switch silently fell back to en-GB. A language pack is now
+the only plugin type that may travel along, under the same condition as every
+other `$:/` tiddler. `$:/language` itself is only written when the wiki can
+really speak the language afterwards: the pack comes with the file, the core
+already has it (`$:/languages/en-GB`), or the target bag has it. Otherwise
+`$:/language` stays untouched and the plan says so — the wiki keeps its language
+instead of pointing at a package that does not exist.
+
+**A replace destroyed tiddlers without a name.** The plan counted what a replace
+deletes, and the dialog called it "Tiddlers not in the file". For the only
+operation that can destroy work, that is one click too few. The plan lists the
+titles, the route returns all of them (no twelve-sample: the number is limited by
+the file's tiddler limit anyway), the CLI prints them, and the dialog gets the
+line with a warning background, the titles in an open list. It is the only red
+line in the plan.
+
+Texts in both languages; out of `Plugins are never imported` and `Plugins left
+out` came `A language pack is one of them` and `Core plugins, themes and
+libraries left out`, because plugins are no longer a blanket no. The old wording
+"the settings of the file do not come along" disappeared together with the
+language lines.
+
+**Verified.** `empty.html` through `import-wiki-file`, before and after, and
+`npm run tsc2`, `cd packages/admin-vanilla && npx tsc --noEmit`, `npm run build`,
+`git diff --check` clean:
+
+- `--include-system` on `empty.html`: `3 tiddler(s)` instead of the previous
+  `13`, namely `$:/config/Plugins/Disabled/$:/languages/de-AT`, `$:/language` and
+  the pack `$:/languages/de-DE`; `11 session/build tiddler(s) dropped` fully
+  named.
+- `language: $:/languages/en-GB` — the core has it, so `$:/language` travels
+  along.
+- A copy of the file pointing to `$:/languages/fr-FR`: `2 new`, `$:/language`
+  neither in the list nor taken over -
+  `The file wants the language "$:/languages/fr-FR" but does not contain the
+  language pack, and the target wiki does not have it either. The wiki keeps
+  its own language.` The reason codes are for the dialog; CLI and plan print the
+  sentence.
+- A copy on `$:/languages/de-DE` that the file brings along: `pack
+  $:/languages/de-DE comes with the file`, `$:/language` written.
+- Without `--include-system`: `0 new`, `3 system tiddler(s) left out`, the
+  language not taken over, the wiki keeps its own.
+- End to end into a wiki created by the command, then delivered: `GET /wiki/de-test`
+  answers `200` and 375 KB, and the browser store contains `$:/language` →
+  `$:/languages/de-DE` with the 1072 tiddlers of the pack —
+  `$:/language/Buttons/Cancel/Hint` is "Abbrechen", the `en-GB` setting of the
+  file is gone. The same wiki had `$:/language` → `$:/languages/en-GB` before the
+  fix.
+- Deletions: a replace that loses one content tiddler reports `1 deleted:
+  Charlie` and writes a snapshot; one that loses twenty reports `20 deleted` with
+  all twenty in the plan and the first twelve in the terminal.
+- The store was afterwards replayed from its backup: 15 wikis, 15 bags, no
+  snapshots, no test wikis.
+
+Not part of this section: `$:/core/modules/` tiddlers (they are system tiddlers
+like all the others and only travel with the switch) and the wiki-file list in
+"My files".
+
+## 85. Feature: "Take over a wiki file" in the admin app (dialog, routes)
+
+The wiki-file import from §84 is now reachable from the admin app. The entry
+sits in the existing dropdown **"Create a wiki"** as **"Take over a wiki
+file"**: upload a saved `index.html`, look at what would happen, and only then
+write.
+
+**Two steps, never one.** The dialog asks the server what a file *would do*
+(`PUT /api/wiki-file/inspect`), and writes only after an explicit confirmation
+(`PUT /api/wiki-file/import`). Both calls send the same multipart upload, and
+both have the plan recalculated server-side — the preview is a promise for *one*
+file and *one* target, never a document the browser would be allowed to send
+back. Every change to file, target, mode or the system tiddler switch discards
+the preview, so that the displayed plan always describes the following request.
+
+**The routes live under `/api`, not under `/admin`.** `/admin/:op/:tab` is the
+generic JSON record route: it claims every two-segment `/admin/...` path and reads
+the body as JSON — out of the first multipart upload this became `MALFORMED_JSON`.
+Under `/api` the body format belongs to the route, and the security checks stay
+the same as elsewhere (`X-Requested-With`, referer `/`, logged-in person).
+
+**Who may do what.** A new wiki runs through `assertWikiCreationAllowed()`,
+including the one-click creation's own wiki limit. An existing wiki is checked
+with the same `RecipeResolver.assertRecipe()` and `canWriteBag()` as saving a
+tiddler, a bag from `readonlyBags` is rejected even for administrators, and
+`state.asserted` is set *before* `state.$transaction()` — that is what the two
+routes learned from the CLI work, where the transaction complained about it. A
+replace additionally needs `C_admin` on the write bag (or the site administration
+or the owner), because it deletes what is not in the file; a merge only needs
+write access and never writes a snapshot. Listing and restoring snapshots sit
+behind the same gate as the replace that created them, and a restore only accepts
+bags under `snapshots/<slug>/`.
+
+**New wiki, existing wiki.** For a new wiki the dialog offers a name and a slug;
+the preview shows the slug the wiki will actually get (the server appends a
+number when the slug is taken), and the import sends exactly this slug — so no
+foreign wiki can be overwritten between the two calls. As a template serves the
+same `DEFAULT_TEMPLATE` ("Blank Template") as with the one-click creation, and
+the bag gets the same personal namespace. `WikiShell.ts` bundles this shell so
+that CLI and dialog cannot drift apart.
+
+**System tiddlers.** They are left out by default as in §84; the box "Also
+import system tiddlers" switches them on, and under the plan stands which ones
+the file contains. Plugins are never imported, not even with the box active.
+
+**Snapshots.** Every replace writes a snapshot; the dialog lists the snapshots of
+the target wiki with timestamp, tiddler count and origin and restores one after
+a query — also a restore is recoverable, because it first writes a snapshot
+itself.
+
+**Files.**
+- `new-managers/WikiFileRoutes.ts`: the four routes, the upload reader with a
+  running byte limit, the target resolution and the plan summaries.
+- `new-managers/WikiShell.ts`: bag + recipe + starter tiddler, shared with the
+  CLI.
+- `new-managers/TabDataAdapter.ts`: `assertWikiCreationAllowed()`,
+  `newWikiAdminRole()`, `newWikiSlug()`, also used by `AdminCreateWiki`.
+- `ServerState.ts`: `wikiFileSizeLimit` (`MWS_WIKI_FILE_SIZE_LIMIT`), so that
+  dialog and CLI accept the same files.
+- `admin-vanilla/src/wiki-file-import.tsx`: the dialog.
+- `admin-vanilla/src/helpers.tsx`: error evaluation and `prettifyBytes()` pulled
+  out of `app.tsx` and `user-files.tsx` so that all three areas share them, plus
+  the German messages to the server reasons of the new routes.
+
+**Verified** on the dev instance with `curl`, with the same requests the dialog
+sends (multipart field `file`, JSON body `{snapshot}` for a restore), against
+`editions/bedienungsanleitung/output/index.html` and a changed copy of it; the
+store was backed up before and restored afterwards:
+- New wiki via `PUT /api/wiki-file/import?create=1` → `49 written`, slug
+  `mws-bedienungsanleitung`, bag
+  `editions/01a09c6c-e744-716e-ae43-73c4d6393f1c/mws-bedienungsanleitung`,
+  owner `admin`, 51 tiddlers (49 plus `$:/SiteTitle`, `$:/DefaultTiddlers`);
+  `GET /wiki/mws-bedienungsanleitung` renders with
+  `<title>MWS Bedienungsanleitung</title>`.
+- Replace → `1 created, 1 updated, 48 unchanged, 0 deleted`, snapshot with 51
+  tiddlers; the preview of the same file afterwards reports `0` created and `0`
+  changed.
+- `include-system=1` → 57 instead of 49 tiddlers, the system list shows the
+  eight `$:/` tiddlers of the file.
+- `Schüler 1` with `B_write` on the bag: merge `200` (`2 written`, no snapshot),
+  replace `403` with "Replacing the wiki … needs administrator rights (C_admin)
+  on its write bag. A merge is enough to add tiddlers."; the snapshot list is
+  also `403` for the same reason.
+- Without session → `403` "User not authenticated"; plain HTML → `400`
+  `NOT_A_TIDDLYWIKI`; unknown wiki → `404`; taken slug → `409`; with
+  `MWS_WIKI_FILE_SIZE_LIMIT=100000` → `413` with the limit in the details.
+- Restore with the body of the dialog → `1 written, 1 deleted, 50 unchanged` and
+  a new snapshot with 52 tiddlers; a snapshot with a foreign wiki prefix →
+  `403`.
+- `npm run tsc2` and `cd packages/admin-vanilla && npm run tsc` clean,
+  `npm run build` successful; the delivered admin bundle contains the dialog and
+  both language versions of its texts.
+
+**Not verified by clicking.** The dialog was tested through its requests, not
+with the mouse: dropdown entry, file selection, plan display and restore button
+still need a manual pass in the browser.
+
+Not part of this section: the wiki-file list in "My files" and the migration of
+existing `user_file` HTML attachments into a bag.
+
+## 84. Feature: import a single-file TiddlyWiki 5 into a wiki (CLI)
+
+A wiki that exists only as one `index.html` can now be taken over by MWS. What
+is meant is not "any HTML becomes a wiki" but: a wiki saved with TiddlyWiki 5
+can be handed to MWS without the detour through a folder full of `.tid` files.
+
+**Why a server-side parser and not the client.** MWS does not have `tiddlywiki`
+as an npm package, but it boots a real TiddlyWiki 5 at runtime —
+`plugin-cache/index.ts` determines the version and boots
+`<wikiPath>/tw5/<version>`. That instance is used here with
+`$tw.wiki.deserializeTiddlers("", html, undefined, {deserializer: "text/html"})`,
+that is with the call from `core-server/commands/import.js:34`. The `text/html`
+deserializer is the decisive part: it reads both storage forms, the JSON script
+`tiddlywiki-tiddler-store` and the classic `storeArea` div. `application/json` is
+wrong, and without an explicit deserializer the storage falls into the
+all-purpose branch and the whole file becomes *one* tiddler.
+
+**What is recognised and what is rejected** (`WikiFileImport.ts`):
+`application-name` must be `TiddlyWiki`, `tiddlywiki-version` must be present,
+and there must be a storage. A TiddlyWiki 2 file is recognised before that by its
+version script — it deserves "first save with TiddlyWiki 5", not "this is not a
+TiddlyWiki". Password-protected files are rejected with exactly that wording, an
+empty storage likewise ("nothing to import"), and byte limit
+(`MWS_WIKI_FILE_SIZE_LIMIT`, default 50 MB) as well as tiddler limit (default
+20 000) are enforced. An `external-core` marker is reported as `tw5x` and read
+with the installed core, because that is exactly what it is.
+
+**System tiddlers and plugins.** `$:/` tiddlers configure the wiki as a whole,
+so they are skipped by default and only taken over with `--include-system` on
+purpose (the admin dialog of a later phase asks). Plugin, theme, library and
+language tiddlers are *never* imported — in the test file `$:/core` alone is
+around 2 MB of plugin text, and the plugins of a wiki come from its recipe. The
+target is exclusively the default write bag of the wiki; recipe, ACLs and plugin
+list stay untouched.
+
+**Replacing means snapshot first.** MWS has no content history, so a replace
+copies the bag into a hidden bag `snapshots/<slug>/<UTC-Zeitstempel>`
+(`WikiSnapshotBag.ts`) before the first write. It is referenced by no recipe, so
+it never appears as wiki content, and it is pruned per wiki to `--snapshot-keep`
+(default 10). `restore-wiki-snapshot` reads it back — and is itself recoverable,
+because a restore also snapshots first.
+
+**What a replace never deletes.** The `$:/` tiddlers of the target bag stay, even
+if the file has none: `$:/SiteTitle` and `$:/DefaultTiddlers` belong to MWS, and
+deleting them because an uploaded file brings none is never what the operator
+meant. In the preview they stand as `kept as they are`.
+
+**Files.**
+- `new-managers/WikiFileImport.ts`: validation, storage detection, parser,
+  system/plugin filter.
+- `new-managers/WikiSnapshotBag.ts`: snapshot bags, metadata, pruning.
+- `new-managers/importWikiFile.ts`: plan (new/changed/unchanged/deleted),
+  applying, restore.
+- `new-commands/import-wiki-file.ts`, `new-commands/restore-wiki-snapshot.ts`:
+  the CLI, registered in `new-commands/index.ts`.
+
+**Verified** on `editions/bedienungsanleitung/output/index.html` (2.5 MB, 5.4.1,
+JSON storage) on the dev instance, database backed up before and reset
+afterwards:
+- `--create --slug import-test` → `49 new`, wiki `import-test` with bag
+  `editions/import-test`, `ADMIN` with `B_write` on the recipe and `C_admin` on
+  the bag, 51 tiddlers (49 content plus `$:/SiteTitle` and `$:/DefaultTiddlers`);
+  largest tiddler 891 bytes, no plugin slipped in.
+- `--dry-run` on the same file → `48 unchanged, 0 changed` — the way through the
+  database is byte-exact.
+- A second file (built with `tiddlywiki --build index`, one tiddler added, two
+  away, one changed) → in the preview `1 new, 47 changed, 2 deleted`, after the
+  real run `2 system tiddler(s) kept as they are`. A further run gives
+  `48 unchanged`.
+- Snapshot `snapshots/import-test/20261001T173119355Z` contained the 51 previous
+  tiddlers plus five metadata tiddlers `$:/mws/snapshot/*`, stood in no
+  `recipe_bag`, and `restore-wiki-snapshot … --list` finds it. The restore
+  brought back 51 tiddlers including `Backup` and `Autosave`, made
+  `Import-Test-Geändert` disappear and put the state before it into its own
+  snapshot.
+- Errors: plain HTML → "no application-name meta tag"; TW2 file → the TW2 hint;
+  encrypted storage → the password hint; storage marker in a text example →
+  empty storage rejected. A bag from `readonlyBags` of the recipe is rejected for
+  the CLI as well ("is a read-only bag of the wiki"), and `--snapshot-keep 0`
+  likewise — a replace without its own backup copy is not a replace.
+- Two errors that the verification found: `$:/SiteTitle` and `$:/DefaultTiddlers`
+  were listed as deleted by a replace (now kept and reported as `kept as they
+  are`), and `--include-system` only *reported* the system tiddlers but did not
+  import them (now 56 instead of 48 tiddlers in the plan).
+- `GET /recipe/import-test/store.json` (anonymous reading set for the test)
+  delivered 56 tiddlers, `GET /wiki/import-test` renders with
+  `<title>MWS Bedienungsanleitung</title>`. The 101 `tiddler_event` rows of the
+  target bag are the service side of the live updating of open tabs.
+- A second, smaller run with three tiddlers, after the shared snapshot reader
+  had replaced the duplicate: create → in the next dry run `0 new, 0 changed, 3
+  unchanged` → change one tiddler, delete one → `1 written, 1 deleted, 1
+  unchanged` with snapshot → restore brings back `T3` and the old `T2` text →
+  `--snapshot-keep 1` throws away the two older snapshots and names them.
+- `npm run tsc2` clean, `npm run build` successful; the dev store was afterwards
+  compared table by table with the backup and is unchanged.
+
+Not part of this section: the admin dialog (upload, preview, confirmation), the
+wiki-file list in "My files" and the migration of existing `user_file` HTML
+attachments into a bag. `restoreSnapshotBag` in `importWikiFile.ts` is the
+programmatic entry point for it; the CLI uses the command until then.
+
+## 83. Bug fix: one connection alert instead of a flood (issue #139)
+
+Upstream issue #139: when the network is gone, the wiki piles up alert after
+alert. Before this change that was reproducible and measurable in the browser.
+
+**Measured before** on an isolated instance (`/tmp/opencode/mws-sim`, port 5099,
+Playwright aborting `/updates`): the first alert appeared only after 61.9 s — the
+syncer polls every 60 s — and the two `displayError` calls of a failed fetch
+each produced their own alert in the normal `syncer-browser-multiwikiclient`
+logger, because the MultiWikiClient adaptor reported a request that never reached
+the server as an ordinary `Error`. The first alert's counter rose from 1 to 10, a
+new `/updates` request went out every 5 s, and once the network came back both
+alerts stayed up during the 40 s observed.
+
+**Four causes, all ours.**
+
+1. `httpRequest` in `plugins/client/src/new-multiwikiclientadaptor.ts` uses
+   `XMLHttpRequest` and does not reject: a request that never reaches the server
+   answers with status `0`. `recipeRequest` turned every non-ok answer into
+   `Server returned 0: (no reason)` and thereby indistinguishable from a real
+   server error — so the syncer never saw a connection failure at all.
+2. `displayError` recognises only the old core string `XMLHttpRequest: 0`, which
+   this adaptor never delivers. And it alerts twice, because the failed fetch
+   reports the error twice: once from the task, once from `syncFromServerTask`.
+   `Logger.alert` only counts identical texts, so both alerts stay visible.
+3. The retry interval stayed at 5 s, no matter how long the error lasted.
+4. The syncer copy in `plugins/client/tiddlers/syncer/syncer.js` cleared the
+   connection alerts in `updateDirtyStatus` as soon as the wiki was not dirty.
+   For an anonymous reader that is immediately true, so an alert that had just
+   been raised was thrown away again.
+
+**The fix.** A `NetworkError` with `isNetworkError` marks what never reached the
+server; status `0` is exactly that, every other status stays an ordinary `Error`
+with the server's reason. `isConnectionError()` recognises the marker next to the
+old string, and per outage one alert is raised via `loggerConnection` — with new
+German and English text in `MWS/Syncer/NetworkErrorAlert`. A successful task
+resets alert and counter, the `[1,2,6,12]` backoff of the 5 s base turns the
+retries into 5/10/30/60 s, and `updateDirtyStatus` no longer clears anything.
+
+**Measured after**, same scenario: first alert at 60.1 s, exactly one alert with
+counter 1 across 100 s of outage, requests at 60.1; 65.1; 75.1 and 107.1 s, and
+the alert is gone on the first successful fetch after the network returns. A
+server that answers `503` still produces the ordinary syncer alerts and no
+connection alert.
+
+**The measurement is a script:** `scripts/syncer-alert-sim.mjs` (Playwright,
+`playwright-core`, the Chromium from the Playwright cache). The defaults are
+20 × 5 s outage and 16 × 5 s recovery; the recovery window has to outlast the 60 s
+backoff, because the attempt that clears the alert comes after it. `MWS_URL`,
+`MWS_WIKI`, `MWS_ABORT_REASON` (default `failed`) and the sample counts are
+environment variables, `--help` lists them.
+
+Not verified: really sleeping and waking on a laptop — that belongs to the
+maintainers' approval.
+
 # 🇩🇪 CHANGELOG – MultiWikiServer-wikiwise
 
 Dokumentation der Änderungen am MultiWikiServer-wikiwise-Fork von heino17.
@@ -9657,90 +10302,6 @@ dem Push ist sie es: der Lauf ist grün und die Annotation über `node20` nicht
 mehr vorhanden, nur noch der Hinweis, dass `ubuntu-latest` ab 19.10.2026 auf
 Ubuntu 26 migriert.
 
-## 92. Snapshots bekommen ihr eigenes Fenster: „Snapshot wiederherstellen"
-
-**Warum.** Die Snapshot-Liste aus §85 steckte in „Wiki-Datei übernehmen". Damit
-war sie gezielt schwer zu finden und versehentlich leicht zu treffen: Sie erschien
-erst, nachdem eine bestehende Wiki gewählt *und* „Datei prüfen" gedrückt war —
-man brauchte also einen Import, um überhaupt in die Historie einer Wiki zu
-sehen. Die Liste war nie das Problem, der Einstieg war es. Zwei Details
-verschärften es: Der Wiederherstellen-Knopf war ein nacktes Symbol, dessen
-Bedeutung man am Tooltip erraten musste, und die Bestätigung war ein
-`globalThis.confirm`-Alert, der überhaupt nicht in die Admin-Oberfläche passte.
-
-**Was.** Ein zweiter Eintrag im „Wiki anlegen"-Menü öffnet
-`SnapshotRestoreDialog` (`packages/admin-vanilla/src/snapshot-restore.tsx`): ein
-eigenes Fenster mit Wiki-Auswahl, Snapshot-Liste und dem Satz, der erklärt, was
-ein Restore tut. Eine Zeile zeigt Datum, Tiddlerzahl und Herkunft und trägt einen
-beschrifteten Knopf „Diesen Snapshot wiederherstellen" statt eines Symbols. Ein
-Klick darauf klappt die Zeile zu einer Bestätigung auf, die Wiki, Datum, Anzahl
-und den Hinweis auf den Sicherheits-Snapshot nennt, und bietet „Aktuellen Stand
-behalten" und „Jetzt wiederherstellen". Der Browser-Alert ist weg.
-
-Der Datei-Dialog verliert die Snapshot-Liste samt `loadSnapshots`, `restore`, den
-States `snapshots`/`snapshotsBusy`/`restoring`/`notice` und dem ganzen Block
-`renderSnapshots`. Übrig bleibt ein Undo-Knopf im Ergebnisbereich: Nach einem
-Import steht dort „Snapshot wiederherstellen" und übergibt die importierte Slug
-über `onRestoreSnapshots` an das neue Fenster. Zwei Modalitäten würden sich
-stapeln, deshalb tritt der Import-Dialog zurück — `openSnapshotRestore` schließt
-ihn. Der Hinweis in der Vorschau wurde umformuliert, weil er auf eine Liste
-„unten" verwies, die es nicht mehr gibt. `PLANNING.md` hält die Verlagerung
-fest; die ⚖️-Einträge zu Routen, Berechtigung und Snapshot-Bag bleiben
-unberührt.
-
-**„Wiki öffnen" öffnet einen neuen Tab.** Ein Restore wirft die Admin-Oberfläche
-beiseite — die Wiki selbst ist das Nächste, was man sehen will, und ihre Historie
-hat der Restore gerade verändert. Beide Links tragen deshalb `target="_blank"`
-mit `rel="noopener noreferrer"`, das gleiche Paar wie die Wiki-Karten auf der
-Startseite (`app-landing.tsx`). Das Fenster bleibt stehen, die Wiki öffnet sich
-daneben.
-
-Serverseitig ändert sich nichts: gleiches `GET /api/wiki-file/snapshots`, gleiches
-`PUT /api/wiki-file/restore`, gleiche Berechtigung — wer nicht ersetzen darf,
-sieht ohnehin keine Snapshots.
-
-**i18n.** Elf neue Schlüssel in allen acht Sprachen, einer umformuliert, einer
-mit dem Alert überflüssig — die acht Basisschlüsselmengen bleiben dieselben 648.
-
-**Die Icons brauchten eine eigene Größe.** `MaterialSymbol` entfernt `width` und
-`height` aus dem SVG, damit es über CSS skaliert — jedes Vorkommen muss die
-Maße also selbst setzen, denn `font-size` skaliert kein SVG. Die neue Meldung
-brachte ein Icon in `.wiki-file-notice`, und das ist kein Flex-Container: Das SVG
-fiel damit auf seinen undefinierten Standard zurück und füllte die ganze Karte —
-189 px Icon in einem 752-px-Dialog beim Undo-Knopf, volle Breite bei der Meldung.
-Beim Messen aller `material-symbol` in beiden Fenstern kamen zusätzlich zwei
-Icons aus §85 heraus, die 0 × 0 groß waren: die Icons in den Überschriften und das
-auf der Snapshot-Zeile, die es nie anders als nur mit `font-size` gab. Alle sind
-jetzt vermessen: 20 px für Überschriften, Meldung und Snapshot-Zeile, 18 px für
-Knöpfe, nach der Konvention, die die anderen 30 Icon-Regeln schon benutzen.
-
-**Geprüft.** Headless Chromium gegen die Dev-Instanz, `fetch` gestubbt: beide
-Wikis in der Auswahl und `initialSlug` wählt `testwiki` vor; zwei Zeilen mit
-deutschen Daten, „412 Tiddler" über die `#one`-Regel und einem Rückfall auf
-`sourceBagName`, wenn `source` leer ist; ein Klick auf den Restore-Knopf klappt
-die Bestätigung mit beiden Knöpfen auf; „Jetzt wiederherstellen" sendet
-`PUT /api/wiki-file/restore?wiki=testwiki` mit
-`{"snapshot":"snapshot-wiki-20260102T101500000Z"}`, meldet „Die Wiki
-\"testwiki\" wurde vom 2.1.2026, 11:15:00 zurückgesetzt." mit „Wiki öffnen",
-schließt das Panel und löst `onDone` aus. Der Datei-Dialog: kein
-`.wiki-file-snapshots`, kein Knopf ohne Text, nur Aufrufe an `inspect` und
-`import` — die `snapshots`-Anfrage ist weg — der neue Hinweistext und der
-Undo-Knopf mit `onRestoreSnapshots("testwiki")`. Jedes `material-symbol` in beiden
-Fenstern misst danach 20 × 20 oder 18 × 18, keines 0. Keine Ausnahmen in der
-Konsole.
-Beide „Wiki öffnen"-Links messen `href="/wiki/testwiki"`, `target="_blank"` und
-`rel="noopener noreferrer"`; Headless Chromium listet den Tab, den ein
-`_blank`-Klick öffnet, nicht auf. Deshalb wurde die Wirkung am Gegenbeispiel
-geprüft: Ein Anker ohne `target` navigiert den aktuellen Tab (`/login` →
-`/main.js`), derselbe Anker mit `target="_blank"` lässt ihn auf `/login`.
-Der Menüeintrag selbst liegt hinter dem Login, und für den Dev-Store lag kein
-Passwort vor, deshalb wurde er im Bundle geprüft: Der übersetzte Knopf trägt
-`onclick:()=>{this.openSnapshotRestore(),this.closeCreateWikiMenu()}`. `npm run
-tsc2`, der Admin-Typecheck, `npm run build` und das i18n-Audit (648 Schlüssel je
-Sprache, keine Waisen, keine Dubletten, keine erfundenen Platzhalter, kein
-literaler `t()` ohne Eintrag) sind sauber.
-
-
 ## 99. Aufräumen: der kopierte CSS-Block am Ende von `app.inline.css`
 
 **Why.** §98 hat eine Notiz über doppelte Regeln weiter unten in
@@ -9993,6 +10554,164 @@ entsprechenden Grund abgewiesen. `npm run tsc2`, Admin-Typecheck, `npm run build
 und i18n-Audit sind sauber; der Dev-Store wurde nach dem Test zurückgesetzt.
 
 
+## 93. Snapshots lassen sich löschen, und die Aufbewahrungsregel sagt es
+
+**Warum.** §84 hat die Snapshot-Bags unter `--snapshot-keep` (Standard 10)
+gebracht, §92 der Liste einen eigenen Dialog gegeben. Zwei Dinge fehlten noch, und
+bei beiden geht es darum, der Liste zu trauen. Ein stillschweigend weggefallener
+Snapshot ist von einem Fehler nicht zu unterscheiden: niemand kann der Liste
+ansehen, ob der elfte Snapshot von gestern wegen der Regel weg ist oder weil
+etwas schiefging. Und ein Snapshot-Bag gehört zu keinem Rezept, es käme also im
+Store nie wieder etwas daran — bis zu zehn vollständige Kopien eines gelöschten
+Wikis lägen dort, ohne sie noch benennen zu können.
+
+**Die Aufbewahrungsregel steht dort, wo die Liste steht.** Die Listenroute
+antwortet `keep` neben den Zeilen (`DEFAULT_SNAPSHOT_KEEP`), und der Dialog
+schreibt sie unter die Liste: "Only the newest `{count}` snapshots are kept.
+Older ones are dropped automatically." Die Regel gehört dem Server und wird nur
+vom Client genannt — `keep: DEFAULT_SNAPSHOT_KEEP` trägt den Kommentar, dass der
+Dialog die Regel nennt, damit der Hinweis sie nicht wiederholen muss — und sie
+wird nur gezeigt, wenn `keep > 0` und die Liste nicht leer ist, weil eine Regel
+über das Behalten unter einer leeren Liste seltsam liest. Knopf und Regel hat der
+§92-Dialog im selben Commit bekommen; auf diesen Abschnitt verweist
+`PLANNING.md` für beides.
+
+**Ein Snapshot lässt sich löschen, hinter derselben Schranke wie das
+Zurückspielen.** `AdminWikiFileSnapshotDelete` (`WikiFileRoutes.ts`) ist ein
+`PUT` auf `/api/wiki-file/snapshot/delete` mit dem JSON-Body `{ snapshot }` und
+dem `wiki`-Query und tut genau das, was das Zurückspielen tut und nichts weniger:
+`state.okUser()`, `state.assertReferer(["/"])`, ein fehlender Slug ist
+`ARGUMENT_REQUIRED`, und die Präfixprüfung `snapshotStampOf(slug, snapshot)`
+antwortet `403` mit "This snapshot does not belong to that wiki." Der Kommentar
+darüber ist der aus dem Zurückspielen, und er ist der Grund für die Prüfung: ein
+Bag-Admin einer Wiki darf die Tiddler einer fremden Wiki nicht lesen können, indem
+er deren Snapshot hier löscht oder zurückschreibt. Danach
+`resolveWikiTarget(state, state.engine, { mode: "replace", wikiSlug: slug })` und
+`state.asserted = true` — gesetzt *vor* `state.$transaction()`, die Reihenfolge,
+die die Routen aus §85 teuer gelernt haben — und ein unbekannter Stempel ist `404`
+"There is no such snapshot." Die Antwort ist `{ slug, deleted: snapshot }`.
+
+Im Dialog trägt eine Zeile neben dem Zurücksetzen einen Lösch-Knopf mit `title`
+und `aria-label` "Delete this snapshot", und die Zeile klappt in eine inline
+Bestätigung auf statt in einen Browser-Alarm: "Delete this snapshot?", die
+Warnung "A deleted snapshot cannot be recovered, and this is the only copy left
+of this state.", und die Knöpfe "Keep it" und "Delete it", mit "Deleting…"
+während es läuft und "The snapshot could not be deleted." im Fehlerfall.
+`confirmKind` ist `"restore" | "delete"`, damit sich beide Bestätigungen eine
+Aufklappung teilen und nicht verwechselt werden können.
+
+**Eine Wiki nimmt ihre Snapshots mit.** In `/admin/wiki/delete` fallen die
+Snapshot-Bags dieses Slugs in derselben Transaktion wie Rezept, Bags und
+Landing-Page-Flag: `pruneSnapshotBags(prisma, slug, 0)` — `keep = 0` ist die
+Aufbewahrungsregel mit nichts zu behalten. Der Kommentar dort sagt, warum die
+Schleife darüber es nicht erledigen kann: die Bags einer gelöschten Wiki gehören
+zu keinem Rezept, also sieht die Schleife sie nie, und der Restore-Dialog kann sie
+nicht einmal mehr benennen. Die Antwort gewinnt eine Liste `droppedSnapshots`,
+damit der Client sagen kann, was weg ist.
+
+⚖️ **Snapshots sind nach Slug der Schlüssel, nicht nach Wiki-Identität.** Eine
+Wiki, die unter einem früheren Namen neu erstellt wird, erbt die alten Snapshots,
+und ein Restore schreibt alten Inhalt in die neue Wiki. Das ist Absicht — die
+Alternative wäre eine Wiki-Identität in jedem Snapshot-Namen, die das Rezept gar
+nicht anbieten müsste und der Slug schon ist —, aber es ist die eine scharfe Kante
+hier, und deshalb nennt die Restore-Bestätigung Wiki und Datum statt nur einer
+Zahl.
+
+**Geprüft.** Aus dem Code gelesen, nicht durch Klicken: die Route trägt dieselben
+vier Sicherheitsschritte in derselben Reihenfolge wie das Zurückspielen,
+`snapshotStampOf` ist die einzige Pfadprüfung und weist einen fremden Präfix ab,
+bevor irgendetwas gelesen wird, das Löschen läuft nach `state.asserted` in einer
+Transaktion, und `pruneSnapshotBags(prisma, slug, 0)` wird vom Wiki-Löschen
+erreicht. Was **nicht** geprüft ist: der Lösch-Knopf im Browser, die
+inline-Bestätigung, und dass ein weggeräumter Snapshot wirklich aus der Liste
+verschwindet — dieser Abschnitt ist nachträglich aus der Umsetzung und den
+Regressionsprüfungen geschrieben, der manuelle Durchgang durch den Dialog steht
+noch aus. `npm run tsc2` und `npm run build` sind sauber.
+
+## 92. Snapshots bekommen ihr eigenes Fenster: „Snapshot wiederherstellen"
+
+**Warum.** Die Snapshot-Liste aus §85 steckte in „Wiki-Datei übernehmen". Damit
+war sie gezielt schwer zu finden und versehentlich leicht zu treffen: Sie erschien
+erst, nachdem eine bestehende Wiki gewählt *und* „Datei prüfen" gedrückt war —
+man brauchte also einen Import, um überhaupt in die Historie einer Wiki zu
+sehen. Die Liste war nie das Problem, der Einstieg war es. Zwei Details
+verschärften es: Der Wiederherstellen-Knopf war ein nacktes Symbol, dessen
+Bedeutung man am Tooltip erraten musste, und die Bestätigung war ein
+`globalThis.confirm`-Alert, der überhaupt nicht in die Admin-Oberfläche passte.
+
+**Was.** Ein zweiter Eintrag im „Wiki anlegen"-Menü öffnet
+`SnapshotRestoreDialog` (`packages/admin-vanilla/src/snapshot-restore.tsx`): ein
+eigenes Fenster mit Wiki-Auswahl, Snapshot-Liste und dem Satz, der erklärt, was
+ein Restore tut. Eine Zeile zeigt Datum, Tiddlerzahl und Herkunft und trägt einen
+beschrifteten Knopf „Diesen Snapshot wiederherstellen" statt eines Symbols. Ein
+Klick darauf klappt die Zeile zu einer Bestätigung auf, die Wiki, Datum, Anzahl
+und den Hinweis auf den Sicherheits-Snapshot nennt, und bietet „Aktuellen Stand
+behalten" und „Jetzt wiederherstellen". Der Browser-Alert ist weg.
+
+Der Datei-Dialog verliert die Snapshot-Liste samt `loadSnapshots`, `restore`, den
+States `snapshots`/`snapshotsBusy`/`restoring`/`notice` und dem ganzen Block
+`renderSnapshots`. Übrig bleibt ein Undo-Knopf im Ergebnisbereich: Nach einem
+Import steht dort „Snapshot wiederherstellen" und übergibt die importierte Slug
+über `onRestoreSnapshots` an das neue Fenster. Zwei Modalitäten würden sich
+stapeln, deshalb tritt der Import-Dialog zurück — `openSnapshotRestore` schließt
+ihn. Der Hinweis in der Vorschau wurde umformuliert, weil er auf eine Liste
+„unten" verwies, die es nicht mehr gibt. `PLANNING.md` hält die Verlagerung
+fest; die ⚖️-Einträge zu Routen, Berechtigung und Snapshot-Bag bleiben
+unberührt.
+
+**„Wiki öffnen" öffnet einen neuen Tab.** Ein Restore wirft die Admin-Oberfläche
+beiseite — die Wiki selbst ist das Nächste, was man sehen will, und ihre Historie
+hat der Restore gerade verändert. Beide Links tragen deshalb `target="_blank"`
+mit `rel="noopener noreferrer"`, das gleiche Paar wie die Wiki-Karten auf der
+Startseite (`app-landing.tsx`). Das Fenster bleibt stehen, die Wiki öffnet sich
+daneben.
+
+Serverseitig ändert sich nichts: gleiches `GET /api/wiki-file/snapshots`, gleiches
+`PUT /api/wiki-file/restore`, gleiche Berechtigung — wer nicht ersetzen darf,
+sieht ohnehin keine Snapshots.
+
+**i18n.** Elf neue Schlüssel in allen acht Sprachen, einer umformuliert, einer
+mit dem Alert überflüssig — die acht Basisschlüsselmengen bleiben dieselben 648.
+
+**Die Icons brauchten eine eigene Größe.** `MaterialSymbol` entfernt `width` und
+`height` aus dem SVG, damit es über CSS skaliert — jedes Vorkommen muss die
+Maße also selbst setzen, denn `font-size` skaliert kein SVG. Die neue Meldung
+brachte ein Icon in `.wiki-file-notice`, und das ist kein Flex-Container: Das SVG
+fiel damit auf seinen undefinierten Standard zurück und füllte die ganze Karte —
+189 px Icon in einem 752-px-Dialog beim Undo-Knopf, volle Breite bei der Meldung.
+Beim Messen aller `material-symbol` in beiden Fenstern kamen zusätzlich zwei
+Icons aus §85 heraus, die 0 × 0 groß waren: die Icons in den Überschriften und das
+auf der Snapshot-Zeile, die es nie anders als nur mit `font-size` gab. Alle sind
+jetzt vermessen: 20 px für Überschriften, Meldung und Snapshot-Zeile, 18 px für
+Knöpfe, nach der Konvention, die die anderen 30 Icon-Regeln schon benutzen.
+
+**Geprüft.** Headless Chromium gegen die Dev-Instanz, `fetch` gestubbt: beide
+Wikis in der Auswahl und `initialSlug` wählt `testwiki` vor; zwei Zeilen mit
+deutschen Daten, „412 Tiddler" über die `#one`-Regel und einem Rückfall auf
+`sourceBagName`, wenn `source` leer ist; ein Klick auf den Restore-Knopf klappt
+die Bestätigung mit beiden Knöpfen auf; „Jetzt wiederherstellen" sendet
+`PUT /api/wiki-file/restore?wiki=testwiki` mit
+`{"snapshot":"snapshot-wiki-20260102T101500000Z"}`, meldet „Die Wiki
+\"testwiki\" wurde vom 2.1.2026, 11:15:00 zurückgesetzt." mit „Wiki öffnen",
+schließt das Panel und löst `onDone` aus. Der Datei-Dialog: kein
+`.wiki-file-snapshots`, kein Knopf ohne Text, nur Aufrufe an `inspect` und
+`import` — die `snapshots`-Anfrage ist weg — der neue Hinweistext und der
+Undo-Knopf mit `onRestoreSnapshots("testwiki")`. Jedes `material-symbol` in beiden
+Fenstern misst danach 20 × 20 oder 18 × 18, keines 0. Keine Ausnahmen in der
+Konsole.
+Beide „Wiki öffnen"-Links messen `href="/wiki/testwiki"`, `target="_blank"` und
+`rel="noopener noreferrer"`; Headless Chromium listet den Tab, den ein
+`_blank`-Klick öffnet, nicht auf. Deshalb wurde die Wirkung am Gegenbeispiel
+geprüft: Ein Anker ohne `target` navigiert den aktuellen Tab (`/login` →
+`/main.js`), derselbe Anker mit `target="_blank"` lässt ihn auf `/login`.
+Der Menüeintrag selbst liegt hinter dem Login, und für den Dev-Store lag kein
+Passwort vor, deshalb wurde er im Bundle geprüft: Der übersetzte Knopf trägt
+`onclick:()=>{this.openSnapshotRestore(),this.closeCreateWikiMenu()}`. `npm run
+tsc2`, der Admin-Typecheck, `npm run build` und das i18n-Audit (648 Schlüssel je
+Sprache, keine Waisen, keine Dubletten, keine erfundenen Platzhalter, kein
+literaler `t()` ohne Eintrag) sind sauber.
+
+
 ## 91. Spanisches `#many`: der letzte offene Pluralfall
 
 §89 hat Spanisch `many` mit einem Argument offen gelassen: es greife ab
@@ -10131,7 +10850,7 @@ genau eine Kategorie, ihre vorhandenen `#one`-Einträge können also nie gewähl
 werden, und es kam keine hinzu. Russisch ist die einzige unterstützte Sprache
 mit `few`, also liegen alle acht `#few`-Einträge in `ru.ts`. Deutsch braucht für
 *Titel* und *Systemtiddler* gar keine Variante, weil sie invariant sind, und
-Spanisch für invariante Wörter wie `вики` ebensowenig. Der Basisschlüssel muss
+Spanisch für invariante Wörter wie `wikis` ebensowenig. Der Basisschlüssel muss
 deshalb die `many`/`other`-Form halten — russisch ist `{count} notes` *заметок*,
 nicht *заметка* — und diese Regel steht jetzt im Doku-Kommentar von `t()`
 zusammen mit der Kategorientabelle.
