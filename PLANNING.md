@@ -115,6 +115,17 @@ Markers used below:
   looked like a broken import while the import itself was correct. The core is
   only consulted when the file's store says nothing about it
   ([§95](CHANGELOG.md))
+- ⚖️ The snapshot hint on the wikis page counts with the same predicates as the
+  restore (`canWriteBag()`, `mayReplace()`) instead of going through
+  `resolveWikiTarget`. `assertRecipe()` ends the request with an *empty* response
+  for a missing or inaccessible wiki, which for a single-wiki route is a correct
+  `403` and for the hint would have wiped the counts of every other wiki. Asking
+  directly also lets the route stay silent about what the reader may not replace
+  instead of denying — a hint that names an invisible wiki would leak it
+  ([§97](CHANGELOG.md))
+- ◐ The hint is a box above the list, not a count per row. Rows won the argument
+  about clutter, but they would also be the better place if the wikis page ever
+  grows a column of its own ([§97](CHANGELOG.md))
 - ⚖️ The session state of the browser that saved a file is dropped before the
   opt-in is even looked at — `$:/StoryList`, `$:/temp/`, `$:/state/`,
   `$:/status/`, `$:/HistoryList`, `$:/Import`, `$:/build`, `$:/isEncrypted` — the

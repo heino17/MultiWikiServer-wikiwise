@@ -5,6 +5,7 @@ import closeIcon from "@material-symbols/svg-400/outlined/close.svg";
 import accountCircleIcon from "@material-symbols/svg-400/outlined/account_circle.svg";
 import expandIcon from "@material-symbols/svg-400/outlined/keyboard_arrow_down.svg";
 import backupIcon from "@material-symbols/svg-400/outlined/backup.svg";
+import historyIcon from "@material-symbols/svg-400/outlined/history.svg";
 import deleteIcon from "@material-symbols/svg-400/outlined/delete.svg";
 import darkModeIcon from "@material-symbols/svg-400/outlined/dark_mode.svg";
 import lightModeIcon from "@material-symbols/svg-400/outlined/light_mode.svg";
@@ -1267,6 +1268,10 @@ export class App extends JSXElement {
   @state() accessor snapshotRestoreOpen = false;
   /** Wiki, die der Snapshot-Dialog vorwählen soll. */
   @state() accessor snapshotRestoreSlug = "";
+  /** Snapshots je Wiki, für den Aufräumhinweis über der Wikis-Liste. */
+  @state() accessor snapshotCounts: { slug: string; displayName: string; count: number }[] = [];
+  @state() accessor snapshotKeep = 0;
+  @state() accessor snapshotCountsLoading = false;
   @state() accessor themeMode: ThemeMode = getEffectiveTheme();
   @state() accessor thumbnailSrc = "";
   /** 1-based page of the paginated "Wikis" list. Reset on every tab switch;
@@ -1329,7 +1334,7 @@ export class App extends JSXElement {
 
   private readonly store = new AppStore(this, adminStorage);
   private readonly handlePageShow = () => {
-    void this.loadAdminRecords(true);
+    void this.loadAdminRecords(true).then(() => this.loadSnapshotCounts());
     void this.loadPinboardUnread();
     void this.loadUserFileCount();
   };
@@ -1402,6 +1407,64 @@ export class App extends JSXElement {
     this.mainStorageError = "";
   };
   loadThrottle = throttle(3000);
+  /**
+   * The hint above the wikis list that says out loud that snapshots are lying
+   * around, and offers the dialog that can delete them.
+   *
+   * It appears only when there is something to say, and only for whoever the
+   * route counted for — a person who may not restore a wiki gets no line about
+   * it. The wiki names are the shortcut into the dialog: a click opens it on
+   * that wiki, so the way from "there are old snapshots" to deleting one is
+   * one step.
+   */
+  private readonly snapshotHint = () => {
+    const rows = this.snapshotCounts.filter(row => row.count > 0);
+    if (!rows.length) return null;
+    const total = rows.reduce((sum, row) => sum + row.count, 0);
+    // A long list of names would push the wikis out of sight, which is the
+    // opposite of what a hint above them should do.
+    const shown = rows.slice(0, 6);
+    const rest = rows.length - shown.length;
+    return (
+      <div class="field-callout snapshot-hint">
+        <p class="snapshot-hint-head">
+          <MaterialSymbol icon={historyIcon} />
+          {t("Your wikis hold {count} snapshots — the way back to an earlier state.", { count: total })}
+        </p>
+        <p class="snapshot-hint-wikis">
+          {shown.map(row => (
+            <button
+              key={row.slug}
+              class="snapshot-hint-wiki"
+              type="button"
+              title={t("Show the snapshots of \"{wiki}\"", { wiki: row.displayName })}
+              onclick={() => this.openSnapshotRestore(row.slug)}
+            >
+              {row.displayName}
+              <span class="snapshot-hint-count">{row.count}</span>
+            </button>
+          ))}
+          {rest > 0 ? <span class="snapshot-hint-rest">{t("{count} more", { count: rest })}</span> : null}
+        </p>
+        <p class="snapshot-hint-detail">
+          {this.snapshotKeep > 0
+            ? t("Every import that replaces a wiki writes one first. Only the newest {keep} of each wiki are kept — delete what you no longer need.", { keep: this.snapshotKeep })
+            : t("Every import that replaces a wiki writes one first. Delete what you no longer need.")}
+        </p>
+        <p class="snapshot-hint-actions">
+          <button
+            class="primary-button"
+            type="button"
+            onclick={() => this.openSnapshotRestore(shown[0]?.slug ?? "")}
+          >
+            <MaterialSymbol icon={historyIcon} />
+            {t("Show snapshots and tidy up")}
+          </button>
+        </p>
+      </div>
+    );
+  };
+
   private readonly loadAdminRecords = async (reload = false) => {
     if (this.loadThrottle()) return;
     this.clearMainStorageError();
@@ -1464,9 +1527,11 @@ export class App extends JSXElement {
   };
 
   /** An import writes into another wiki and a restore rewrites one: both
-   *  change bags and tiddlers, so the wikis list is stale afterwards. */
+   *  change bags and tiddlers, so the wikis list is stale afterwards. Both
+   *  also write a snapshot, so the hint above that list is stale too. */
   private readonly wikiFileImportDone = () => {
     void this.store.reload();
+    void this.loadSnapshotCounts();
   };
 
   private readonly submitNewWiki = async () => {
@@ -1507,6 +1572,37 @@ export class App extends JSXElement {
     } catch (error) {
       console.error(error);
       this.backupError = getErrorMessage(error, t("Failed to load backups."));
+    }
+  };
+
+  /**
+   * How many snapshots the wikis of this person hold, for the hint above the
+   * wikis list. The slugs come from the list the server already filtered for
+   * this person, and the route leaves out every wiki behind the restore gate
+   * — so an empty answer means "nothing lying around", not "you may not
+   * look". A hint that cannot be loaded is not worth an error banner: the
+   * tab then simply shows none.
+   */
+  private readonly loadSnapshotCounts = async () => {
+    const wikis = this.store.state.itemsByTab.wikis ?? [];
+    if (!embeddedServerResponse.userState.isLoggedIn || !wikis.length) return;
+    if (this.snapshotCountsLoading) return;
+    this.snapshotCountsLoading = true;
+    try {
+      const slugs = wikis.map(wiki => wiki.slug).join(",");
+      const response = await fetch(pathPrefix + "/api/wiki-file/snapshot-counts?wikis=" + encodeURIComponent(slugs), {
+        headers: { "X-Requested-With": "TiddlyWiki" },
+      });
+      const text = await response.text();
+      if (response.status !== 200) throw new Error(text);
+      const parsed = JSON.parse(text);
+      this.snapshotCounts = parsed.counts ?? [];
+      this.snapshotKeep = parsed.keep ?? 0;
+    } catch (error) {
+      console.error(error);
+      this.snapshotCounts = [];
+    } finally {
+      this.snapshotCountsLoading = false;
     }
   };
 
@@ -1624,7 +1720,7 @@ export class App extends JSXElement {
     super.connectedCallback();
     document.addEventListener("click", this.handleAccountMenuClick, true);
     window.addEventListener("pageshow", this.handlePageShow);
-    void this.loadAdminRecords();
+    void this.loadAdminRecords().then(() => this.loadSnapshotCounts());
     void this.loadBackups();
     void this.loadStorage();
     if (featurePref("showPinboard")) {
@@ -1805,6 +1901,10 @@ export class App extends JSXElement {
               onclick={() => {
                 this.wikiPage = 1;
                 store.setActiveTab(tab.id);
+                // The hint belongs to the wikis tab and is the only thing
+                // there that changes without a reload, so it waits for the
+                // tab rather than for a page load.
+                if (tab.id === "wikis") void this.loadSnapshotCounts();
               }}
               type="button"
             >
@@ -2282,6 +2382,8 @@ export class App extends JSXElement {
                     })}</p>
             </div>
           ) : null}
+
+          {currentTab.id === "wikis" ? this.snapshotHint() : null}
 
           <div class="list-grid" style={{ ["--grid-columns"]: buildListGridTemplate(listColumns) }}>
             <div class="list-head-row">

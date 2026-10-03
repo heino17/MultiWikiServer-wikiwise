@@ -176,6 +176,15 @@ export async function deleteSnapshotBag(prisma: PrismaTxnClient, bagName: string
   return true;
 }
 
+/**
+ * How many snapshots one wiki has, without reading their meta tiddlers. The
+ * overview in the wikis tab asks for a count per wiki and never opens a
+ * snapshot, so it should not pay for the rows behind them.
+ */
+export async function countSnapshotBags(prisma: PrismaTxnClient, slug: string): Promise<number> {
+  return prisma.bag.count({ where: { name: { startsWith: snapshotBagPrefix(slug) } } });
+}
+
 export async function listSnapshotBags(prisma: PrismaTxnClient, slug?: string): Promise<SnapshotBag[]> {
   const where = slug
     ? { name: { startsWith: snapshotBagPrefix(slug) } }
