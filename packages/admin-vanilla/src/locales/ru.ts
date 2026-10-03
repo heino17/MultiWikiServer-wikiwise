@@ -174,6 +174,7 @@ export const ruStrings: Record<string, string> = {
   "Display name": "Отображаемое имя",
   "Template": "Шаблон",
   "Created by": "Создано",
+  "Created at": "Дата создания",
   "Readonly bags": "Бэги только для чтения",
   "Plugins": "Плагины",
   "Description": "Описание",

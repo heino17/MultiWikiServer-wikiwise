@@ -1062,6 +1062,13 @@ h6 {
 	color: var(--color-text-faint);
 }
 
+/* A date column: the day is what fits, the hour lives in the tooltip. Kept on
+   one line, because "3.10.2026" broken after the dot reads as two columns. */
+.list-date {
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+
 .list-cell-link {
 	color: inherit;
 	text-decoration: underline;

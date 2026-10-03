@@ -180,6 +180,7 @@ export const deStrings: Record<string, string> = {
   "Display name": "Anzeigename",
   "Template": "Template",
   "Created by": "Erstellt von",
+  "Created at": "Erstellt am",
   "Readonly bags": "Lesebags",
   "Plugins": "Plugins",
   "Description": "Beschreibung",

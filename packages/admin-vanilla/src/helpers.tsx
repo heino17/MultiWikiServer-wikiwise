@@ -32,6 +32,22 @@ export function prettifyBytes(bytes: number): string {
   return `${value.toFixed(1)} ${units[unit]}`;
 }
 
+/** An ISO timestamp as a short date, with the full timestamp kept for the
+ *  tooltip. A list column only has room for the day; the hour matters when
+ *  several rows were written in the same session, so it stays reachable
+ *  without a second column. Returns "" for a missing or unparsable value so
+ *  the caller can let its own em dash speak. */
+export function shortDate(iso: string | undefined | null): { dateTime: string; short: string; full: string } | null {
+  if (!iso) return null;
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return {
+    dateTime: parsed.toISOString(),
+    short: parsed.toLocaleDateString(),
+    full: parsed.toLocaleString(),
+  };
+}
+
 export type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
 
 // Server `details.reason`-→ i18n-Schlüssel für die gängigen Admin-Operationen.

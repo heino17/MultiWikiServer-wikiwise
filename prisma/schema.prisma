@@ -166,17 +166,23 @@ model Settings {
 // ---------------------------------------------------------------------------
 
 model Roles {
-  role_id       String  @id @default(uuid(7))
-  role_name     String  @unique()
+  role_id       String    @id @default(uuid(7))
+  role_name     String    @unique()
   description   String?
   /// Grants teacher/team-admin capabilities (manage the users one invites,
   /// see all wikis/bags, exemption from the own-wiki limit). Named "teacher"
   /// historically, but the capability rides on this flag: the role may be
   /// renamed freely.
-  is_teacher    Boolean @default(false)
+  is_teacher    Boolean   @default(false)
   /// user_id of the user who created this role; editable only by the
   /// owner or the site admin account ("admin"). No FK (auth module).
   owner_user_id String?
+  /// When the role was created. Nullable without a default on purpose: the
+  /// roles a store already had get NULL rather than the date of the migration
+  /// that adds the column, because "created today" would be a lie about them.
+  /// The column is shown as "—" for those. New roles get the timestamp from
+  /// the database.
+  created       DateTime?
   users         Users[]
 
   @@map("roles")

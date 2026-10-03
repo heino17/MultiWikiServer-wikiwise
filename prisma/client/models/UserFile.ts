@@ -660,9 +660,10 @@ export type $UserFilePayload<ExtArgs extends runtime.Types.Extensions.InternalAr
      */
     user_id: string
     /**
-     * recipe_slug (via Recipe id) this file was uploaded to; files uploaded
-     * from inside a wiki are visible to that wiki's readers. No FK declared
-     * here, mirroring user_id. NULL = personal file (account's "Meine Dateien").
+     * Recipe.id (uuid, not the slug) of the wiki this file was uploaded to;
+     * files uploaded from inside a wiki are visible to that wiki's readers.
+     * No FK declared here, mirroring user_id. NULL = personal file (account's
+     * "Meine Dateien").
      */
     recipe_id: string | null
     /**

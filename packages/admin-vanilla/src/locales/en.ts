@@ -181,6 +181,7 @@ export const enStrings: Record<string, string> = {
   "Display name": "Display name",
   "Template": "Template",
   "Created by": "Created by",
+  "Created at": "Created at",
   "Readonly bags": "Readonly bags",
   "Plugins": "Plugins",
   "Description": "Description",

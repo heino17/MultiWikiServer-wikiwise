@@ -228,6 +228,11 @@ export class RoleImportWriter extends PerClassImportWriter<"roles"> {
         description: role.description,
         is_teacher: role.isTeacher,
         owner_user_id: role.ownerUserId ? IdString.cast(role.ownerUserId) : undefined,
+        // Set here and not by a column default: SQLite rejects a
+        // CURRENT_TIMESTAMP default, and a default would also date the roles
+        // that already existed when the column was added. They keep their
+        // NULL and show an em dash instead.
+        created: new Date(),
       },
     })));
   }
@@ -371,7 +376,7 @@ export class BagImportWriter extends PerClassImportWriter<"bag"> {
           create: bag.permissions.map(e => ({ level: e.level, role_id: IdString.cast(e.role_id) })),
         }
       },
-      select: { id: true, _count: { select: { permissions: true } } },
+      select: { id: true, created: true, _count: { select: { permissions: true } } },
     })));
 
     for (let i = 0; i < bags.length; i++) {
@@ -489,11 +494,14 @@ export class RecipeImportWriter extends PerClassImportWriter<"recipe"> {
         },
         select: {
           id: true,
+          // the wikis list shows when the wiki was created; the caller reads it
+          // out of the same row instead of asking the database a second time
+          created: true,
           _count: { select: { permissions: true, recipe_bags: true } },
         }
       });
     }
-    const results: [string, Date][] = [];
+    const results: [string, Date, Date][] = [];
     for (const recipe of recipes) {
       const compiledAt = new Date();
       const row = await upserter(recipe, compiledAt);
@@ -504,7 +512,7 @@ export class RecipeImportWriter extends PerClassImportWriter<"recipe"> {
         throw new Error("Permissions length did not match");
       if (recipe.compiledBags.length !== row._count.recipe_bags)
         throw new Error("Compiled bags length did not match");
-      results.push([row.id, compiledAt]);
+      results.push([row.id, compiledAt, row.created]);
     }
 
     return results;

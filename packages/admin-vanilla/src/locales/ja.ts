@@ -172,6 +172,7 @@ export const jaStrings: Record<string, string> = {
   "Display name": "表示名",
   "Template": "テンプレート",
   "Created by": "作成者",
+  "Created at": "作成日時",
   "Readonly bags": "読み取り専用バッグ",
   "Plugins": "プラグイン",
   "Description": "説明",

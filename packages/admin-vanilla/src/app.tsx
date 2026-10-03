@@ -55,7 +55,7 @@ import {
   type ListViewState,
 } from "./list-view";
 import { t } from "./i18n";
-import { formatStorageErrorForDisplay, getErrorMessage, prettifyBytes, renderErrorBanner } from "./helpers";
+import { formatStorageErrorForDisplay, getErrorMessage, prettifyBytes, renderErrorBanner, shortDate } from "./helpers";
 import { getEffectiveTheme, toggleTheme, type ThemeMode } from "./theme";
 import "./pinboard";
 import "./user-files";
@@ -2663,6 +2663,15 @@ function buildListGridTemplate(columns: readonly ColumnDefinition[]): string {
 }
 
 function renderListCellValue(columnKey: string, value: string | undefined, onThumbnailClick?: (src: string) => void, truncate?: number) {
+  // The date columns want a <time> with the machine-readable value in the
+  // attribute and the full timestamp in the tooltip, so they are read before
+  // formatFieldValue, which would otherwise turn the ISO string into plain text.
+  if (columnKey === "createdAt") {
+    const stamp = shortDate(value);
+    if (!stamp) return <span class="list-access-names is-empty">—</span>;
+    return <time class="list-date" datetime={stamp.dateTime} title={stamp.full}>{stamp.short}</time>;
+  }
+
   let formattedValue = formatFieldValue(value);
   if (truncate && formattedValue.length > truncate) formattedValue = formattedValue.slice(0, truncate) + "…";
 

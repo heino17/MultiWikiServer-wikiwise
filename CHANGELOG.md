@@ -243,6 +243,22 @@ finally follow the language they are counted in.
 
 ---
 
+## Unreleased
+
+**Added**
+
+- **A creation date in the wikis, bags, roles and users tables** (§100). The
+  short date in the cell, the full timestamp in the tooltip, sortable like every
+  other column. `Roles` gets the column as a nullable date without a default, so
+  the roles a store already had show `—` instead of the day the migration ran.
+
+**Operating notes**
+
+- One migration: `20261003_roles_created` adds `roles.created` and backfills
+  nothing. It applies itself on the next server start.
+
+---
+
 ## 1. Missing dependency: `escape-string-regexp`
 
 **Files:** `package.json` (root)
@@ -4736,6 +4752,43 @@ The pinboard block further up is indented with spaces while the rest of the file
 uses tabs. That is left alone on purpose: it is a whole section, it changes nothing,
 and reindenting it would bury this cleanup in noise.
 
+## 100. Feature: a creation date in the wikis, bags, roles and users tables
+
+**Why.** Four tables carried a creation date that nothing displayed. `Recipe`,
+`Bag` and `Users` have had `created`/`created_at` from the beginning, but the
+admin app sent it nowhere and showed no column for it, so the only way to learn
+when a wiki or an account was made was to open the SQLite file. `Roles` had no
+such column at all. Since the wikis table already lists "Created by" next to the
+slug, the moment it was made belongs next to it — and the tables were wide
+enough to take it, so nothing was pushed out.
+
+The column shows the **short date**, and the full timestamp including the hour is
+in the tooltip, because a day alone cannot separate rows that were written in the
+same session. Each cell is a `<time>` element with the ISO value in `datetime`,
+so the cell is readable as a machine value and not only as a picture of one. The
+cell is rendered like an em dash when there is nothing to show, and sorting by it
+uses the ISO string, which is why the column header offers the usual sort arrow.
+
+**Roles needed a decision.** The column on `Roles` is `DateTime?` and **without a
+default**, which is the whole point: a `DEFAULT CURRENT_TIMESTAMP` would date
+every role that existed before the migration to the day the migration ran, and
+"created today" is a lie about a role from last year. SQLite rejects a
+`CURRENT_TIMESTAMP` column default anyway. So the roles a store already had keep
+`NULL` and show `—`, and only roles created from here on carry a real date. All
+three creation paths set it explicitly: the role form in the admin app, the
+personal role a teacher gets when their account is created, and the `ADMIN`/`USER`
+roles of a fresh store. Roles restored by `load-archive` stay `NULL` on purpose —
+the archive does not carry a creation date, and inventing one would be the same
+lie in a new place.
+
+**Verified.** The migration `20261003_roles_created` applies itself on the next
+server start and touches nothing but `roles`. In the dev store, which holds 12
+roles from before the column existed, all twelve show `—` after the migration and
+a role created through the admin app shows its real date with the matching hour in
+the tooltip. Wikis, bags and users show a date in every row of all four tables,
+the admin typecheck and `npm run tsc2` are clean, and the browser reported no
+console or page errors while clicking through the four tables.
+
 ## 98. Feature: the snapshot hint folds away, the sum stays
 
 **Why.** The hint of §97 answered the right question but spent 122px on it, and
@@ -5907,6 +5960,23 @@ Admin-App folgen endlich der Sprache, in der sie gezählt werden.
   vorhandene Installation behält also ihr TiddlyWiki.
 - Das Admin-Bundle wird neu gebaut, eine laufende Admin-App sollte neu geladen
   werden. Der Wiki-Syncer ist in diesem Release nicht angefasst.
+
+---
+
+## Unveröffentlicht
+
+**Hinzugefügt**
+
+- **Ein Erstellungsdatum in den Tabellen Wikis, Bags, Rollen und Benutzer** (§100).
+  Das kurze Datum in der Zelle, der vollständige Zeitstempel im Tooltip, sortierbar
+  wie jede andere Spalte. `Roles` bekommt die Spalte als nullable Datum ohne
+  Default, damit Rollen, die ein Store schon hatte, `—` zeigen statt des Tages,
+  an dem die Migration lief.
+
+**Betriebshinweise**
+
+- Eine Migration: `20261003_roles_created` legt `roles.created` an und füllt
+  nichts auf. Sie zieht sich beim nächsten Serverstart selbst.
 
 ---
 
@@ -10496,6 +10566,44 @@ Seitenfehler. `npm run build` und der Admin-Typecheck sind sauber.
 Der Pinnwand-Block weiter oben ist mit Leerzeichen eingerückt, der Rest der Datei
 mit Tabs. Das bleibt absichtlich so: Es ist ein ganzer Abschnitt, es ändert nichts,
 und eine Umformatierung würde diese Aufräumarbeit in Rauschen begraben.
+
+## 100. Feature: ein Erstellungsdatum in den Tabellen Wikis, Bags, Rollen und Benutzer
+
+**Warum.** Vier Tabellen trugen ein Erstellungsdatum, das nirgends angezeigt wurde.
+`Recipe`, `Bag` und `Users` haben `created`/`created_at` von Anfang an, aber die
+Admin-App schickte es nirgendwohin und zeigte keine Spalte dafür — wer wissen
+wollte, wann ein Wiki oder ein Konto entstanden ist, musste die SQLite-Datei
+öffnen. Bei `Roles` gab es die Spalte gar nicht. Da die Wiki-Tabelle den Kurznamen
+schon neben „Erstellt von" führt, gehört der Zeitpunkt daneben — und die Tabellen
+waren breit genug dafür, es ging nichts verloren.
+
+Die Spalte zeigt das **kurze Datum**, und der vollständige Zeitstempel mit Stunde
+steht im Tooltip, denn ein Tag allein unterscheidet keine Zeilen, die in derselben
+Sitzung geschrieben wurden. Jede Zelle ist ein `<time>`-Element mit dem
+ISO-Wert in `datetime` — die Zelle ist damit auch als Maschinenwert lesbar und
+nicht nur als Bild eines. Fehlt der Wert, erscheint wie gewohnt ein Gedankenstrich;
+die Sortierung nutzt den ISO-String, weshalb der Spaltenkopf den üblichen
+Sortierpfeil anbietet.
+
+**Bei Rollen musste entschieden werden.** Die Spalte auf `Roles` ist `DateTime?`
+und **ohne Default** — genau darum: Ein `DEFAULT CURRENT_TIMESTAMP` würde allen
+Rollen, die es vor der Migration gab, das Datum des Migrationstages verpassen, und
+„heute erstellt" ist eine Lüge über eine Rolle von letztes Jahr. SQLite lässt einen
+`CURRENT_TIMESTAMP` als Spalten-Default ohnehin nicht zu. Also behalten die Rollen,
+die ein Store schon hatte, `NULL` und zeigen `—`, und nur neu angelegte Rollen
+tragen ein echtes Datum. Alle drei Erzeugungspfade setzen es ausdrücklich: das
+Rollenformular der Admin-App, die persönliche Rolle, die ein Lehrer beim Anlegen
+seines Kontos bekommt, und die Rollen `ADMIN`/`USER` eines frischen Stores. Aus
+`load-archive` zurückgespielte Rollen bleiben absichtlich `NULL` — das Archiv führt
+kein Erstellungsdatum, und eines zu erfinden wäre dieselbe Lüge an anderer Stelle.
+
+**Geprüft.** Die Migration `20261003_roles_created` zieht sich beim nächsten
+Serverstart selbst und fasst nichts außer `roles` an. Im Dev-Store mit 12 Rollen
+aus der Zeit vor der Spalte zeigen nach der Migration alle zwölf `—`, eine in der
+Admin-App angelegte Rolle zeigt ihr echtes Datum mit passender Stunde im Tooltip.
+Wikis, Bags und Benutzer zeigen in allen Zeilen aller vier Tabellen ein Datum, der
+Admin-Typecheck und `npm run tsc2` sind sauber, und der Browser meldete beim
+Durchklicken der vier Tabellen keine Konsolen- oder Seitenfehler.
 
 ## 98. Feature: der Snapshot-Hinweis klappt sich weg, die Summe bleibt
 

@@ -74,6 +74,7 @@ export type RecipeDefinition = Omit<
   | "slug"
   | "templateName"
   | "lastCompiledAt"
+  | "createdAt"
   | "recipePermissions"
   | "effectiveWritableBags"
   | "effectiveReadonlyBags"
@@ -427,7 +428,7 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
       recipePermissions,
     );
 
-    const [[id, lastCompiledAt]] = await importer.upsert([{
+    const [[id, lastCompiledAt, createdAt]] = await importer.upsert([{
       slug: data.slug,
       templateId: new IdString(template.id),
       compiledBags: bags,
@@ -492,6 +493,7 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
       definition: authoredDefinition,
       templateName: template.name,
       lastCompiledAt,
+      createdAt,
       allbags: bags,
       plugins,
       recipePermissions,
@@ -503,10 +505,12 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
 
   }
 
-  private buildResponse({ definition, plugins, allbags, id, slug, templateName, lastCompiledAt, recipePermissions, ownerUsername = "", myRights = "", sharedWritableBags = [], landingVisible = true }: {
+  private buildResponse({ definition, plugins, allbags, id, slug, templateName, lastCompiledAt, createdAt, recipePermissions, ownerUsername = "", myRights = "", sharedWritableBags = [], landingVisible = true }: {
     id: IdString;
     slug: string;
     lastCompiledAt: Date;
+    /** when the recipe row was created; the "Created at" column */
+    createdAt: Date;
     definition: RecipeDefinition;
     allbags: CompiledRecipeBagInput[];
     plugins: string[];
@@ -536,6 +540,7 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
       slug,
       templateName,
       lastCompiledAt: lastCompiledAt.toISOString(),
+      createdAt: createdAt.toISOString(),
       // recipePermissions,
       effectiveWritableBags,
       effectiveReadonlyBags,
@@ -574,6 +579,7 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
         plugins: true,
         template_id: true,
         compiledAt: true,
+        created: true,
         owner_user_id: true,
         permissions: {
           select: {
@@ -695,6 +701,7 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
         id: new IdString(recipe.id),
         slug: recipe.slug,
         lastCompiledAt: recipe.compiledAt,
+        createdAt: recipe.created,
         plugins: recipe.plugins,
         ownerUsername: recipe.owner_user_id ? ownerNames.get(recipe.owner_user_id) ?? "" : "",
         recipePermissions: recipe.permissions.map(e => ({
@@ -929,6 +936,7 @@ export class BagDataAdapter extends TabDataAdapter<"bags"> {
       name: data.name,
       description: data.description,
       ownerUsername,
+      createdAt: bag.created.toISOString(),
       bagPermissions: data.bagPermissions,
     }
   }
@@ -942,6 +950,7 @@ export class BagDataAdapter extends TabDataAdapter<"bags"> {
         name: true,
         description: true,
         owner_user_id: true,
+        created: true,
         permissions: {
           select: {
             level: true,
@@ -963,6 +972,7 @@ export class BagDataAdapter extends TabDataAdapter<"bags"> {
       name: bag.name,
       description: bag.description,
       ownerUsername: bag.owner_user_id ? ownerNames.get(bag.owner_user_id) ?? "" : "",
+      createdAt: bag.created.toISOString(),
       bagPermissions: bag.permissions.map((row) => ({
         role: roles(new IdString(row.role_id)),
         level: row.level,
@@ -1078,6 +1088,7 @@ export class RoleDataAdapter extends TabDataAdapter<"roles"> {
       description: role.description ?? "",
       isTeacher: Boolean(role.is_teacher),
       ownerUsername,
+      createdAt: role.created?.toISOString() ?? "",
       foreignTeacherRole: ownerUserId !== this.user.user_id && ownerIsTeacher.has(ownerUserId),
       ownerSharesGroupWithMe: Boolean(ownerUserId && myGroupMemberIds.has(ownerUserId) && ownerUserId !== this.user.user_id),
     }
@@ -1091,6 +1102,7 @@ export class RoleDataAdapter extends TabDataAdapter<"roles"> {
         description: true,
         is_teacher: true,
         owner_user_id: true,
+        created: true,
       },
     });
 
@@ -1109,6 +1121,9 @@ export class RoleDataAdapter extends TabDataAdapter<"roles"> {
       description: role.description ?? "",
       isTeacher: Boolean(role.is_teacher),
       ownerUsername: role.owner_user_id ? ownerNames.get(role.owner_user_id) ?? "" : "",
+      // null for the roles an older store already had: the column arrived with
+      // a migration and there is no honest date to put there
+      createdAt: role.created?.toISOString() ?? "",
       foreignTeacherRole: Boolean(
         role.owner_user_id && ownerIsTeacher.has(role.owner_user_id) && role.owner_user_id !== this.user.user_id
       ),
@@ -1269,6 +1284,7 @@ export class UserDataAdapter extends TabDataAdapter<"users"> {
       password: "",
       ownerUsername,
       userRoles: normalizedUserRoles,
+      createdAt: user.created_at.toISOString(),
       groupRoles: roleGroupNamesForUser(user.username, roleInfos),
       wikiLimit: user.wiki_limit == null ? "" : String(user.wiki_limit),
       ownWikiUsage: formatOwnWikiUsage(ownWikiCount, limitExempt ? null : user.wiki_limit),
@@ -1292,6 +1308,7 @@ export class UserDataAdapter extends TabDataAdapter<"users"> {
         resetCode: true,
         owner_user_id: true,
         wiki_limit: true,
+        created_at: true,
         roles: {
           select: {
             role_name: true,
@@ -1326,6 +1343,7 @@ export class UserDataAdapter extends TabDataAdapter<"users"> {
       groupRoles: roleGroupNamesForUser(user.username, user.roles),
       ownerUsername: user.owner_user_id ? ownerNames.get(user.owner_user_id) ?? "" : "",
       resetCode: user.resetCode || "",
+      createdAt: user.created_at.toISOString(),
       password: "",
       wikiLimit: user.wiki_limit == null ? "" : String(user.wiki_limit),
       ownWikiUsage: formatOwnWikiUsage(
@@ -1687,6 +1705,7 @@ async function ensurePersonalRole(prisma: PrismaTxnClient, user: ServerRequest["
       role_name: roleName,
       description: `Persönliche Rolle von ${user.username}`,
       owner_user_id: user.user_id,
+      created: new Date(),
     },
   });
   const linked = await prisma.users.findUnique({
@@ -1804,7 +1823,7 @@ export const AdminCreateWiki = zodRoute({
         cspAllow: [],
       };
       const { bags, plugins } = recipeWriter.compileRecipeSimpleV1(authoredDefinition, template.definition);
-      const [[recipeId, lastCompiledAt]] = await recipeWriter.upsert([{
+      const [[recipeId, lastCompiledAt, createdAt]] = await recipeWriter.upsert([{
         slug,
         templateId: new IdString(template.id),
         compiledBags: bags,
@@ -1839,6 +1858,7 @@ export const AdminCreateWiki = zodRoute({
         bagName,
         templateName: DEFAULT_TEMPLATE,
         lastCompiledAt: lastCompiledAt.toISOString(),
+        createdAt: createdAt.toISOString(),
       };
     });
   }

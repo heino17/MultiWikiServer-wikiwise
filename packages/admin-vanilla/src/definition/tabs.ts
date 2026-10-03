@@ -194,6 +194,7 @@ const tabs = {
       { key: "displayName", label: "Display name", width: 2 },
       { key: "templateName", label: "Template" },
       { key: "ownerUsername", label: "Created by" },
+      { key: "createdAt", label: "Created at", width: 2 },
       { key: "recipeUsers", label: "Readable by" },
       { key: "recipeAdmins", label: "Writable by" },
       { key: "myRights", label: "My rights" },
@@ -212,6 +213,7 @@ const tabs = {
       { key: "plugins", label: "Plugin name", type: "search-multiselect", section: "authored", mode: "create edit" },
       { key: "lastCompiledAt", label: "Compiled", type: "string", section: "runtime", mode: "server" },
       { key: "ownerUsername", label: "Created by", type: "string", section: "runtime", mode: "server" },
+      { key: "createdAt", label: "Created at", type: "string", section: "runtime", mode: "server" },
       { key: "myRights", label: "My rights", type: "string", section: "runtime", mode: "server" },
       {
         key: "cspAllow",
@@ -517,6 +519,7 @@ const tabs = {
       { key: "name", label: "Name", width: 2 },
       { key: "description", label: "Description", width: 2 },
       { key: "ownerUsername", label: "Created by" },
+      { key: "createdAt", label: "Created at", width: 2 },
       { key: "usedByCount", label: "Used by" },
       { key: "readonlyUsageCount", label: "Readonly" },
       { key: "writableUsageCount", label: "Writable" },
@@ -537,6 +540,7 @@ const tabs = {
         architecture: "Edits bag permission rows. These rows are consulted directly by the resolver when deciding who can read from or write to the storage container.",
       },
       { key: "ownerUsername", label: "Created by", type: "string", section: "runtime", mode: "server" },
+      { key: "createdAt", label: "Created at", type: "string", section: "runtime", mode: "server" },
       {
         key: "referencedByTemplates",
         label: "Referenced by templates",
@@ -632,6 +636,7 @@ const tabs = {
       { key: "name", label: "Role name", width: 2 },
       { key: "description", label: "Description", width: 6, truncate: 100 },
       { key: "ownerUsername", label: "Created by" },
+      { key: "createdAt", label: "Created at", width: 2 },
     ],
     fields: [
       { key: "name", label: "Role name", type: "string", section: "authored", mode: "create edit" },
@@ -645,6 +650,7 @@ const tabs = {
         description: "Grants this role the teacher capabilities: managing the users it invites, seeing all wikis and bags, and creating own wikis without a limit. Survives renames; only the site admin may change it.",
       },
       { key: "ownerUsername", label: "Created by", type: "string", section: "runtime", mode: "server" },
+      { key: "createdAt", label: "Created at", type: "string", section: "runtime", mode: "server" },
       {
         key: "foreignTeacherRole",
         label: "Foreign teacher role",
@@ -681,12 +687,14 @@ const tabs = {
       { key: "email", label: "Email", width: 6 },
       { key: "ownWikiUsage", label: "Own wikis", width: 2 },
       { key: "ownerUsername", label: "Created by" },
+      { key: "createdAt", label: "Created at", width: 2 },
       { key: "groupRoles", label: "Role in the group", width: 3 },
     ],
     fields: [
       { key: "username", label: "Username", type: "string", section: "authored", mode: "create edit" },
       { key: "email", label: "Email", type: "string", section: "authored", mode: "create edit" },
       { key: "ownerUsername", label: "Created by", type: "string", section: "runtime", mode: "server" },
+      { key: "createdAt", label: "Created at", type: "string", section: "runtime", mode: "server" },
       {
         key: "groupRoles",
         label: "Role in the group",
@@ -861,6 +869,8 @@ export interface WikiAdminRecord {
   effectivePluginSet: readonly string[];
   compileValidation: string;
   lastCompiledAt: string;
+  /** ISO string of the recipe row's creation, "" when the server sends none */
+  createdAt: string;
   statusFlags: string;
   missingBags: string;
   missingPlugins: string;
@@ -906,6 +916,8 @@ export interface BagAdminRecord {
   name: string;
   description: string;
   ownerUsername: string;
+  /** ISO string of the bag row's creation, "" when the server sends none */
+  createdAt: string;
   bagPermissions: readonly PermissionRow<BagPermissionLevel>[];
   usedByCount: string;
   readonlyUsageCount: string;
@@ -935,6 +947,9 @@ export interface RoleAdminRecord {
   description: string;
   isTeacher: boolean;
   ownerUsername: string;
+  /** ISO string of the role's creation; "" for the roles an older store
+   *  already had, which the migration that adds the column cannot date */
+  createdAt: string;
   foreignTeacherRole: boolean;
   ownerSharesGroupWithMe: boolean;
 }
@@ -947,6 +962,8 @@ export interface UserAdminRecord {
   password: string;
   confirmPassword: string;
   ownerUsername: string;
+  /** ISO string of the account's creation */
+  createdAt: string;
   userRoles: readonly string[];
   groupRoles: readonly string[];
   wikiLimit: string;

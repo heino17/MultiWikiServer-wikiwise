@@ -175,6 +175,7 @@ export const esStrings: Record<string, string> = {
   "Display name": "Nombre mostrado",
   "Template": "Plantilla",
   "Created by": "Creado por",
+  "Created at": "Creado el",
   "Readonly bags": "Bags de solo lectura",
   "Plugins": "Plugins",
   "Description": "Descripción",

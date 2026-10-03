@@ -172,6 +172,7 @@ export const zhCnStrings: Record<string, string> = {
   "Display name": "显示名称",
   "Template": "模板",
   "Created by": "创建者",
+  "Created at": "创建时间",
   "Readonly bags": "只读袋",
   "Plugins": "插件",
   "Description": "描述",

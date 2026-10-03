@@ -28,8 +28,8 @@ export class Command extends BaseCommand {
 
 				await prisma.roles.createMany({
 					data: [
-						{ role_name: "ADMIN", description: "System Administrator" },
-						{ role_name: "USER", description: "Basic User" },
+						{ role_name: "ADMIN", description: "System Administrator", created: new Date() },
+						{ role_name: "USER", description: "Basic User", created: new Date() },
 					]
 				});
 

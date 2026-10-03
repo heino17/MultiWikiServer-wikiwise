@@ -173,6 +173,7 @@ export const frStrings: Record<string, string> = {
   "Display name": "Nom affiché",
   "Template": "Modèle",
   "Created by": "Créé par",
+  "Created at": "Créé le",
   "Readonly bags": "Bags en lecture seule",
   "Plugins": "Plugins",
   "Description": "Description",

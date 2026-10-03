@@ -172,6 +172,7 @@ export const koStrings: Record<string, string> = {
   "Display name": "표시 이름",
   "Template": "템플릿",
   "Created by": "만든 사람",
+  "Created at": "생성일",
   "Readonly bags": "읽기 전용 백",
   "Plugins": "플러그인",
   "Description": "설명",
