@@ -3,6 +3,7 @@ export * from "./init-data-folder";
 export * from "./init-store";
 export * from "./import-wiki-file";
 export * from "./load-wiki-folder";
+export * from "./provision-simplewiki";
 export * from "./rename-personal-roles";
 export * from "./restore-wiki-snapshot";
 export * from "./test-args";

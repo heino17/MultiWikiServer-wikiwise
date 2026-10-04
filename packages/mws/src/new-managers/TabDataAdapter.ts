@@ -1780,12 +1780,17 @@ export const AdminCreateWiki = zodRoute({
   zodRequestBody: z => z.object({
     displayName: z.string().min(1).max(120),
     description: z.string().max(400).optional(),
+    /** Which template the new wiki is built from. Defaults to the blank
+        TiddlyWiki template; the SimpleWiki entry passes its own name so a
+        wiki can be created that serves the SimpleWiki shell instead of
+        TiddlyWiki. See §103. */
+    templateName: z.string().min(1).max(120).optional(),
   }),
   inner: async (state) => {
     state.assertReferer(["/"]);
     state.asserted = state.user.isLoggedIn;
 
-    const { displayName, description } = state.data;
+    const { displayName, description, templateName } = state.data;
 
     return await state.$transaction(async (prisma) => {
       await assertWikiCreationAllowed(prisma, state.user);
@@ -1809,8 +1814,18 @@ export const AdminCreateWiki = zodRoute({
         ],
       } satisfies UpsertBagInput]);
 
-      const template = await prisma.template.findUnique({ where: { name: DEFAULT_TEMPLATE } });
+      const template = await prisma.template.findUnique({
+        where: { name: templateName ?? DEFAULT_TEMPLATE },
+        select: { id: true, name: true, definition: true },
+      });
       if (!template) throw new Error("wiki template not found");
+
+      // A template with a custom HTML shell brings its own front page. The
+      // TiddlyWiki welcome tiddler and a $:/DefaultTiddlers pointing at it
+      // would be Wikitext in a shell that cannot render it, and SimpleWiki
+      // reads $:/DefaultTiddlers as the name of a page that has to exist. So
+      // such a wiki starts empty and only carries the site title (§103).
+      const customShell = !!(template.definition as { customHtmlEnabled?: boolean } | null)?.customHtmlEnabled;
 
       const recipeWriter = new RecipeImportWriter(prisma, false);
       await recipeWriter.checkExisting(new IdString(""), slug, state.user, { allowCreate: true });
@@ -1839,11 +1854,13 @@ export const AdminCreateWiki = zodRoute({
       const recipeIdString = new IdString(recipeId);
       const bagId = new IdString(bag.id);
       const welcomeTitle = "Willkommen";
-      const startingTiddlers = [
-        { title: "$:/SiteTitle", text: displayName },
-        { title: "$:/DefaultTiddlers", text: welcomeTitle },
-        { title: welcomeTitle, text: welcomeText(displayName) },
-      ];
+      const startingTiddlers = customShell
+        ? [{ title: "$:/SiteTitle", text: displayName }]
+        : [
+          { title: "$:/SiteTitle", text: displayName },
+          { title: "$:/DefaultTiddlers", text: welcomeTitle },
+          { title: welcomeTitle, text: welcomeText(displayName) },
+        ];
       for (const { title, text } of startingTiddlers) {
         await store.saveTiddler({
           recipe_id: recipeIdString,
@@ -1856,7 +1873,7 @@ export const AdminCreateWiki = zodRoute({
         slug,
         displayName,
         bagName,
-        templateName: DEFAULT_TEMPLATE,
+        templateName: template.name,
         lastCompiledAt: lastCompiledAt.toISOString(),
         createdAt: createdAt.toISOString(),
       };

@@ -247,6 +247,49 @@ finally follow the language they are counted in.
 
 **Added**
 
+- **A wiki can be a SimpleWiki, created with one click** (§103). A template with
+  its own HTML no longer has to be a TiddlyWiki in a different shape: if that
+  HTML is the SimpleWiki shell, the wiki built from it is served by MWS itself
+  under `/wiki/<slug>/`, shows pages instead of tiddlers and writes every change
+  straight to MWS. The "Create a wiki" dropdown gets a second entry,
+  `1-click wiki creation as SimpleWiki`, which opens the same dialog with the
+  template pre-set. It appears only when the template `SimpleWiki` exists *and*
+  carries `customHtmlEnabled`, so no store gets an entry that fails on the
+  server.
+- **What the shell gets injected into** (§103). The shell contains
+  `<script class="simplewiki-store-point"></script>` exactly once, and a
+  `$tw.preloadTiddler` in front of it. For such a recipe MWS writes
+  `<script>$tw.preloadTiddler({…});</script>` before the *first* occurrence of
+  `injectionLocation` and then calls `injectionFunction` (`$tw.preloadTiddler`).
+  `injectDefaultPreloadScript` stays off for custom HTML — that is why the shell
+  brings its own `$tw`. `</head>` is not a usable marker: the document contains
+  that literal text earlier, in the document comment and in the bundled toast
+  code, and the server's plain `indexOf` would write the store into the
+  invisible.
+- **A wiki with a custom shell starts empty** (§103). The TiddlyWiki welcome
+  tiddler and a `$:/DefaultTiddlers` pointing at it would be wiki markup in a
+  shell that cannot render it, and SimpleWiki reads `$:/DefaultTiddlers` as the
+  name of a page that has to exist. Such a wiki therefore starts with nothing
+  but `$:/SiteTitle`, set to the display name.
+- **`provision-simplewiki`, to get the shell into the template store** (§103).
+  The command reads a `simplewiki.html`, checks the rules above and stores it as
+  the template `SimpleWiki`. It is the counterpart to `import-wiki-file`, which
+  reads a wiki *out* of a file.
+- **`templateName` in the wiki creation** (§103). `PUT /admin/wiki` accepts an
+  optional `templateName`. Without it the blank TiddlyWiki template is used
+  exactly as before, so the old entry's request stays the same byte for byte.
+- **The write route is a PUT** (§103). `POST /recipe/<slug>/batch/save` answers
+  `400 NO_ROUTE_MATCHED`: the route in `RecipeRoutes.ts` takes nothing but
+  `PUT`. A stand-in test server that understands `POST` confirms whatever it was
+  told to confirm and knows nothing about the real route; `tests/mwsserver.py`
+  and `tests/t_mwsmode.py` in the SimpleWiki repository now say `PUT` as well.
+- Checked on the dev instance: the page the browser writes appears in the table
+  of contents after a reload; without write permission MWS answers
+  `403 BAG_NO_WRITE_PERMISSION` and the shell shows its read-only note. A bag
+  without a single permission row is closed even for readers
+  (`RecipeResolver.ts`), so a public wiki needs an `A_read` row for `ANON`.
+- No migration, no schema change.
+
 - **A wiki file from SimpleWiki can be imported** (§102). The wiki file import
   takes a second format: the `.html` and the `.json` that SimpleWiki writes, the
   small single page wiki that is the other half of this exchange. A SimpleWiki
@@ -6048,6 +6091,53 @@ Admin-App folgen endlich der Sprache, in der sie gezählt werden.
 ## Unveröffentlicht
 
 **Hinzugefügt**
+
+- **Eine Wiki kann SimpleWiki sein, mit einem Klick angelegt** (§103). Ein
+  Template mit eigenem HTML muss keine TiddlyWiki in anderer Form mehr sein:
+  Ist dieses HTML die SimpleWiki-Schale, wird die daraus gebaute Wiki von MWS
+  selbst unter `/wiki/<slug>/` ausgeliefert, zeigt Seiten statt Tiddler und
+  schreibt jede Änderung sofort nach MWS. Das Aufklappmenü „Wiki erstellen“
+  bekommt einen zweiten Eintrag, `1-click wiki creation as SimpleWiki`, der
+  denselben Dialog mit voreingestelltem Template öffnet. Er erscheint nur,
+  wenn es das Template `SimpleWiki` gibt *und* es `customHtmlEnabled` trägt,
+  damit kein Store einen Eintrag bekommt, der am Server scheitert.
+- **Wohin der Server die Schale einsetzt** (§103). Die Schale enthält genau
+  einmal `<script class="simplewiki-store-point"></script>` und davor ein
+  `$tw.preloadTiddler`. Für ein solches Rezept schreibt MWS
+  `<script>$tw.preloadTiddler({…});</script>` vor den *ersten* Treffer von
+  `injectionLocation` und ruift danach `injectionFunction` auf
+  (`$tw.preloadTiddler`). `injectDefaultPreloadScript` bleibt bei eigenem HTML
+  aus — deshalb bringt die Schale ihr eigenes `$tw` mit. `</head>` taugt als
+  Marke nicht: das Dokument enthält den literalen Text früher, im
+  Dokumentkommentar und im eingebetteten Toast-Code, und das einfache
+  `indexOf` des Servers schriebe den Speicher an eine unsichtbare Stelle.
+- **Eine Wiki mit eigener Schale startet leer** (§103). Der
+  TiddlyWiki-Willkommenstiddler und ein `$:/DefaultTiddlers`, das darauf zeigt,
+  wären Wiki-Markup in einer Schale, die es nicht darstellen kann, und
+  SimpleWiki liest `$:/DefaultTiddlers` als Namen einer Seite, die es geben muss.
+  Eine solche Wiki startet deshalb mit nichts als `$:/SiteTitle`, gesetzt auf
+  den Anzeigenamen.
+- **`provision-simplewiki`, um die Schale in den Template-Speicher zu
+  bringen** (§103). Der Befehl liest eine `simplewiki.html`, prüft die Regeln
+  oben und legt sie als Template `SimpleWiki` ab. Er ist das Gegenstück zu
+  `import-wiki-file`, der eine Wiki *aus* einer Datei liest.
+- **`templateName` bei der Wiki-Erstellung** (§103). `PUT /admin/wiki` nimmt
+  ein optionales `templateName`. Ohne sie gilt wie bisher das leere
+  TiddlyWiki-Template, die Anfrage des alten Eintrags bleibt also Byte für
+  Byte dieselbe.
+- **Die Schreibroute ist ein PUT** (§103). `POST /recipe/<slug>/batch/save`
+  antwortet `400 NO_ROUTE_MATCHED`: die Route in `RecipeRoutes.ts` nimmt
+  ausschließlich `PUT`. Ein Ersatz-Testserver, der `POST` versteht, bestätigt
+  nur, was man ihm vorgegeben hat, und sagt nichts über die echte Route;
+  `tests/mwsserver.py` und `tests/t_mwsmode.py` im SimpleWiki-Repository sagen
+  jetzt ebenfalls `PUT`.
+- An der Dev-Instanz geprüft: Die Seite, die der Browser schreibt, erscheint
+  nach dem Neuladen im Inhaltsverzeichnis; ohne Schreibrecht antwortet MWS mit
+  `403 BAG_NO_WRITE_PERMISSION` und die Schale zeigt ihren Nur-Lesen-Hinweis.
+  Ein Bag ohne eine einzige Berechtigungszeile ist auch für Lesende geschlossen
+  (`RecipeResolver.ts`), eine öffentliche Wiki braucht also eine `A_read`-Zeile
+  für `ANON`.
+- Keine Migration, keine Schemaänderung.
 
 - **Eine Wiki-Datei aus SimpleWiki lässt sich importieren** (§102). Der
   Wiki-Dateien-Import versteht ein zweites Format: die `.html` und die `.json`,

@@ -572,6 +572,12 @@ class PerTabStoreImpl implements PerTabStore {
   }
 }
 
+// The wiki built from this template serves the SimpleWiki shell instead of
+// TiddlyWiki: pages, no wiki markup, no tw5 widgets. The menu entry appears
+// only when the template really is there and really carries its own HTML,
+// so a store without it gets no entry that fails on the server (§103).
+const SIMPLEWIKI_TEMPLATE = "SimpleWiki";
+
 // Storage overview is a diagnostic tab rather than a CRUD tab: it has no
 // list of records, columns or editable fields, so it is rendered as a custom
 // panel instead of the generic grid. This synthetic definition drives the
@@ -1336,6 +1342,10 @@ export class App extends JSXElement {
 
   @state() accessor newWikiOpen = false;
   @state() accessor newWikiName = "";
+  /** Template, aus dem die neue Wiki entsteht. Leer heisst: das
+   *  TiddlyWiki-Template wie bisher. SimpleWiki setzt hier seinen Namen,
+   *  damit der Server eine Wiki mit eigener HTML-Schale baut (§103). */
+  @state() accessor newWikiTemplate = "";
   @state() accessor newWikiBusy = false;
   @state() accessor newWikiError = "";
   /** Wiki-Datei-Dialog (Import aus einer gespeicherten Single-File-Wiki). */
@@ -1585,9 +1595,10 @@ export class App extends JSXElement {
     if (menu instanceof HTMLDetailsElement) menu.open = false;
   };
 
-  private readonly startNewWiki = () => {
+  private readonly startNewWiki = (templateName = "") => {
     const username = embeddedServerResponse.userState.username;
     this.newWikiName = username ? t("{username}'s Wiki", { username }) : t("My Wiki");
+    this.newWikiTemplate = templateName;
     this.newWikiError = "";
     this.newWikiOpen = true;
   };
@@ -1595,6 +1606,7 @@ export class App extends JSXElement {
   private readonly closeNewWiki = () => {
     if (this.newWikiBusy) return;
     this.newWikiOpen = false;
+    this.newWikiTemplate = "";
   };
 
   private readonly openWikiFileImport = () => {
@@ -1632,10 +1644,14 @@ export class App extends JSXElement {
     this.newWikiBusy = true;
     this.newWikiError = "";
     try {
+      // Only the SimpleWiki entry names a template. Leaving it out keeps the
+      // request for the TiddlyWiki path byte for byte the one it always was.
+      const koerper: { displayName: string; templateName?: string } = { displayName };
+      if (this.newWikiTemplate) koerper.templateName = this.newWikiTemplate;
       const response = await fetch(pathPrefix + "/admin/wiki", {
         method: "PUT",
         headers: { "X-Requested-With": "TiddlyWiki" },
-        body: JSON.stringify({ displayName }),
+        body: JSON.stringify(koerper),
       });
       const text = await response.text();
       if (response.status !== 200) throw new Error(text);
@@ -1643,6 +1659,7 @@ export class App extends JSXElement {
       // Success: close the dialog (same as the delete-wiki flow). The new
       // wiki is listed in the wikis tab right away, with its slug as a link.
       this.newWikiName = "";
+      this.newWikiTemplate = "";
       this.newWikiOpen = false;
     } catch (error) {
       console.error(error);
@@ -1877,6 +1894,13 @@ export class App extends JSXElement {
     const ownWikiRemaining = userState.wikiLimit == null
       ? null
       : Math.max(0, userState.wikiLimit - ownWikiCount);
+    // The templates are already in the store, so the SimpleWiki entry needs no
+    // extra request. customHtmlEnabled is what decides: a normal TiddlyWiki
+    // template under this name would produce an entry that promises a
+    // SimpleWiki surface and delivers TiddlyWiki.
+    const simpleWikiVorhanden = (this.store.state.itemsByTab.templates ?? []).some(
+      (template) => template.name === SIMPLEWIKI_TEMPLATE && template.customHtmlEnabled,
+    );
     // Teachers (like admins) are exempt from the limit server-side, so their
     // stored value must never be shown as if it applied.
     const bannerWikiLimit = isTeacher ? null : userState.wikiLimit;
@@ -2123,6 +2147,17 @@ export class App extends JSXElement {
                     onclick={() => { this.startNewWiki(); this.closeCreateWikiMenu(); }}
                     disabled={isLoadingData || perTabStore.isOpeningItem || perTabStore.isSaving}
                   >{t("1-click wiki creation")}</button>
+                  {/* Same dialog, other template. The dialog text and the
+                      request body follow newWikiTemplate. */}
+                  {simpleWikiVorhanden ? (
+                    <button
+                      class="create-wiki-action"
+                      type="button"
+                      role="menuitem"
+                      onclick={() => { this.startNewWiki(SIMPLEWIKI_TEMPLATE); this.closeCreateWikiMenu(); }}
+                      disabled={isLoadingData || perTabStore.isOpeningItem || perTabStore.isSaving}
+                    >{t("1-click wiki creation as SimpleWiki")}</button>
+                  ) : null}
                   {isAdmin || isTeacher ? (
                     <button
                       class="create-wiki-action"
@@ -2650,8 +2685,12 @@ export class App extends JSXElement {
               <header class="modal-header">
                 <div class="modal-title">
                   <p class="eyebrow">{t("New Wiki")}</p>
-                  <h3>{t("Create a wiki with a single click")}</h3>
-                  <p>{t("A name is all it takes. Slug, bag and default permissions are assigned automatically (slug: wiki-<username>).")}</p>
+                  <h3>{this.newWikiTemplate === SIMPLEWIKI_TEMPLATE
+                    ? t("Create a SimpleWiki wiki with a single click")
+                    : t("Create a wiki with a single click")}</h3>
+                  <p>{this.newWikiTemplate === SIMPLEWIKI_TEMPLATE
+                    ? t("The wiki gets the SimpleWiki surface: pages instead of tiddlers, no wiki markup. Slug, bag and default permissions are assigned automatically.")
+                    : t("A name is all it takes. Slug, bag and default permissions are assigned automatically (slug: wiki-<username>).")}</p>
                 </div>
                 <div class="close-button" onclick={this.closeNewWiki} aria-label={t("Close")}>
                   <MaterialSymbol icon={closeIcon} />

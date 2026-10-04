@@ -222,6 +222,29 @@ Markers used below:
   ([§102](CHANGELOG.md)). They set the look of the SimpleWiki interface, not the
   content of the wiki; the target wiki takes its language and its theme from its
   recipe, and a language pack is a plugin decision rather than an import one.
+- ◐ A wiki that *is* SimpleWiki, served by MWS itself
+  ([§103](CHANGELOG.md)), is done as far as the shell contract goes: the shell
+  brings a `$tw.preloadTiddler`, MWS writes the store in front of a single
+  `<script class="simplewiki-store-point"></script>`, and the write route works
+  against the real server. Open ends, each its own step:
+  - The shell edits Markdown as plain text; a rendered editor would be the
+    natural next thing, and it is a plugin or a script decision, not a shell one.
+  - The toast UI is roughly 695 kB of the 1.1 MB shell. Serving it as a
+    same-origin asset instead of embedding it would shrink every page; that
+    needs a route and a version story for the asset, so it is not a quick win.
+  - `templateUsers` of the SimpleWiki template are stored but not enforced: the
+    new path only checks that the template exists. Who may build such a wiki
+    from which template is a decision, not a lookup.
+- ⚖️ The SimpleWiki entry in the "Create a wiki" dropdown is shown to everyone
+  who may create a wiki, and it disappears as soon as the template is gone or
+  carries no custom HTML ([§103](CHANGELOG.md)). Name plus `customHtmlEnabled`
+  is what the client checks — a template under that name without its own HTML
+  would promise a SimpleWiki surface and deliver TiddlyWiki, which is worse
+  than no entry at all.
+- ⚖️ A wiki with a custom shell starts empty ([§103](CHANGELOG.md)). The
+  TiddlyWiki welcome tiddler would be wiki markup in a shell that cannot
+  render it, and SimpleWiki reads `$:/DefaultTiddlers` as the name of a page
+  that has to exist; only `$:/SiteTitle` is written, set to the display name.
 - ◐ An imported SimpleWiki page keeps its Markdown as text. Rendering it needs
   the `tiddlywiki/markdown` plugin in the wiki's recipe, and no recipe in this
   fork ships it — adding it would change every wiki, not just the imported ones,

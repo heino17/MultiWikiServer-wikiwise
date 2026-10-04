@@ -51,6 +51,18 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
   SimpleWiki werden zu `[[Text|Seite]]`; `[[Seite]]` bleibt, Code bleibt Code. Der
   Text bleibt Markdown – wer ihn gerendert haben will, braucht das Plugin
   `tiddlywiki/markdown` im Wiki-Rezept
+- **SimpleWiki-Wiki anlegen (ein Klick):** Im Dropdown „Wiki erstellen" steht
+  **„1-Klick Wiki als SimpleWiki"** – derselbe Dialog wie beim 1-Klick-Eintrag,
+  nur mit dem Template SimpleWiki vorbelegt. Die neue Wiki wird unter
+  `/wiki/<slug>/` von MWS selbst ausgeliefert: Seiten statt Tiddler, kein
+  Wiki-Markup, und jede Änderung wird sofort nach MWS geschrieben, ganz ohne
+  Speichern-Knopf. Voraussetzung ist das Template aus
+  `npm start provision-simplewiki <simplewiki.html>`; fehlt es oder trägt es
+  kein eigenes HTML, steht der Eintrag nicht im Menü. Eine so angelegte Wiki
+  startet leer und trägt nur den Anzeigenamen als Seitentitel – der erste
+  SimpleWiki-Eintrag legt selbst die erste Seite an. Wie bei jeder anderen Wiki
+  entscheidet das Wiki-Rezept, wer sie öffnen darf; für eine öffentliche Wiki
+  braucht der Bag eine `A_read`-Zeile für `ANON`
 - **Snapshot von Hand anlegen (Wiki-Dialog):** Wer den Inhalt einer Wiki ersetzen darf, hat im Wiki-Dialog unten den Knopf **„Snapshot erstellen"**. Er legt eine Sicherung des aktuellen Stands an, ohne dass ein Import etwas auslösen muss, und sagt danach, wie viele Tiddler darin sind. Die Rechte sind dieselben wie beim Ersetzen (Schreiben auf der Standard-Schreib-Bag plus Administratorrecht auf der Wiki) – wer nur zusammenführen darf, bekommt den Knopf gar nicht erst zu sehen. Ein Wiki ohne Tiddler lehnt der Server mit einer klaren Meldung ab, statt einen leeren Snapshot zu schreiben. Solche **manuellen Backups** haben ein eigenes Budget: die **5 neuesten** bleiben, ältere werden verworfen – unabhängig von den **10 Snapshots**, die ein Import hinterlässt. Im Snapshot-Fenster stehen beide Regeln, und ein manuelles Backup ist als **„Manuelles Backup"** erkennbar.
 - **Snapshot wiederherstellen (Dialog):** Im selben Dropdown „Wiki erstellen" steht **„Snapshot wiederherstellen"** mit einem eigenen Fenster: Wiki auswählen, Liste der Snapshots mit Datum, Tiddlerzahl und Herkunft – der neueste zuerst. Hinter jedem Eintrag steht ein **beschrifteter** Knopf „Diesen Snapshot wiederherstellen"; ein Klick klappt die Zeile zu einer Rückfrage auf (welche Wiki, welches Datum, wie viele Tiddler) und nennt, dass der aktuelle Stand zuerst als neuer Snapshot gesichert wird. Erst „Jetzt wiederherstellen" schreibt, „Aktuellen Stand behalten" bricht ab. Vor jedem Restore entsteht also ein neuer Snapshot – auch das Wiederherstellen ist rückholbar. Es stehen die letzten 10 Snapshots pro Wiki, wer nur zusammenführen darf, sieht keine
 - **Snapshot-Hinweis auf den Wikis:** Weil Snapshots nur bei einem Import mit „Ersetzen" anfallen, sammeln sie sich unbemerkt an – und jeder Import belegt Platz. Steht in mindestens einer Wiki ein Snapshot, erscheint über der Liste eine **eingeklappte** Zeile („Ihre Wikis enthalten **5** Snapshots") mit einem Pfeil am rechten Rand. Ein Klick darauf – oder die Tastatur – klappt sie auf und zeigt die betroffenen Wikis mit ihren Zählern, die Erklärung und den Knopf **„Snapshots ansehen und aufräumen"**; ein Klick auf eine Wiki öffnet direkt das Snapshot-Fenster mit dieser Wiki. Eingeklappt ist sie eine Zeile hoch, damit sie die Liste nicht wegschiebt. Wer nur zusammenführen darf, sieht nichts. Ohne Snapshots bleibt der Hinweis weg, statt einen leeren Bereich zu zeigen. Gelöscht wird ausschließlich im Snapshot-Fenster, hinter jedem einzelnen Eintrag
@@ -206,6 +218,17 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
   references `[Text](wiki:Page)` and `[Text](<wiki:Page>)` from SimpleWiki become
   `[[Text|Page]]`; `[[Page]]` stays, code stays code. The text stays Markdown –
   to have it rendered, the wiki recipe needs the `tiddlywiki/markdown` plugin
+- **Creating a SimpleWiki wiki (one click):** the "Create a wiki" dropdown
+  carries **"1-click wiki creation as SimpleWiki"** – the same dialog as the
+  1-click entry, only with the SimpleWiki template pre-set. The new wiki is
+  served by MWS itself under `/wiki/<slug>/`: pages instead of tiddlers, no wiki
+  markup, and every change is written to MWS on the spot, with no save button
+  anywhere. It needs the template from `npm start provision-simplewiki
+  <simplewiki.html>`; without that template, or without custom HTML on it, the
+  entry stays out of the menu. A wiki created that way starts empty and carries
+  the display name as its page title – the first entry made in SimpleWiki writes
+  the first page itself. As with any other wiki, the wiki recipe decides who
+  may open it; a public wiki needs an `A_read` row for `ANON` on the bag
 - **Taking a snapshot by hand (wiki dialog):** whoever may replace the content of a wiki gets a **"Create snapshot"** button at the bottom of the wiki dialog. It writes a backup of the current state without an import having to trigger one, and afterwards says how many tiddlers it holds. The rights are the same as for replacing (write on the default write bag plus administrator rights on the wiki) – those who may only merge never see the button at all. The server refuses a wiki without tiddlers with a clear message instead of writing an empty snapshot. Such **manual backups** have a budget of their own: the **5 newest** are kept and older ones are dropped, independently of the **10 snapshots** an import leaves behind. The snapshot dialog states both rules, and a manual backup is recognisable as **"Manual backup"**.
 - **Restoring a snapshot (dialog):** The same "Create a wiki" dropdown carries **"Restore a snapshot"**, which opens its own window: pick a wiki, see the snapshots with date, tiddler count and origin, newest first. Each row has a **written** "Restore this snapshot" button; clicking it expands that row into a confirmation naming the wiki, the date and the count, and stating that the current state is saved as a new snapshot first. Only "Restore now" writes, "Keep the current state" cancels. Every restore therefore creates a snapshot of its own — a restore is undoable, too. The last 10 snapshots per wiki are kept; those who may only merge see none
 - **Snapshot hint on the wikis page:** snapshots only pile up from an import with "Replace", and they quietly take up space. As soon as at least one wiki has a snapshot, a **folded** line appears above the list ("Your wikis hold **5** snapshots") with an arrow at the right edge. Clicking it – or using the keyboard – unfolds it and shows the wikis involved with their counts, the explanation and the **"Show snapshots and tidy up"** button; clicking a wiki opens the snapshot dialog with that wiki preselected. Folded it is one line high, so it does not push the list away. Those who may only merge see nothing. Without snapshots the hint is absent rather than showing an empty box. Deleting happens exclusively in the snapshot dialog, behind each single entry
