@@ -203,6 +203,30 @@ Markers used below:
   similar restricted access. — first step done (the referer check, see *Web*), full
   model still open.
 
+- ◐ Exchange with SimpleWiki — the import half is done
+  ([§102](CHANGELOG.md)): a `.html` or `.json` from SimpleWiki goes through the
+  same wiki file import as a TiddlyWiki file, is checked for its format version,
+  and lands as tiddlers with `$:/DefaultTiddlers` pointing at the start page. The
+  export half is still open: a wiki written back as a SimpleWiki file, which
+  means deciding what happens to tiddlers SimpleWiki has no place for (images
+  first of all — it has no image concept at all, so they would have to be named
+  in the result rather than dropped silently).
+- ⚖️ The unknown top-level fields of a SimpleWiki file are not persisted in the
+  SimpleWiki app — `fremdeDaten` lives in the Vue state and not in the
+  localStorage, so they survive a file round trip but not a browser restart.
+  Deliberately left as it is: MWS writes only the five documented keys, so
+  nothing is lost today, and persisting them would be complexity for a feature
+  nobody uses. Should MWS ever put something of its own on top, that is its own
+  decision to make then.
+- ⚖️ `sprache` and `thema` from a SimpleWiki file are not carried into the wiki
+  ([§102](CHANGELOG.md)). They set the look of the SimpleWiki interface, not the
+  content of the wiki; the target wiki takes its language and its theme from its
+  recipe, and a language pack is a plugin decision rather than an import one.
+- ◐ An imported SimpleWiki page keeps its Markdown as text. Rendering it needs
+  the `tiddlywiki/markdown` plugin in the wiki's recipe, and no recipe in this
+  fork ships it — adding it would change every wiki, not just the imported ones,
+  so it is its own step with its own decision.
+
 ## other
 
 - ✗ Not planed, but https://crates.io/crates/indradb

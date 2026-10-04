@@ -81,6 +81,13 @@ export const STORAGE_ERROR_REASON_KEYS: Record<string, string> = {
   "This snapshot does not belong to that wiki.": "This snapshot does not belong to that wiki.",
   "There is no such snapshot.": "There is no such snapshot.",
   "This wiki holds no tiddlers, so there is nothing to snapshot.": "This wiki holds no tiddlers, so there is nothing to snapshot.",
+  // SimpleWiki-Dateien: Meldungen aus SimpleWikiFile.ts.
+  "This file does not contain SimpleWiki data.": "This file does not contain SimpleWiki data.",
+  "This file has a page that is not an object.": "This file has a page that is not an object.",
+  "This file has a page without a title. TiddlyWiki has no tiddler without one either.":
+    "This file has a page without a title.",
+  "This file looks like JSON but could not be read. If it is a SimpleWiki export, save it again from SimpleWiki.":
+    "This file looks like JSON but could not be read.",
 };
 
 // Variablen Gründe (mit dynamischen Wiki-/Bag-/Rollen-/Tab-Namen) per Präfix:
@@ -97,6 +104,11 @@ export const STORAGE_ERROR_REASON_PREFIX_KEYS: ReadonlyArray<readonly [string, s
   ["The wiki \"", "This wiki cannot be edited this way."],
   ["The value of \"", "This value is not a number between 1 and 1000."],
   ["The file holds ", "This file holds too many tiddlers."],
+  ["This file holds ", "This file holds too many pages."],
+  ["This file uses SimpleWiki format version ", "This file uses a newer SimpleWiki format than this server reads."],
+  ["This file claims SimpleWiki format version ", "This file does not name a SimpleWiki format version this server can read."],
+  ["This file has more than one page titled ", "This file has two pages with the same title, and TiddlyWiki would keep only the last one."],
+  ["The start page of this file (id ", "The start page of this file is not one of its pages."],
 ];
 
 // Fallback je `reason`-Code, wenn keine Detail-Nachricht bekannt ist:

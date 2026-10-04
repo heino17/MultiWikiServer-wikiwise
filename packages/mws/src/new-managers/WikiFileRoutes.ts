@@ -125,6 +125,13 @@ async function parseUpload(state: ServerRequest, html: string, options: {
 }): Promise<{ parsed: ParsedWikiFile; readWith: string }> {
   try {
     const info = inspectWikiFile(html, { sizeLimit: state.config.wikiFileSizeLimit });
+    // A SimpleWiki file has no tiddlers for a TiddlyWiki parser to read, so
+    // booting one for it would only cost time. It also has no version it was
+    // saved with, which is why readWith stays empty for it.
+    if (info.kind === "simplewiki") {
+      const parsed = parseWikiFile(null, html, { sizeLimit: state.config.wikiFileSizeLimit });
+      return { parsed, readWith: "" };
+    }
     const { $tw, version } = await bootForParsing(state, info.twVersion, options.fallbackVersion);
     const parsed = parseWikiFile($tw, html, {
       includeSystem: options.includeSystem,

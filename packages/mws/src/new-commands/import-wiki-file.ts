@@ -28,9 +28,9 @@ serverEvents.on("cli.register", (commands) => {
 
 const info: CommandInfo = {
 	name: "import-wiki-file",
-	description: "Import a single-file TiddlyWiki (.html), replacing the content of a wiki",
+	description: "Import a single-file TiddlyWiki (.html) or a SimpleWiki file (.html, .json), replacing the content of a wiki",
 	arguments: [
-		["path", "Path to the TiddlyWiki .html file"],
+		["path", "Path to the TiddlyWiki .html file or the SimpleWiki .html or .json file"],
 	],
 	options: [
 		["wiki <string>", "Slug of the wiki whose content is replaced."],
@@ -100,27 +100,35 @@ export class ImportWikiFileCommand extends BaseCommand<[string], ImportWikiFileO
 		let parsed: ParsedWikiFile;
 		try {
 			const fileInfo = inspectWikiFile(html, { sizeLimit });
-			const $tw = await this.bootForImport(fileInfo.twVersion, wikiSlug, templateName);
-			// The plugins of the file are only welcome when they are the version
-			// the wiki will run, not the version the file was saved with.
-			const targetVersion = (wikiSlug
-				? await this.templateVersionOfWiki(wikiSlug)
-				: await this.templateVersion(templateName)) ?? "";
-			parsed = parseWikiFile($tw, html, {
-				includeSystem,
-				includePlugins,
-				targetVersion,
-				sizeLimit,
-			});
+			// A SimpleWiki file needs no TiddlyWiki to be read, so nothing is
+			// booted for it.
+			if (fileInfo.kind === "simplewiki") {
+				parsed = parseWikiFile(null, html, { sizeLimit });
+			} else {
+				const $tw = await this.bootForImport(fileInfo.twVersion, wikiSlug, templateName);
+				// The plugins of the file are only welcome when they are the version
+				// the wiki will run, not the version the file was saved with.
+				const targetVersion = (wikiSlug
+					? await this.templateVersionOfWiki(wikiSlug)
+					: await this.templateVersion(templateName)) ?? "";
+				parsed = parseWikiFile($tw, html, {
+					includeSystem,
+					includePlugins,
+					targetVersion,
+					sizeLimit,
+				});
+			}
 		} catch (error) {
 			if (error instanceof WikiFileError) throw `${fileName}: ${error.message}`;
 			throw error;
 		}
 
-		console.log(`${fileName}: TiddlyWiki ${parsed.twVersion} (${parsed.kind}), `
-			+ `${parsed.store === "json" ? "JSON" : "classic"} store, ${formatBytes(parsed.sizeBytes)}, `
-			+ `${parsed.tiddlers.length} tiddler(s), ${parsed.systemTiddlers.length} system tiddler(s), `
-			+ `${parsed.pluginTiddlers.length} plugin tiddler(s)`);
+		console.log(parsed.kind === "simplewiki"
+			? `${fileName}: SimpleWiki, ${formatBytes(parsed.sizeBytes)}, ${parsed.tiddlers.length} Seite(n)`
+			: `${fileName}: TiddlyWiki ${parsed.twVersion} (${parsed.kind}), `
+				+ `${parsed.store === "json" ? "JSON" : "classic"} store, ${formatBytes(parsed.sizeBytes)}, `
+				+ `${parsed.tiddlers.length} tiddler(s), ${parsed.systemTiddlers.length} system tiddler(s), `
+				+ `${parsed.pluginTiddlers.length} plugin tiddler(s)`);
 
 		await this.config.engine.$transaction(async (prisma) => {
 

@@ -213,7 +213,17 @@ export class WikiFileImportDialog extends JSXElement {
     }
   };
 
-  private readonly setTargetKind = (kind: TargetKind) => {
+  /**
+ * A SimpleWiki file has no system tiddlers and no plugins of its own, so the
+ * two checkboxes that ask for them have nothing to do. They stay visible and
+ * are greyed out rather than vanishing, because a dialog that loses a line under
+ * the pointer reads as a glitch.
+ */
+private get simpleWikiFile(): boolean {
+  return this.preview?.file.kind === "simplewiki";
+}
+
+private readonly setTargetKind = (kind: TargetKind) => {
     if (kind === this.targetKind) return;
     this.targetKind = kind;
     this.invalidate();
@@ -253,7 +263,9 @@ export class WikiFileImportDialog extends JSXElement {
           {" "}(<code>{target.slug}</code>) → <code>{target.bagName}</code>
         </p>
         <p class="wiki-file-preview-file">
-          {t("File")}: <strong>{file.filename}</strong> · {file.sizeText} · TiddlyWiki {file.twVersion}
+          {t("File")}: <strong>{file.filename}</strong> · {file.sizeText} · {file.kind === "simplewiki"
+          ? t("SimpleWiki")
+          : <>TiddlyWiki {file.twVersion}</>}
           {file.siteTitle ? <> · <em>{file.siteTitle}</em></> : null}
         </p>
         <div class="wiki-file-plan">
@@ -445,12 +457,12 @@ export class WikiFileImportDialog extends JSXElement {
 
               <div class="field-block">
                 <div class="field-editor">
-                  <label class="field-label" for="wiki-file-input">{t("Wiki file (.html)")}</label>
+                  <label class="field-label" for="wiki-file-input">{t("Wiki file (.html or .json)")}</label>
                   <input
                     id="wiki-file-input"
                     class="field-input"
                     type="file"
-                    accept=".html,.htm,text/html"
+                    accept=".html,.htm,.json,text/html,application/json"
                     onchange={(event) => {
                       const input = event.target as HTMLInputElement;
                       this.file = input.files?.[0] ?? null;
@@ -464,7 +476,7 @@ export class WikiFileImportDialog extends JSXElement {
                     </p>
                   ) : (
                     <p class="wiki-file-muted">
-                      {t("The saved index.html of a TiddlyWiki 5 wiki, with all tiddlers in it.")}
+                      {t("The saved index.html of a TiddlyWiki 5 wiki, with all tiddlers in it, or a file saved by SimpleWiki.")}
                     </p>
                   )}
                 </div>
@@ -587,9 +599,12 @@ export class WikiFileImportDialog extends JSXElement {
                     this.includeSystem = (event.target as HTMLInputElement).checked;
                     this.invalidate();
                   }}
-                  disabled={busy}
+                  disabled={busy || this.simpleWikiFile}
                 />
                 {t("Also import system tiddlers (titles starting with $:/): layout, tags, themes of the old wiki")}
+                {this.simpleWikiFile ? (
+                  <span class="wiki-file-muted">{t("A SimpleWiki file has none.")}</span>
+                ) : null}
               </label>
 
               <label class="wiki-file-checkbox">
@@ -600,9 +615,12 @@ export class WikiFileImportDialog extends JSXElement {
                     this.includePlugins = (event.target as HTMLInputElement).checked;
                     this.invalidate();
                   }}
-                  disabled={busy}
+                  disabled={busy || this.simpleWikiFile}
                 />
                 {t("Also import the file's plugins: core, themes and libraries")}
+                {this.simpleWikiFile ? (
+                  <span class="wiki-file-muted">{t("A SimpleWiki file has none.")}</span>
+                ) : null}
                 <span class="wiki-file-muted">
                   {t("Only those that are the version the wiki runs. The copy travels with the wiki, into its snapshots and into another installation; while the wiki loads its plugins from the installation's cache, the running wiki keeps using those.")}
                 </span>

@@ -1,4 +1,11 @@
 import { TiddlerFields, TW } from "tiddlywiki";
+import {
+  SimpleWikiError,
+  SimpleWikiRejectCode,
+  isSimpleWikiFile,
+  readSimpleWikiFile,
+  simpleWikiTiddlers,
+} from "./SimpleWikiFile";
 
 /**
  * Reading a single-file TiddlyWiki (.html) into tiddler fields, server side.
@@ -14,6 +21,12 @@ import { TiddlerFields, TW } from "tiddlywiki";
  * application-name, tiddlywiki-version, and a tiddler store. A built TW5 file
  * can carry both store shapes at once - an empty storeArea next to the JSON
  * store - so the JSON store wins when both are there.
+ *
+ * One more file is welcome here: a SimpleWiki file, which is not a TiddlyWiki at
+ * all but the other half of the exchange with SimpleWiki. It is recognised
+ * before the TiddlyWiki markers and read into the same shape, so everything
+ * downstream - the plan, the dialog, the writer, the snapshot that a replace
+ * takes on the way - works on both without knowing which one it got.
  */
 
 /** Default ceiling for one uploaded wiki file. Configurable via MWS_WIKI_FILE_SIZE_LIMIT. */
@@ -22,7 +35,7 @@ export const DEFAULT_WIKI_FILE_SIZE_LIMIT = 50 * 1024 * 1024;
 /** Default ceiling for the tiddler count of one uploaded wiki file. */
 export const DEFAULT_WIKI_FILE_TIDDLER_LIMIT = 20000;
 
-export type WikiFileKind = "tw5" | "tw5x";
+export type WikiFileKind = "tw5" | "tw5x" | "simplewiki";
 
 export type WikiFileStore = "json" | "storeArea";
 
@@ -32,7 +45,8 @@ export type WikiFileRejectCode =
   | "ENCRYPTED_WIKI"
   | "NO_TIDDLER_STORE"
   | "FILE_TOO_LARGE"
-  | "TOO_MANY_TIDDLERS";
+  | "TOO_MANY_TIDDLERS"
+  | SimpleWikiRejectCode;
 
 export class WikiFileError extends Error {
   constructor(readonly code: WikiFileRejectCode, message: string) {
@@ -257,9 +271,9 @@ const STORE_AREA = /<div\b[^>]*\bid\s*=\s*["']?storeArea/i;
 const EXTERNAL_CORE = /<script\b[^>]*\bsrc\s*=\s*["'][^"']*tiddlywikicore/i;
 
 /**
- * Checks that the text is an unencrypted TiddlyWiki 5 file and reports what it
- * is. Throws a WikiFileError with a message meant for the person who picked the
- * file, never for a log.
+ * Checks that the text is an unencrypted TiddlyWiki 5 file or a SimpleWiki file
+ * and reports what it is. Throws a WikiFileError with a message meant for the
+ * person who picked the file, never for a log.
  */
 export function inspectWikiFile(html: string, options: { sizeLimit?: number } = {}): WikiFileInfo {
   const sizeLimit = options.sizeLimit ?? DEFAULT_WIKI_FILE_SIZE_LIMIT;
@@ -267,6 +281,23 @@ export function inspectWikiFile(html: string, options: { sizeLimit?: number } = 
   if (sizeBytes > sizeLimit) {
     throw new WikiFileError("FILE_TOO_LARGE",
       `The file is ${formatBytes(sizeBytes)}; the limit is ${formatBytes(sizeLimit)}.`);
+  }
+
+  // A SimpleWiki file carries no application-name and no TiddlyWiki store, so
+  // it is recognised before the TiddlyWiki markers. Otherwise it would come out
+  // as "not a TiddlyWiki", which is true and useless to somebody who just saved
+  // their wiki from SimpleWiki on purpose.
+  if (isSimpleWikiFile(html)) {
+    return { kind: "simplewiki", twVersion: "", store: "json", sizeBytes };
+  }
+
+  // A file that begins like JSON is not a TiddlyWiki, whatever is in it. This
+  // catches the SimpleWiki export that was cut off, and it beats the
+  // application-name sentence below, which would send somebody who saved a
+  // SimpleWiki export looking for a meta tag that never existed.
+  if (/^\s*[[{]/.test(html)) {
+    throw new WikiFileError("NOT_A_TIDDLYWIKI",
+      "This file looks like JSON but could not be read. If it is a SimpleWiki export, save it again from SimpleWiki.");
   }
 
   // A TiddlyWiki 2 file announces itself in a script block and has no meta tags,
@@ -312,13 +343,56 @@ export function inspectWikiFile(html: string, options: { sizeLimit?: number } = 
 }
 
 /**
+ * A SimpleWiki file into the same shape a TiddlyWiki file produces, so that the
+ * plan, the dialog and the writer do not learn a second format.
+ *
+ * The options that only make sense for TiddlyWiki - system tiddlers, plugins, a
+ * version to check plugins against - do not apply: a SimpleWiki file has no
+ * system tiddlers and no plugins, and exactly one system tiddler is written
+ * anyway, $:/DefaultTiddlers, because a wiki that does not open on the page the
+ * file named is not the wiki that was exported.
+ *
+ * SimpleWiki's own sprache and thema are deliberately left out. They set the
+ * look of the SimpleWiki interface, not the content of the wiki, and the target
+ * wiki takes its language and its theme from its recipe.
+ */
+function parseSimpleWikiFile(html: string, options: { tiddlerLimit?: number }): ParsedWikiFile {
+  let payload;
+  try {
+    payload = readSimpleWikiFile(html, { pageLimit: options.tiddlerLimit });
+  } catch (error) {
+    if (error instanceof SimpleWikiError) throw new WikiFileError(error.code, error.message);
+    throw error;
+  }
+  const { tiddlers, systemTiddlers } = simpleWikiTiddlers(payload);
+  return {
+    kind: "simplewiki",
+    // No TiddlyWiki version: the file never had one. A blank here keeps the
+    // dialog from printing "TiddlyWiki" with nothing behind it.
+    twVersion: "",
+    store: "json",
+    sizeBytes: Buffer.byteLength(html, "utf8"),
+    tiddlers: [...tiddlers, ...systemTiddlers],
+    systemTiddlers,
+    pluginTiddlers: [],
+    skippedSystemTitles: [],
+    keptPluginTitles: [],
+    skippedPlugins: [],
+    skippedTransientTitles: [],
+    includePlugins: false,
+    targetVersion: "",
+  };
+}
+
+/**
  * Parses an inspected wiki file into tiddler fields.
  *
  * Needs the booted $tw of a TiddlyWiki version: the deserializer modules only
  * exist inside a booted instance. Use the version the file was saved with when
- * it is installed, so the markup matches what the parser expects.
+ * it is installed, so the markup matches what the parser expects. A SimpleWiki
+ * file needs no $tw, and $tw may be null for it.
  */
-export function parseWikiFile($tw: TW, html: string, options: {
+export function parseWikiFile($tw: TW | null, html: string, options: {
   /** Also return the $:/ tiddlers. They configure the whole wiki and are off by default. */
   includeSystem?: boolean;
   /**
@@ -332,6 +406,13 @@ export function parseWikiFile($tw: TW, html: string, options: {
   tiddlerLimit?: number;
 } = {}): ParsedWikiFile {
   const info = inspectWikiFile(html, { sizeLimit: options.sizeLimit });
+  if (info.kind === "simplewiki") {
+    return parseSimpleWikiFile(html, { tiddlerLimit: options.tiddlerLimit });
+  }
+  if (!$tw) {
+    throw new WikiFileError("NOT_A_TIDDLYWIKI",
+      "This is not a TiddlyWiki file (no application-name meta tag).");
+  }
   const tiddlerLimit = options.tiddlerLimit ?? DEFAULT_WIKI_FILE_TIDDLER_LIMIT;
   const includePlugins = !!options.includePlugins;
   // Without a version to check against, no plugin may travel: an unchecked

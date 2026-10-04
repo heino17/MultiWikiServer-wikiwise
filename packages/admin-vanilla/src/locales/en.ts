@@ -133,6 +133,8 @@ export const enStrings: Record<string, string> = {
   "{username}'s Wiki": "{username}'s Wiki",
   "Name of the wiki": "Name of the wiki",
   "Create a wiki with a single click": "Create a wiki with a single click",
+  "Create a SimpleWiki wiki with a single click": "Create a SimpleWiki wiki with a single click",
+  "The wiki gets the SimpleWiki surface: pages instead of tiddlers, no wiki markup. Slug, bag and default permissions are assigned automatically.": "The wiki gets the SimpleWiki surface: pages instead of tiddlers, no wiki markup. Slug, bag and default permissions are assigned automatically.",
   "A name is all it takes. Slug, bag and default permissions are assigned automatically (slug: wiki-<username>).": "A name is all it takes. Slug, bag and default permissions are assigned automatically (slug: wiki-<username>).",
   "Creating…": "Creating…",
 
@@ -284,6 +286,7 @@ export const enStrings: Record<string, string> = {
 
   "Create a wiki": "Create a wiki",
   "1-click wiki creation": "1-click wiki creation",
+  "1-click wiki creation as SimpleWiki": "1-click wiki creation as SimpleWiki",
   "Defined wiki creation": "Defined wiki creation",
 
   "Switch to light mode": "Switch to light mode",
@@ -611,6 +614,20 @@ export const enStrings: Record<string, string> = {
   // #region wiki file import
   "Take over a wiki file": "Upload a wiki file",
     "Wiki file": "Wiki file",
+  "Wiki file (.html or .json)": "Wiki file (.html or .json)",
+  "The saved index.html of a TiddlyWiki 5 wiki, with all tiddlers in it, or a file saved by SimpleWiki.": "The saved index.html of a TiddlyWiki 5 wiki, with all tiddlers in it, or a file saved by SimpleWiki.",
+  "SimpleWiki": "SimpleWiki",
+  "A SimpleWiki file has none.": "A SimpleWiki file has none.",
+  "This file does not contain SimpleWiki data.": "This file does not contain SimpleWiki data.",
+  "This file has a page that is not an object.": "This file has a page that is not an object.",
+  "This file has a page without a title.": "This file has a page without a title.",
+  "This file looks like JSON but could not be read. If it is a SimpleWiki export, save it again from SimpleWiki.":
+    "This file looks like JSON but could not be read.",
+  "This file holds too many pages.": "This file holds too many pages.",
+  "This file uses a newer SimpleWiki format than this server reads.": "This file uses a newer SimpleWiki format than this server reads.",
+  "This file does not name a SimpleWiki format version this server can read.": "This file does not name a SimpleWiki format version this server can read.",
+  "This file has two pages with the same title, and TiddlyWiki would keep only the last one.": "This file has two pages with the same title, and TiddlyWiki would keep only the last one.",
+  "The start page of this file is not one of its pages.": "The start page of this file is not one of its pages.",
   "Wiki file (.html)": "Wiki file (.html)",
   "Import the saved HTML of a TiddlyWiki 5 wiki: the file is checked first, then you decide what is written into the wiki.": "Import the saved HTML of a TiddlyWiki 5 wiki: the file is checked first, then you decide what is written into the wiki.",
   "The saved index.html of a TiddlyWiki 5 wiki, with all tiddlers in it.": "The saved index.html of a TiddlyWiki 5 wiki, with all tiddlers in it.",

@@ -247,6 +247,42 @@ finally follow the language they are counted in.
 
 **Added**
 
+- **A wiki file from SimpleWiki can be imported** (§102). The wiki file import
+  takes a second format: the `.html` and the `.json` that SimpleWiki writes, the
+  small single page wiki that is the other half of this exchange. A SimpleWiki
+  file has no `application-name` and no TiddlyWiki store, so it used to come out
+  as *not a TiddlyWiki file* — true, and useless to somebody who had just saved
+  their wiki from SimpleWiki on purpose. It is recognised before the TiddlyWiki
+  markers and read into the same shape a TiddlyWiki file produces, so the plan,
+  the dialog, the writer and the snapshot a replace takes on the way all work on
+  both without knowing which one they got. Every page becomes a tiddler, the
+  start page becomes `$:/DefaultTiddlers`, and the dialog names the format
+  instead of printing an empty TiddlyWiki version.
+- **What a SimpleWiki file is checked for** (§102). A file that announces a
+  higher format version is refused whole rather than in part: reading half of a
+  format this server does not know would lose fields on the next export, and the
+  person would find out much later. Two pages with one title are refused too,
+  because the title is the identity on both sides and TiddlyWiki would keep only
+  the last one. A file whose start page is not one of its own pages is refused as
+  well, rather than opening the wiki on something else.
+- **The `wiki:` links of a SimpleWiki page become TiddlyWiki links** (§102).
+  SimpleWiki writes a page reference as `[Text](wiki:Title)`, which TiddlyWiki
+  shows as an ordinary link into the void; `[Text](<wiki:Title>)` is the same
+  thing with a title that has spaces in it. Both become `[[Text|Title]]`.
+  `[[Title]]` and `[[Text|Title]]` mean the same on both sides and are left
+  alone, and so is everything else on the page — a fenced block or an inline
+  code span may well show the syntax as an example, and rewriting it there would
+  change what the page teaches.
+- **The dates and tags of a SimpleWiki file land in TiddlyWiki's own format**
+  (§102). SimpleWiki writes ISO 8601 in UTC, TiddlyWiki writes
+  `YYYYMMDDhhmmssSSS` — and its `parseDate` reads that form digit by digit, so
+  an ISO string is not an invalid date but a plausible wrong one: a page created
+  on the third of October comes out as the first of January, silently, in every
+  modified-time listing and in the info pane. The import converts, which is a
+  reformatting and not a shift, because both name the same instant in UTC. Tags
+  are written as a TiddlyWiki list, matching every other tiddler in the store
+  instead of being the one JSON array among ~900 list fields.
+
 - **A snapshot button in the wiki dialog** (§101). Whoever may replace the
   content of a wiki can now put a backup of it there, without an import to
   trigger one. The button asks a new route, `PUT
@@ -277,6 +313,27 @@ finally follow the language they are counted in.
 
 - One migration: `20261003_roles_created` adds `roles.created` and backfills
   nothing. It applies itself on the next server start.
+- No migration, no new dependency, and no plugin added to a recipe: an imported
+  page keeps its Markdown as text, and a wiki that wants it rendered needs the
+  `tiddlywiki/markdown` plugin in its recipe.
+- Verified on a dev instance on port 5000 and against
+  `simplewiki_export.json`, `simplewiki_export.html` and `simplewiki-leer.html`:
+  the `.json` and the `.html` produce the same 8 tiddlers, the empty file
+  produces a wiki with 0 pages and no `$:/DefaultTiddlers`, and a replace into an
+  existing wiki takes a snapshot first and then rewrites all 7 pages. Refused as
+  intended: format version 2, a duplicate title, a start page that is not one of
+  the pages, a page without a title, and a truncated `.json`. A TiddlyWiki 5 file
+  still imports exactly as before (49 tiddlers, 3 plugins left out) and a
+  TiddlyWiki 2 file still gets the save-with-5 hint. The date format was checked
+  against `$tw.utils.parseDate` from `boot/boot.js` of 5.4.1, and the tag format
+  against a real TiddlyWiki import of the same build. **The dialog itself was
+  not clicked through**: the admin API answers `403` without a session and no
+  password was guessed, so the two greyed-out checkboxes and the *SimpleWiki* in
+  the file line still want a look in a browser.
+- Two wikis were created in the dev store to try this out: `sw-phase1` (the real
+  export) and `sw-links` (all three link forms, a code block and tags), plus
+  `tw5-probe` for the counter-test. They can be deleted like any other wiki.
+
 - No migration and no new dependency. Verified against a dev instance on port
   5000 (`admin`): six backups in a row left five and reported the sixth as
   pruned, the ten imports of `neues-admin-empty` were untouched by them, an empty
@@ -5992,6 +6049,44 @@ Admin-App folgen endlich der Sprache, in der sie gezählt werden.
 
 **Hinzugefügt**
 
+- **Eine Wiki-Datei aus SimpleWiki lässt sich importieren** (§102). Der
+  Wiki-Dateien-Import versteht ein zweites Format: die `.html` und die `.json`,
+  die SimpleWiki schreibt — das kleine Single-Page-Wiki, das die andere Hälfte
+  dieses Austauschs ist. Eine SimpleWiki-Datei hat kein `application-name` und
+  keinen TiddlyWiki-Speicher, sie kam also als *das ist keine TiddlyWiki-Datei*
+  heraus — wahr und nutzlos für jemanden, der gerade eben absichtlich sein Wiki
+  aus SimpleWiki gesichert hat. Sie wird vor den TiddlyWiki-Merkmalen erkannt und
+  in dieselbe Form gelesen, die eine TiddlyWiki-Datei liefert, damit Plan, Dialog,
+  Schreiber und der Snapshot, den ein Ersetzen unterwegs anlegt, für beide
+  arbeiten, ohne zu wissen, welche sie bekommen haben. Jede Seite wird ein
+  Tiddler, die Startseite wird `$:/DefaultTiddlers`, und der Dialog nennt das
+  Format, statt eine leere TiddlyWiki-Version zu drucken.
+- **Worauf eine SimpleWiki-Datei geprüft wird** (§102). Eine Datei, die eine
+  höhere Formatversion nennt, wird ganz abgelehnt und nicht teilweise: Wer die
+  Hälfte eines unbekannten Formats liest, verliert Felder beim nächsten Export,
+  und das merkt man viel später. Zwei Seiten mit demselben Titel werden ebenso
+  abgelehnt, denn der Titel ist auf beiden Seiten die Identität, und TiddlyWiki
+  behielte nur die letzte. Auch eine Datei, deren Startseite nicht eine ihrer
+  eigenen Seiten ist, wird abgelehnt, statt die Wiki auf etwas anderem zu öffnen.
+- **Die `wiki:`-Links einer SimpleWiki-Seite werden TiddlyWiki-Links** (§102).
+  SimpleWiki schreibt einen Seitenverweis als `[Text](wiki:Titel)`, den
+  TiddlyWiki als gewöhnlichen Link ins Leere anzeigt; `[Text](<wiki:Titel>)` ist
+  dasselbe mit einem Titel, der Leerzeichen enthält. Beides wird zu
+  `[[Text|Titel]]`. `[[Titel]]` und `[[Text|Titel]]` meinen auf beiden Seiten
+  dasselbe und bleiben stehen, und sonst bleibt auf der Seite alles stehen: Ein
+  Codeblock oder ein Inline-Code kann die Syntax gut als Beispiel zeigen, und sie
+  dort umzuschreiben würde verändern, was die Seite lehrt.
+- **Die Daten und Schlagwörter einer SimpleWiki-Datei landen in TiddlyWikis
+  eigenem Format** (§102). SimpleWiki schreibt ISO 8601 in UTC, TiddlyWiki
+  schreibt `YYYYMMDDhhmmssSSS` — und dessen `parseDate` liest diese Form
+  Ziffer für Ziffer, ein ISO-String ist also kein ungültiges Datum, sondern ein
+  plausibles falsches: Eine Seite vom 3. Oktober kommt als 1. Januar heraus,
+  still, in jeder Liste nach Änderungszeit und in der Infobox. Der Import
+  rechnet um, was ein Umschreiben ist und keine Verschiebung, weil beide
+  denselben Zeitpunkt in UTC benennen. Schlagwörter werden als
+  TiddlyWiki-Liste geschrieben, passend zu jedem anderen Tiddler im Store statt
+  das eine JSON-Array unter rund 900 Listenfeldern zu sein.
+
 - **Ein Snapshot-Knopf im Wiki-Dialog** (§101). Wer den Inhalt eines Wikis
   ersetzen darf, kann dort jetzt eine Sicherung davon ablegen — ohne Import, der
   eine auslöst. Der Knopf fragt eine neue Route, `PUT
@@ -6025,6 +6120,29 @@ Admin-App folgen endlich der Sprache, in der sie gezählt werden.
 
 - Eine Migration: `20261003_roles_created` legt `roles.created` an und füllt
   nichts auf. Sie zieht sich beim nächsten Serverstart selbst.
+- Keine Migration, keine neue Dependency und kein Plugin in einem Rezept: Eine
+  importierte Seite behält ihren Markdown als Text, und eine Wiki, die ihn
+  gerendert haben will, braucht das Plugin `tiddlywiki/markdown` im Rezept.
+- An einer Dev-Instanz auf Port 5000 und gegen `simplewiki_export.json`,
+  `simplewiki_export.html` und `simplewiki-leer.html` geprüft: `.json` und
+  `.html` ergeben dieselben 8 Tiddler, die leere Datei ergibt eine Wiki mit
+  0 Seiten und ohne `$:/DefaultTiddlers`, und ein Ersetzen in eine vorhandene Wiki
+  legt zuerst einen Snapshot an und schreibt danach alle 7 Seiten neu. Wie
+  gewollt abgelehnt: Formatversion 2, ein doppelter Titel, eine Startseite, die
+  nicht eine der Seiten ist, eine Seite ohne Titel und eine abgeschnittene
+  `.json`. Eine TiddlyWiki-5-Datei importiert genau wie vorher (49 Tiddler, 3
+  Plugins ausgelassen), und eine TiddlyWiki-2-Datei bekommt weiterhin den
+  Hinweis, mit 5 zu speichern. Das Datumsformat ist gegen
+  `$tw.utils.parseDate` aus `boot/boot.js` von 5.4.1 geprüft, das Schlagwortformat
+  gegen einen echten TiddlyWiki-Import desselben Build. **Der Dialog selbst ist
+  nicht durchgeklickt**: Die Admin-API antwortet ohne Sitzung mit `403`, und es
+  wurde kein Passwort geraten — die beiden ausgegrauten Kontrollkästchen und das
+  *SimpleWiki* in der Dateizeile wollen also noch einen Blick in den Browser.
+- Für den Versuch sind im Dev-Store zwei Wikis entstanden: `sw-phase1` (der
+  echte Export) und `sw-links` (alle drei Linkformen, ein Codeblock und
+  Schlagwörter), dazu `tw5-probe` für die Gegenprobe. Sie lassen sich wie jede
+  andere Wiki löschen.
+
 - Keine Migration und keine neue Dependency. An einer Dev-Instanz auf Port 5000
   (`admin`) geprüft: sechs Backups hintereinander ließen fünf übrig und meldeten
   das sechste als verworfen, die zehn Importe von `neues-admin-empty` blieben

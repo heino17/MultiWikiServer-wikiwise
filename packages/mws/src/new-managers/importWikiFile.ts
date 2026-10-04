@@ -1,7 +1,7 @@
 import { IdString } from "@mws/admin-vanilla/src/definition/tabs";
 import { ServerRequest } from "@tiddlywiki/server";
 import { TiddlerFields } from "tiddlywiki";
-import { ParsedWikiFile, WikiFilePluginSkip, WikiFileStore } from "./WikiFileImport";
+import { ParsedWikiFile, WikiFileKind, WikiFilePluginSkip, WikiFileStore } from "./WikiFileImport";
 import { WikiStore } from "./RecipeResolver";
 import {
   SnapshotBag,
@@ -32,7 +32,7 @@ export interface WikiImportTarget {
 export interface WikiImportPlan {
   target: WikiImportTarget;
   mode: WikiImportMode;
-  kind: "tw5" | "tw5x";
+  kind: WikiFileKind;
   twVersion: string;
   store: WikiFileStore;
   sizeBytes: number;
