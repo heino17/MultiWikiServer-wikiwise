@@ -283,8 +283,16 @@ finally follow the language they are counted in.
   `PUT`. A stand-in test server that understands `POST` confirms whatever it was
   told to confirm and knows nothing about the real route; `tests/mwsserver.py`
   and `tests/t_mwsmode.py` in the SimpleWiki repository now say `PUT` as well.
-- Checked on the dev instance: the page the browser writes appears in the table
-  of contents after a reload; without write permission MWS answers
+- Checked on the dev instance, in the browser: on the "Create a wiki" dropdown
+  the entry **"1-click wiki creation as SimpleWiki"** stands between "1-click
+  wiki creation" and "Defined wiki creation" in German; clicking it opens the
+  dialog with the heading **"SimpleWiki-Wiki auf einen Klick anlegen"**, the
+  SimpleWiki sentence, the name field prefilled with "admins Wiki"; "Wiki
+  anlegen" answers 200 and closes the dialog. The new wiki carries the
+  SimpleWiki `template_id` and serves the shell (about 1.1 MB, store before
+  the marker, no JSON island).
+- Also checked on the dev instance: the page the browser writes appears in the
+  table of contents after a reload; without write permission MWS answers
   `403 BAG_NO_WRITE_PERMISSION` and the shell shows its read-only note. A bag
   without a single permission row is closed even for readers
   (`RecipeResolver.ts`), so a public wiki needs an `A_read` row for `ANON`.
@@ -6131,12 +6139,20 @@ Admin-App folgen endlich der Sprache, in der sie gezählt werden.
   nur, was man ihm vorgegeben hat, und sagt nichts über die echte Route;
   `tests/mwsserver.py` und `tests/t_mwsmode.py` im SimpleWiki-Repository sagen
   jetzt ebenfalls `PUT`.
-- An der Dev-Instanz geprüft: Die Seite, die der Browser schreibt, erscheint
-  nach dem Neuladen im Inhaltsverzeichnis; ohne Schreibrecht antwortet MWS mit
-  `403 BAG_NO_WRITE_PERMISSION` und die Schale zeigt ihren Nur-Lesen-Hinweis.
-  Ein Bag ohne eine einzige Berechtigungszeile ist auch für Lesende geschlossen
-  (`RecipeResolver.ts`), eine öffentliche Wiki braucht also eine `A_read`-Zeile
-  für `ANON`.
+- An der Dev-Instanz im Browser geprüft: Im Dropdown „Wiki erstellen" steht
+  **„1-Klick Wiki als SimpleWiki"** zwischen „1-Klick Wiki erstellen" und
+  „Definiertes Wiki erstellen"; ein Klick darauf öffnet den Dialog mit der
+  Überschrift **„SimpleWiki-Wiki auf einen Klick anlegen"**, dem SimpleWiki-Satz
+  und dem auf „admins Wiki" vorbelegten Namensfeld; „Wiki anlegen" antwortet
+  mit 200 und schließt den Dialog. Die neue Wiki trägt die SimpleWiki-
+  `template_id` und liefert die Schale (rund 1,1 MB, Speicher vor der Marke,
+  keine JSON-Insel).
+- An der Dev-Instanz außerdem geprüft: Die Seite, die der Browser schreibt,
+  erscheint nach dem Neuladen im Inhaltsverzeichnis; ohne Schreibrecht
+  antwortet MWS mit `403 BAG_NO_WRITE_PERMISSION` und die Schale zeigt ihren
+  Nur-Lesen-Hinweis. Ein Bag ohne eine einzige Berechtigungszeile ist auch für
+  Lesende geschlossen (`RecipeResolver.ts`), eine öffentliche Wiki braucht also
+  eine `A_read`-Zeile für `ANON`.
 - Keine Migration, keine Schemaänderung.
 
 - **Eine Wiki-Datei aus SimpleWiki lässt sich importieren** (§102). Der
