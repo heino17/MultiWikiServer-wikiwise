@@ -1913,8 +1913,9 @@ export const AdminDeleteWiki = zodRoute({
       // nothing above would touch them, and the restore dialog cannot even
       // name them any more — a deleted wiki would leave up to `keep` full
       // copies of its content behind with no way to reach them. keep = 0 is
-      // the retention rule with nothing to keep.
-      const droppedSnapshots = await pruneSnapshotBags(prisma, slug, 0);
+      // the retention rule with nothing to keep, and "all" because a deleted
+      // wiki must not leave its manual backups behind either.
+      const droppedSnapshots = await pruneSnapshotBags(prisma, slug, 0, "all");
 
       return { slug, deleted: true, droppedSnapshots };
     });

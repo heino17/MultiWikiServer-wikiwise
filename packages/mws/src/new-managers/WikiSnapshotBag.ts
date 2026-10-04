@@ -24,6 +24,37 @@ export const SNAPSHOT_META_PREFIX = "$:/mws/snapshot/";
 
 export const DEFAULT_SNAPSHOT_KEEP = 10;
 
+/**
+ * How many snapshots *the user asked for* one wiki keeps.
+ *
+ * Separate from `DEFAULT_SNAPSHOT_KEEP` on purpose. The automatic snapshot is
+ * taken a second before an import overwrites the bag, so it is the last way out
+ * of that import. If it shared a budget with manual backups, then taking a
+ * backup could drop the very snapshot one would want to keep — the oldest
+ * automatic snapshot goes first, which is exactly the one taken longest ago. So
+ * each kind is pruned against its own budget and the two never compete.
+ */
+export const MANUAL_SNAPSHOT_KEEP = 5;
+
+/**
+ * Marks a snapshot bag as one the user asked for, inside its own name.
+ *
+ * The name is the only thing `pruneSnapshotBags` looks at — sorting and
+ * counting a wiki's snapshots must not open every bag to read its metadata.
+ * The marker therefore has to live where pruning can see it for free. It sits
+ * between the wiki prefix and the stamp, so a manual snapshot still sorts
+ * chronologically *within* the manual ones and `snapshotStampOf` keeps
+ * accepting it, because that guard only requires a single path segment.
+ */
+export const MANUAL_SNAPSHOT_MARKER = "manual-";
+
+/**
+ * What a manual snapshot records as its origin. A marker rather than a
+ * sentence, because the restore dialog shows the origin and the store must not
+ * hold one language's wording — the dialog translates it.
+ */
+export const MANUAL_SNAPSHOT_SOURCE = "manual";
+
 export interface SnapshotBag {
   bagName: string;
   slug: string;
@@ -31,8 +62,15 @@ export interface SnapshotBag {
   sourceBagName: string;
   source: string;
   count: number;
-  /** Older snapshots of the same wiki that the retention rule dropped. */
+  /** True when the user asked for this snapshot instead of an import taking it. */
+  manual: boolean;
+  /** Older snapshots of the same kind that the retention rule dropped. */
   pruned?: string[];
+}
+
+/** Whether a snapshot bag name belongs to a manual backup rather than an import. */
+export function isManualSnapshotName(slug: string, bagName: string): boolean {
+  return bagName.startsWith(snapshotBagPrefix(slug) + MANUAL_SNAPSHOT_MARKER);
 }
 
 export function snapshotBagPrefix(slug: string): string {
@@ -95,23 +133,35 @@ export async function createSnapshotBag(prisma: PrismaTxnClient, options: {
   /** What is about to happen, recorded in the snapshot ("import of foo.html"). */
   source: string;
   tiddlers: readonly { title: string; fields: PrismaJson.Tiddler_fields }[];
+  /**
+   * True when the user asked for this snapshot instead of an import taking one.
+   * Picks the marker in the bag name and the retention budget; see
+   * `MANUAL_SNAPSHOT_KEEP`.
+   */
+  manual?: boolean;
   keep?: number;
   now?: Date;
 }): Promise<SnapshotBag> {
   const now = options.now ?? new Date();
   const created = now.toISOString();
   const prefix = snapshotBagPrefix(options.slug);
+  const marker = options.manual ? MANUAL_SNAPSHOT_MARKER : "";
+  const keep = options.keep ?? (options.manual ? MANUAL_SNAPSHOT_KEEP : DEFAULT_SNAPSHOT_KEEP);
 
-  let bagName = prefix + snapshotStamp(now);
+  let bagName = prefix + marker + snapshotStamp(now);
   for (let attempt = 2; await bagIdOfName(prisma, bagName); attempt++) {
-    bagName = `${prefix}${snapshotStamp(now)}-${attempt}`;
+    bagName = `${prefix}${marker}${snapshotStamp(now)}-${attempt}`;
   }
 
   const writer = new BagImportWriter(prisma, false);
   await writer.checkExisting(new IdString(""), bagName, options.user, { allowCreate: true });
   const [bag] = await writer.upsert([{
     name: bagName,
-    description: `Snapshot of "${options.slug}" (${options.tiddlers.length} tiddlers) taken ${created} before ${options.source}`,
+    // An automatic snapshot names what is about to overwrite the bag, a manual
+    // one has no such thing — "before a manual backup" would be nonsense.
+    description: options.manual
+      ? `Manual backup of "${options.slug}" (${options.tiddlers.length} tiddlers) taken ${created}`
+      : `Snapshot of "${options.slug}" (${options.tiddlers.length} tiddlers) taken ${created} before ${options.source}`,
     permissions: [],
   }]);
 
@@ -133,8 +183,7 @@ export async function createSnapshotBag(prisma: PrismaTxnClient, options: {
     ],
   });
 
-  const keep = options.keep ?? DEFAULT_SNAPSHOT_KEEP;
-  const pruned = await pruneSnapshotBags(prisma, options.slug, keep);
+  const pruned = await pruneSnapshotBags(prisma, options.slug, keep, options.manual ? "manual" : "auto");
 
   return {
     bagName,
@@ -143,15 +192,33 @@ export async function createSnapshotBag(prisma: PrismaTxnClient, options: {
     sourceBagName: options.sourceBagName,
     source: options.source,
     count: options.tiddlers.length,
+    manual: Boolean(options.manual),
     pruned,
   };
 }
 
+/**
+ * Which snapshots a retention run may drop: only the ones an import took, only
+ * the ones the user asked for, or both. "all" exists for the wiki deletion,
+ * which has to leave no snapshot behind — a boolean could not say that, because
+ * "unspecified" would have had to mean either "auto" or "all".
+ */
+export type SnapshotKind = "auto" | "manual" | "all";
+
 /** Drops the oldest snapshots of a wiki, keeping the newest `keep` of them. */
-export async function pruneSnapshotBags(prisma: PrismaTxnClient, slug: string, keep: number): Promise<string[]> {
+export async function pruneSnapshotBags(prisma: PrismaTxnClient, slug: string, keep: number, kind: SnapshotKind = "auto"): Promise<string[]> {
   const prefix = snapshotBagPrefix(slug);
+  const marker = prefix + MANUAL_SNAPSHOT_MARKER;
+  // Only this kind of snapshot is a candidate, so the two budgets cannot eat
+  // into each other. The marker is part of the name, which is why this stays a
+  // single query instead of opening every bag to ask what it is.
+  const where = kind === "all"
+    ? { name: { startsWith: prefix } }
+    : kind === "manual"
+      ? { name: { startsWith: marker } }
+      : { name: { startsWith: prefix, not: { startsWith: marker } } };
   const rows = await prisma.bag.findMany({
-    where: { name: { startsWith: prefix } },
+    where,
     select: { id: true, name: true },
     orderBy: { name: "desc" },
   });
@@ -208,13 +275,21 @@ export async function listSnapshotBags(prisma: PrismaTxnClient, slug?: string): 
       return found ? String(found.fields.text ?? "") : "";
     };
     const count = Number(meta("count"));
+    // Named after the parameter above but deliberately its own value: a bag name
+    // that lost its metadata still has to yield the wiki it belongs to, and that
+    // is the slug the marker is tested against below.
+    const bagSlug = meta("wiki") || row.name.slice(SNAPSHOT_BAG_PREFIX.length).split("/")[0];
     return {
       bagName: row.name,
-      slug: meta("wiki") || row.name.slice(SNAPSHOT_BAG_PREFIX.length).split("/")[0],
+      slug: bagSlug,
       created: meta("created") || row.created.toISOString(),
       sourceBagName: meta("bag"),
       source: meta("source"),
       count: Number.isFinite(count) ? count : row.tiddlers.length,
+      // Read off the name, because the list already has it and the marker is
+      // what the retention rule splits on. The stored source agrees, but an
+      // older store has snapshots written before the marker existed.
+      manual: bagSlug ? isManualSnapshotName(bagSlug, row.name) : false,
     };
   });
 }
@@ -239,6 +314,7 @@ export async function readSnapshotMeta(prisma: PrismaTxnClient, bagName: string)
     sourceBagName: text("bag"),
     source: text("source"),
     count: Number(text("count")) || 0,
+    manual: isManualSnapshotName(wiki, bagName),
   };
 }
 /**

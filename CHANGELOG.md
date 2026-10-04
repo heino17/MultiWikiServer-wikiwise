@@ -247,6 +247,27 @@ finally follow the language they are counted in.
 
 **Added**
 
+- **A snapshot button in the wiki dialog** (§101). Whoever may replace the
+  content of a wiki can now put a backup of it there, without an import to
+  trigger one. The button asks a new route, `PUT
+  /api/wiki-file/snapshot/create`, which takes the same gate as a restore
+  (`resolveWikiTarget` with `mode: "replace"`: write on the default write bag
+  plus `C_admin`/owner/site-admin), so it cannot become a second way around it.
+  An empty wiki is refused with `WIKI_FILE_INVALID` and a reason of its own
+  rather than storing an empty snapshot.
+- **A budget of its own for wanted backups** (§101). An import leaves 10
+  snapshots behind; a backup somebody asked for is the fifth at most, and the two
+  budgets do not touch each other — five imports can no longer push a wanted
+  backup out of the store. Which budget a snapshot belongs to is read from the
+  `manual-` prefix of its bag name, so pruning does not have to open every
+  snapshot to find out. Snapshots that existed before this are imports, as they
+  always were, and keep working. The restore dialog now names both rules, and
+  shows a wanted backup as *Manual backup* instead of its raw source marker.
+- The wikis tab asks `/api/wiki-file/snapshot-counts` anyway, and that route now
+  reports a wiki with the count **zero** as well: it is the same list that
+  decides where the button is offered, and a count of zero is what a wiki looks
+  like exactly when somebody wants to back it up for the first time. The hint
+  above the list drops the zeros itself.
 - **A creation date in the wikis, bags, roles and users tables** (§100). The
   short date in the cell, the full timestamp in the tooltip, sortable like every
   other column. `Roles` gets the column as a nullable date without a default, so
@@ -256,6 +277,10 @@ finally follow the language they are counted in.
 
 - One migration: `20261003_roles_created` adds `roles.created` and backfills
   nothing. It applies itself on the next server start.
+- No migration and no new dependency. Verified against a dev instance on port
+  5000 (`admin`): six backups in a row left five and reported the sixth as
+  pruned, the ten imports of `neues-admin-empty` were untouched by them, an empty
+  wiki was refused, and an anonymous request was denied with `403`.
 
 ---
 
@@ -5967,6 +5992,29 @@ Admin-App folgen endlich der Sprache, in der sie gezählt werden.
 
 **Hinzugefügt**
 
+- **Ein Snapshot-Knopf im Wiki-Dialog** (§101). Wer den Inhalt eines Wikis
+  ersetzen darf, kann dort jetzt eine Sicherung davon ablegen — ohne Import, der
+  eine auslöst. Der Knopf fragt eine neue Route, `PUT
+  /api/wiki-file/snapshot/create`, die dasselbe Gate nimmt wie eine Wiederherstellung
+  (`resolveWikiTarget` mit `mode: "replace"`: Schreiben auf der Standard-Schreib-Bag
+  plus `C_admin`/Owner/Site-Admin); er kann also kein zweiter Weg daran vorbei
+  werden. Ein leeres Wiki wird mit `WIKI_FILE_INVALID` und eigenem Grund
+  abgelehnt, statt einen leeren Snapshot zu speichern, den niemand
+  wiederherstellen kann.
+- **Ein eigenes Budget für gewollte Backups** (§101). Ein Import hinterlässt 10
+  Snapshots; ein Backup, um das jemand gebeten hat, ist höchstens das fünfte, und
+  die beiden Budgets fassen einander nicht an — fünf Importe können ein gewolltes
+  Backup nicht mehr aus dem Store drängen. Zu welchem Budget ein Snapshot gehört,
+  steht im `manual-`-Präfix seines Bag-Namens, damit das Pruning nicht jeden
+  Snapshot öffnen muss, um es zu erfahren. Snapshots, die es vorher schon gab,
+  sind Imports, wie sie es immer waren, und funktionieren unverändert. Der
+  Wiederherstellen-Dialog nennt jetzt beide Regeln und zeigt ein gewolltes Backup
+  als *Manuelles Backup* statt als rohe Quellmarkierung.
+- Der Wikis-Tab fragt `/api/wiki-file/snapshot-counts` ohnehin, und diese Route
+  meldet ein Wiki mit dem Zähler **null** jetzt ebenfalls: Es ist dieselbe Liste,
+  die entscheidet, wo der Knopf angeboten wird, und ein Zähler von null ist genau
+  das, was ein Wiki zeigt, wenn jemand es zum ersten Mal sichern will. Der Hinweis
+  über der Liste verwirft die Nullen selbst.
 - **Ein Erstellungsdatum in den Tabellen Wikis, Bags, Rollen und Benutzer** (§100).
   Das kurze Datum in der Zelle, der vollständige Zeitstempel im Tooltip, sortierbar
   wie jede andere Spalte. `Roles` bekommt die Spalte als nullable Datum ohne
@@ -5977,6 +6025,11 @@ Admin-App folgen endlich der Sprache, in der sie gezählt werden.
 
 - Eine Migration: `20261003_roles_created` legt `roles.created` an und füllt
   nichts auf. Sie zieht sich beim nächsten Serverstart selbst.
+- Keine Migration und keine neue Dependency. An einer Dev-Instanz auf Port 5000
+  (`admin`) geprüft: sechs Backups hintereinander ließen fünf übrig und meldeten
+  das sechste als verworfen, die zehn Importe von `neues-admin-empty` blieben
+  unberührt, ein leeres Wiki wurde abgelehnt, und eine anonyme Anfrage mit `403`
+  abgewiesen.
 
 ---
 

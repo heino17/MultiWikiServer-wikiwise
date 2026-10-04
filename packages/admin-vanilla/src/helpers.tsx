@@ -1,5 +1,6 @@
 import { addstyles, customElement, JSXElement } from "@tiddlywiki/jsx-lit";
 import warningIcon from "@material-symbols/svg-400/outlined/warning.svg";
+import checkIcon from "@material-symbols/svg-400/outlined/check_circle.svg";
 import { MaterialSymbol } from "./material-symbol";
 
 
@@ -79,6 +80,7 @@ export const STORAGE_ERROR_REASON_KEYS: Record<string, string> = {
     "This wiki is password protected. Remove the password protection and save it again.",
   "This snapshot does not belong to that wiki.": "This snapshot does not belong to that wiki.",
   "There is no such snapshot.": "There is no such snapshot.",
+  "This wiki holds no tiddlers, so there is nothing to snapshot.": "This wiki holds no tiddlers, so there is nothing to snapshot.",
 };
 
 // Variablen Gründe (mit dynamischen Wiki-/Bag-/Rollen-/Tab-Namen) per Präfix:
@@ -156,6 +158,21 @@ export function renderErrorBanner(message: string, dismissAction?: { label: stri
       {dismissAction ? (
         <button class="ghost-button error-banner-dismiss" type="button" onclick={dismissAction.onclick}>{dismissAction.label}</button>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * The counterpart of `renderErrorBanner` for something that went *right*. An
+ * operation with no visible result — a snapshot writes into a hidden bag — would
+ * otherwise leave the person wondering whether the click arrived at all.
+ */
+export function renderNoticeBanner(message: string) {
+  if (!message) return null;
+  return (
+    <div class="notice-banner" role="status" aria-live="polite">
+      <span class="notice-banner-icon" aria-hidden="true"><MaterialSymbol icon={checkIcon} /></span>
+      <p class="notice-banner-message">{message}</p>
     </div>
   );
 }

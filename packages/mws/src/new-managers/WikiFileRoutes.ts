@@ -24,7 +24,7 @@ import { RecipeResolver } from "./RecipeResolver";
 import { WikiImportMode, WikiImportPlan, WikiImportTarget, applyWikiFileImport, defaultWriteTargetBag, planWikiFileImport, restoreSnapshotBag } from "./importWikiFile";
 import { assertWikiCreationAllowed, defaultBagName, newWikiAdminRole, newWikiSlug, sanitizeSlugPart } from "./TabDataAdapter";
 import { ParsedWikiFile, WikiFileError, formatBytes, inspectWikiFile, parseWikiFile } from "./WikiFileImport";
-import { DEFAULT_SNAPSHOT_KEEP, countSnapshotBags, deleteSnapshotBag, listSnapshotBags, snapshotStampOf } from "./WikiSnapshotBag";
+import { DEFAULT_SNAPSHOT_KEEP, MANUAL_SNAPSHOT_KEEP, MANUAL_SNAPSHOT_SOURCE, countSnapshotBags, createSnapshotBag, deleteSnapshotBag, listSnapshotBags, snapshotStampOf } from "./WikiSnapshotBag";
 import { createWikiShell, writeStarterTiddlers } from "./WikiShell";
 
 /** How many titles of a list the dialog shows before it only counts the rest. */
@@ -535,13 +535,83 @@ export const AdminWikiFileSnapshots = zodRoute({
       // The dialog states the rule instead of letting it be a surprise when a
       // snapshot disappears from the list.
       keep: DEFAULT_SNAPSHOT_KEEP,
+      manualKeep: MANUAL_SNAPSHOT_KEEP,
       snapshots: snapshots.map(snapshot => ({
         bagName: snapshot.bagName,
         created: snapshot.created,
         source: snapshot.source,
         sourceBagName: snapshot.sourceBagName,
         count: snapshot.count,
+        manual: snapshot.manual,
       })),
+    };
+  },
+});
+
+/**
+ * Takes a snapshot of a wiki on request, so a backup does not have to wait for
+ * an import that overwrites something.
+ *
+ * The copy is the same one an import takes and restores the same way, so this
+ * is behind the same gate as the replace: a snapshot holds the wiki's content,
+ * and who may copy it is who may overwrite it. It writes nothing into the wiki
+ * itself — the snapshot goes into a hidden bag that belongs to no recipe.
+ */
+export const AdminWikiFileSnapshotCreate = zodRoute({
+  method: ["PUT"],
+  path: "/api/wiki-file/snapshot/create",
+  bodyFormat: "json",
+  securityChecks: { requestedWithHeader: true },
+  zodPathParams: z => ({}),
+  zodQueryKeys: ["wiki"],
+  zodRequestBody: z => z.object({
+    keep: z.number().int().min(1).max(1000).optional(),
+  }),
+  inner: async (state) => {
+    state.okUser();
+    state.assertReferer(["/"]);
+
+    const slug = state.query.get("wiki");
+    if (!slug) throw new SendError("ARGUMENT_REQUIRED", 400, { name: "wiki" });
+    const { keep } = state.data;
+
+    const resolved = await resolveWikiTarget(state, state.engine, { mode: "replace", wikiSlug: slug });
+    state.asserted = true;
+
+    const snapshot = await state.$transaction(async (prisma) => {
+      const existing = await prisma.tiddler.findMany({
+        where: { bag_id: IdString.cast(resolved.target.bagId) },
+        select: { title: true, fields: true },
+      });
+      // An empty snapshot is a row in the list that restores nothing, and it
+      // would take one of the manual budget's slots. Saying so is more useful
+      // than a silent entry — the caller can add a tiddler and try again.
+      if (!existing.length) {
+        throw new SendError("WIKI_FILE_INVALID", 400, {
+          reason: "This wiki holds no tiddlers, so there is nothing to snapshot.",
+        });
+      }
+      return createSnapshotBag(prisma, {
+        user: state.user,
+        slug: resolved.slug,
+        sourceBagId: resolved.target.bagId,
+        sourceBagName: resolved.target.bagName,
+        source: MANUAL_SNAPSHOT_SOURCE,
+        tiddlers: existing,
+        manual: true,
+        ...(keep === undefined ? {} : { keep }),
+      });
+    });
+
+    return {
+      slug: resolved.slug,
+      bagName: resolved.bagName,
+      snapshot: {
+        bagName: snapshot.bagName,
+        created: snapshot.created,
+        count: snapshot.count,
+        pruned: snapshot.pruned ?? [],
+      },
     };
   },
 });
@@ -564,6 +634,12 @@ export const AdminWikiFileSnapshots = zodRoute({
  * so nothing about a foreign wiki can be learned from it. Because the gate
  * demands write and admin rights, "left out" is also the answer for somebody
  * who may see the wiki but not restore it — they get no line about it.
+ *
+ * A wiki that passes the gate is reported even when its count is zero, because
+ * this list also answers whether the wiki dialog may offer a snapshot button —
+ * and a count of zero is what a wiki looks like exactly when somebody wants to
+ * back it up for the first time. The hint above the wikis list drops the zeros
+ * itself.
  */
 export const AdminWikiFileSnapshotCounts = zodRoute({
   method: ["GET"],
@@ -630,7 +706,7 @@ export const AdminWikiFileSnapshotCounts = zodRoute({
       if (!mayReplace(state, recipe, rb)) continue;
 
       const count = await countSnapshotBags(state.engine, slug);
-      if (count > 0) counts.push({ slug, displayName: recipe.definition?.displayName || slug, count });
+      counts.push({ slug, displayName: recipe.definition?.displayName || slug, count });
     }
     counts.sort((left, right) => right.count - left.count || left.slug.localeCompare(right.slug));
 

@@ -69,6 +69,23 @@ Markers used below:
   not by wiki identity: a wiki recreated under a name it had before inherits the
   old snapshots, and restoring one writes that old content into the new wiki
   ([§93](CHANGELOG.md))
+- ⚖️ A snapshot a person asked for is a deliberate backup and gets **its own
+  budget of 5**, beside the 10 an import leaves behind — two `pruneSnapshotBags`
+  kinds, not one list with two numbers in it. Sharing the 10 would let five
+  imports push a wanted backup out of the store, and the wanted one is the only
+  snapshot anybody ever misses. The kind is decided by the `manual-` prefix of
+  the bag name, because pruning must not read the metadata of every snapshot to
+  find out what it is; the *list* still reports `manual` explicitly, so a name
+  written by an older version reads as an import and nothing breaks. Snapshots
+  made before this decision existed keep working untouched
+  ([§101](CHANGELOG.md))
+- ⚖️ The manual button sits in the wiki dialog of the wikis tab and is offered
+  only where the server would accept it: the snapshot-counts route already runs
+  the two gates, so the client asks that route instead of guessing a right of
+  its own. That route therefore reports wikis with the count **zero** as well —
+  otherwise the button would be missing on exactly the wiki somebody wants to
+  back up first. A wiki without tiddlers is refused with a reason of its own
+  instead of writing an empty snapshot nobody can restore ([§101](CHANGELOG.md))
 - ⚖️ Core plugin, theme and library tiddlers of an imported file are written
   into a bag **only when the operator asks for them and only when the plugin's
   own `version` is the version the target wiki runs**; by default they are left

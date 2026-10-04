@@ -18,7 +18,7 @@ import { AdminStorage } from "./StorageRoutes";
 import { AdminStorageCleanup } from "./StorageCleanupRoutes";
 import { PinboardDeleteNote, PinboardList, PinboardMarkRead, PinboardSaveNote, PinboardSavePosition, PinboardUnreadCount } from "./PinboardRoutes";
 import { UserFileDelete, UserFileDownload, UserFileList, UserFilePreview, UserFileShareTargets, UserFileShareUpdate, UserFileSharedList, UserFileUpload, UserFileWikiFile, UserFileWikiFiles } from "./UserFileRoutes";
-import { AdminWikiFileImport, AdminWikiFileInspect, AdminWikiFileRestore, AdminWikiFileSnapshotCounts, AdminWikiFileSnapshotDelete, AdminWikiFileSnapshots } from "./WikiFileRoutes";
+import { AdminWikiFileImport, AdminWikiFileInspect, AdminWikiFileRestore, AdminWikiFileSnapshotCounts, AdminWikiFileSnapshotCreate, AdminWikiFileSnapshotDelete, AdminWikiFileSnapshots } from "./WikiFileRoutes";
 import { serveWikiThumbnail } from "./WikiThumbnailRoutes";
 import { RecipeStatus, RecipeStoreJS, RecipeStoreJSON, RecipeUpdates, TiddlerBatch, TiddlerList } from "./RecipeRoutes";
 import { AdminPrefsGet, AdminPrefsPut } from "./PrefsRoutes";
@@ -200,6 +200,7 @@ const ApiRoutes = {
   AdminWikiFileImport,
   AdminWikiFileSnapshots,
   AdminWikiFileSnapshotCounts,
+  AdminWikiFileSnapshotCreate,
   AdminWikiFileRestore,
   AdminWikiFileSnapshotDelete,
 };
@@ -239,6 +240,7 @@ interface ClientRoutes {
   AdminWikiFileImport: ClientRoute<typeof AdminWikiFileImport>;
   AdminWikiFileSnapshots: ClientRoute<typeof AdminWikiFileSnapshots>;
   AdminWikiFileSnapshotCounts: ClientRoute<typeof AdminWikiFileSnapshotCounts>;
+  AdminWikiFileSnapshotCreate: ClientRoute<typeof AdminWikiFileSnapshotCreate>;
   AdminWikiFileRestore: ClientRoute<typeof AdminWikiFileRestore>;
   AdminWikiFileSnapshotDelete: ClientRoute<typeof AdminWikiFileSnapshotDelete>;
   TiddlerBatch: ClientRoute<typeof TiddlerBatch>;

@@ -25,7 +25,12 @@ interface SnapshotRow {
   source: string;
   sourceBagName: string;
   count: number;
+  /** True when the person asked for it rather than an import taking it. */
+  manual?: boolean;
 }
+
+/** The source a snapshot of the person's own choosing carries in its metadata. */
+const MANUAL_SOURCE = "manual";
 
 /** Same shape as the fetch wrapper in wiki-file-import.tsx, kept module-local
  *  like in pinboard.tsx and user-files.tsx. */
@@ -40,6 +45,16 @@ async function wikiFileApiJson(path: string, init?: RequestInit): Promise<any> {
   const text = await response.text();
   if (response.status !== 200) throw new Error(text || `HTTP ${response.status}`);
   return text ? JSON.parse(text) : null;
+}
+
+/**
+ * What a snapshot says about its origin. An import records its filename, which
+ * is worth showing verbatim; a backup records a marker, because the store must
+ * not hold one language's wording — so that one is translated here instead.
+ */
+function describeSource(snapshot: SnapshotRow): string {
+  if (snapshot.manual || snapshot.source === MANUAL_SOURCE) return t("Manual backup");
+  return snapshot.source || snapshot.sourceBagName;
 }
 
 @customElement("mws-snapshot-restore")
@@ -60,6 +75,8 @@ export class SnapshotRestoreDialog extends JSXElement {
   @state() accessor deleting = "";
   /** How many snapshots the server keeps per wiki, for the rule under the list. */
   @state() accessor keep = 0;
+  /** The same, for the snapshots the person asked for; a budget of its own. */
+  @state() accessor manualKeep = 0;
   @state() accessor error = "";
   @state() accessor notice = "";
   @state() accessor restoredSlug = "";
@@ -99,11 +116,12 @@ export class SnapshotRestoreDialog extends JSXElement {
     try {
       const response = await wikiFileApiJson(
         `/api/wiki-file/snapshots?wiki=${encodeURIComponent(slug)}`,
-      ) as { snapshots?: SnapshotRow[]; keep?: number };
+      ) as { snapshots?: SnapshotRow[]; keep?: number; manualKeep?: number };
       this.snapshots = response?.snapshots ?? [];
       // The retention rule belongs to the server; the dialog states it instead
       // of hardcoding the number the server would prune to.
       this.keep = response?.keep ?? 0;
+      this.manualKeep = response?.manualKeep ?? 0;
     } catch (error) {
       this.snapshots = null;
       this.error = error instanceof Error ? error.message : t("The snapshots could not be loaded.");
@@ -243,7 +261,7 @@ export class SnapshotRestoreDialog extends JSXElement {
           <li key={snapshot.bagName}>
             <div class="snapshot-main">
               <strong>{new Date(snapshot.created).toLocaleString()}</strong>
-              <small>{t("{count} tiddlers", { count: snapshot.count })} · {snapshot.source || snapshot.sourceBagName}</small>
+              <small>{t("{count} tiddlers", { count: snapshot.count })} · {describeSource(snapshot)}</small>
             </div>
             {this.confirming === snapshot.bagName ? (
               this.confirmPanel(snapshot)
@@ -348,7 +366,9 @@ export class SnapshotRestoreDialog extends JSXElement {
                     simply disappears from the list one day, and nobody knows
                     whether that was a mistake or the rule. */}
                 {this.keep > 0 && this.snapshots?.length ? (
-                  <p class="wiki-file-muted">{t("Only the newest {count} snapshots are kept. Older ones are dropped automatically.", { count: this.keep })}</p>
+                  <p class="wiki-file-muted">{this.manualKeep > 0
+                    ? t("Two budgets: only the newest {keep} snapshots an import wrote are kept, and {manualKeep} of your own backups. Older ones are dropped automatically.", { keep: this.keep, manualKeep: this.manualKeep })
+                    : t("Only the newest {count} snapshots are kept. Older ones are dropped automatically.", { count: this.keep })}</p>
                 ) : null}
               </section>
             </div>

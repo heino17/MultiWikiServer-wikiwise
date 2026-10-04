@@ -55,7 +55,7 @@ import {
   type ListViewState,
 } from "./list-view";
 import { t } from "./i18n";
-import { formatStorageErrorForDisplay, getErrorMessage, prettifyBytes, renderErrorBanner, shortDate } from "./helpers";
+import { formatStorageErrorForDisplay, getErrorMessage, prettifyBytes, renderErrorBanner, renderNoticeBanner, shortDate } from "./helpers";
 import { getEffectiveTheme, toggleTheme, type ThemeMode } from "./theme";
 import "./pinboard";
 import "./user-files";
@@ -218,6 +218,15 @@ interface ToggleFieldProps {
 
 interface RecordModalProps {
   store: PerTabStore;
+  /**
+   * Whether this wiki may be snapshotted. The counts are already filtered by
+   * the same gate the create route enforces, so a wiki missing from the list is
+   * one the server would refuse — and the button is then better absent than
+   * permanently failing.
+   */
+  canSnapshotWiki?: (slug: string) => boolean;
+  /** Called after a snapshot was written, so the hint above the list counts up. */
+  onSnapshotCreated?: () => void;
 }
 
 
@@ -787,6 +796,9 @@ class RecordModalElement extends JSXElement {
   @state() accessor props!: RecordModalProps;
   @state() accessor deleting = false;
   @state() accessor deleteError = "";
+  @state() accessor snapshotBusy = false;
+  @state() accessor snapshotError = "";
+  @state() accessor snapshotNotice = "";
 
   private readonly deleteWiki = async () => {
     const { store } = this.props;
@@ -926,6 +938,50 @@ class RecordModalElement extends JSXElement {
     }
   };
 
+  /**
+   * Takes a snapshot of the open wiki without importing anything, so a state
+   * worth keeping can be secured on purpose instead of only a second before an
+   * import overwrites it.
+   *
+   * No confirmation: nothing in the wiki changes, and the snapshot lands in a
+   * hidden bag. What it can do is push the oldest *manual* backup out of its
+   * own budget — never an automatic one, which is the safety net before an
+   * import — so the notice below names what was dropped instead of leaving it
+   * to be discovered later.
+   */
+  private readonly createSnapshot = async () => {
+    const { store } = this.props;
+    const { selectedTab, fieldState } = store;
+    if (!selectedTab || !fieldState || this.snapshotBusy) return;
+    const slug = (fieldState.draft as Partial<WikiAdminRecord>).slug;
+    if (!slug) return;
+    this.snapshotBusy = true;
+    this.snapshotError = "";
+    this.snapshotNotice = "";
+    try {
+      const response = await fetch(pathPrefix + "/api/wiki-file/snapshot/create?wiki=" + encodeURIComponent(slug.toString()), {
+        method: "PUT",
+        headers: { "X-Requested-With": "TiddlyWiki", "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const text = await response.text();
+      if (response.status !== 200) throw new Error(text);
+      const parsed = JSON.parse(text) as { snapshot?: { count?: number; pruned?: string[] } };
+      const count = parsed.snapshot?.count ?? 0;
+      const pruned = parsed.snapshot?.pruned ?? [];
+      this.snapshotNotice = pruned.length
+        ? t("Snapshot created with {count} tiddlers. The oldest manual backup was dropped: {names}.", { count, names: pruned.join(", ") })
+        : t("Snapshot created with {count} tiddlers.", { count });
+      // The hint above the wikis list counts snapshots, so it is stale now.
+      this.props.onSnapshotCreated?.();
+    } catch (error) {
+      console.error(error);
+      this.snapshotError = formatStorageErrorForDisplay(getErrorMessage(error, t("Failed to create the snapshot.")), t);
+    } finally {
+      this.snapshotBusy = false;
+    }
+  };
+
   protected render() {
     const { store } = this.props;
     const { selectedTab, fieldState } = store;
@@ -957,6 +1013,14 @@ class RecordModalElement extends JSXElement {
     const canDeleteWiki = selectedTab.id === "wikis" && (
       currentUsername === "admin" || (ownerUsername !== "" && ownerUsername === currentUsername)
     );
+    // The snapshot counts arrive pre-filtered: the route leaves out every wiki
+    // the person may not replace, which is the same gate the create route puts
+    // the copy behind. A wiki missing from that list therefore has no business
+    // showing the button — the server would only refuse it again.
+    const draftSlug = selectedTab.id === "wikis"
+      ? String((fieldState.draft as Partial<WikiAdminRecord>).slug ?? "")
+      : "";
+    const canSnapshotWiki = draftSlug !== "" && (this.props.canSnapshotWiki?.(draftSlug) ?? false);
     const draftUsername = selectedTab.id === "users"
       ? String((fieldState.draft as Partial<UserAdminRecord>).username ?? "")
       : "";
@@ -1095,6 +1159,16 @@ class RecordModalElement extends JSXElement {
                 {true
                   ? <footer class="modal-actions">
                     <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+                      {selectedTab.id === "wikis" && fieldState.mode === "edit" && canSnapshotWiki ? (
+                        <button
+                          class="ghost-button"
+                          type="button"
+                          onclick={this.createSnapshot}
+                          disabled={isSaving || this.deleting || this.snapshotBusy}
+                        >
+                          {this.snapshotBusy ? t("Creating snapshot…") : t("Create snapshot")}
+                        </button>
+                      ) : null}
                       {selectedTab.id === "wikis" && fieldState.mode === "edit" && canDeleteWiki ? (
                         <button
                           class="ghost-button"
@@ -1131,6 +1205,8 @@ class RecordModalElement extends JSXElement {
                           disabled={isSaving || this.deleting}
                         >{this.deleting ? t("Deleting…") : t("Delete bag")}</button>
                       ) : null}
+                      {this.snapshotError ? renderErrorBanner(this.snapshotError) : null}
+                      {this.snapshotNotice ? renderNoticeBanner(this.snapshotNotice) : null}
                       {this.deleteError ? renderErrorBanner(this.deleteError) : null}
                     </div>
                     <div style="display:flex; gap:0.75rem; align-items:center;">
@@ -2539,6 +2615,8 @@ export class App extends JSXElement {
         {perTabStore.isOpen ? (
           <RecordModalElement
             store={perTabStore}
+            canSnapshotWiki={slug => this.snapshotCounts.some(row => row.slug === slug)}
+            onSnapshotCreated={this.loadSnapshotCounts}
           />
         ) : null}
 
