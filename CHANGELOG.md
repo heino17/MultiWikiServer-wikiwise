@@ -360,7 +360,39 @@ finally follow the language they are counted in.
   other column. `Roles` gets the column as a nullable date without a default, so
   the roles a store already had show `—` instead of the day the migration ran.
 
+**Fixed**
+
+- **The startup warning about a possible memory leak is gone** (§104). `npm start`
+  printed `MaxListenersExceededWarning: 11 cli.register listeners added to
+  [ServerEvents]. MaxListeners is 10.` Every command file in
+  `packages/mws/src/new-commands/` hung a listener of its own on `cli.register`,
+  so the count on that event grew with the number of commands. Node warns from
+  eleven listeners on and words it as a leak. Nothing leaked: the listeners are
+  added once, while the modules load, and never again. The count says that
+  somebody added a command — and the eleventh came with `provision-simplewiki`
+  (§103), which is what made the warning appear in the first place.
+- **The commands are a table and one listener** (§104). A command is a class
+  with a static `info`, so the whole list is data in `new-commands/index.ts`,
+  and a single `cli.register` listener hands it to the CLI. The command files
+  register nothing themselves and are free of side effects. The key of the
+  table is the command name and the order of the table is the order of
+  `mws help`. A new command is a class plus one line in that table, which is
+  what `_empty.ts` now says instead of showing the old pattern.
+- The stopgap in between raised the limit instead of removing the reason, in a
+  module of its own because ESM evaluates every import of a module before that
+  module's body runs. It existed for one commit and is gone again with the
+  listener it was there for; the comment explaining that is now in `index.ts`
+  where the single listener stands.
+
 **Operating notes**
+
+- Checked on the dev instance after the change: `npm start` prints no warning,
+  `mws help` lists all eleven commands in the order it did before, `done` stays
+  hidden unless `MWSDEV` is set, `test-args a b --flag` still reports
+  `[ 'a', 'b' ]`, and `provision-simplewiki` still writes its template.
+  `npm run tsc2` and `npm run build` are clean. No migration, no new
+  dependency, and no change in behaviour: the CLI had one listener per command
+  and now has one.
 
 - One migration: `20261003_roles_created` adds `roles.created` and backfills
   nothing. It applies itself on the next server start.
@@ -6222,7 +6254,41 @@ Admin-App folgen endlich der Sprache, in der sie gezählt werden.
   Default, damit Rollen, die ein Store schon hatte, `—` zeigen statt des Tages,
   an dem die Migration lief.
 
+**Behoben**
+
+- **Die Startwarnung über ein mögliches Speicherleck ist weg** (§104). `npm start`
+  meldete `MaxListenersExceededWarning: 11 cli.register listeners added to
+  [ServerEvents]. MaxListeners is 10.` Jede Befehlsdatei in
+  `packages/mws/src/new-commands/` hängte einen eigenen Hörer an
+  `cli.register`, der Zähler auf diesem Ereignis wuchs also mit der Zahl der
+  Befehle. Node warnt ab elf Hörern und formuliert es als Leck. Es leckte nichts:
+  Die Hörer kommen einmal dazu, während die Module laden, und nie wieder. Der
+  Zähler sagte, dass jemand einen Befehl hinzugefügt hat — und der elfte kam mit
+  `provision-simplewiki` (§103), der die Warnung überhaupt erst sichtbar gemacht
+  hat.
+- **Die Befehle sind eine Tabelle und ein Hörer** (§104). Ein Befehl ist eine
+  Klasse mit statischem `info`, also steht die ganze Liste als Daten in
+  `new-commands/index.ts`, und ein einziger `cli.register`-Hörer reicht sie an
+  die CLI weiter. Die Befehlsdateien melden sich selbst nirgends an und haben
+  keine Nebenwirkungen mehr. Der Schlüssel der Tabelle ist der Befehlsname,
+  ihre Reihenfolge ist die Reihenfolge von `mws help`. Ein neuer Befehl ist eine
+  Klasse und eine Zeile in dieser Tabelle; das sagt jetzt auch `_empty.ts`,
+  statt das alte Muster zu zeigen.
+- Als Zwischenlösung wurde die Grenze angehoben, statt den Grund zu beseitigen,
+  und zwar in einem eigenen Modul, weil ESM alle Importe eines Moduls auswertet,
+  bevor dessen Rumpf läuft. Es gab es für einen Commit und ist mit dem Hörer
+  wieder weg, für den es da war; die Erklärung steht jetzt als Kommentar dort,
+  wo der einzige Hörer steht.
+
 **Betriebshinweise**
+
+- Nach dem Umbau an einer Dev-Instanz geprüft: `npm start` meldet keine
+  Warnung, `mws help` listet alle elf Befehle in der bisherigen Reihenfolge,
+  `done` bleibt verborgen, solange `MWSDEV` nicht gesetzt ist, `test-args a b
+  --flag` meldet weiter `[ 'a', 'b' ]`, und `provision-simplewiki` schreibt
+  weiter sein Template. `npm run tsc2` und `npm run build` sind sauber. Keine
+  Migration, keine neue Dependency, keine Verhaltensänderung: Die CLI hatte
+  einen Hörer je Befehl und hat jetzt einen.
 
 - Eine Migration: `20261003_roles_created` legt `roles.created` an und füllt
   nichts auf. Sie zieht sich beim nächsten Serverstart selbst.

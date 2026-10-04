@@ -5,11 +5,6 @@ import { resolve } from "path";
 import { LoadWikiFolderCommand } from "./load-wiki-folder";
 import { RoleImportWriter, TemplateImportWriter, UserImportWriter } from "../new-managers";
 import { IdString } from "@mws/admin-vanilla/src/definition/tabs";
-import { serverEvents } from "@tiddlywiki/events";
-
-serverEvents.on("cli.register", (commands) => {
-	commands[info.name] = { info, Command: InitStoreCommand };
-});
 
 const info: CommandInfo = {
 	name: "init-store",

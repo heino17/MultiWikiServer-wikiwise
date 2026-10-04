@@ -1,13 +1,5 @@
 import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
-import { serverEvents } from "@tiddlywiki/events";
 import { UpdateTiddlyWiki } from "../plugin-cache/UpdateTiddlyWiki";
-
-
-
-serverEvents.on("cli.register", (commands) => {
-  commands[info.name] = { info, Command: UpdateTiddlyWikiCommand };
-});
-
 
 const info: CommandInfo = {
   name: "update-tiddlywiki",

@@ -2,7 +2,6 @@ import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
 import { IdString } from "@mws/admin-vanilla/src/definition/tabs";
 import { readFileSync } from "fs";
 import * as path from "path";
-import { serverEvents } from "@tiddlywiki/events";
 import { DEFAULT_TEMPLATE } from "../new-managers";
 import {
 	WikiImportMode,
@@ -21,10 +20,6 @@ import {
 	parseWikiFile,
 } from "../new-managers/WikiFileImport";
 import { bootTiddlyWikiVersion } from "../plugin-cache";
-
-serverEvents.on("cli.register", (commands) => {
-	commands[info.name] = { info, Command: ImportWikiFileCommand };
-});
 
 const info: CommandInfo = {
 	name: "import-wiki-file",

@@ -1,9 +1,4 @@
 import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
-import { serverEvents } from "@tiddlywiki/events";
-
-serverEvents.on("cli.register", (commands) => {
-  commands[info.name] = { info, Command: TestArgsCommand };
-});
 
 const info: CommandInfo = {
   name: "test-args",

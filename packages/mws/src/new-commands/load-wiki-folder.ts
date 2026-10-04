@@ -4,11 +4,6 @@ import { TiddlerFields, TW } from "tiddlywiki";
 import * as path from "path";
 import { WikiStore, BagDataAdapter, RecipeDataAdapter, toMappingRows } from "../new-managers";
 import { IdString } from "@mws/admin-vanilla/src/definition/tabs";
-import { serverEvents } from "@tiddlywiki/events";
-
-serverEvents.on("cli.register", (commands) => {
-	commands[info.name] = { info, Command: LoadWikiFolderCommand };
-});
 
 const info: CommandInfo = {
 	name: "load-wiki-folder",

@@ -3,10 +3,6 @@ import { Router, startListening, Z2, zod, truthy, createRootRoute } from "@tiddl
 import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
 import { serverEvents } from "@tiddlywiki/events";
 
-serverEvents.on("cli.register", (commands) => {
-  commands.listen = { info, Command: ListenCommand };
-});
-
 const info: CommandInfo = {
   name: "listen",
   description: "Listen for web requests. ",

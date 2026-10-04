@@ -1,12 +1,7 @@
 import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
-import { serverEvents } from "@tiddlywiki/events";
 import { IdString } from "@mws/admin-vanilla/src/definition/tabs";
 import { WikiImportTarget, defaultWriteTargetBag, planTiddlers, applyTiddlers } from "../new-managers/importWikiFile";
 import { listSnapshotBags, readSnapshotTiddlers } from "../new-managers/WikiSnapshotBag";
-
-serverEvents.on("cli.register", (commands) => {
-	commands[info.name] = { info, Command: RestoreWikiSnapshotCommand };
-});
 
 const info: CommandInfo = {
 	name: "restore-wiki-snapshot",

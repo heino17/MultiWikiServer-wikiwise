@@ -1,7 +1,6 @@
 import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
 import { readFileSync } from "fs";
 import * as path from "path";
-import { serverEvents } from "@tiddlywiki/events";
 import { defaultPreloadFunction } from "../plugin-cache";
 
 /** Where the server splices in the store, and how it spells the call.
@@ -17,10 +16,6 @@ const INJECTION_LOCATION = `<script class="simplewiki-store-point"></script>`;
 /** Class name of the JSON island the server fills in the regular
  *  tiddlywiki5.html. A custom shell never sees it and has no use for it. */
 const TW_STORE_MARKER = "tiddlywiki-tiddler-store";
-
-serverEvents.on("cli.register", (commands) => {
-	commands[info.name] = { info, Command: ProvisionSimpleWikiCommand };
-});
 
 export const SIMPLEWIKI_TEMPLATE = "SimpleWiki";
 

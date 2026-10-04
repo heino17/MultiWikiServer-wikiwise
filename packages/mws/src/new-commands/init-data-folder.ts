@@ -1,12 +1,7 @@
 import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
-import { serverEvents } from "@tiddlywiki/events";
 import { dist_resolve } from "@tiddlywiki/server";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import * as path from "path";
-
-serverEvents.on("cli.register", (commands) => {
-  commands[info.name] = { info, Command: InitDataFolderCommand };
-});
 
 const info: CommandInfo = {
   name: "init-data-folder",

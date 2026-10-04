@@ -1,9 +1,8 @@
 import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
-import { serverEvents } from "@tiddlywiki/events";
 
-serverEvents.on("cli.register", (commands) => {
-  // commands[info.name] = { info, Command: EmptyCommand };
-});
+// A command registers itself nowhere. Write the class and its info like this,
+// then add the class to COMMANDS in index.ts under its command name; that
+// table and the one listener there are what put the command into the CLI.
 
 const info: CommandInfo = {
   name: "",

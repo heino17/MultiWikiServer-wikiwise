@@ -1,12 +1,7 @@
 import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
-import { serverEvents } from "@tiddlywiki/events";
 import { personalRoleNameCandidates, sanitizeSlugPart } from "../new-managers";
 
 const OLD_PREFIX = "lehrer-";
-
-serverEvents.on("cli.register", (commands) => {
-  commands["rename-personal-roles"] = { info, Command: RenamePersonalRolesCommand };
-});
 
 const info: CommandInfo = {
   name: "rename-personal-roles",
