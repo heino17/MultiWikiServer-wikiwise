@@ -430,6 +430,16 @@ finally follow the language they are counted in.
   pruned, the ten imports of `neues-admin-empty` were untouched by them, an empty
   wiki was refused, and an anonymous request was denied with `403`.
 
+- **One `provision-simplewiki` run reaches every wiki of the template** (§105).
+  The shell lives in the template, not in the wiki: a wiki holds nothing but a
+  `template_id`, and `RecipeResolver.ts` reads the shell from there on every
+  request. So after a new `simplewiki.html` there is **nothing to migrate** —
+  the command replaces the interface of all wikis built from that template,
+  pages and rights untouched, and the existing wiki is the best place to look,
+  because it has content while a fresh one is empty. The other side of the
+  same fact: on a real server a teacher's wikis change too, at the same
+  moment. There is no per-wiki pinning of a shell version.
+
 ---
 
 ## 1. Missing dependency: `escape-string-regexp`
@@ -4943,9 +4953,56 @@ checks (44 in `t_login.py`, including that the anonymous link decodes to exactly
 with 37 of 37, including the deep link `/login?redirect=…`, the anonymous link
 check and the unchanged OPAQUE login and `POST /logout`. Not verified here, and
 honestly so: the actual click — typing a password into the form and watching
-where the browser lands — cannot be driven by the test harness, which is why the redirect is decided by the
-client and not by a server redirect that a `curl` could follow. That click
+where the browser lands — cannot be driven by the test harness, which is why
+the redirect is decided by the client and not by a server redirect that a
+`curl` could follow. That click
 belongs to whoever maintains this fork; it is a one-field check.
+
+## 105. Documentation: one provisioning reaches every wiki of the template
+
+**Why.** §103 described `provision-simplewiki` as writing the shell into the
+template store, which is true and is also the source of a wrong assumption:
+that each wiki then carries its own copy of the shell, so that a new version
+of the shell would only reach wikis created after it. It does not work that
+way, and the reason is two lines of code.
+
+The shell lives in the **template**, in `definition.htmlContent`, and a wiki
+stores nothing but a reference: `RecipeResolver.ts:423` reads
+`prisma.template.findUnique({ where: { id: this.recipe.template_id } })` on
+every request, and takes the HTML from there. `provision-simplewiki.ts:185`
+finds the existing template by name and updates that one row, which is why it
+reports `Template "SimpleWiki" updated` with the **same id** as the first time.
+So one run of the command replaces the interface of **every** wiki built from
+that template at once — no migration, no re-creation, no wiki has to be
+touched. What stays untouched is everything the wiki itself owns: its pages in
+its own bags, its rights, its owner.
+
+That is worth writing down on both sides, because the natural assumption is the
+other way round and the wrong assumption costs an evening. It is also the
+answer to a question that comes up every time the shell changes: there is
+nothing to migrate, and the existing wiki is the best place to look, because it
+has content in it while a fresh one is empty.
+
+The same fact has a second edge, and it is the operator's to know: a shell
+update also lands on the wikis of other users — a teacher on a real server
+sees the new interface too, at the same moment, without being asked. On a
+dev store with one wiki that is invisible; with twenty it is not. There is no
+per-wiki pinning of a shell version, and adding one would mean copying ~1.1 MB
+per wiki to make the interface stale on purpose.
+
+**Verified.** On the dev instance, before and after one provisioning run: the
+template id stayed `01a1082c-0d64-736e-9287-d55a5e7eee9d`, the shell grew from
+1097.0 kB to 1114.8 kB, and the **existing** wiki `wikiwise-booklet` served the
+new interface immediately — `app-spalte`, `content-header`, `fluss-aktionen`
+and `editor-fallback-hint` are in the delivered HTML and in the rendered DOM,
+the table of contents and the read-only notice for anonymous visitors are
+intact, and the anonymous login link still reads
+`/login?redirect=%2Fwiki%2Fwikiwise-booklet`, so §104 survives the new shell.
+The SimpleWiki's own suite is green at 721 of 721 — in that repository
+(`python3 tests/alle.py`, 23 test files; its changelog is dated rather than
+numbered), and it includes the MWS-mode tests that read and write through
+`/recipe/<slug>/batch`, so the exchange itself is covered and not only the
+look of the thing.
 
 ## 99. Cleanup: the copy-pasted CSS block at the end of `app.inline.css`
 
@@ -6393,6 +6450,16 @@ Admin-App folgen endlich der Sprache, in der sie gezählt werden.
   das sechste als verworfen, die zehn Importe von `neues-admin-empty` blieben
   unberührt, ein leeres Wiki wurde abgelehnt, und eine anonyme Anfrage mit `403`
   abgewiesen.
+- **Ein `provision-simplewiki`-Durchlauf erreicht jede Wiki des Templates**
+  (§105). Die Schale liegt im Template, nicht in der Wiki: eine Wiki hält nichts
+  als eine `template_id`, und `RecipeResolver.ts` holt sich die Schale bei jeder
+  Anfrage von dort. Nach einer neuen `simplewiki.html` ist also **nichts zu
+  migrieren** — der Befehl ersetzt die Oberfläche aller Wikis aus diesem
+  Template, Seiten und Rechte bleiben unberührt, und die vorhandene Wiki ist der
+  beste Ort zum Nachsehen, weil in ihr Inhalt steht, während eine neue leer ist.
+  Die andere Seite derselben Tatsache: Auf einem echten Server ändern sich auch
+  die Wikis einer Lehrkraft, im selben Moment. Es gibt keine Version der
+  Schale, die eine Wiki festhalten könnte.
 
 ---
 
@@ -11002,10 +11069,58 @@ zeigt, in der er steht), `live_mws.py` gegen einen echten Server mit 37 von 37,
 einschließlich des Tiefen Links `/login?redirect=…`, der Anon-Links und der
 unveränderten OPAQUE-Anmeldung und `POST /logout`. Hier nicht geprüft, und das
 ehrlich gesagt: Der eigentliche Klick — ein Passwort ins Formular tippen und
-zusehen, wo der Browser landet — lässt sich mit dem Testwerkzeug nicht fahren. Deshalb entscheidet der Client
-über die Weiterleitung und nicht ein Server-Redirect, dem ein `curl` einfach
-folgen könnte. Dieser Klick gehört zu dem, der diesen Fork pflegt; er ist eine
-Prüfung an einem Feld.
+zusehen, wo der Browser landet — lässt sich mit dem Testwerkzeug nicht fahren.
+Deshalb entscheidet der Client über die Weiterleitung und nicht ein
+Server-Redirect, dem ein `curl` einfach folgen könnte. Dieser Klick gehört zu
+dem, der diesen Fork pflegt; er ist eine Prüfung an einem Feld.
+
+## 105. Dokumentation: eine Provisionierung erreicht jede Wiki des Templates
+
+**Warum.** §103 hat `provision-simplewiki` beschrieben als den Befehl, der die
+Schale in den Template-Speicher schreibt. Das stimmt, ist aber auch die Ursache
+einer falschen Annahme: dass danach jede Wiki ihre eigene Kopie der Schale
+hätte und eine neue Fassung nur die Wikis erreichte, die danach gebaut wurden.
+So ist es nicht, und der Grund sind zwei Zeilen Code.
+
+Die Schale liegt im **Template**, in `definition.htmlContent`, und eine Wiki
+speichert nichts als eine Referenz: `RecipeResolver.ts:423` liest bei jeder
+Anfrage `prisma.template.findUnique({ where: { id: this.recipe.template_id } })`
+und nimmt das HTML von dort. `provision-simplewiki.ts:185` findet das
+vorhandene Template über den Namen und aktualisiert genau diese eine Zeile —
+deshalb meldet der Befehl `Template "SimpleWiki" updated` mit derselben **id**
+wie beim ersten Mal. Ein Durchlauf des Befehls ersetzt also die Oberfläche
+**aller** Wikis aus diesem Template auf einmal: keine Migration, keine
+Neuanlage, keine Wiki muss angefasst werden. Unberührt bleibt alles, was die
+Wiki selbst besitzt — ihre Seiten in ihren eigenen Bags, ihre Rechte, ihren
+Besitzer.
+
+Das gehört auf beide Seiten notiert, weil die natürliche Annahme
+umgekehrt ist und die falsche einen Abend kostet. Es ist auch die Antwort auf
+die Frage, die bei jeder Änderung der Schale wiederkommt: Es gibt nichts zu
+migrieren, und die vorhandene Wiki ist der beste Ort zum Nachsehen, weil in ihr
+Inhalt steht, während eine neue leer ist.
+
+Dieselbe Sache hat eine zweite Kante, und die gehört dem Betreiber: Eine
+Aktualisierung der Schale kommt auch bei den Wikis anderer Benutzer an — eine
+Lehrkraft sieht auf einem echten Server im selben Moment die neue Oberfläche,
+ohne gefragt worden zu sein. Auf einem Dev-Store mit einer Wiki sieht man das
+nicht; mit zwanzig schon. Es gibt keine Version der Schale, die eine Wiki
+festhalten könnte, und eine solche Ergänzung hieße, ~1,1 MB pro Wiki zu
+kopieren, damit die Oberfläche absichtlich veraltet.
+
+**Geprüft.** Auf der Dev-Instanz, vor und nach einem Provisionier-Durchlauf:
+Die Template-id blieb `01a1082c-0d64-736e-9287-d55a5e7eee9d`, die Schale wuchs
+von 1097,0 kB auf 1114,8 kB, und die **vorhandene** Wiki `wikiwise-booklet`
+lieferte sofort die neue Oberfläche — `app-spalte`, `content-header`,
+`fluss-aktionen` und `editor-fallback-hint` stehen im ausgelieferten HTML und
+im gerenderten DOM, Verzeichnis und Nur-Lesen-Hinweis für anonyme Besucher sind
+da, und der Anmeldelink lautet weiterhin
+`/login?redirect=%2Fwiki%2Fwikiwise-booklet`, §104 übersteht also die neue
+Schale. Die Suite von SimpleWiki selbst ist grün mit 721 von 721 — in dem
+Repository (`python3 tests/alle.py`, 23 Testdateien; dessen Changelog ist nach
+Tag datiert statt nummeriert), und sie enthält die MWS-Modus-Tests, die über
+`/recipe/<slug>/batch` lesen und schreiben. Damit ist der Austausch selbst
+abgedeckt und nicht nur das Aussehen.
 
 ## 99. Aufräumen: der kopierte CSS-Block am Ende von `app.inline.css`
 
