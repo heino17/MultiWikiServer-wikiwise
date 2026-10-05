@@ -354,12 +354,67 @@ export class LoginForm extends JSXElement {
 
   }
 
+  /**
+   * Where a successful login goes: by default the start page, but a
+   * `redirect` parameter can point somewhere else on this server. That
+   * is how a wiki sends a user back to the wiki they opened instead of
+   * to an account page they did not ask for.
+   *
+   * The target has to stay on this server and below the path prefix. A
+   * login form that forwards to any address it is handed is a ready-made
+   * phishing tool: the user has just typed their password into this page
+   * and trusts it completely. Everything that is not acceptable falls
+   * back to the start page, and it does so silently — a login page has
+   * no business explaining a redirect to a stranger.
+   */
+  private readonly redirectAfterLogin = (): string =>
+    this.sameServerRedirect() || (location.origin + pathPrefix + "/");
+
+  /**
+   * The redirect parameter as it is needed to put it back into a query
+   * string, for the password reset: it assigns `location.search`, which
+   * replaces the whole query. Without this, a user who forgot their
+   * password and came from a wiki would arrive at the start page anyway.
+   * The value was checked already, so this cannot smuggle a hostile one
+   * in through the back door.
+   */
+  private readonly redirectQuery = (): string => {
+    const ziel = this.sameServerRedirect();
+    return ziel ? "&redirect=" + encodeURIComponent(ziel) : "";
+  }
+
+  /**
+   * The target of a `redirect` parameter, if it is one we are willing to
+   * navigate to, otherwise the empty string.
+   *
+   * Resolving the value against our own origin first is what closes the
+   * two spellings of the same trick: "//elsewhere.example/x" and
+   * "/\elsewhere.example/x" both become a *different* origin under the
+   * URL parser, so both are caught by the one origin comparison below
+   * instead of by a string test looking for slashes. "javascript:" and
+   * "data:" end up with an origin of "null" and are rejected the same
+   * way. A path on this server that is simply not a wiki is allowed:
+   * this is about safety, not about knowing which pages exist.
+   */
+  private readonly sameServerRedirect = (): string => {
+    const wanted = new URLSearchParams(globalThis.location?.search ?? "").get("redirect");
+    if (!wanted) return "";
+    try {
+      const target = new URL(wanted, location.origin);
+      if (target.origin !== location.origin) return "";
+      if (!target.pathname.startsWith(pathPrefix + "/")) return "";
+      return target.pathname + target.search + target.hash;
+    } catch {
+      return "";
+    }
+  }
+
   private submitLogin = async (): Promise<boolean> => {
     const serverState = await this.ensureServerState();
     const clientState = this.draft;
     this.rememberMe;
     await loginWithOpaque(clientState.username, clientState.password, true);
-    location.href = location.origin + pathPrefix + "/";
+    location.href = this.redirectAfterLogin();
     return true;
   }
   private submitForgotPassword = async (): Promise<boolean> => {
@@ -392,7 +447,7 @@ export class LoginForm extends JSXElement {
       resetCode: clientState.resetCode,
       newPassword: clientState.newPassword,
     });
-    location.search = "?state=password-changed";
+    location.search = "?state=password-changed" + this.redirectQuery();
     return new Promise(() => { });
     return true;
   }

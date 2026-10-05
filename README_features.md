@@ -82,6 +82,7 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
 - Anonyme Besucher sehen statt des Login-Formulars eine einladende Startseite mit **Hero-Bereich**, **Statistik-Kacheln** (Tiddler, öffentliche Wikis, Nutzer, Online), **Wiki-Karten** (mit Vorschaubild) und **Versions-Footer**
 - **Willkommens-Text** und **News-Block** des Betreibers (Markdown), News durch den Besucher wegklickbar, News-Stil wählbar (Hinweis/Erfolg/Warnung/Gefahr)
 - **Login-Button** führt zum gewohnten Formular; eingeloggte sehen „Zurück zur Wiki-Übersicht"
+- **Rückweg beim Anmelden:** `/login?redirect=<pfad>` bringt nach dem Anmelden dorthin zurück, von wo man gekommen ist — eine Wiki, die das mitschickt, landet danach wieder in derselben Wiki. Werte, die auf einen anderen Server oder oberhalb von `pathPrefix` zeigen, werden übergangen (Rückfall: Startseite)
 - Der Betreiber kann die Startseite per Schalter abschalten (dann wieder Umleitung auf `/login`)
 
 ### Pinnwand
@@ -246,6 +247,7 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
 - Anonymous visitors see an inviting start page instead of the login form, with a **hero area**, **statistic cards** (tiddlers, public wikis, users, online), **wiki cards** (with preview images) and a **version footer**
 - Operator **welcome message** and **news block** (Markdown); the visitor can dismiss the news; news style selectable (info/success/warning/danger)
 - A **Log in** button leads to the familiar form; logged-in visitors see "Back to the wiki overview"
+- **Way back when logging in:** `/login?redirect=<path>` returns you to where you came from after the login — a wiki that sends this ends up back in the same wiki. Values pointing at another server or above `pathPrefix` are skipped (fallback: start page)
 - The operator can switch the start page off (then it redirects to `/login` again)
 
 ### **Pinboard**

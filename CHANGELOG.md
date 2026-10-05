@@ -247,6 +247,14 @@ finally follow the language they are counted in.
 
 **Added**
 
+- **The login page can send you back to where you came from** (§104).
+  `/login?redirect=/wiki/<slug>` brings the browser to that wiki after a
+  successful login instead of to the start page. This is what lets a SimpleWiki
+  (§103) keep you in the wiki you opened: it links to the login with the current
+  wiki in the parameter. A `redirect` that points somewhere else — another
+  server, another scheme, or above `pathPrefix` — is ignored and the start page
+  stays the target. The parameter is new but optional, so nothing changes for
+  anyone who does not send it.
 - **A wiki can be a SimpleWiki, created with one click** (§103). A template with
   its own HTML no longer has to be a TiddlyWiki in a different shape: if that
   HTML is the SimpleWiki shell, the wiki built from it is served by MWS itself
@@ -4882,6 +4890,63 @@ GitHub can show whether the warning is really gone — and after the push it is:
 the run is green and the annotation about `node20` is no longer there, only the
 notice that `ubuntu-latest` migrates to Ubuntu 26 from 19.10.2026.
 
+## 104. Feature: `?redirect=` on the login page
+
+**Why.** §103 brought the SimpleWiki to `/wiki/<slug>/`, including the little
+lock icon that leads to the login. The login itself still ended on the server's
+start page, because `app-login.tsx` sent the browser unconditionally to
+`location.origin + pathPrefix + "/"` after `loginWithOpaque`. For someone who
+clicked "log in" inside a wiki, that is a dead end: the wiki they wanted is one
+click away, and what they get is the list of accounts. The way back was in the
+page the whole time (`location.pathname`), nobody read it.
+
+The parameter is called `redirect` because that is what it does, and because it
+is the name every other login form in the world uses — someone who wants to
+deep-link the login from their own wiki does not have to read this changelog
+first. Only one thing was needed: read the parameter after a successful login
+and navigate there instead of to the start page. No route, no server change, no
+session change; the path is checked in the browser before it is used.
+
+**What counts as a target.** Same origin, and below `pathPrefix + "/"`. Anything
+else falls back to the start page, and it falls back silently on purpose: a
+login form that forwards to an address it was handed is a ready-made phishing
+tool — the user has just typed their password into this page and trusts it
+completely. Resolving the value against `location.origin` before comparing is
+what closes the two classic spellings of the same trick: `//fremde.example/x`
+and `/\fremde.example/x` both become a *different origin* under the URL parser,
+so both are caught by the one origin comparison instead of by a string test
+looking for slashes. `javascript:` and `data:` end up with an origin of `null`
+and are rejected the same way. A target on this server that is simply not a wiki
+(`/profile`, `/`) is allowed: the check is about safety, not about knowing which
+pages exist.
+
+The fallback also applies when the parameter is absent, empty, or unparsable —
+an old wiki that links to plain `/login` keeps working unchanged, and so does
+this fork against an older server that ignores `redirect`.
+
+**The password reset keeps it.** `?state=password-changed` is set by assigning
+`location.search`, which replaces the whole query string. Without care, a user
+who forgot their password and came from a wiki would arrive at the start page
+anyway, since the parameter had been dropped on the way through the dialog. The
+value is therefore appended again there — after the same check, so a hostile
+value cannot sneak through the back door.
+
+**Verified.** `npm run tsc2`, `npm run tsc` in `packages/admin-vanilla` and
+`npm run build` are clean, and `git status` shows this file,
+`README_features.md` and `app-login.tsx`. On the running dev instance
+`GET /login?redirect=%2Fwiki%2Fwikiwise-booklet` answers 200, and the client it
+serves now contains `redirectAfterLogin` — in dev mode esbuild rebuilds the
+admin client on every document request, so this is the new code and not the old
+one. The SimpleWiki test suite passes with 539 of 539
+checks (44 in `t_login.py`, including that the anonymous link decodes to exactly
+`/wiki/<slug>` of the wiki it sits in), and `live_mws.py` against a real server
+with 37 of 37, including the deep link `/login?redirect=…`, the anonymous link
+check and the unchanged OPAQUE login and `POST /logout`. Not verified here, and
+honestly so: the actual click — typing a password into the form and watching
+where the browser lands — cannot be driven by the test harness, which is why the redirect is decided by the
+client and not by a server redirect that a `curl` could follow. That click
+belongs to whoever maintains this fork; it is a one-field check.
+
 ## 99. Cleanup: the copy-pasted CSS block at the end of `app.inline.css`
 
 **Why.** §98 left a note about duplicated rules further down `app.inline.css` and
@@ -6132,6 +6197,14 @@ Admin-App folgen endlich der Sprache, in der sie gezählt werden.
 
 **Hinzugefügt**
 
+- **Die Anmeldeseite kann dorthin zurückbringen, von wo man kam** (§104).
+  `/login?redirect=/wiki/<slug>` bringt den Browser nach erfolgreichem Anmelden
+  in diese Wiki statt auf die Startseite. Damit bleibt man in der Wiki, die man
+  geöffnet hat: Die SimpleWiki (§103) verlinkt auf die Anmeldung mit der
+  aktuellen Wiki im Parameter. Ein `redirect` auf ein anderes Ziel — anderer
+  Server, anderes Schema oder oberhalb von `pathPrefix` — wird übergangen, es
+  bleibt die Startseite. Der Parameter ist neu, aber freiwillig: Für alle, die
+  ihn nicht mitschicken, ändert sich nichts.
 - **Eine Wiki kann SimpleWiki sein, mit einem Klick angelegt** (§103). Ein
   Template mit eigenem HTML muss keine TiddlyWiki in anderer Form mehr sein:
   Ist dieses HTML die SimpleWiki-Schale, wird die daraus gebaute Wiki von MWS
@@ -10871,6 +10944,68 @@ Warnung wirklich verschwunden ist, kann nur der Lauf auf GitHub zeigen — nach
 dem Push ist sie es: der Lauf ist grün und die Annotation über `node20` nicht
 mehr vorhanden, nur noch der Hinweis, dass `ubuntu-latest` ab 19.10.2026 auf
 Ubuntu 26 migriert.
+
+## 104. Feature: `?redirect=` auf der Anmeldeseite
+
+**Warum.** §103 hat die SimpleWiki unter `/wiki/<slug>/` gebracht, auch mit dem
+kleinen Schloss, das zur Anmeldung führt. Die Anmeldung selbst endete trotzdem auf
+der Startseite des Servers, weil `app-login.tsx` den Browser nach
+`loginWithOpaque` kommentarlos auf `location.origin + pathPrefix + "/"`
+schickte. Wer in einer Wiki auf „Anmelden“ klickt, landet damit an einer Sackgasse:
+Die gewünschte Wiki ist einen Klick entfernt, stattdessen kommt die Liste aller
+Konten. Der Rückweg lag die ganze Zeit in der Seite (`location.pathname`), es hat
+ihn nur niemand gelesen.
+
+Der Parameter heißt `redirect`, weil er genau das tut und weil das der Name ist,
+den jedes Anmeldeformular der Welt benutzt — wer die Anmeldung aus der eigenen
+Wiki verlinken will, muss dafür nicht erst dieses Changelog lesen. Nötig war nur
+eines: nach erfolgreichem Anmelden den Parameter lesen und dorthin navigieren
+statt auf die Startseite. Keine Route, keine Serveränderung, keine Änderung an
+der Sitzung; der Pfad wird im Browser geprüft, bevor er benutzt wird.
+
+**Was als Ziel zählt.** Gleicher Origin und unterhalb von `pathPrefix + "/"`.
+Alles andere fällt auf die Startseite zurück, und zwar lautlos und aus gutem
+Grund: Ein Anmeldeformular, das an eine ihm übergebene Adresse weiterleitet, ist
+ein fertiges Phishing-Werkzeug — der Nutzer hat gerade sein Passwort in diese
+Seite getippt und vertraut ihr vollständig. Der Wert wird deshalb gegen
+`location.origin` aufgelöst und *dann* verglichen; das schließt beide
+Schreibweisen desselben Tricks: `//fremde.example/x` und `/\fremde.example/x`
+werden vom URL-Parser zu einem *anderen Origin*, fallen also unter denselben
+Vergleich statt unter eine Zeichenkettensuche nach Schrägstrichen.
+`javascript:` und `data:` bekommen den Origin `null` und fliegen auf dieselbe
+Weise raus. Ein Ziel auf diesem Server, das zufällig keine Wiki ist (`/profile`,
+`/`), bleibt erlaubt: Die Prüfung handelt von Sicherheit, nicht davon, welche
+Seiten es gibt.
+
+Der Rückfall gilt auch, wenn der Parameter fehlt, leer oder nicht lesbar ist —
+eine alte Wiki, die auf ein schlichtes `/login` verlinkt, funktioniert unverändert
+weiter, und dasselbe gilt für diesen Fork gegen einen älteren Server, der
+`redirect` ignoriert.
+
+**Der Passwort-Zurücksetzen behält ihn.** `?state=password-changed` wird gesetzt,
+indem `location.search` zugewiesen wird, und das ersetzt die ganze
+Abfragezeichenkette. Ohne Nachdenken käme also auch jemand, der sein Passwort
+vergessen hatte und aus einer Wiki kam, auf der Startseite — der Parameter wäre
+auf dem Weg durch den Dialog verloren gegangen. Der Wert wird dort deshalb noch
+einmal angehängt, nach derselben Prüfung, damit ein feindlicher Wert nicht durch
+die Hintertür mitkommt.
+
+**Geprüft.** `npm run tsc2`, `npm run tsc` in `packages/admin-vanilla` und
+`npm run build` laufen sauber, `git status` zeigt diese Datei,
+`README_features.md` und `app-login.tsx`. Auf der laufenden Dev-Instanz
+beantwortet `GET /login?redirect=%2Fwiki%2Fwikiwise-booklet` mit 200, und der
+ausgelieferte Client enthält jetzt `redirectAfterLogin` — im Dev-Modus baut
+esbuild den Admin-Client bei jedem Dokumentaufruf neu, das ist also der neue Code
+und nicht der alte. Die SimpleWiki-Testsuite besteht mit 539 von 539 Prüfungen (44 in
+`t_login.py`, darunter dass der anonyme Link auf genau `/wiki/<slug>` der Wiki
+zeigt, in der er steht), `live_mws.py` gegen einen echten Server mit 37 von 37,
+einschließlich des Tiefen Links `/login?redirect=…`, der Anon-Links und der
+unveränderten OPAQUE-Anmeldung und `POST /logout`. Hier nicht geprüft, und das
+ehrlich gesagt: Der eigentliche Klick — ein Passwort ins Formular tippen und
+zusehen, wo der Browser landet — lässt sich mit dem Testwerkzeug nicht fahren. Deshalb entscheidet der Client
+über die Weiterleitung und nicht ein Server-Redirect, dem ein `curl` einfach
+folgen könnte. Dieser Klick gehört zu dem, der diesen Fork pflegt; er ist eine
+Prüfung an einem Feld.
 
 ## 99. Aufräumen: der kopierte CSS-Block am Ende von `app.inline.css`
 
