@@ -516,6 +516,8 @@ export const enStrings: Record<string, string> = {
   "You do not have permission to open this wiki.": "You do not have permission to open this wiki.",
   "The wiki was not found.": "The wiki was not found.",
   "The request could not be completed.": "The request could not be completed.",
+  "The default template may only change the plugin caching and external store settings.":
+    "The default template may only change the plugin caching and external store settings.",
   "Your administrator has not allowed you to create your own wikis.": "Your administrator has not allowed you to create your own wikis.",
   "You have reached your own wiki limit.": "You have reached your own wiki limit.",
 

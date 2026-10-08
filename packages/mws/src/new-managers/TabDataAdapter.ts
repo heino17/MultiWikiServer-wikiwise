@@ -881,8 +881,72 @@ export class TemplateDataAdapter extends TabDataAdapter<"templates"> {
     let template: UpsertTemplateInput;
     const isDefault = data.name === DEFAULT_TEMPLATE;
     if (isDefault) {
-      const existing = await prisma.template.findUnique({ where: { name: DEFAULT_TEMPLATE } });
+      const existing = await prisma.template.findUnique({
+        where: { name: DEFAULT_TEMPLATE },
+        include: { permissions: true },
+      });
       if (!existing) throw new Error("could not find the default template");
+      // The default template is deliberately uneditable: only plugin caching
+      // and the external store persist, every other field would be silently
+      // dropped while the request still answers 200 (§114). Catch the drift
+      // up front so the admin gets a real message instead of a
+      // successful-looking save that changed nothing.
+      const stored = existing.definition;
+      const editedUnpersistable = [
+        data.description !== stored.description,
+        normalizeLineList(data.readonlyBags).join("\0") !== normalizeLineList(stored.readonlyBags ?? []).join("\0"),
+        normalizeLineList(data.plugins).join("\0") !== normalizeLineList(stored.plugins ?? []).join("\0"),
+        JSON.stringify(normalizePrefixRows(data.writablePrefixBags)) !== JSON.stringify(normalizePrefixRows(stored.writablePrefixBags ?? [])),
+        (data.twVersion ?? null) !== (stored.twVersion ?? null),
+        data.requiredPluginsEnabled !== stored.requiredPluginsEnabled,
+        data.customHtmlEnabled !== stored.customHtmlEnabled,
+        data.htmlContent !== stored.htmlContent,
+        data.injectionFunction !== stored.injectionFunction,
+        data.injectionLocation !== stored.injectionLocation,
+      ].some(Boolean);
+      if (editedUnpersistable)
+        throw new SendError("OPERATION_NOT_PERMITTED", 403, {
+          reason: "The default template may only change the plugin caching and external store settings.",
+        });
+      // When even the persistable switches (plugin caching, external store)
+      // and the role lists match the stored row, an unchanged "save" is a
+      // true no-op: it must not mint a new shell release, must not bump
+      // `updated`, and — since the stored template has no owner — must not
+      // fabricate an owner in the reply that flips the "Created by" column
+      // from "-" to the caller's name (§114).
+      const desiredPermissions = templatePermissions.map(e => ({ level: e.level, role_id: roleIds(e.role).toString() }));
+      const samePermissions = existing.permissions.length === desiredPermissions.length
+        && existing.permissions.every(p => desiredPermissions.some(d => d.role_id === p.role_id && d.level === p.level));
+      const persistableEdited =
+        data.externalPlugins !== stored.externalPlugins
+        || data.externalStore !== stored.externalStore
+        || !samePermissions;
+      if (!persistableEdited) {
+        const ownerUsername = existing.owner_user_id
+          ? (await prisma.users.findUnique({ where: { user_id: existing.owner_user_id }, select: { username: true } }))?.username ?? ""
+          : "";
+        const newestShellVersion = await prisma.templateVersion.findFirst({
+          where: { template_id: existing.id },
+          orderBy: { release: "desc" },
+          select: { release: true, label: true },
+        });
+        return {
+          ...existing.definition,
+          id: new IdString(existing.id),
+          name: data.name,
+          type: "simpleV1",
+          lastUpdatedAt: existing.updated.toISOString(),
+          shellVersion: newestShellVersion
+            ? (newestShellVersion.label
+              ?? this.templateVersionLabel(existing.definition)
+              ?? String(newestShellVersion.release))
+            : "",
+          docsUrl: this.templateDocsUrl(existing.definition),
+          templateAdmins: templatePermissions.filter(e => e.level === "B_write").map(e => e.role),
+          templateUsers: templatePermissions.filter(e => e.level === "A_read").map(e => e.role),
+          ownerUsername,
+        };
+      }
       template = {
         name: DEFAULT_TEMPLATE,
         definition: {
@@ -936,7 +1000,13 @@ export class TemplateDataAdapter extends TabDataAdapter<"templates"> {
     if (!isDefault) {
       const recipes = await prisma.recipe.findMany({
         where: { template_id },
-        include: { permissions: true }
+        select: {
+          id: true,
+          slug: true,
+          pinned_template_version_id: true,
+          definition: true,
+          permissions: true,
+        },
       });
 
       const importerRecipe = new RecipeImportWriter(prisma, false);
@@ -946,6 +1016,13 @@ export class TemplateDataAdapter extends TabDataAdapter<"templates"> {
         // frozen definition; only auto wikis follow this save of the template
         // head. Their pin is moved by the wiki owner, not by an admin save.
         if (recipe.pinned_template_version_id) continue;
+
+        // Every write is asserted: recompiling a wiki's definition writes to
+        // that wiki, so the editor must hold write access to each unpinned
+        // wiki it belongs to (admins always pass). Skipping this assertion
+        // used to make every non-default template save fail with a 500
+        // ("Permissions must be asserted first.", §114).
+        await importerRecipe.checkExisting(new IdString(recipe.id), recipe.slug, this.user);
 
         const compiled = importerRecipe.compileRecipeSimpleV1(
           recipe.definition,
@@ -966,9 +1043,13 @@ export class TemplateDataAdapter extends TabDataAdapter<"templates"> {
       }
     }
 
+    // Report the owner the way getList shows it: empty when an existing
+    // record has no owner, the current user only for a freshly created one.
     const ownerUsername = record?.owner_user_id
       ? (await prisma.users.findUnique({ where: { user_id: record.owner_user_id }, select: { username: true } }))?.username ?? ""
-      : this.user.username;
+      : record
+        ? ""
+        : this.user.username;
 
     // The save just created the newest shell release; report it as the
     // "Version" column would (label over TiddlyWiki version over release

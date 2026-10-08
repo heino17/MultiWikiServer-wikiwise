@@ -5157,6 +5157,67 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 115. The templates "Updated" column shows a real date
+
+**Why.** The templates list rendered the "Updated" column as a raw ISO
+timestamp ("2026-10-08T21:12:24.122Z"), while the "Created at" columns of
+the wikis, bags, roles and users lists had long shown a readable locale
+date with the full timestamp in the tooltip. The templates tab only has
+"Updated" — it carries no created date (§108) — so its raw string stuck out.
+
+**What.** "Updated" now formats like "Created at": a <time> element whose
+machine-readable value lives in the `datetime` attribute, its text a short
+locale date, and the full timestamp in the tooltip. The column is display
+only — sorting and search still read the original ISO string (§108), so the
+default sort keeps working.
+
+**Verified.** `npm run tsc` in `packages/admin-vanilla` and the root
+`npm run build` are clean. The click-through awaits the maintainer: the
+templates list shows a date such as "08.10.2026" instead of the long stamp.
+
+**Translations:** none new.
+
+## 114. Saving a template: the SimpleWiki crash and the silent default template
+
+**Why.** Two template saves misled at the same time. Saving the SimpleWiki
+template always answered `INTERNAL_SERVER_ERROR` and stored nothing, because
+`TemplateDataAdapter.saveRow` hands the recompiled wikis to
+`RecipeImportWriter.upsert` without ever asserting permissions first — the
+writer's guard throws "Permissions must be asserted first." and the whole
+request rolls back. The "Tiddlywiki" template, in contrast, answered `200` for
+every save and returned to the overview, while silently dropping every changed
+field except plugin caching and the external store. The button looked
+successful, nothing had happened.
+
+**What.** Every recompiled unpinned wiki is now authorized like any other write
+to a wiki (`checkExisting` per recipe, same path as the wiki save): admins pass
+by role, everyone else needs the appropriate permission on the wiki, so a
+template save can no longer fail on a missing assertion. The default template
+gets a guard of its own: when an admin changes any field the template does not
+persist (description, bags, plugins, shell and HTML fields), the save answers
+`403 OPERATION_NOT_PERMITTED` with the reason "The default template may only
+change the plugin caching and external store settings." instead of pretending
+success. Plugin caching and the external store remain editable, as before. An
+unchanged save of the default template is a true no-op: it answers `200`
+without minting a new shell release or bumping `updated`, and — since the
+stored template has no owner — without reporting the caller as its creator,
+which until then flipped the "Created by" column from "-" to "admin" until
+the next reload. Template saves now report an owner the way the list shows it
+(empty for a record without one, the creator only for a brand-new template);
+before, every save of an unowned template named the caller.
+
+**Verified.** `npm run tsc2`, the admin typecheck and the root `npm run build`
+are clean. Against the built `dist/mws.js` on a fresh copy of the dev store
+(admin login, `PUT /admin/save/templates`): the unchanged SimpleWiki save turns
+`500` into `200`; a changed SimpleWiki description persists; the unchanged
+Tiddlywiki save stays `200` and is a true no-op — `lastUpdatedAt` does not
+move and the reply reports `ownerUsername` ""; changing `plugins` on the
+Tiddlywiki template answers `403 OPERATION_NOT_PERMITTED` with the new reason;
+changing `externalPlugins` persists with `ownerUsername` "". The
+click-through in a browser still awaits the maintainer: the templates dialog
+shows the message in DE/EN when it rejects a change to the Tiddlywiki
+template.
+
 ## 113. The version pill leaves the header, the template dialog links its docs
 
 **Why.** The header carried a version pill —
@@ -11752,6 +11813,74 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 115. Die Spalte „Aktualisiert" der Templates zeigt ein echtes Datum
+
+**Warum.** Die Template-Liste zeigte die Spalte „Aktualisiert" als rohen
+ISO-Zeitstempel ("2026-10-08T21:12:24.122Z"), während die Spalten „Erstellt
+am" der Listen für Wikis, Bags, Rollen und User längst ein lesbares Datum
+in der Lokalsprache mit dem vollen Zeitstempel im Tooltip anzeigen. Der
+Templates-Tab kennt nur „Aktualisiert" — Templates tragen kein Erstell-datum
+(§108) —, deshalb fiel der rohe String auf.
+
+**Was.** „Aktualisiert" formatiert jetzt wie „Erstellt am": ein <time>-
+Element, dessen maschinenlesbarer Wert im `datetime`-Attribut steht, dessen
+Text ein kurzes Datum in der Lokalsprache ist und dessen Tooltip den vollen
+Zeitstempel zeigt. Die Spalte ist reine Anzeige — Sortierung und Suche
+lesen weiterhin den ursprünglichen ISO-String (§108), die Standard-
+Sortierung funktioniert also unverändert.
+
+**Geprüft.** `npm run tsc` in `packages/admin-vanilla` und das
+Root-`npm run build` sind sauber. Der Klick-Durchlauf wartet auf den
+Maintainer: Die Template-Liste zeigt statt des langen Stempels ein Datum
+wie "08.10.2026".
+
+**Übersetzungen:** keine neuen.
+
+## 114. Template-Speichern: SimpleWiki-Crash und stilles Standard-Template
+
+**Warum.** Zwei Template-Speichervorgänge täuschten gleichzeitig. Das Speichern
+des SimpleWiki-Templates antwortete immer mit `INTERNAL_SERVER_ERROR` und
+speicherte nichts, weil `TemplateDataAdapter.saveRow` die neu kompilierten Wikis
+an `RecipeImportWriter.upsert` übergibt, ohne vorher die Berechtigung zu
+prüfen — die Absicherung des Writers wirft "Permissions must be asserted
+first." und die ganze Anfrage rollt zurück. Das "Tiddlywiki"-Template dagegen
+antwortete bei jedem Speichern mit `200` und kehrte zur Übersicht zurück,
+verwarf aber still jedes geänderte Feld außer Plugin-Caching und externem Store.
+Der Button wirkte erfolgreich, passiert war nichts.
+
+**Was.** Jedes neu kompilierte, nicht angepinnte Wiki wird jetzt wie jeder
+andere Schreibzugriff auf eine Wiki autorisiert (`checkExisting` pro Wiki,
+gleicher Pfad wie beim Wiki-Speichern): Admins passieren per Rolle, alle
+anderen brauchen die zugehörige Berechtigung auf dem Wiki — ein
+Template-Speichern kann also nicht mehr an einer fehlenden Absicherung
+scheitern. Das Standard-Template bekommt einen eigenen Wächter: Ändert ein
+Admin ein Feld, das das Template nicht persistiert (Beschreibung, Bags,
+Plugins, Shell- und HTML-Felder), antwortet der Speichern-Vorgang mit
+`403 OPERATION_NOT_PERMITTED` und dem Grund "The default template may only
+change the plugin caching and external store settings." statt Erfolg
+vorzutäuschen. Plugin-Caching und externer Store bleiben wie bisher
+bearbeitbar. Ein unveränderter Save des Standard-Templates ist nun ein echtes
+No-Op: Er antwortet `200`, ohne einen neuen Shell-Release zu erzeugen oder
+`updated` hochzuziehen, und ohne den Aufrufer als Ersteller zu melden — das
+kippte die Spalte „Erstellt von" bis zum nächsten Reload von „-" zu „admin".
+Template-Saves melden den Ersteller jetzt so, wie ihn die Liste anzeigt
+(leer ohne Erstellter, nur bei einem frisch angelegten Template den
+Ersteller); vorher nannte jeder Save eines Templates ohne Erstellter den
+Aufrufer.
+
+**Verifiziert.** `npm run tsc2`, der Admin-Typecheck und das
+Root-`npm run build` sind sauber. Gegen das gebaute `dist/mws.js` auf
+einer frischen Kopie des Dev-Stores (Admin-Login,
+`PUT /admin/save/templates`): Der unveränderte SimpleWiki-Save wird aus
+`500` zu `200`; eine geänderte SimpleWiki-Beschreibung persistiert; der
+unveränderte Tiddlywiki-Save bleibt `200` und ist ein echtes No-Op —
+`lastUpdatedAt` bewegt sich nicht und die Antwort meldet `ownerUsername` "";
+die Änderung von `plugins` am Tiddlywiki-Template antwortet
+`403 OPERATION_NOT_PERMITTED` mit dem neuen Grund; die Änderung von
+`externalPlugins` persistiert mit `ownerUsername` "". Der Klick-Durchlauf
+im Browser wartet weiter auf den Maintainer: Der Template-Dialog zeigt die
+Meldung auf DE/EN, wenn er eine Änderung am Tiddlywiki-Template ablehnt.
 
 ## 113. Die Versions-Pille verlässt den Header, der Template-Dialog verlinkt seine Doku
 

@@ -425,6 +425,8 @@ export const deStrings: Record<string, string> = {
   "You do not have permission to open this wiki.": "Du hast keine Berechtigung, dieses Wiki zu öffnen.",
   "The wiki was not found.": "Das Wiki wurde nicht gefunden.",
   "The request could not be completed.": "Die Anfrage konnte nicht abgeschlossen werden.",
+  "The default template may only change the plugin caching and external store settings.":
+    "Das Standard-Template lässt Änderungen nur an „Plugin-Caching“ und „Externer JS-Speicher“ zu.",
   "Your administrator has not allowed you to create your own wikis.": "Dein Administrator hat dir noch keine eigenen Wikis freigegeben.",
   "You have reached your own wiki limit.": "Du hast dein Limit für eigene Wikis erreicht.",
 

@@ -88,6 +88,10 @@ export const STORAGE_ERROR_REASON_KEYS: Record<string, string> = {
     "This file has a page without a title.",
   "This file looks like JSON but could not be read. If it is a SimpleWiki export, save it again from SimpleWiki.":
     "This file looks like JSON but could not be read.",
+  // Templates: Der Server wirft beim Standard-Template die still verworfene
+  // Änderung ab, statt einen fälschlich gelingenden Speichervorgang zu melden (§114).
+  "The default template may only change the plugin caching and external store settings.":
+    "The default template may only change the plugin caching and external store settings.",
 };
 
 // Variablen Gründe (mit dynamischen Wiki-/Bag-/Rollen-/Tab-Namen) per Präfix:
