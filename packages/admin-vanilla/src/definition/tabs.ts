@@ -171,6 +171,8 @@ export interface TabDefinition {
   eyebrow: string;
   description: string;
   columns: ColumnDefinition[];
+  defaultSortKey?: string;
+  defaultSortDirection?: "asc" | "desc";
   sidebarDisplay: string[];
   fields: FieldDefinition[];
   fieldGroups?: Partial<Record<FieldSection, FieldGroupDefinition[]>>;
@@ -191,6 +193,8 @@ const tabs = {
     createLabel: "Create wiki",
     eyebrow: "Your thoughts",
     description: "Final wiki instances built from a template plus per-wiki customizations.",
+    defaultSortKey: "createdAt",
+    defaultSortDirection: "desc",
     columns: [
       { key: "slug", label: "Slug", width: 2 },
       { key: "thumbnailUrl", label: "", width: 2 },
@@ -386,8 +390,11 @@ const tabs = {
     createLabel: "Create template",
     eyebrow: "Wiki Blueprints",
     description: "Reusable recipe definitions. Changes made to a template apply to every wiki using it.",
+    defaultSortKey: "lastUpdatedAt",
+    defaultSortDirection: "desc",
     columns: [
       { key: "name", label: "Name", width: 2 },
+      { key: "shellVersion", label: "Version", width: 2 },
       { key: "description", label: "Description", width: 3 },
       { key: "ownerUsername", label: "Created by" },
       { key: "readonlyBagsSummary", label: "Readonly bags" },
@@ -545,6 +552,8 @@ const tabs = {
     createLabel: "Create bag",
     eyebrow: "Tiddler Storage",
     description: "Concrete tiddler storage with role-based access control.",
+    defaultSortKey: "createdAt",
+    defaultSortDirection: "desc",
     columns: [
       { key: "name", label: "Name", width: 2 },
       { key: "description", label: "Description", width: 2 },
@@ -662,6 +671,8 @@ const tabs = {
     createLabel: "Create role",
     eyebrow: "Access profiles",
     description: "Named access profiles that can be assigned to user accounts.",
+    defaultSortKey: "createdAt",
+    defaultSortDirection: "desc",
     columns: [
       { key: "name", label: "Role name", width: 2 },
       { key: "description", label: "Description", width: 6, truncate: 100 },
@@ -712,6 +723,8 @@ const tabs = {
     createLabel: "Create user",
     eyebrow: "Account logins",
     description: "User accounts with assigned roles. Here admins create accounts and set login passwords. To change your own password, use your profile page.",
+    defaultSortKey: "createdAt",
+    defaultSortDirection: "desc",
     columns: [
       { key: "username", label: "Username", width: 2 },
       { key: "email", label: "Email", width: 6 },

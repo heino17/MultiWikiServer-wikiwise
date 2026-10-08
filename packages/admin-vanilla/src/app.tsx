@@ -1373,11 +1373,11 @@ export class App extends JSXElement {
   @state() accessor listViews: Partial<Record<TabId, ListViewState>> = {};
 
   private getListView(tabId: TabId): ListViewState {
-    return this.listViews[tabId] ?? EMPTY_LIST_VIEW;
+    return this.listViews[tabId] ?? defaultListView(getTab(tabId));
   }
 
   private updateListView(tabId: TabId, patch: Partial<ListViewState>): void {
-    this.listViews = { ...this.listViews, [tabId]: { ...EMPTY_LIST_VIEW, ...this.listViews[tabId], ...patch } };
+    this.listViews = { ...this.listViews, [tabId]: { ...defaultListView(getTab(tabId)), ...this.listViews[tabId], ...patch } };
     // A narrower or reordered list no longer has the page the user was on.
     this.wikiPage = 1;
   }
@@ -1387,6 +1387,14 @@ export class App extends JSXElement {
   private readonly toggleListSort = (tabId: TabId, columnKey: string) => {
     const view = this.getListView(tabId);
     this.updateListView(tabId, nextListSort(view.sortKey, view.sortDirection, columnKey));
+  };
+
+  /** Back to the tab's standard order: for the five record tabs that is the
+   *  default sort field (created/updated, descending), for panels without a
+   *  default the plain server order. The search query is kept on purpose. */
+  private readonly resetListSorting = (tabId: TabId) => {
+    const reset = defaultListView(getTab(tabId));
+    this.updateListView(tabId, { sortKey: reset.sortKey, sortDirection: reset.sortDirection });
   };
 
   private readonly handleListQueryInput = (tabId: TabId) => (event: Event) => {
@@ -1874,6 +1882,13 @@ export class App extends JSXElement {
     const searchNeedle = normalizeListSearchText(listView.query);
     const searchedItems = filterListItems(activeTabItems, searchColumns, searchNeedle);
     const sortColumn = listColumns.find((column) => column.key === listView.sortKey) ?? null;
+    // "Clear sorting" means "back to the standard", and it has nothing to do
+    // while a tab already shows its standard order — so the button hides
+    // exactly then (synthetic panels without a default count unsorted as
+    // their standard, matching the pre-§108 behaviour).
+    const currentTabDef = getTab(currentTab.id);
+    const atDefaultSort = listView.sortKey === (currentTabDef?.defaultSortKey ?? "")
+      && listView.sortDirection === (currentTabDef?.defaultSortDirection ?? "asc");
     const sortedItems = sortColumn
       ? sortListRecords(searchedItems, sortColumn, listView.sortDirection)
       : searchedItems;
@@ -2482,11 +2497,11 @@ export class App extends JSXElement {
                   {t("{shown} of {total} shown", { shown: sortedItems.length, total: activeTabItems.length })}
                 </span>
               ) : null}
-              {sortColumn ? (
+              {sortColumn && !atDefaultSort ? (
                 <button
                   class="ghost-button"
                   type="button"
-                  onclick={() => this.updateListView(currentTab.id, { sortKey: "" })}
+                  onclick={() => this.resetListSorting(currentTab.id)}
                 >{t("Clear sorting")}</button>
               ) : null}
             </div>
@@ -2912,6 +2927,15 @@ function getListCellSearchText(column: ColumnDefinition, record: AdminRecord): s
     return `${names} ${names ? t("Shared") : t("Private")}`.trim();
   }
   return text;
+}
+
+/** Initial list state of a tab: sorted by the tab's default column, most
+ *  recent first. Tabs without a default (the synthetic storage, pinboard and
+ *  files panels among them) start in the plain server order. */
+function defaultListView(tab: TabDefinition | undefined): ListViewState {
+  return tab?.defaultSortKey
+    ? { query: "", sortKey: tab.defaultSortKey, sortDirection: tab.defaultSortDirection ?? "asc" }
+    : EMPTY_LIST_VIEW;
 }
 
 /** Columns offered to the search: everything the user can actually read, minus
