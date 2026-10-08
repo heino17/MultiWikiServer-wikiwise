@@ -697,6 +697,8 @@ export const enStrings: Record<string, string> = {
   "The wiki \"{slug}\" has been created.": "The wiki \"{slug}\" has been created.",
   "The wiki \"{slug}\" has been imported into.": "The wiki \"{slug}\" has been imported into.",
   "Open the wiki": "Open the wiki",
+  "Open the manual": "Open the manual",
+  "Documentation": "Documentation",
   "Written: {count}": "Written: {count}",
   "Deleted: {count}": "Deleted: {count}",
   "Unchanged: {count}": "Unchanged: {count}",

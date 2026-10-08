@@ -397,6 +397,17 @@ function renderPreField(ctx: ReadonlyFieldContext) {
   );
 }
 
+function renderLinkFieldSidebar(ctx: ReadonlyFieldContext) {
+  definitely<string>(ctx.value);
+  if (!ctx.value) return undefined;
+  const label = ctx.value.startsWith("/tw5/") ? t("TiddlyWiki docs") : t("Open the manual");
+  return (
+    <a class="field-value-link" href={pathPrefix + ctx.value} target="_blank" rel="noreferrer">
+      {label}
+    </a>
+  );
+}
+
 function renderConfirmPasswordFieldEditor(ctx: FieldEditorContext<any>) {
   const { field, value, disabled, fieldState, inputId, onDraftChange, onTriggerOperation } = ctx;
   definitely<string>(value);
@@ -856,6 +867,7 @@ export const fieldTypeRenderEditors = {
   "table": renderTableField,
   "structured-preview": renderCalloutField,
   "validation-report": renderCalloutField,
+  "link": () => null,
   "template-type": (ctx) => null,
 } satisfies Record<FieldType, FieldTypeRenderEditor>;
 
@@ -884,5 +896,6 @@ export const fieldTypeRenderSidebars = {
   "table": renderTableField,
   "structured-preview": renderCalloutField,
   "validation-report": renderCalloutField,
+  "link": renderLinkFieldSidebar,
   "template-type": () => null,
 } satisfies Record<FieldType, FieldTypeRenderSidebar>;

@@ -692,6 +692,8 @@ export const deStrings: Record<string, string> = {
   "The wiki \"{slug}\" has been created.": "Die Wiki \"{slug}\" wurde erstellt.",
   "The wiki \"{slug}\" has been imported into.": "Die Wiki \"{slug}\" wurde befüllt.",
   "Open the wiki": "Wiki öffnen",
+  "Open the manual": "Bedienungsanleitung öffnen",
+  "Documentation": "Dokumentation",
   "Written: {count}": "Geschrieben: {count}",
   "Deleted: {count}": "Gelöscht: {count}",
   "Unchanged: {count}": "Unverändert: {count}",

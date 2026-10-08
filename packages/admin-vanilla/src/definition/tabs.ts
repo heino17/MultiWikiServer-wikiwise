@@ -56,7 +56,8 @@ export type FieldType =
   | "select"
   | "metadata-table"
   | "landing-visibility"
-  | "shell-policy";
+  | "shell-policy"
+  | "link";
 
 
 export class IdString extends String {
@@ -101,6 +102,7 @@ export const fieldTypeZodShapes = {
   "metadata-table": z.string().array(),
   "landing-visibility": z.boolean(),
   "shell-policy": z.enum(["auto", "pin", "notify"]),
+  "link": z.string(),
 } satisfies Record<FieldType, any>;
 
 export type FieldZodType<T extends FieldType = FieldType> = z.infer<(typeof fieldTypeZodShapes)[T]>;
@@ -131,6 +133,7 @@ export const fieldTypeCreateFactories = {
   "metadata-table": () => [],
   "landing-visibility": () => true,
   "shell-policy": () => "notify",
+  "link": () => "",
 } satisfies { [K in FieldType]: () => FieldZodType<K> };
 
 
@@ -409,6 +412,7 @@ const tabs = {
       { key: "description", label: "Description", type: "text", section: "authored", mode: "create edit" },
       { key: "lastUpdatedAt", label: "Updated", type: "string", section: "runtime", mode: "server" },
       { key: "shellVersion", label: "Version", type: "string", section: "runtime", mode: "server", architecture: "The newest shell release of this template, shown as the name the shell declares in its mws-shell-version tag, or as the release number when there is no label." },
+      { key: "docsUrl", label: "Documentation", type: "link", section: "runtime", mode: "server", architecture: "Read-only link to the documentation this template serves: the TiddlyWiki docs of the version it serves for shell-less templates, or the fork's manual wiki when the template brings its own HTML shell." },
       { key: "ownerUsername", label: "Created by", type: "string", section: "runtime", mode: "server" },
       {
         key: "writablePrefixBags",
@@ -544,6 +548,8 @@ const tabs = {
     sidebarDisplay: [
       "name",
       "description",
+      "shellVersion",
+      "docsUrl",
       "dependentWikiCount",
     ]
   },
@@ -936,6 +942,11 @@ export interface TemplateAdminRecord {
   type: TemplateTypes;
   name: string;
   shellVersion: string;
+  /** Read-only route to the documentation this template serves, as a path
+   *  fragment: `/tw5/<version>` for shell-less TiddlyWiki templates, or
+   *  `/wiki/bedienungsanleitung` for templates with their own HTML shell.
+   *  "" when there is nothing to link to. Rendered with `pathPrefix`. */
+  docsUrl: string;
   description: string;
   writablePrefixBags: readonly WritablePrefixRow[];
   readonlyBags: readonly string[];

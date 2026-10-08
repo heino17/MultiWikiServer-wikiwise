@@ -1759,6 +1759,17 @@ footer.modal-header {
 	white-space: pre-wrap;
 }
 
+.sidebar-section > .sidebar-section-body > .field-value-link {
+	color: var(--color-accent-heading);
+	text-decoration: none;
+	word-break: break-all;
+}
+
+.sidebar-section > .sidebar-section-body > .field-value-link:hover,
+.sidebar-section > .sidebar-section-body > .field-value-link:focus-visible {
+	text-decoration: underline;
+}
+
 .sidebar-section > .sidebar-section-body > .field-value ul,
 .sidebar-section > .sidebar-section-body > .value-list,
 .sidebar-section > .sidebar-section-body > .timeline-list,

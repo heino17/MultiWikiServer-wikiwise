@@ -5157,6 +5157,40 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 113. The version pill leaves the header, the template dialog links its docs
+
+**Why.** The header carried a version pill —
+`<details class="hero-account-menu">` with the last installed TiddlyWiki
+version and a dropdown with the docs link of every installed version. It was
+server-global, while the version a template serves belongs to the store and
+has had a home since §111/§112: the "Version" column of the templates tab.
+Two places for the same number, and neither told where the documentation
+lives — especially for SimpleWiki (§109), whose version `v0.1.0` and manual
+had no representation in the admin app at all.
+
+**What.** The header pill is removed; footer and landing page keep their
+"TiddlyWiki docs" link. The template detail dialog's sidebar now shows the
+version and a documentation link (opening in a new tab):
+- "Version" repeats the newest shell release that the list already shows (§111).
+- "Documentation" links where the documentation of that template lives, with
+  the target computed server-side as a new read-only `docsUrl` field: a
+  shell-less TiddlyWiki template points at `/tw5/<version>` — the docs of the
+  TiddlyWiki version it serves (§112) — a template with its own HTML shell
+  (SimpleWiki) at `/wiki/bedienungsanleitung`, the fork's manual that
+  `init-store` seeds. `docsUrl` is only a path fragment; the admin app
+  prepends its `pathPrefix`, so no host is ever hardcoded and the link works
+  under every prefix. Without a target it is "" and the sidebar shows no link.
+- A new `link` field type renders the anchor; its text is "TiddlyWiki docs"
+  for `/tw5/`, "Open the manual" ("Bedienungsanleitung öffnen") for `/wiki/`.
+
+**Verified.** `npm run tsc2`, the admin typecheck and the root `npm run build`
+are clean; the zod shapes for the new field type live in
+`fieldTypeZodShapes`/`fieldTypeCreateFactories`, and the two new strings exist
+in `en.ts` and `de.ts` (the other languages fall back as everywhere else). The
+click-through awaits the maintainer: no version pill in the header, and the
+"Tiddlywiki" and "SimpleWiki" rows of the templates tab open a dialog whose
+sidebar shows `5.4.1`/`v0.1.0` and the two links.
+
 ## 110. A wiki's shell version shows its name, not just a number
 
 **Why.** Two places claimed a version number where only a counter existed.
@@ -11718,6 +11752,42 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 113. Die Versions-Pille verlässt den Header, der Template-Dialog verlinkt seine Doku
+
+**Warum.** Der Header trug eine Versions-Pille —
+`<details class="hero-account-menu">` mit der zuletzt installierten
+TiddlyWiki-Version und einem Ausklappmenü mit dem Doku-Link jeder
+installierten Version. Sie ist serverglobal, die Version aber, die ein
+Template ausliefert, gehört zum Store und hat seit §111/§112 bereits einen
+Ort: die Versions-Spalte des Templates-Tabs. Zwei Plätze für dieselbe Zahl,
+und keiner sagt, wo die Dokumentation liegt — gerade für SimpleWiki (§109),
+dessen Version `v0.1.0` und Anleitung in der Verwaltung gar nicht vorkamen.
+
+**Was.** Die Pille im Header fällt weg; Footer und Startseite behalten ihren
+„TiddlyWiki docs"-Link. Der Detaildialog eines Templates zeigt in seiner
+Sidebar jetzt die Version und einen Doku-Link (öffnet in einem neuen Tab):
+- „Version" wiederholt die neueste Schalen-Ausgabe, die die Liste schon zeigt
+  (§111).
+- „Dokumentation" verlinkt die Doku dieses Templates, das Ziel als neues, nur
+  lesbares `docsUrl`-Feld serverseitig berechnet: Ein schalenloses
+  TiddlyWiki-Template zeigt auf `/tw5/<version>` — die Doku der
+  TiddlyWiki-Version, die es ausliefert (§112) — ein Template mit eigener
+  HTML-Schale (SimpleWiki) auf `/wiki/bedienungsanleitung`, die Anleitung
+  dieses Forks, die `init-store` seedet. `docsUrl` ist nur ein Pfad-Fragment;
+  die Admin-App ergänzt ihr `pathPrefix`, also wird nie ein Host hartkodiert
+  und der Link funktioniert unter jedem Präfix. Fehlt das Ziel, ist `docsUrl`
+  leer und die Sidebar zeigt keinen Link.
+- Ein neuer Feldtyp `link` rendert den Anker; sein Text lautet „TiddlyWiki
+  docs" für `/tw5/`, "Bedienungsanleitung öffnen" für `/wiki/`.
+
+**Geprüft.** `npm run tsc2`, der Admin-Typecheck und der Root-`npm run build`
+sind sauber; die Zod-Shapes für den neuen Feldtyp liegen in
+`fieldTypeZodShapes`/`fieldTypeCreateFactories`, und die zwei neuen Texte
+stehen in `en.ts` und `de.ts` (die übrigen Sprachen fallen aus wie überall
+sonst). Der Klick-Durchlauf wartet auf den Maintainer: keine Versions-Pille im
+Header, und die Zeilen „Tiddlywiki" und „SimpleWiki" im Templates-Tab öffnen
+einen Dialog, dessen Sidebar `5.4.1`/`v0.1.0` und die beiden Links zeigt.
 
 ## 110. Die Schalen-Version einer Wiki zeigt ihren Namen, nicht nur eine Zahl
 

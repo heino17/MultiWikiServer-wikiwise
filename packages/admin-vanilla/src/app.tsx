@@ -43,7 +43,6 @@ import { adminStorage, createDraft, getEmptyItems, jsonReviver } from "./definit
 import { definitely, is } from "./definition/utils";
 import { logout } from "./passwords";
 import { fieldTypeRenderSidebars, formatFieldValue, renderFieldEditor, renderFieldSidebar, renderSwitchField, textWithSlashes } from "./definition/renders";
-import { tw5logo } from "./logos";
 import {
   compareListValues,
   EMPTY_LIST_VIEW,
@@ -1964,29 +1963,6 @@ export class App extends JSXElement {
                 <MaterialSymbol icon={settingsIcon} />
               </button>
             ) : null}
-            <details class="hero-account-menu">
-              <summary class="hero-account-trigger">
-                <span class="hero-account-name">
-                  {embeddedServerResponse.tw5Versions.slice(-1)[0]}
-                </span>
-                <span class="hero-account-icon" aria-hidden="true">
-                  <MaterialSymbol icon={tw5logo} class="hero-account-icon" />
-                </span>
-              </summary>
-              <div class="hero-account-dropdown" role="menu" aria-label={t("Account options")}>
-                {embeddedServerResponse.tw5Versions.map(e => <>
-                  <a
-                    href={pathPrefix + "/tw5/" + e}
-                    class="hero-account-action"
-                    type="button"
-                    role="menuitem"
-                    target="_blank"
-                    rel="noreferrer"
-                  >{e}</a>
-                </>)}
-              </div>
-            </details>
-
             <details class="hero-account-menu">
               <summary class="hero-account-trigger" aria-label={t("Open account menu")}>
                 <span class="hero-account-name">{embeddedServerResponse.userState.username}</span>

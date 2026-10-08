@@ -64,6 +64,7 @@ export type TemplateDefinition = Omit<
   | "name"
   | "lastUpdatedAt"
   | "shellVersion"
+  | "docsUrl"
   | "templatePermissions"
   | "dependentWikis"
   | "templateUsers"
@@ -847,6 +848,20 @@ export class TemplateDataAdapter extends TabDataAdapter<"templates"> {
     return this.pluginCache?.versionFromTemplate(definition.twVersion);
   }
 
+  /**
+   * Documentation route for a template, shown as its sidebar link. A shell-less
+   * TiddlyWiki template points at the docs of the TiddlyWiki version it serves
+   * (`/tw5/<version>`), a template with its own HTML shell (SimpleWiki) at the
+   * fork's manual wiki (`/wiki/bedienungsanleitung`, seeded by `init-store`);
+   * "" when nothing is installed. Only the route fragment — the admin app
+   * prepends its own `pathPrefix` when it renders the link (see §113).
+   */
+  private templateDocsUrl(definition: TemplateDefinition) {
+    if (definition.customHtmlEnabled) return "/wiki/bedienungsanleitung";
+    const version = this.templateVersionLabel(definition);
+    return version ? `/tw5/${version}` : "";
+  }
+
   async saveRow(prisma: PrismaTxnClient, data: DataSave["templates"][number]): Promise<DataStore["templates"][number]> {
     const importer = new TemplateImportWriter(prisma, false);
     await importer.checkExisting(data.id, data.name, this.user);
@@ -975,6 +990,7 @@ export class TemplateDataAdapter extends TabDataAdapter<"templates"> {
           ?? this.templateVersionLabel(template.definition)
           ?? String(newestShellVersion.release))
         : "",
+      docsUrl: this.templateDocsUrl(template.definition),
       templateAdmins: templatePermissions.filter(e => e.level === "B_write").map(e => e.role),
       templateUsers: templatePermissions.filter(e => e.level === "A_read").map(e => e.role),
       ownerUsername,
@@ -1060,6 +1076,7 @@ export class TemplateDataAdapter extends TabDataAdapter<"templates"> {
             ?? this.templateVersionLabel(template.definition)
             ?? String(latest.release))
           : "",
+        docsUrl: this.templateDocsUrl(template.definition),
         ownerUsername: template.owner_user_id ? ownerNames.get(template.owner_user_id) ?? "" : "",
         templateAdmins: template.permissions.filter(e => e.level === "B_write").map(e => roles(new IdString(e.role_id))),
         templateUsers: template.permissions.filter(e => e.level === "A_read").map(e => roles(new IdString(e.role_id))),
