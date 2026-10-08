@@ -56,6 +56,7 @@ export const ModelName = {
   Tiddler: 'Tiddler',
   TiddlerEvent: 'TiddlerEvent',
   Template: 'Template',
+  TemplateVersion: 'TemplateVersion',
   TemplatePermission: 'TemplatePermission',
   Recipe: 'Recipe',
   RecipePermission: 'RecipePermission',
@@ -140,6 +141,18 @@ export const TemplateScalarFieldEnum = {
 export type TemplateScalarFieldEnum = (typeof TemplateScalarFieldEnum)[keyof typeof TemplateScalarFieldEnum]
 
 
+export const TemplateVersionScalarFieldEnum = {
+  id: 'id',
+  template_id: 'template_id',
+  release: 'release',
+  label: 'label',
+  definition: 'definition',
+  created: 'created'
+} as const
+
+export type TemplateVersionScalarFieldEnum = (typeof TemplateVersionScalarFieldEnum)[keyof typeof TemplateVersionScalarFieldEnum]
+
+
 export const TemplatePermissionScalarFieldEnum = {
   template_id: 'template_id',
   role_id: 'role_id',
@@ -158,7 +171,9 @@ export const RecipeScalarFieldEnum = {
   template_id: 'template_id',
   definition: 'definition',
   plugins: 'plugins',
-  compiledAt: 'compiledAt'
+  compiledAt: 'compiledAt',
+  shell_policy: 'shell_policy',
+  pinned_template_version_id: 'pinned_template_version_id'
 } as const
 
 export type RecipeScalarFieldEnum = (typeof RecipeScalarFieldEnum)[keyof typeof RecipeScalarFieldEnum]

@@ -2,6 +2,7 @@ import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
 import { readFileSync } from "fs";
 import * as path from "path";
 import { defaultPreloadFunction } from "../plugin-cache";
+import { createTemplateRelease } from "../new-managers/template-releases";
 
 /** Where the server splices in the store, and how it spells the call.
  *
@@ -194,6 +195,10 @@ export class ProvisionSimpleWikiCommand extends BaseCommand<[string], ProvisionS
 					where: { name: templateName },
 					data: { definition: definition as any, permissions: { create: permissions } },
 				});
+				// A provision is a template write like an admin save: it gets a
+				// new immutable release, so pin/notify wikis see the update and
+				// "auto" wikis can move their ETag identity (servedKey) on.
+				await createTemplateRelease(prisma, { id: existing.id, definition: definition as any });
 				return { action: "updated", id: existing.id, mayUse: userRoles.map(role => role.role_name) };
 			}
 
@@ -206,6 +211,7 @@ export class ProvisionSimpleWikiCommand extends BaseCommand<[string], ProvisionS
 				},
 				select: { id: true },
 			});
+			await createTemplateRelease(prisma, { id: created.id, definition: definition as any });
 			return { action: "created", id: created.id, mayUse: userRoles.map(role => role.role_name) };
 		});
 

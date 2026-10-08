@@ -4,6 +4,12 @@ BagInfo/Heading: Хранилище
 Login/ServiceName: Войти в это вики
 SaveWiki/ButtonCaption: Состояние сервера
 SaveWiki/ButtonTooltip: Состояние синхронизации с сервером
+ShellUpdate/BannerText: Для этого вики доступна более новая версия шаблона.
+ShellUpdate/ButtonCaption: Обновить до новейшей версии
+ShellUpdate/ButtonTooltip: Применить новейшую версию шаблона для этого вики
+ShellUpdate/ResultUpdated: Вики обновлена до версии шаблона <<version>>.
+ShellUpdate/ResultError: Не удалось обновить шаблон. Попробуйте ещё раз.
+ShellUpdate/ResultForbidden: Обновлять шаблон может только владелец вики или администратор.
 Sidebar/ConnectionStatus: Состояние подключения MWS
 Syncer/CopyLogs: Скопировать журнал синхронизации в буфер обмена
 Syncer/LoggedIn: Вы вошли в систему

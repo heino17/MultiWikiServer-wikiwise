@@ -47,6 +47,8 @@ declare global {
       [T, K] extends ["BagPermission", "bag_id"] ? PrismaField<"Bag", "id"> :
       [T, K] extends ["BagPermission", "role_id"] ? PrismaField<"Roles", "role_id"> :
       [T, K] extends ["Recipe", "template_id"] ? PrismaField<"Template", "id"> :
+      [T, K] extends ["Recipe", "pinned_template_version_id"] ? PrismaField<"TemplateVersion", "id"> :
+      [T, K] extends ["TemplateVersion", "template_id"] ? PrismaField<"Template", "id"> :
       [T, K] extends ["RecipePermission", "recipe_id"] ? PrismaField<"Recipe", "id"> :
       [T, K] extends ["RecipePermission", "role_id"] ? PrismaField<"Roles", "role_id"> :
       [T, K] extends ["RecipeBag", "recipe_id"] ? PrismaField<"Recipe", "id"> :

@@ -1,6 +1,8 @@
 import { zodRoute, SendError } from "@tiddlywiki/server";
 import { RecipeResolver } from "./RecipeResolver";
 import { serveWikiIndex } from "./RecipeIndexSender";
+import { resolveShellVersionStatus } from "./template-releases";
+import { RecipeImportWriter } from "./TabUpserts";
 // ---------------------------------------------------------------------------
 // Recipe-scoped endpoints (RSD, batch, list, status) — addressed by title.
 // ---------------------------------------------------------------------------
@@ -32,6 +34,9 @@ export const RecipeStatus = zodRoute({
         user_id,
         username,
         isLoggedIn,
+        // which template shell release this wiki serves, and whether a newer
+        // one exists — the wiki's update banner reads it from here
+        shell: await resolveShellVersionStatus(prisma, recipe),
         bags: recipe.recipe_bags.map(e => ({
           bag_id: e.bag_id,
           is_writable: e.is_writable,
@@ -41,6 +46,78 @@ export const RecipeStatus = zodRoute({
           canUserWrite: r.canWriteBag(e),
         }))
       };
+    });
+  },
+});
+// #region ShellUpdate
+/**
+ * Accept the template's newest shell release for this wiki: the pin moves to
+ * that release and the wiki is recompiled against it. The shell policy stays
+ * as it is (pin stays pin, notify stays notify); "auto" wikis serve the newest
+ * release anyway, so for them the call only recompiles.
+ *
+ * Allowed for the wiki owner and for admins — the same gate that guards the
+ * wiki settings form. Deliberately not editors: a shell carries the whole
+ * page, so accepting a new one is the owner's decision.
+ */
+export const RecipeShellUpdate = zodRoute({
+  method: ["PUT"],
+  path: "/recipe/:recipe_slug/shell/update",
+  bodyFormat: "ignore",
+  securityChecks: { requestedWithHeader: true },
+  zodPathParams: z => ({
+    recipe_slug: z.prismaField("Recipe", "slug", "string"),
+  }),
+  inner: async (state) => {
+    const { recipe_slug } = state.pathParams;
+    state.assertWikiReferer(recipe_slug);
+    const recipe = await RecipeResolver.assertRecipe({
+      state,
+      recipe_slug,
+    }).then(e => {
+      state.asserted = true;
+      return e;
+    });
+
+    if (!state.user.isAdmin && recipe.owner_user_id !== state.user.user_id)
+      throw new SendError("ACCESS_DENIED", 403, { reason: "Only the wiki owner or an admin may update the shell." });
+
+    return await state.$transaction(async (prisma) => {
+      const latest = await prisma.templateVersion.findFirst({
+        where: { template_id: recipe.template_id },
+        orderBy: { release: "desc" },
+        select: { id: true, release: true, definition: true },
+      });
+      if (!latest)
+        throw state.sendEmpty(409, { "x-reason": "the template has no shell releases yet" });
+
+      const compiled = new RecipeImportWriter(prisma, false).compileRecipeSimpleV1(
+        recipe.definition,
+        latest.definition,
+      );
+      await prisma.recipe.update({
+        where: { id: recipe.id },
+        data: {
+          plugins: compiled.plugins,
+          compiledAt: new Date(),
+          pinned_template_version_id: latest.id,
+          recipe_bags: {
+            deleteMany: {},
+            create: compiled.bags.map(e => ({
+              bag: { connect: { name: e.bagName } },
+              is_writable: e.isWritable,
+              prefix: e.prefix,
+              priority: e.priority,
+            })),
+          },
+        },
+      });
+
+      return await resolveShellVersionStatus(prisma, {
+        template_id: recipe.template_id,
+        shell_policy: recipe.shell_policy,
+        pinned_template_version_id: latest.id,
+      });
     });
   },
 });

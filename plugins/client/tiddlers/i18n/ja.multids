@@ -4,6 +4,12 @@ BagInfo/Heading: バッグ情報
 Login/ServiceName: このWikiにログイン
 SaveWiki/ButtonCaption: サーバーの状態
 SaveWiki/ButtonTooltip: サーバーとの同期状態
+ShellUpdate/BannerText: このWikiでは、より新しいテンプレートバージョンが利用できます。
+ShellUpdate/ButtonCaption: 最新バージョンに更新
+ShellUpdate/ButtonTooltip: このWikiに最新のテンプレートバージョンを適用
+ShellUpdate/ResultUpdated: Wikiをテンプレートバージョン<<version>>に更新しました。
+ShellUpdate/ResultError: テンプレートの更新に失敗しました。もう一度お試しください。
+ShellUpdate/ResultForbidden: テンプレートを更新できるのは、Wikiの所有者または管理者だけです。
 Sidebar/ConnectionStatus: MWS接続状態
 Syncer/CopyLogs: 同期ログをクリップボードにコピー
 Syncer/LoggedIn: ログインしています

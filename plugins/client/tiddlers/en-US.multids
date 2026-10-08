@@ -4,6 +4,12 @@ BagInfo/Heading: Bag Info
 Login/ServiceName: Log in to this wiki
 SaveWiki/ButtonCaption: Server status
 SaveWiki/ButtonTooltip: Status of synchronisation with server
+ShellUpdate/BannerText: A newer template version is available for this wiki.
+ShellUpdate/ButtonCaption: Update to newest version
+ShellUpdate/ButtonTooltip: Accept the newest template version for this wiki
+ShellUpdate/ResultUpdated: The wiki was updated to template version <<version>>.
+ShellUpdate/ResultError: The template update failed. Please try again.
+ShellUpdate/ResultForbidden: Only the wiki owner or an administrator may update the template.
 Sidebar/ConnectionStatus: MWS Connection Status
 Syncer/CopyLogs: Copy syncer logs to clipboard
 Syncer/LoggedIn: You are logged in

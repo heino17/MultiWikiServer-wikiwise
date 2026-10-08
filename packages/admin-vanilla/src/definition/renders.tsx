@@ -284,6 +284,21 @@ function renderSelectField(ctx: FieldEditorContext<boolean>) {
   );
 }
 
+type ShellPolicy = "auto" | "pin" | "notify";
+
+function renderShellPolicyField(ctx: FieldEditorContext<ShellPolicy>) {
+  const { field, value, disabled, inputId, onDraftChange } = ctx;
+  return (
+    <select id={inputId} class="field-select" disabled={disabled} onchange={(event) => {
+      onDraftChange(field.key, (event.currentTarget as HTMLSelectElement).value as ShellPolicy);
+    }}>
+      <option value="auto" selected={value === "auto"}>{t("Always use the newest version")}</option>
+      <option value="pin" selected={value === "pin"}>{t("Stay on the current version")}</option>
+      <option value="notify" selected={value === "notify"}>{t("Stay on the current version and ask me before updating")}</option>
+    </select>
+  );
+}
+
 
 export function renderSwitchField(ctx: Pick<
   FieldEditorContext<boolean>,
@@ -837,6 +852,7 @@ export const fieldTypeRenderEditors = {
   "activity-feed": renderActivityFeedField,
   "metadata-table": renderMetadataTableField,
   "landing-visibility": renderLandingVisibilityFieldEditor,
+  "shell-policy": renderShellPolicyField,
   "table": renderTableField,
   "structured-preview": renderCalloutField,
   "validation-report": renderCalloutField,
@@ -864,6 +880,7 @@ export const fieldTypeRenderSidebars = {
   "activity-feed": renderActivityFeedField,
   "metadata-table": renderMetadataTableField,
   "landing-visibility": () => null,
+  "shell-policy": () => null,
   "table": renderTableField,
   "structured-preview": renderCalloutField,
   "validation-report": renderCalloutField,

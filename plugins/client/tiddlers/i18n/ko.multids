@@ -4,6 +4,12 @@ BagInfo/Heading: 백 정보
 Login/ServiceName: 이 위키에 로그인
 SaveWiki/ButtonCaption: 서버 상태
 SaveWiki/ButtonTooltip: 서버와의 동기화 상태
+ShellUpdate/BannerText: 이 Wiki에 더 새로운 템플릿 버전이 있습니다.
+ShellUpdate/ButtonCaption: 최신 버전으로 업데이트
+ShellUpdate/ButtonTooltip: 이 Wiki에 최신 템플릿 버전을 적용
+ShellUpdate/ResultUpdated: Wiki가 템플릿 버전 <<version>>(으)로 업데이트되었습니다.
+ShellUpdate/ResultError: 템플릿 업데이트에 실패했습니다. 다시 시도해 주세요.
+ShellUpdate/ResultForbidden: 템플릿을 업데이트할 수 있는 사람은 Wiki 소유자 또는 관리자뿐입니다.
 Sidebar/ConnectionStatus: MWS 연결 상태
 Syncer/CopyLogs: 동기화 로그를 클립보드에 복사
 Syncer/LoggedIn: 로그인되어 있습니다

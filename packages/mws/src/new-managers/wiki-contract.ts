@@ -63,6 +63,18 @@ export interface UpsertRecipeInput {
   /** set only when creating the recipe; the owner may delete the wiki.
    *  Existing recipes keep their owner on edits. */
   ownerUserId?: IdString;
+  /**
+   * How this wiki follows the template's shell releases: "auto" (always the
+   * template head), "pin" (one frozen release), "notify" (one frozen release
+   * plus an update banner). Omit on bulk recompiles to keep the row's value.
+   */
+  shellPolicy?: string;
+  /**
+   * The shell release the wiki is pinned to when shellPolicy is pin/notify.
+   * null clears the pin (wiki follows the template head again); omit to keep
+   * the row's value unchanged.
+   */
+  pinnedTemplateVersionId?: IdString | null;
 }
 
 

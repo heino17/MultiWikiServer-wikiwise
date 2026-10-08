@@ -20,7 +20,7 @@ import { PinboardDeleteNote, PinboardList, PinboardMarkRead, PinboardSaveNote, P
 import { UserFileDelete, UserFileDownload, UserFileList, UserFilePreview, UserFileShareTargets, UserFileShareUpdate, UserFileSharedList, UserFileUpload, UserFileWikiFile, UserFileWikiFiles } from "./UserFileRoutes";
 import { AdminWikiFileImport, AdminWikiFileInspect, AdminWikiFileRestore, AdminWikiFileSnapshotCounts, AdminWikiFileSnapshotCreate, AdminWikiFileSnapshotDelete, AdminWikiFileSnapshots } from "./WikiFileRoutes";
 import { serveWikiThumbnail } from "./WikiThumbnailRoutes";
-import { RecipeStatus, RecipeStoreJS, RecipeStoreJSON, RecipeUpdates, TiddlerBatch, TiddlerList } from "./RecipeRoutes";
+import { RecipeStatus, RecipeShellUpdate, RecipeStoreJS, RecipeStoreJSON, RecipeUpdates, TiddlerBatch, TiddlerList } from "./RecipeRoutes";
 import { AdminPrefsGet, AdminPrefsPut } from "./PrefsRoutes";
 import { LandingData } from "./LandingRoutes";
 import { LegalNoticeRoute } from "./LandingRoutes";
@@ -158,6 +158,7 @@ serverEvents.on("mws.routes", (root) => {
 
 const ApiRoutes = {
   RecipeStatus,
+  RecipeShellUpdate,
   RecipeUpdates,
   RecipeStoreJS,
   RecipeStoreJSON,
@@ -246,6 +247,7 @@ interface ClientRoutes {
   TiddlerBatch: ClientRoute<typeof TiddlerBatch>;
   TiddlerList: ClientRoute<typeof TiddlerList>;
   RecipeStatus: ClientRoute<typeof RecipeStatus>;
+  RecipeShellUpdate: ClientRoute<typeof RecipeShellUpdate>;
   RecipeUpdates: ClientRoute<typeof RecipeUpdates>;
 }
 type ClientRoutes2 = RouterRouteMap2<typeof ApiRoutes>;

@@ -4,6 +4,12 @@ BagInfo/Heading: Bag-Info
 Login/ServiceName: In dieses Wiki einloggen
 SaveWiki/ButtonCaption: Serverstatus
 SaveWiki/ButtonTooltip: Status der Synchronisierung mit dem Server
+ShellUpdate/BannerText: Für dieses Wiki ist eine neuere Template-Version verfügbar.
+ShellUpdate/ButtonCaption: Auf die neueste Version aktualisieren
+ShellUpdate/ButtonTooltip: Die neueste Template-Version für dieses Wiki übernehmen
+ShellUpdate/ResultUpdated: Das Wiki wurde auf Template-Version <<version>> aktualisiert.
+ShellUpdate/ResultError: Die Template-Aktualisierung ist fehlgeschlagen. Bitte erneut versuchen.
+ShellUpdate/ResultForbidden: Nur die Wiki-Besitzerin oder ein Administrator kann das Template aktualisieren.
 Sidebar/ConnectionStatus: MWS-Verbindungsstatus
 Syncer/CopyLogs: Sync-Protokolle in die Zwischenablage kopieren
 Syncer/LoggedIn: Du bist angemeldet

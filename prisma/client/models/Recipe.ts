@@ -34,6 +34,8 @@ export type RecipeMinAggregateOutputType = {
   owner_user_id: string | null
   template_id: string | null
   compiledAt: Date | null
+  shell_policy: string | null
+  pinned_template_version_id: string | null
 }
 
 export type RecipeMaxAggregateOutputType = {
@@ -44,6 +46,8 @@ export type RecipeMaxAggregateOutputType = {
   owner_user_id: string | null
   template_id: string | null
   compiledAt: Date | null
+  shell_policy: string | null
+  pinned_template_version_id: string | null
 }
 
 export type RecipeCountAggregateOutputType = {
@@ -56,6 +60,8 @@ export type RecipeCountAggregateOutputType = {
   definition:PrismaJson.Recipe_definition
   plugins:PrismaJson.Recipe_plugins
   compiledAt: number
+  shell_policy: number
+  pinned_template_version_id: number
   _all: number
 }
 
@@ -68,6 +74,8 @@ export type RecipeMinAggregateInputType = {
   owner_user_id?: true
   template_id?: true
   compiledAt?: true
+  shell_policy?: true
+  pinned_template_version_id?: true
 }
 
 export type RecipeMaxAggregateInputType = {
@@ -78,6 +86,8 @@ export type RecipeMaxAggregateInputType = {
   owner_user_id?: true
   template_id?: true
   compiledAt?: true
+  shell_policy?: true
+  pinned_template_version_id?: true
 }
 
 export type RecipeCountAggregateInputType = {
@@ -90,6 +100,8 @@ export type RecipeCountAggregateInputType = {
   definition?: true
   plugins?: true
   compiledAt?: true
+  shell_policy?: true
+  pinned_template_version_id?: true
   _all?: true
 }
 
@@ -175,6 +187,8 @@ export type RecipeGroupByOutputType = {
   definition:PrismaJson.Recipe_definition
   plugins:PrismaJson.Recipe_plugins
   compiledAt: Date
+  shell_policy: string
+  pinned_template_version_id: string | null
   _count: RecipeCountAggregateOutputType | null
   _min: RecipeMinAggregateOutputType | null
   _max: RecipeMaxAggregateOutputType | null
@@ -208,9 +222,12 @@ export type RecipeWhereInput = {
   definition?: Prisma.JsonFilter<"Recipe">
   plugins?: Prisma.JsonFilter<"Recipe">
   compiledAt?: Prisma.DateTimeFilter<"Recipe"> | Date | string
+  shell_policy?: Prisma.StringFilter<"Recipe"> | string
+  pinned_template_version_id?: Prisma.StringNullableFilter<"Recipe"> | string | null
   template?: Prisma.XOR<Prisma.TemplateScalarRelationFilter, Prisma.TemplateWhereInput>
   recipe_bags?: Prisma.RecipeBagListRelationFilter
   permissions?: Prisma.RecipePermissionListRelationFilter
+  pinnedTemplateVersion?: Prisma.XOR<Prisma.TemplateVersionNullableScalarRelationFilter, Prisma.TemplateVersionWhereInput> | null
 }
 
 export type RecipeOrderByWithRelationInput = {
@@ -223,9 +240,12 @@ export type RecipeOrderByWithRelationInput = {
   definition?: Prisma.SortOrder
   plugins?: Prisma.SortOrder
   compiledAt?: Prisma.SortOrder
+  shell_policy?: Prisma.SortOrder
+  pinned_template_version_id?: Prisma.SortOrderInput | Prisma.SortOrder
   template?: Prisma.TemplateOrderByWithRelationInput
   recipe_bags?: Prisma.RecipeBagOrderByRelationAggregateInput
   permissions?: Prisma.RecipePermissionOrderByRelationAggregateInput
+  pinnedTemplateVersion?: Prisma.TemplateVersionOrderByWithRelationInput
 }
 
 export type RecipeWhereUniqueInput = Prisma.AtLeast<{
@@ -241,9 +261,12 @@ export type RecipeWhereUniqueInput = Prisma.AtLeast<{
   definition?: Prisma.JsonFilter<"Recipe">
   plugins?: Prisma.JsonFilter<"Recipe">
   compiledAt?: Prisma.DateTimeFilter<"Recipe"> | Date | string
+  shell_policy?: Prisma.StringFilter<"Recipe"> | string
+  pinned_template_version_id?: Prisma.StringNullableFilter<"Recipe"> | string | null
   template?: Prisma.XOR<Prisma.TemplateScalarRelationFilter, Prisma.TemplateWhereInput>
   recipe_bags?: Prisma.RecipeBagListRelationFilter
   permissions?: Prisma.RecipePermissionListRelationFilter
+  pinnedTemplateVersion?: Prisma.XOR<Prisma.TemplateVersionNullableScalarRelationFilter, Prisma.TemplateVersionWhereInput> | null
 }, "id" | "slug">
 
 export type RecipeOrderByWithAggregationInput = {
@@ -256,6 +279,8 @@ export type RecipeOrderByWithAggregationInput = {
   definition?: Prisma.SortOrder
   plugins?: Prisma.SortOrder
   compiledAt?: Prisma.SortOrder
+  shell_policy?: Prisma.SortOrder
+  pinned_template_version_id?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.RecipeCountOrderByAggregateInput
   _max?: Prisma.RecipeMaxOrderByAggregateInput
   _min?: Prisma.RecipeMinOrderByAggregateInput
@@ -274,6 +299,8 @@ export type RecipeScalarWhereWithAggregatesInput = {
   definition?: Prisma.JsonWithAggregatesFilter<"Recipe">
   plugins?: Prisma.JsonWithAggregatesFilter<"Recipe">
   compiledAt?: Prisma.DateTimeWithAggregatesFilter<"Recipe"> | Date | string
+  shell_policy?: Prisma.StringWithAggregatesFilter<"Recipe"> | string
+  pinned_template_version_id?: Prisma.StringNullableWithAggregatesFilter<"Recipe"> | string | null
 }
 
 export type RecipeCreateInput = {
@@ -285,9 +312,11 @@ export type RecipeCreateInput = {
   definition:PrismaJson.Recipe_definition
   plugins:PrismaJson.Recipe_plugins
   compiledAt: Date | string
+  shell_policy?: string
   template: Prisma.TemplateCreateNestedOneWithoutRecipesInput
   recipe_bags?: Prisma.RecipeBagCreateNestedManyWithoutRecipeInput
   permissions?: Prisma.RecipePermissionCreateNestedManyWithoutRecipeInput
+  pinnedTemplateVersion?: Prisma.TemplateVersionCreateNestedOneWithoutPinnedByInput
 }
 
 export type RecipeUncheckedCreateInput = {
@@ -300,6 +329,8 @@ export type RecipeUncheckedCreateInput = {
   definition:PrismaJson.Recipe_definition
   plugins:PrismaJson.Recipe_plugins
   compiledAt: Date | string
+  shell_policy?: string
+  pinned_template_version_id?: string | null
   recipe_bags?: Prisma.RecipeBagUncheckedCreateNestedManyWithoutRecipeInput
   permissions?: Prisma.RecipePermissionUncheckedCreateNestedManyWithoutRecipeInput
 }
@@ -313,9 +344,11 @@ export type RecipeUpdateInput = {
   definition?:PrismaJson.Recipe_definition
   plugins?:PrismaJson.Recipe_plugins
   compiledAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  shell_policy?: Prisma.StringFieldUpdateOperationsInput | string
   template?: Prisma.TemplateUpdateOneRequiredWithoutRecipesNestedInput
   recipe_bags?: Prisma.RecipeBagUpdateManyWithoutRecipeNestedInput
   permissions?: Prisma.RecipePermissionUpdateManyWithoutRecipeNestedInput
+  pinnedTemplateVersion?: Prisma.TemplateVersionUpdateOneWithoutPinnedByNestedInput
 }
 
 export type RecipeUncheckedUpdateInput = {
@@ -328,6 +361,8 @@ export type RecipeUncheckedUpdateInput = {
   definition?:PrismaJson.Recipe_definition
   plugins?:PrismaJson.Recipe_plugins
   compiledAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  shell_policy?: Prisma.StringFieldUpdateOperationsInput | string
+  pinned_template_version_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recipe_bags?: Prisma.RecipeBagUncheckedUpdateManyWithoutRecipeNestedInput
   permissions?: Prisma.RecipePermissionUncheckedUpdateManyWithoutRecipeNestedInput
 }
@@ -342,6 +377,8 @@ export type RecipeCreateManyInput = {
   definition:PrismaJson.Recipe_definition
   plugins:PrismaJson.Recipe_plugins
   compiledAt: Date | string
+  shell_policy?: string
+  pinned_template_version_id?: string | null
 }
 
 export type RecipeUpdateManyMutationInput = {
@@ -353,6 +390,7 @@ export type RecipeUpdateManyMutationInput = {
   definition?:PrismaJson.Recipe_definition
   plugins?:PrismaJson.Recipe_plugins
   compiledAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  shell_policy?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type RecipeUncheckedUpdateManyInput = {
@@ -365,6 +403,8 @@ export type RecipeUncheckedUpdateManyInput = {
   definition?:PrismaJson.Recipe_definition
   plugins?:PrismaJson.Recipe_plugins
   compiledAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  shell_policy?: Prisma.StringFieldUpdateOperationsInput | string
+  pinned_template_version_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type RecipeListRelationFilter = {
@@ -387,6 +427,8 @@ export type RecipeCountOrderByAggregateInput = {
   definition?: Prisma.SortOrder
   plugins?: Prisma.SortOrder
   compiledAt?: Prisma.SortOrder
+  shell_policy?: Prisma.SortOrder
+  pinned_template_version_id?: Prisma.SortOrder
 }
 
 export type RecipeMaxOrderByAggregateInput = {
@@ -397,6 +439,8 @@ export type RecipeMaxOrderByAggregateInput = {
   owner_user_id?: Prisma.SortOrder
   template_id?: Prisma.SortOrder
   compiledAt?: Prisma.SortOrder
+  shell_policy?: Prisma.SortOrder
+  pinned_template_version_id?: Prisma.SortOrder
 }
 
 export type RecipeMinOrderByAggregateInput = {
@@ -407,6 +451,8 @@ export type RecipeMinOrderByAggregateInput = {
   owner_user_id?: Prisma.SortOrder
   template_id?: Prisma.SortOrder
   compiledAt?: Prisma.SortOrder
+  shell_policy?: Prisma.SortOrder
+  pinned_template_version_id?: Prisma.SortOrder
 }
 
 export type RecipeScalarRelationFilter = {
@@ -456,6 +502,48 @@ export type RecipeUncheckedUpdateManyWithoutTemplateNestedInput = {
   deleteMany?: Prisma.RecipeScalarWhereInput | Prisma.RecipeScalarWhereInput[]
 }
 
+export type RecipeCreateNestedManyWithoutPinnedTemplateVersionInput = {
+  create?: Prisma.XOR<Prisma.RecipeCreateWithoutPinnedTemplateVersionInput, Prisma.RecipeUncheckedCreateWithoutPinnedTemplateVersionInput> | Prisma.RecipeCreateWithoutPinnedTemplateVersionInput[] | Prisma.RecipeUncheckedCreateWithoutPinnedTemplateVersionInput[]
+  connectOrCreate?: Prisma.RecipeCreateOrConnectWithoutPinnedTemplateVersionInput | Prisma.RecipeCreateOrConnectWithoutPinnedTemplateVersionInput[]
+  createMany?: Prisma.RecipeCreateManyPinnedTemplateVersionInputEnvelope
+  connect?: Prisma.RecipeWhereUniqueInput | Prisma.RecipeWhereUniqueInput[]
+}
+
+export type RecipeUncheckedCreateNestedManyWithoutPinnedTemplateVersionInput = {
+  create?: Prisma.XOR<Prisma.RecipeCreateWithoutPinnedTemplateVersionInput, Prisma.RecipeUncheckedCreateWithoutPinnedTemplateVersionInput> | Prisma.RecipeCreateWithoutPinnedTemplateVersionInput[] | Prisma.RecipeUncheckedCreateWithoutPinnedTemplateVersionInput[]
+  connectOrCreate?: Prisma.RecipeCreateOrConnectWithoutPinnedTemplateVersionInput | Prisma.RecipeCreateOrConnectWithoutPinnedTemplateVersionInput[]
+  createMany?: Prisma.RecipeCreateManyPinnedTemplateVersionInputEnvelope
+  connect?: Prisma.RecipeWhereUniqueInput | Prisma.RecipeWhereUniqueInput[]
+}
+
+export type RecipeUpdateManyWithoutPinnedTemplateVersionNestedInput = {
+  create?: Prisma.XOR<Prisma.RecipeCreateWithoutPinnedTemplateVersionInput, Prisma.RecipeUncheckedCreateWithoutPinnedTemplateVersionInput> | Prisma.RecipeCreateWithoutPinnedTemplateVersionInput[] | Prisma.RecipeUncheckedCreateWithoutPinnedTemplateVersionInput[]
+  connectOrCreate?: Prisma.RecipeCreateOrConnectWithoutPinnedTemplateVersionInput | Prisma.RecipeCreateOrConnectWithoutPinnedTemplateVersionInput[]
+  upsert?: Prisma.RecipeUpsertWithWhereUniqueWithoutPinnedTemplateVersionInput | Prisma.RecipeUpsertWithWhereUniqueWithoutPinnedTemplateVersionInput[]
+  createMany?: Prisma.RecipeCreateManyPinnedTemplateVersionInputEnvelope
+  set?: Prisma.RecipeWhereUniqueInput | Prisma.RecipeWhereUniqueInput[]
+  disconnect?: Prisma.RecipeWhereUniqueInput | Prisma.RecipeWhereUniqueInput[]
+  delete?: Prisma.RecipeWhereUniqueInput | Prisma.RecipeWhereUniqueInput[]
+  connect?: Prisma.RecipeWhereUniqueInput | Prisma.RecipeWhereUniqueInput[]
+  update?: Prisma.RecipeUpdateWithWhereUniqueWithoutPinnedTemplateVersionInput | Prisma.RecipeUpdateWithWhereUniqueWithoutPinnedTemplateVersionInput[]
+  updateMany?: Prisma.RecipeUpdateManyWithWhereWithoutPinnedTemplateVersionInput | Prisma.RecipeUpdateManyWithWhereWithoutPinnedTemplateVersionInput[]
+  deleteMany?: Prisma.RecipeScalarWhereInput | Prisma.RecipeScalarWhereInput[]
+}
+
+export type RecipeUncheckedUpdateManyWithoutPinnedTemplateVersionNestedInput = {
+  create?: Prisma.XOR<Prisma.RecipeCreateWithoutPinnedTemplateVersionInput, Prisma.RecipeUncheckedCreateWithoutPinnedTemplateVersionInput> | Prisma.RecipeCreateWithoutPinnedTemplateVersionInput[] | Prisma.RecipeUncheckedCreateWithoutPinnedTemplateVersionInput[]
+  connectOrCreate?: Prisma.RecipeCreateOrConnectWithoutPinnedTemplateVersionInput | Prisma.RecipeCreateOrConnectWithoutPinnedTemplateVersionInput[]
+  upsert?: Prisma.RecipeUpsertWithWhereUniqueWithoutPinnedTemplateVersionInput | Prisma.RecipeUpsertWithWhereUniqueWithoutPinnedTemplateVersionInput[]
+  createMany?: Prisma.RecipeCreateManyPinnedTemplateVersionInputEnvelope
+  set?: Prisma.RecipeWhereUniqueInput | Prisma.RecipeWhereUniqueInput[]
+  disconnect?: Prisma.RecipeWhereUniqueInput | Prisma.RecipeWhereUniqueInput[]
+  delete?: Prisma.RecipeWhereUniqueInput | Prisma.RecipeWhereUniqueInput[]
+  connect?: Prisma.RecipeWhereUniqueInput | Prisma.RecipeWhereUniqueInput[]
+  update?: Prisma.RecipeUpdateWithWhereUniqueWithoutPinnedTemplateVersionInput | Prisma.RecipeUpdateWithWhereUniqueWithoutPinnedTemplateVersionInput[]
+  updateMany?: Prisma.RecipeUpdateManyWithWhereWithoutPinnedTemplateVersionInput | Prisma.RecipeUpdateManyWithWhereWithoutPinnedTemplateVersionInput[]
+  deleteMany?: Prisma.RecipeScalarWhereInput | Prisma.RecipeScalarWhereInput[]
+}
+
 export type RecipeCreateNestedOneWithoutPermissionsInput = {
   create?: Prisma.XOR<Prisma.RecipeCreateWithoutPermissionsInput, Prisma.RecipeUncheckedCreateWithoutPermissionsInput>
   connectOrCreate?: Prisma.RecipeCreateOrConnectWithoutPermissionsInput
@@ -493,8 +581,10 @@ export type RecipeCreateWithoutTemplateInput = {
   definition:PrismaJson.Recipe_definition
   plugins:PrismaJson.Recipe_plugins
   compiledAt: Date | string
+  shell_policy?: string
   recipe_bags?: Prisma.RecipeBagCreateNestedManyWithoutRecipeInput
   permissions?: Prisma.RecipePermissionCreateNestedManyWithoutRecipeInput
+  pinnedTemplateVersion?: Prisma.TemplateVersionCreateNestedOneWithoutPinnedByInput
 }
 
 export type RecipeUncheckedCreateWithoutTemplateInput = {
@@ -506,6 +596,8 @@ export type RecipeUncheckedCreateWithoutTemplateInput = {
   definition:PrismaJson.Recipe_definition
   plugins:PrismaJson.Recipe_plugins
   compiledAt: Date | string
+  shell_policy?: string
+  pinned_template_version_id?: string | null
   recipe_bags?: Prisma.RecipeBagUncheckedCreateNestedManyWithoutRecipeInput
   permissions?: Prisma.RecipePermissionUncheckedCreateNestedManyWithoutRecipeInput
 }
@@ -548,6 +640,63 @@ export type RecipeScalarWhereInput = {
   definition?: Prisma.JsonFilter<"Recipe">
   plugins?: Prisma.JsonFilter<"Recipe">
   compiledAt?: Prisma.DateTimeFilter<"Recipe"> | Date | string
+  shell_policy?: Prisma.StringFilter<"Recipe"> | string
+  pinned_template_version_id?: Prisma.StringNullableFilter<"Recipe"> | string | null
+}
+
+export type RecipeCreateWithoutPinnedTemplateVersionInput = {
+  id?: string
+  slug: string
+  created?: Date | string
+  updated?: Date | string
+  owner_user_id?: string | null
+  definition:PrismaJson.Recipe_definition
+  plugins:PrismaJson.Recipe_plugins
+  compiledAt: Date | string
+  shell_policy?: string
+  template: Prisma.TemplateCreateNestedOneWithoutRecipesInput
+  recipe_bags?: Prisma.RecipeBagCreateNestedManyWithoutRecipeInput
+  permissions?: Prisma.RecipePermissionCreateNestedManyWithoutRecipeInput
+}
+
+export type RecipeUncheckedCreateWithoutPinnedTemplateVersionInput = {
+  id?: string
+  slug: string
+  created?: Date | string
+  updated?: Date | string
+  owner_user_id?: string | null
+  template_id: string
+  definition:PrismaJson.Recipe_definition
+  plugins:PrismaJson.Recipe_plugins
+  compiledAt: Date | string
+  shell_policy?: string
+  recipe_bags?: Prisma.RecipeBagUncheckedCreateNestedManyWithoutRecipeInput
+  permissions?: Prisma.RecipePermissionUncheckedCreateNestedManyWithoutRecipeInput
+}
+
+export type RecipeCreateOrConnectWithoutPinnedTemplateVersionInput = {
+  where: Prisma.RecipeWhereUniqueInput
+  create: Prisma.XOR<Prisma.RecipeCreateWithoutPinnedTemplateVersionInput, Prisma.RecipeUncheckedCreateWithoutPinnedTemplateVersionInput>
+}
+
+export type RecipeCreateManyPinnedTemplateVersionInputEnvelope = {
+  data: Prisma.RecipeCreateManyPinnedTemplateVersionInput | Prisma.RecipeCreateManyPinnedTemplateVersionInput[]
+}
+
+export type RecipeUpsertWithWhereUniqueWithoutPinnedTemplateVersionInput = {
+  where: Prisma.RecipeWhereUniqueInput
+  update: Prisma.XOR<Prisma.RecipeUpdateWithoutPinnedTemplateVersionInput, Prisma.RecipeUncheckedUpdateWithoutPinnedTemplateVersionInput>
+  create: Prisma.XOR<Prisma.RecipeCreateWithoutPinnedTemplateVersionInput, Prisma.RecipeUncheckedCreateWithoutPinnedTemplateVersionInput>
+}
+
+export type RecipeUpdateWithWhereUniqueWithoutPinnedTemplateVersionInput = {
+  where: Prisma.RecipeWhereUniqueInput
+  data: Prisma.XOR<Prisma.RecipeUpdateWithoutPinnedTemplateVersionInput, Prisma.RecipeUncheckedUpdateWithoutPinnedTemplateVersionInput>
+}
+
+export type RecipeUpdateManyWithWhereWithoutPinnedTemplateVersionInput = {
+  where: Prisma.RecipeScalarWhereInput
+  data: Prisma.XOR<Prisma.RecipeUpdateManyMutationInput, Prisma.RecipeUncheckedUpdateManyWithoutPinnedTemplateVersionInput>
 }
 
 export type RecipeCreateWithoutPermissionsInput = {
@@ -559,8 +708,10 @@ export type RecipeCreateWithoutPermissionsInput = {
   definition:PrismaJson.Recipe_definition
   plugins:PrismaJson.Recipe_plugins
   compiledAt: Date | string
+  shell_policy?: string
   template: Prisma.TemplateCreateNestedOneWithoutRecipesInput
   recipe_bags?: Prisma.RecipeBagCreateNestedManyWithoutRecipeInput
+  pinnedTemplateVersion?: Prisma.TemplateVersionCreateNestedOneWithoutPinnedByInput
 }
 
 export type RecipeUncheckedCreateWithoutPermissionsInput = {
@@ -573,6 +724,8 @@ export type RecipeUncheckedCreateWithoutPermissionsInput = {
   definition:PrismaJson.Recipe_definition
   plugins:PrismaJson.Recipe_plugins
   compiledAt: Date | string
+  shell_policy?: string
+  pinned_template_version_id?: string | null
   recipe_bags?: Prisma.RecipeBagUncheckedCreateNestedManyWithoutRecipeInput
 }
 
@@ -601,8 +754,10 @@ export type RecipeUpdateWithoutPermissionsInput = {
   definition?:PrismaJson.Recipe_definition
   plugins?:PrismaJson.Recipe_plugins
   compiledAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  shell_policy?: Prisma.StringFieldUpdateOperationsInput | string
   template?: Prisma.TemplateUpdateOneRequiredWithoutRecipesNestedInput
   recipe_bags?: Prisma.RecipeBagUpdateManyWithoutRecipeNestedInput
+  pinnedTemplateVersion?: Prisma.TemplateVersionUpdateOneWithoutPinnedByNestedInput
 }
 
 export type RecipeUncheckedUpdateWithoutPermissionsInput = {
@@ -615,6 +770,8 @@ export type RecipeUncheckedUpdateWithoutPermissionsInput = {
   definition?:PrismaJson.Recipe_definition
   plugins?:PrismaJson.Recipe_plugins
   compiledAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  shell_policy?: Prisma.StringFieldUpdateOperationsInput | string
+  pinned_template_version_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recipe_bags?: Prisma.RecipeBagUncheckedUpdateManyWithoutRecipeNestedInput
 }
 
@@ -627,8 +784,10 @@ export type RecipeCreateWithoutRecipe_bagsInput = {
   definition:PrismaJson.Recipe_definition
   plugins:PrismaJson.Recipe_plugins
   compiledAt: Date | string
+  shell_policy?: string
   template: Prisma.TemplateCreateNestedOneWithoutRecipesInput
   permissions?: Prisma.RecipePermissionCreateNestedManyWithoutRecipeInput
+  pinnedTemplateVersion?: Prisma.TemplateVersionCreateNestedOneWithoutPinnedByInput
 }
 
 export type RecipeUncheckedCreateWithoutRecipe_bagsInput = {
@@ -641,6 +800,8 @@ export type RecipeUncheckedCreateWithoutRecipe_bagsInput = {
   definition:PrismaJson.Recipe_definition
   plugins:PrismaJson.Recipe_plugins
   compiledAt: Date | string
+  shell_policy?: string
+  pinned_template_version_id?: string | null
   permissions?: Prisma.RecipePermissionUncheckedCreateNestedManyWithoutRecipeInput
 }
 
@@ -669,8 +830,10 @@ export type RecipeUpdateWithoutRecipe_bagsInput = {
   definition?:PrismaJson.Recipe_definition
   plugins?:PrismaJson.Recipe_plugins
   compiledAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  shell_policy?: Prisma.StringFieldUpdateOperationsInput | string
   template?: Prisma.TemplateUpdateOneRequiredWithoutRecipesNestedInput
   permissions?: Prisma.RecipePermissionUpdateManyWithoutRecipeNestedInput
+  pinnedTemplateVersion?: Prisma.TemplateVersionUpdateOneWithoutPinnedByNestedInput
 }
 
 export type RecipeUncheckedUpdateWithoutRecipe_bagsInput = {
@@ -683,6 +846,8 @@ export type RecipeUncheckedUpdateWithoutRecipe_bagsInput = {
   definition?:PrismaJson.Recipe_definition
   plugins?:PrismaJson.Recipe_plugins
   compiledAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  shell_policy?: Prisma.StringFieldUpdateOperationsInput | string
+  pinned_template_version_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   permissions?: Prisma.RecipePermissionUncheckedUpdateManyWithoutRecipeNestedInput
 }
 
@@ -695,6 +860,8 @@ export type RecipeCreateManyTemplateInput = {
   definition:PrismaJson.Recipe_definition
   plugins:PrismaJson.Recipe_plugins
   compiledAt: Date | string
+  shell_policy?: string
+  pinned_template_version_id?: string | null
 }
 
 export type RecipeUpdateWithoutTemplateInput = {
@@ -706,8 +873,10 @@ export type RecipeUpdateWithoutTemplateInput = {
   definition?:PrismaJson.Recipe_definition
   plugins?:PrismaJson.Recipe_plugins
   compiledAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  shell_policy?: Prisma.StringFieldUpdateOperationsInput | string
   recipe_bags?: Prisma.RecipeBagUpdateManyWithoutRecipeNestedInput
   permissions?: Prisma.RecipePermissionUpdateManyWithoutRecipeNestedInput
+  pinnedTemplateVersion?: Prisma.TemplateVersionUpdateOneWithoutPinnedByNestedInput
 }
 
 export type RecipeUncheckedUpdateWithoutTemplateInput = {
@@ -719,6 +888,8 @@ export type RecipeUncheckedUpdateWithoutTemplateInput = {
   definition?:PrismaJson.Recipe_definition
   plugins?:PrismaJson.Recipe_plugins
   compiledAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  shell_policy?: Prisma.StringFieldUpdateOperationsInput | string
+  pinned_template_version_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recipe_bags?: Prisma.RecipeBagUncheckedUpdateManyWithoutRecipeNestedInput
   permissions?: Prisma.RecipePermissionUncheckedUpdateManyWithoutRecipeNestedInput
 }
@@ -732,6 +903,64 @@ export type RecipeUncheckedUpdateManyWithoutTemplateInput = {
   definition?:PrismaJson.Recipe_definition
   plugins?:PrismaJson.Recipe_plugins
   compiledAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  shell_policy?: Prisma.StringFieldUpdateOperationsInput | string
+  pinned_template_version_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+}
+
+export type RecipeCreateManyPinnedTemplateVersionInput = {
+  id?: string
+  slug: string
+  created?: Date | string
+  updated?: Date | string
+  owner_user_id?: string | null
+  template_id: string
+  definition:PrismaJson.Recipe_definition
+  plugins:PrismaJson.Recipe_plugins
+  compiledAt: Date | string
+  shell_policy?: string
+}
+
+export type RecipeUpdateWithoutPinnedTemplateVersionInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  created?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updated?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  definition?:PrismaJson.Recipe_definition
+  plugins?:PrismaJson.Recipe_plugins
+  compiledAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  shell_policy?: Prisma.StringFieldUpdateOperationsInput | string
+  template?: Prisma.TemplateUpdateOneRequiredWithoutRecipesNestedInput
+  recipe_bags?: Prisma.RecipeBagUpdateManyWithoutRecipeNestedInput
+  permissions?: Prisma.RecipePermissionUpdateManyWithoutRecipeNestedInput
+}
+
+export type RecipeUncheckedUpdateWithoutPinnedTemplateVersionInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  created?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updated?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  template_id?: Prisma.StringFieldUpdateOperationsInput | string
+  definition?:PrismaJson.Recipe_definition
+  plugins?:PrismaJson.Recipe_plugins
+  compiledAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  shell_policy?: Prisma.StringFieldUpdateOperationsInput | string
+  recipe_bags?: Prisma.RecipeBagUncheckedUpdateManyWithoutRecipeNestedInput
+  permissions?: Prisma.RecipePermissionUncheckedUpdateManyWithoutRecipeNestedInput
+}
+
+export type RecipeUncheckedUpdateManyWithoutPinnedTemplateVersionInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  created?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updated?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  owner_user_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  template_id?: Prisma.StringFieldUpdateOperationsInput | string
+  definition?:PrismaJson.Recipe_definition
+  plugins?:PrismaJson.Recipe_plugins
+  compiledAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  shell_policy?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 
@@ -784,9 +1013,12 @@ export type RecipeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   definition?: boolean
   plugins?: boolean
   compiledAt?: boolean
+  shell_policy?: boolean
+  pinned_template_version_id?: boolean
   template?: boolean | Prisma.TemplateDefaultArgs<ExtArgs>
   recipe_bags?: boolean | Prisma.Recipe$recipe_bagsArgs<ExtArgs>
   permissions?: boolean | Prisma.Recipe$permissionsArgs<ExtArgs>
+  pinnedTemplateVersion?: boolean | Prisma.Recipe$pinnedTemplateVersionArgs<ExtArgs>
   _count?: boolean | Prisma.RecipeCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["recipe"]>
 
@@ -800,7 +1032,10 @@ export type RecipeSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extens
   definition?: boolean
   plugins?: boolean
   compiledAt?: boolean
+  shell_policy?: boolean
+  pinned_template_version_id?: boolean
   template?: boolean | Prisma.TemplateDefaultArgs<ExtArgs>
+  pinnedTemplateVersion?: boolean | Prisma.Recipe$pinnedTemplateVersionArgs<ExtArgs>
 }, ExtArgs["result"]["recipe"]>
 
 export type RecipeSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -813,7 +1048,10 @@ export type RecipeSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extens
   definition?: boolean
   plugins?: boolean
   compiledAt?: boolean
+  shell_policy?: boolean
+  pinned_template_version_id?: boolean
   template?: boolean | Prisma.TemplateDefaultArgs<ExtArgs>
+  pinnedTemplateVersion?: boolean | Prisma.Recipe$pinnedTemplateVersionArgs<ExtArgs>
 }, ExtArgs["result"]["recipe"]>
 
 export type RecipeSelectScalar = {
@@ -826,20 +1064,25 @@ export type RecipeSelectScalar = {
   definition?: boolean
   plugins?: boolean
   compiledAt?: boolean
+  shell_policy?: boolean
+  pinned_template_version_id?: boolean
 }
 
-export type RecipeOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "slug" | "created" | "updated" | "owner_user_id" | "template_id" | "definition" | "plugins" | "compiledAt", ExtArgs["result"]["recipe"]>
+export type RecipeOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "slug" | "created" | "updated" | "owner_user_id" | "template_id" | "definition" | "plugins" | "compiledAt" | "shell_policy" | "pinned_template_version_id", ExtArgs["result"]["recipe"]>
 export type RecipeInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   template?: boolean | Prisma.TemplateDefaultArgs<ExtArgs>
   recipe_bags?: boolean | Prisma.Recipe$recipe_bagsArgs<ExtArgs>
   permissions?: boolean | Prisma.Recipe$permissionsArgs<ExtArgs>
+  pinnedTemplateVersion?: boolean | Prisma.Recipe$pinnedTemplateVersionArgs<ExtArgs>
   _count?: boolean | Prisma.RecipeCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type RecipeIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   template?: boolean | Prisma.TemplateDefaultArgs<ExtArgs>
+  pinnedTemplateVersion?: boolean | Prisma.Recipe$pinnedTemplateVersionArgs<ExtArgs>
 }
 export type RecipeIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   template?: boolean | Prisma.TemplateDefaultArgs<ExtArgs>
+  pinnedTemplateVersion?: boolean | Prisma.Recipe$pinnedTemplateVersionArgs<ExtArgs>
 }
 
 export type $RecipePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -848,6 +1091,7 @@ export type $RecipePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     template: Prisma.$TemplatePayload<ExtArgs>
     recipe_bags: Prisma.$RecipeBagPayload<ExtArgs>[]
     permissions: Prisma.$RecipePermissionPayload<ExtArgs>[]
+    pinnedTemplateVersion: Prisma.$TemplateVersionPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -870,6 +1114,19 @@ export type $RecipePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
      */
     plugins:PrismaJson.Recipe_plugins
     compiledAt: Date
+    /**
+     * how this wiki follows releases of its template shell:
+     * "auto" = always the template head, "pin" = the frozen release named by
+     * pinnedTemplateVersion, "notify" = a frozen release plus an update banner
+     * whenever a newer release exists.
+     */
+    shell_policy: string
+    /**
+     * the shell release this wiki serves when shell_policy is "pin" or
+     * "notify"; NULL means the wiki currently serves the template head.
+     * onDelete Restrict: a release that wikis are pinned to must not vanish.
+     */
+    pinned_template_version_id: string | null
   }, ExtArgs["result"]["recipe"]>
   composites: {}
 }
@@ -1267,6 +1524,7 @@ export interface Prisma__RecipeClient<T, Null = never, ExtArgs extends runtime.T
   template<T extends Prisma.TemplateDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TemplateDefaultArgs<ExtArgs>>): Prisma.Prisma__TemplateClient<runtime.Types.Result.GetResult<Prisma.$TemplatePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   recipe_bags<T extends Prisma.Recipe$recipe_bagsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Recipe$recipe_bagsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RecipeBagPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   permissions<T extends Prisma.Recipe$permissionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Recipe$permissionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RecipePermissionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  pinnedTemplateVersion<T extends Prisma.Recipe$pinnedTemplateVersionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Recipe$pinnedTemplateVersionArgs<ExtArgs>>): Prisma.Prisma__TemplateVersionClient<runtime.Types.Result.GetResult<Prisma.$TemplateVersionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1305,6 +1563,8 @@ export interface RecipeFieldRefs {
   readonly definition: Prisma.FieldRef<"Recipe", 'Json'>
   readonly plugins: Prisma.FieldRef<"Recipe", 'Json'>
   readonly compiledAt: Prisma.FieldRef<"Recipe", 'DateTime'>
+  readonly shell_policy: Prisma.FieldRef<"Recipe", 'String'>
+  readonly pinned_template_version_id: Prisma.FieldRef<"Recipe", 'String'>
 }
     
 
@@ -1749,6 +2009,25 @@ export type Recipe$permissionsArgs<ExtArgs extends runtime.Types.Extensions.Inte
   take?: number
   skip?: number
   distinct?: Prisma.RecipePermissionScalarFieldEnum | Prisma.RecipePermissionScalarFieldEnum[]
+}
+
+/**
+ * Recipe.pinnedTemplateVersion
+ */
+export type Recipe$pinnedTemplateVersionArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the TemplateVersion
+   */
+  select?: Prisma.TemplateVersionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the TemplateVersion
+   */
+  omit?: Prisma.TemplateVersionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TemplateVersionInclude<ExtArgs> | null
+  where?: Prisma.TemplateVersionWhereInput
 }
 
 /**

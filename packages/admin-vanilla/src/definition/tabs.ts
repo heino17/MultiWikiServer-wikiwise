@@ -55,7 +55,8 @@ export type FieldType =
   | "version"
   | "select"
   | "metadata-table"
-  | "landing-visibility";
+  | "landing-visibility"
+  | "shell-policy";
 
 
 export class IdString extends String {
@@ -99,6 +100,7 @@ export const fieldTypeZodShapes = {
   "switch": z.boolean(),
   "metadata-table": z.string().array(),
   "landing-visibility": z.boolean(),
+  "shell-policy": z.enum(["auto", "pin", "notify"]),
 } satisfies Record<FieldType, any>;
 
 export type FieldZodType<T extends FieldType = FieldType> = z.infer<(typeof fieldTypeZodShapes)[T]>;
@@ -128,6 +130,7 @@ export const fieldTypeCreateFactories = {
   "select": () => "",
   "metadata-table": () => [],
   "landing-visibility": () => true,
+  "shell-policy": () => "notify",
 } satisfies { [K in FieldType]: () => FieldZodType<K> };
 
 
@@ -288,6 +291,31 @@ const tabs = {
         architecture: "Whether this publicly readable (ANON-open) wiki appears in the public overview on the start page. Only shown once ANON is among the wiki's Readers.",
       },
       {
+        key: "shellPolicy",
+        label: "Template updates",
+        type: "shell-policy",
+        section: "authored",
+        mode: "create edit",
+        description: "Decides how this wiki follows new versions of its template shell.",
+        architecture: "auto: always serve the newest released template shell. pin/notify: freeze the shell at the newest release at creation (or at the moment the policy is switched); the update banner in the wiki offers the move to a newer release.",
+      },
+      {
+        key: "shellRelease",
+        label: "Served shell version",
+        type: "string",
+        section: "runtime",
+        mode: "server",
+        architecture: "Version name this wiki serves: the label from the shell's <meta name=\"mws-shell-version\" content=\"...\"> tag when it declares one, else the release number. Empty while the store has no releases yet.",
+      },
+      {
+        key: "shellLatestRelease",
+        label: "Newest shell version",
+        type: "string",
+        section: "runtime",
+        mode: "server",
+        architecture: "Newest version the template has published (label from the shell's meta tag, else the release number). When it exceeds the served version, the wiki offers an update.",
+      },
+      {
         key: "compileValidation",
         label: "Compile validation",
         type: "validation-report",
@@ -322,10 +350,12 @@ const tabs = {
         { title: "Readers", description: "Who can open this wiki (read access).", keys: ["recipeUsers"], width: halfWidth },
         { title: "Editors", description: "Who can make changes to this wiki.", keys: ["recipeAdmins"], width: halfWidth },
         { title: "Landing page", description: "Show this publicly readable wiki on the start page for visitors without an account.", keys: ["landingVisible"], width: halfWidth },
+        { title: "Template updates", description: "Follow new template versions automatically or keep this wiki on a pinned version you confirm yourself.", keys: ["shellPolicy"], width: halfWidth },
         { title: "Browser security", description: "External sources browsers may load beyond the strict same-origin default (images, media, frames, network); external scripts stay locked to same-origin.", keys: ["cspAllow"], width: fullWidth },
         { title: "Access", description: "Controls who can edit the wiki settings.", keys: ["recipePermissions"], width: fullWidth },
       ],
       runtime: [
+        { title: "Shell version", description: "Which template shell version this wiki serves, and the newest one the template has published. Shows the name the shell declares in its mws-shell-version tag; otherwise the release number.", keys: ["shellRelease", "shellLatestRelease"], width: halfWidth },
         { title: "Shared areas", description: "Bags that users other than the owner can write to. Every writer can currently read all of the wiki's tiddlers, so share these areas with care — or keep them in their own wiki.", keys: ["sharedWritableBags"], width: fullWidth },
         // { title: "Computed Write Prefix", description: "", keys: ["effectiveWritableBags"], width: fullWidth },
         // { title: "Computed Bag Order", description: "", keys: ["effectiveReadonlyBags"], width: halfWidth },
@@ -858,6 +888,13 @@ export interface WikiAdminRecord {
   cspAllow: readonly string[],
   // whether this publicly readable wiki appears on the public landing page
   landingVisible: boolean,
+  // how this wiki follows releases of its template shell (auto/pin/notify)
+  shellPolicy: "auto" | "pin" | "notify",
+  // release number of the template version this wiki serves ("" before the
+  // store has released anything)
+  shellRelease: string,
+  // newest release number the template has published
+  shellLatestRelease: string,
   // client field
   defaultWritableBag: string;
   thumbnailUrl: string;

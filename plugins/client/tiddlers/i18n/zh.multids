@@ -4,6 +4,12 @@ BagInfo/Heading: Bag 信息
 Login/ServiceName: 登录此 Wiki
 SaveWiki/ButtonCaption: 服务器状态
 SaveWiki/ButtonTooltip: 与服务器的同步状态
+ShellUpdate/BannerText: 此 Wiki 有更新的模板版本可用。
+ShellUpdate/ButtonCaption: 更新到最新版本
+ShellUpdate/ButtonTooltip: 为此 Wiki 应用最新模板版本
+ShellUpdate/ResultUpdated: Wiki 已更新到模板版本 <<version>>。
+ShellUpdate/ResultError: 模板更新失败。请重试。
+ShellUpdate/ResultForbidden: 只有 Wiki 所有者或管理员才能更新模板。
 Sidebar/ConnectionStatus: MWS 连接状态
 Syncer/CopyLogs: 将同步日志复制到剪贴板
 Syncer/LoggedIn: 你已登录

@@ -4,6 +4,12 @@ BagInfo/Heading: Infos du bag
 Login/ServiceName: Se connecter à ce wiki
 SaveWiki/ButtonCaption: État du serveur
 SaveWiki/ButtonTooltip: État de la synchronisation avec le serveur
+ShellUpdate/BannerText: Une version plus récente du modèle est disponible pour ce wiki.
+ShellUpdate/ButtonCaption: Mettre à jour vers la version la plus récente
+ShellUpdate/ButtonTooltip: Accepter la version la plus récente du modèle pour ce wiki
+ShellUpdate/ResultUpdated: Le wiki a été mis à jour vers la version <<version>> du modèle.
+ShellUpdate/ResultError: La mise à jour du modèle a échoué. Veuillez réessayer.
+ShellUpdate/ResultForbidden: Seule la personne propriétaire du wiki ou un·e administrateur·rice peut mettre à jour le modèle.
 Sidebar/ConnectionStatus: État de connexion MWS
 Syncer/CopyLogs: Copier le journal de synchronisation dans le presse-papiers
 Syncer/LoggedIn: Vous êtes connecté

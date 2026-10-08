@@ -74,6 +74,9 @@ export async function createWikiShell(prisma: PrismaTxnClient, options: WikiShel
     recipeUsers: options.readerRoleNames ?? [],
     cspAllow: [],
     landingVisible: false,
+    // notify is the safe default: a new template release never replaces a
+    // wiki's shell without its owner accepting it (§106).
+    shellPolicy: "notify",
   });
 
   const recipe = await prisma.recipe.findUnique({ where: { slug: options.slug }, select: { id: true } });

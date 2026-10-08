@@ -93,8 +93,33 @@ model Template {
   definition    Json
   recipes       Recipe[]
   permissions   TemplatePermission[]
+  versions      TemplateVersion[]
 
   @@map("template")
+}
+
+/// An immutable release of a template's shell. Every write to a template
+/// definition creates a new release; wikis pin to a release, never to the
+/// template head, so a published release keeps serving the exact definition
+/// that was current when it was made.
+model TemplateVersion {
+  id          String   @id @default(uuid(7))
+  template_id String
+  /// ascending release number per template (1, 2, …); this is the identity
+  /// wikis pin to and what the update banner compares.
+  release     Int
+  /// human-readable label, e.g. "v0.1.0", read from a
+  /// <meta name="mws-shell-version"> in the shell HTML when present.
+  label       String?
+  /// [Template_definition]
+  /// snapshot of the template definition this release serves; immutable
+  definition  Json
+  created     DateTime @default(now())
+  template    Template @relation(fields: [template_id], references: [id], onDelete: Cascade)
+  pinnedBy    Recipe[]
+
+  @@unique([template_id, release])
+  @@map("template_version")
 }
 
 model TemplatePermission {
@@ -108,23 +133,33 @@ model TemplatePermission {
 }
 
 model Recipe {
-  id            String             @id @default(uuid(7))
-  slug          String             @unique
-  created       DateTime           @default(now())
-  updated       DateTime           @updatedAt
+  id                         String             @id @default(uuid(7))
+  slug                       String             @unique
+  created                    DateTime           @default(now())
+  updated                    DateTime           @updatedAt
   /// user_id of the user who created this wiki; deletable only by the
   /// owner or the site admin account ("admin"). role_id references the
   /// auth module, no FK declared here.
-  owner_user_id String?
-  template_id   String
+  owner_user_id              String?
+  template_id                String
   /// [Recipe_definition]
-  definition    Json
-  template      Template           @relation(fields: [template_id], references: [id], onDelete: Restrict)
-  recipe_bags   RecipeBag[]
-  permissions   RecipePermission[]
+  definition                 Json
+  template                   Template           @relation(fields: [template_id], references: [id], onDelete: Restrict)
+  recipe_bags                RecipeBag[]
+  permissions                RecipePermission[]
   /// [Recipe_plugins]
-  plugins       Json
-  compiledAt    DateTime
+  plugins                    Json
+  compiledAt                 DateTime
+  /// how this wiki follows releases of its template shell:
+  /// "auto" = always the template head, "pin" = the frozen release named by
+  /// pinnedTemplateVersion, "notify" = a frozen release plus an update banner
+  /// whenever a newer release exists.
+  shell_policy               String             @default("notify")
+  /// the shell release this wiki serves when shell_policy is "pin" or
+  /// "notify"; NULL means the wiki currently serves the template head.
+  /// onDelete Restrict: a release that wikis are pinned to must not vanish.
+  pinned_template_version_id String?
+  pinnedTemplateVersion      TemplateVersion?   @relation(fields: [pinned_template_version_id], references: [id], onDelete: Restrict)
 
   @@map("recipe")
 }

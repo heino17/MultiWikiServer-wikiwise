@@ -169,6 +169,7 @@ export class LoadWikiFolderCommand extends BaseCommand<[string], {
 						recipeUsers,
 						cspAllow: [],
 						landingVisible: true,
+						shellPolicy: "notify",
 					});
 				}
 			}

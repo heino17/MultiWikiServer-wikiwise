@@ -383,10 +383,21 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 			this.isLoggedIn = status?.isLoggedIn ?? false;
 			this.username = status?.username ?? "(anon)";
 			this.isReadOnly = !(status?.bags?.some(b => b.canUserWrite) ?? false);
+			this.writeIsAdmin(status);
 		} else {
 			this.error = `Server error ${result?.status}`;
 		}
 		callback(this.error, this.isLoggedIn, this.username, this.isReadOnly, false);
+	}
+
+	/** The status response is the only place where the client learns whether the
+	 *  user is an admin. The shell-update banner reads this tiddler to decide
+	 *  who may accept a new template version. */
+	private writeIsAdmin(status: RecipeStatus | null) {
+		this.wiki.addTiddler({
+			title: "$:/status/IsAdmin",
+			text: status?.isAdmin ? "yes" : "no",
+		});
 	}
 
 	// -------------------------------------------------------------------------

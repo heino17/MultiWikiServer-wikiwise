@@ -17,6 +17,7 @@ import { IdString } from "@mws/admin-vanilla/src/definition/tabs";
 import { serverEvents } from "@tiddlywiki/events";
 import { defaultPreloadFunction, TiddlerHasher, PluginCache, requiredPlugins } from "../plugin-cache";
 import { AuthUser } from "./sessions";
+import { resolveShellVersionStatus } from "./template-releases";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -155,6 +156,8 @@ export class RecipeResolver {
         template_id: true,
         owner_user_id: true,
         definition: true,
+        shell_policy: true,
+        pinned_template_version_id: true,
         // template: {
         //   select: { name: true, definition: true, type: true },
         // },
@@ -423,9 +426,19 @@ export class RecipeResolver {
     const templateRow = await this.prisma!.template.findUnique({ where: { id: this.recipe.template_id } });
     if (!templateRow) throw new Error("template not found");
 
-    const { customHtmlEnabled, injectionFunction, injectionLocation, externalPlugins, externalStore, } = templateRow.definition;
+    // Which definition this wiki serves. "auto" (and a pin/notify wiki that
+    // has no release yet) follows the template head; pin/notify serve their
+    // pinned release unchanged, no matter what the template looks like today.
+    const pinnedVersion = this.recipe.pinned_template_version_id && this.recipe.shell_policy !== "auto"
+      ? await this.prisma!.templateVersion.findUnique({ where: { id: this.recipe.pinned_template_version_id } })
+      : null;
+    const servedDefinition = pinnedVersion?.definition ?? templateRow.definition;
+    // release numbers for the store tiddlers + the ETag identity
+    const versionInfo = await resolveShellVersionStatus(this.prisma!, this.recipe);
+
+    const { customHtmlEnabled, injectionFunction, injectionLocation, externalPlugins, externalStore, } = servedDefinition;
     const template = {
-      ...templateRow.definition,
+      ...servedDefinition,
       name: templateRow.name,
       injectionFunction: customHtmlEnabled ? injectionFunction : defaultPreloadFunction,
       injectionLocation: customHtmlEnabled ? injectionLocation : "</head>",
@@ -454,6 +467,11 @@ export class RecipeResolver {
       hash.update(temp);
       hash.update(this.recipe.recipe_bags.map(e => e.bag.name).join(","));
       hash.update(cspPolicy);
+      // Identity of the served shell: a template save always creates a new
+      // release, so a changed htmlContent / injection / plugin set can never
+      // survive in a browser cache. The previous ETag did not cover the shell
+      // at all, so an html-only change kept answering 304 with the old page.
+      hash.update(versionInfo.servedKey);
       // this is always needed because of the integrity hashes
       const version = pluginCache.versionFromTemplate(template.twVersion);
       hash.update(plugins.map(e => pluginCache.getHashForTitle(version, injectionFunction, e) ?? "").join(","));
@@ -474,7 +492,7 @@ export class RecipeResolver {
       return plugins;
     }
 
-    return { bagTiddlers, lastEventId, template, injectDefault, getIndexEtag, getPluginList, cspPolicy }
+    return { bagTiddlers, lastEventId, template, injectDefault, getIndexEtag, getPluginList, cspPolicy, versionInfo }
 
   }
 

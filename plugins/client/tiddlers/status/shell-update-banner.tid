@@ -1,0 +1,25 @@
+title: $:/plugins/mws/client/shell-update-banner
+tags: $:/tags/AboveStory
+
+\whitespace trim
+<$reveal state="$:/state/multiwikiclient/shell-update" type="match" text="yes">
+
+<div class="tc-message-box mws-shell-update-banner">
+
+<$set name="release-label" value={{$:/config/multiwikiclient/shell-latest-release-label}}>
+<$set name="release" value={{$:/config/multiwikiclient/shell-latest-release}}>
+<p class="mws-shell-update-text">{{$:/language/MWS/ShellUpdate/BannerText}}
+<$list filter="[<release-label>!match[]]"><strong>(<<release-label>>)</strong></$list>
+<$list filter="[<release-label>match[]]"><strong>(v<<release>>)</strong></$list>
+</p>
+</$set>
+</$set>
+
+<$button class="tc-btn-invisible mws-shell-update-button" tooltip={{$:/language/MWS/ShellUpdate/ButtonTooltip}} aria-label={{$:/language/MWS/ShellUpdate/ButtonCaption}}>
+{{$:/language/MWS/ShellUpdate/ButtonCaption}}
+<$action-sendmessage $message="tm-shell-update"/>
+</$button>
+
+</div>
+
+</$reveal>

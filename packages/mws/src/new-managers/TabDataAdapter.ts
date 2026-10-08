@@ -43,6 +43,7 @@ import { SessionManager } from "./sessions";
 import { deleteThumbnail } from "./WikiThumbnailRoutes";
 import { pruneSnapshotBags } from "./WikiSnapshotBag";
 import { HIDDEN_PREFIX } from "./LandingRoutes";
+import { isShellPolicy, resolveShellVersionStatus, type ShellPolicy, type ShellVersionStatus } from "./template-releases";
 import type { PasswordService } from "../services/PasswordService";
 
 
@@ -85,6 +86,9 @@ export type RecipeDefinition = Omit<
   | "myRights"
   | "sharedWritableBags"
   | "landingVisible"
+  | "shellPolicy"
+  | "shellRelease"
+  | "shellLatestRelease"
 >;
 
 declare global {
@@ -395,11 +399,6 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
       cspAllow: normalizeLineList(data.cspAllow ?? []),
     };
 
-    const { bags, plugins } = importer.compileRecipeSimpleV1(
-      authoredDefinition,
-      template.definition
-    );
-
     const recipePermissions = normalizePermissions<RecipePermissionLevel>([
       ...data.recipeUsers.map(e => ({ level: "A_read" as const, role: e })),
       ...data.recipeAdmins.map(e => ({ level: "B_write" as const, role: e })),
@@ -409,7 +408,7 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
 
     const existingRecipe = await prisma.recipe.findUnique({
       where: { slug: data.slug },
-      select: { owner_user_id: true },
+      select: { owner_user_id: true, shell_policy: true, pinned_template_version_id: true },
     });
 
     assertCanEdit({
@@ -417,6 +416,26 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
       user: this.user,
       kind: "wiki",
     });
+
+    // When a wiki pins its shell release (pin/notify), it is compiled and
+    // served against that frozen definition, not against the template head.
+    // The anchor is always the template's newest release: a fresh wiki pins
+    // that, a wiki that opts into pin/notify later on freezes exactly what
+    // it serves today.
+    const shellPolicy = isShellPolicy(data.shellPolicy) ? data.shellPolicy : "notify";
+    const anchorVersion = shellPolicy === "auto"
+      ? null
+      : await prisma.templateVersion.findFirst({
+          where: { template_id: template.id },
+          orderBy: { release: "desc" },
+          select: { id: true, definition: true },
+        });
+    const effectiveTemplateDefinition = anchorVersion?.definition ?? template.definition;
+
+    const { bags, plugins } = importer.compileRecipeSimpleV1(
+      authoredDefinition,
+      effectiveTemplateDefinition
+    );
 
     // Editors may only reference bags they already have rights on. Without
     // this gate a recipe author could attach a foreign bag and expose its
@@ -428,12 +447,31 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
       recipePermissions,
     );
 
+    // Which release rows the upsert below must write. undefined keeps the
+    // row's current value (already-pinned wikis stay pinned on edits, and a
+    // pin → notify switch keeps the same frozen release). A wiki without a
+    // pin that opts into pin/notify anchors on the newest release, freezing
+    // exactly what it serves today. auto clears the pin.
+    const wantsPin = shellPolicy !== "auto";
+    const keepPin = !!(existingRecipe?.pinned_template_version_id)
+      && (existingRecipe?.shell_policy === shellPolicy
+        || (existingRecipe?.shell_policy === "pin" && shellPolicy === "notify"));
+    const pinToPersist: IdString | null | undefined = !wantsPin
+      ? null
+      : keepPin
+        ? undefined
+        : anchorVersion
+          ? new IdString(anchorVersion.id)
+          : null;
+
     const [[id, lastCompiledAt, createdAt]] = await importer.upsert([{
       slug: data.slug,
       templateId: new IdString(template.id),
       compiledBags: bags,
       plugins: plugins,
       definition: authoredDefinition,
+      shellPolicy: shellPolicy,
+      pinnedTemplateVersionId: pinToPersist,
       ownerUserId: existingRecipe ? undefined : (this.user.user_id ? new IdString(this.user.user_id) : undefined),
       permissions: recipePermissions.map(row => ({
         level: row.level,
@@ -487,6 +525,18 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
       compiledBags: bags,
     });
 
+    // What the upsert just persisted: policy as submitted, pin kept when the
+    // row already had one (keepPin), otherwise the anchor or none.
+    const persistedPolicy = shellPolicy;
+    const persistedPin = pinToPersist === undefined
+      ? (existingRecipe?.pinned_template_version_id ?? null)
+      : (pinToPersist === null ? null : IdString.cast(pinToPersist));
+    const shellStatus = await resolveShellVersionStatus(prisma, {
+      template_id: template.id,
+      shell_policy: persistedPolicy,
+      pinned_template_version_id: persistedPin,
+    });
+
     return this.buildResponse({
       id: new IdString(id),
       slug: data.slug,
@@ -501,11 +551,13 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
       myRights: this.user.isAdmin ? "admin" : existingRecipe?.owner_user_id === this.user.user_id ? "owner" : "",
       sharedWritableBags,
       landingVisible,
+      shellPolicy: persistedPolicy,
+      shellStatus,
     });
 
   }
 
-  private buildResponse({ definition, plugins, allbags, id, slug, templateName, lastCompiledAt, createdAt, recipePermissions, ownerUsername = "", myRights = "", sharedWritableBags = [], landingVisible = true }: {
+  private buildResponse({ definition, plugins, allbags, id, slug, templateName, lastCompiledAt, createdAt, recipePermissions, ownerUsername = "", myRights = "", sharedWritableBags = [], landingVisible = true, shellPolicy = "notify", shellStatus }: {
     id: IdString;
     slug: string;
     lastCompiledAt: Date;
@@ -522,6 +574,10 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
     sharedWritableBags: string[];
     /** whether this publicly readable wiki appears on the public landing page */
     landingVisible: boolean;
+    /** how this wiki follows its template's shell releases (auto/pin/notify) */
+    shellPolicy?: ShellPolicy;
+    /** resolved release numbers for the runtime readout */
+    shellStatus?: ShellVersionStatus;
   }): DataStore["wikis"][number] {
     const effectivePluginSet = plugins;
     const effectiveReadonlyBags = allbags
@@ -551,6 +607,13 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
       recipeAdmins: recipePermissions.filter(e => e.level === "B_write").map(e => e.role),
       recipeUsers: recipePermissions.filter(e => e.level === "A_read").map(e => e.role),
       landingVisible,
+      shellPolicy,
+      // The shell's own version name (v0.1.0) when it declares one in a
+      // <meta name="mws-shell-version"> tag; the bare release number only
+      // for shells without a label. "" while a store has no release yet
+      // (pre-backfill stores only).
+      shellRelease: shellStatus?.servedLabel ?? (shellStatus?.servedRelease != null ? String(shellStatus.servedRelease) : ""),
+      shellLatestRelease: shellStatus?.latestLabel ?? (shellStatus?.latestRelease != null ? String(shellStatus.latestRelease) : ""),
     };
   }
 
@@ -581,6 +644,8 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
         compiledAt: true,
         created: true,
         owner_user_id: true,
+        shell_policy: true,
+        pinned_template_version_id: true,
         permissions: {
           select: {
             level: true,
@@ -650,6 +715,44 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
         .map((row) => row.key.slice(HIDDEN_PREFIX.length)),
     );
 
+    // Shell releases for the readout: the newest release of every template
+    // with its label, plus the relevant entries of the pinned versions the
+    // visible wikis reference. One `findMany`, ordered, since groupBy cannot
+    // carry a label and the set is small.
+    const allVersions = await prisma.templateVersion.findMany({
+      select: { id: true, template_id: true, release: true, label: true },
+      orderBy: { release: "desc" },
+    });
+    const latestVersionByTemplate = new Map<string, { id: string; release: number; label: string | null }>();
+    for (const version of allVersions) {
+      if (!latestVersionByTemplate.has(version.template_id)) latestVersionByTemplate.set(version.template_id, version);
+    }
+    const pinnedIds = Array.from(new Set(
+      recipes
+        .map(r => r.pinned_template_version_id)
+        .filter((id): id is string => Boolean(id)),
+    ));
+    const pinnedVersionById = new Map<string, { id: string; release: number; label: string | null }>(
+      pinnedIds.length ? allVersions.filter(v => pinnedIds.includes(v.id)).map(v => [v.id, v]) : [],
+    );
+    const shellStatusFor = (recipe: { template_id: string; shell_policy: string; pinned_template_version_id: string | null }): ShellVersionStatus => {
+      const latest = latestVersionByTemplate.get(recipe.template_id) ?? null;
+      const pinned = recipe.pinned_template_version_id
+        ? pinnedVersionById.get(recipe.pinned_template_version_id)
+        : undefined;
+      const usePinned = recipe.shell_policy !== "auto" && pinned !== undefined;
+      const served = usePinned ? pinned : latest;
+      return {
+        policy: recipe.shell_policy,
+        servedRelease: served?.release ?? null,
+        servedLabel: served?.label ?? null,
+        latestRelease: latest?.release ?? null,
+        latestLabel: latest?.label ?? null,
+        updateAvailable: !!(latest && served && latest.release > served.release),
+        servedKey: "",
+      };
+    };
+
     // Foreign-writer classification for the shared-area warning: every
     // role_id granted B_write/C_admin anywhere in the visible recipe set,
     // its members, and its role names, fetched in a few round-trips.
@@ -712,6 +815,8 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
         myRights,
         sharedWritableBags,
         landingVisible: !hiddenLandingIds.has(recipe.id),
+        shellPolicy: isShellPolicy(recipe.shell_policy) ? recipe.shell_policy : "notify",
+        shellStatus: shellStatusFor(recipe),
       });
     })
   }
@@ -801,6 +906,11 @@ export class TemplateDataAdapter extends TabDataAdapter<"templates"> {
       const importerRecipe = new RecipeImportWriter(prisma, false);
 
       for (const recipe of recipes) {
+        // Wikis pinned to a release keep serving and compiling against that
+        // frozen definition; only auto wikis follow this save of the template
+        // head. Their pin is moved by the wiki owner, not by an admin save.
+        if (recipe.pinned_template_version_id) continue;
+
         const compiled = importerRecipe.compileRecipeSimpleV1(
           recipe.definition,
           template.definition,
@@ -990,7 +1100,7 @@ async function getRolesMapper(prisma: PrismaTxnClient, roles: readonly string[])
  * created it (owner) or by the bootstrap site admin account ("admin").
  * Records without an owner (legacy/system rows) are admin-only.
  */
-function assertCanEdit(opts: {
+export function assertCanEdit(opts: {
   existingOwnerId: string | null | undefined;
   user: ServerRequest["user"];
   kind: string;
@@ -1785,12 +1895,17 @@ export const AdminCreateWiki = zodRoute({
         wiki can be created that serves the SimpleWiki shell instead of
         TiddlyWiki. See §103. */
     templateName: z.string().min(1).max(120).optional(),
+    /** How the new wiki follows its template's shell releases:
+        "notify" (default, freezes the newest release at creation and shows an
+        update banner when a newer release appears), "pin" (freeze, never ask)
+        or "auto" (always the newest release). */
+    shellPolicy: z.enum(["auto", "pin", "notify"]).optional(),
   }),
   inner: async (state) => {
     state.assertReferer(["/"]);
     state.asserted = state.user.isLoggedIn;
 
-    const { displayName, description, templateName } = state.data;
+    const { displayName, description, templateName, shellPolicy } = state.data;
 
     return await state.$transaction(async (prisma) => {
       await assertWikiCreationAllowed(prisma, state.user);
@@ -1837,13 +1952,29 @@ export const AdminCreateWiki = zodRoute({
         plugins: [],
         cspAllow: [],
       };
-      const { bags, plugins } = recipeWriter.compileRecipeSimpleV1(authoredDefinition, template.definition);
+      // pin/notify freeze the newest release right at creation: the wiki is
+      // compiled and served against that frozen definition, so it only moves
+      // when its owner accepts an update. auto keeps following the head.
+      const policy = shellPolicy ?? "notify";
+      const anchor = policy === "auto"
+        ? null
+        : await prisma.templateVersion.findFirst({
+            where: { template_id: template.id },
+            orderBy: { release: "desc" },
+            select: { id: true, definition: true },
+          });
+      const { bags, plugins } = recipeWriter.compileRecipeSimpleV1(
+        authoredDefinition,
+        anchor?.definition ?? template.definition,
+      );
       const [[recipeId, lastCompiledAt, createdAt]] = await recipeWriter.upsert([{
         slug,
         templateId: new IdString(template.id),
         compiledBags: bags,
         plugins,
         definition: authoredDefinition,
+        shellPolicy: policy,
+        pinnedTemplateVersionId: anchor ? new IdString(anchor.id) : null,
         ownerUserId: new IdString(state.user.user_id),
         permissions: [
           { role_id: adminRole, level: "B_write" },

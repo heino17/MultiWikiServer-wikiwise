@@ -478,6 +478,8 @@ abstract class StoreWriter {
   abstract plugins: string[];
   abstract twVersion: string;
   protected ownerUsername = "";
+  /** shell release status of this wiki; absent for the docs sender */
+  protected shellStatus?: import("./template-releases").ShellVersionStatus;
 
   // private get cachePath() { return this.state.pluginCache.cachePath; }
   // private get pluginFiles() { return this.state.pluginCache.pluginFiles; }
@@ -526,6 +528,31 @@ abstract class StoreWriter {
         text: this.ownerUsername,
       });
     }
+    // Shell release status of this wiki: the client's update banner compares
+    // served against latest and asks the server to move the pin. Empty
+    // strings while the store has no releases yet.
+    if (this.shellStatus) {
+      await this.writeTiddler({
+        title: "$:/config/multiwikiclient/shell-policy",
+        text: this.shellStatus.policy,
+      });
+      await this.writeTiddler({
+        title: "$:/config/multiwikiclient/shell-release",
+        text: this.shellStatus.servedRelease != null ? String(this.shellStatus.servedRelease) : "",
+      });
+      await this.writeTiddler({
+        title: "$:/config/multiwikiclient/shell-release-label",
+        text: this.shellStatus.servedLabel ?? "",
+      });
+      await this.writeTiddler({
+        title: "$:/config/multiwikiclient/shell-latest-release",
+        text: this.shellStatus.latestRelease != null ? String(this.shellStatus.latestRelease) : "",
+      });
+      await this.writeTiddler({
+        title: "$:/config/multiwikiclient/shell-latest-release-label",
+        text: this.shellStatus.latestLabel ?? "",
+      });
+    }
     if (process.env.DEVSERVER) {
       await this.writeTiddler({
         title: "$:/state/multiwikiclient/dev-mode",
@@ -568,6 +595,7 @@ class WikiStoreWriter extends StoreWriter {
   ) {
     super();
     this.ownerUsername = ownerUsername;
+    this.shellStatus = index.versionInfo;
     this.bagTiddlers = index.bagTiddlers;
     this.injectionFunction = index.template.injectionFunction;
     this.externalPlugins = index.template.externalPlugins;

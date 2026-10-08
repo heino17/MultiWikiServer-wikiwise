@@ -4,6 +4,12 @@ BagInfo/Heading: Información del bag
 Login/ServiceName: Iniciar sesión en este wiki
 SaveWiki/ButtonCaption: Estado del servidor
 SaveWiki/ButtonTooltip: Estado de la sincronización con el servidor
+ShellUpdate/BannerText: Hay una versión más reciente de la plantilla disponible para este wiki.
+ShellUpdate/ButtonCaption: Actualizar a la versión más reciente
+ShellUpdate/ButtonTooltip: Aceptar la versión más reciente de la plantilla para este wiki
+ShellUpdate/ResultUpdated: El wiki se actualizó a la versión <<version>> de la plantilla.
+ShellUpdate/ResultError: Falló la actualización de la plantilla. Inténtalo de nuevo.
+ShellUpdate/ResultForbidden: Solo la propietaria del wiki o un administrador pueden actualizar la plantilla.
 Sidebar/ConnectionStatus: Estado de conexión de MWS
 Syncer/CopyLogs: Copiar el registro de sincronización al portapapeles
 Syncer/LoggedIn: Has iniciado sesión

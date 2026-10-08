@@ -43,6 +43,14 @@ export type TiddlerEvent = Prisma.TiddlerEventModel
  */
 export type Template = Prisma.TemplateModel
 /**
+ * Model TemplateVersion
+ * An immutable release of a template's shell. Every write to a template
+ * definition creates a new release; wikis pin to a release, never to the
+ * template head, so a published release keeps serving the exact definition
+ * that was current when it was made.
+ */
+export type TemplateVersion = Prisma.TemplateVersionModel
+/**
  * Model TemplatePermission
  * 
  */

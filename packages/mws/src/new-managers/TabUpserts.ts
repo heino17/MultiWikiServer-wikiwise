@@ -10,6 +10,7 @@ import {
 } from "./wiki-contract";
 import { Prisma } from "@tiddlywiki/mws-prisma";
 import { mapGetInit, thrower } from "./wiki-utils";
+import { createTemplateRelease } from "./template-releases";
 import { IdString, TabId } from "@mws/admin-vanilla/src/definition/tabs";
 import { Debug } from "@prisma/client/runtime/client";
 
@@ -399,6 +400,10 @@ export class TemplateImportWriter extends PerClassImportWriter<"template"> {
    * Saving a template without an id will always create one if the name does not exist 
    * and modify it if it does exist. 
    * You must include the existing id if you want to rename a template.
+   * Every written definition is snapshotted into a new immutable shell release
+   * (createTemplateRelease), so wikis can pin and be notified about updates.
+   * BagRename (BagImportWriter.rename) edits template definitions directly and
+   * deliberately does NOT go through here, so a bag rename creates no release.
    */
   async upsert(templates: UpsertTemplateInput[]) {
     this.assertPermissions();
@@ -435,6 +440,14 @@ export class TemplateImportWriter extends PerClassImportWriter<"template"> {
 
     }));
 
+    // One immutable release per written definition, in the same transaction.
+    for (let i = 0; i < templates.length; i++) {
+      await createTemplateRelease(this.tx, {
+        id: templateRows[i].id,
+        definition: templates[i].definition,
+      });
+    }
+
     return templateRows;
   }
 }
@@ -452,6 +465,17 @@ export class RecipeImportWriter extends PerClassImportWriter<"recipe"> {
     this.assertPermissions();
     const upserter = async (recipe: UpsertRecipeInput, compiledAt: Date) => {
       recipe.compiledBags.sort((a, b) => a.priority - b.priority);
+      // The shell policy and the pinned release travel with the recipe row.
+      // When a caller does not set them (bulk recompile, restore), the
+      // existing values must survive unchanged — hence the conditional spread.
+      const shellPolicy = recipe.shellPolicy !== undefined
+        ? { shell_policy: recipe.shellPolicy }
+        : {};
+      const pinnedVersion = recipe.pinnedTemplateVersionId !== undefined
+        ? { pinned_template_version_id: recipe.pinnedTemplateVersionId === null
+          ? null
+          : IdString.cast(recipe.pinnedTemplateVersionId) }
+        : {};
       return await this.tx.recipe.upsert({
         where: { slug: recipe.slug },
         update: {
@@ -459,6 +483,8 @@ export class RecipeImportWriter extends PerClassImportWriter<"recipe"> {
           template_id: IdString.cast(recipe.templateId),
           plugins: recipe.plugins,
           compiledAt,
+          ...shellPolicy,
+          ...pinnedVersion,
           recipe_bags: {
             deleteMany: {},
             create: recipe.compiledBags.map(e => ({
@@ -479,6 +505,8 @@ export class RecipeImportWriter extends PerClassImportWriter<"recipe"> {
           template_id: IdString.cast(recipe.templateId),
           plugins: recipe.plugins,
           compiledAt,
+          ...shellPolicy,
+          ...pinnedVersion,
           owner_user_id: recipe.ownerUserId ? IdString.cast(recipe.ownerUserId) : undefined,
           recipe_bags: {
             create: recipe.compiledBags.map(e => ({

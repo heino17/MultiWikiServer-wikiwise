@@ -675,6 +675,8 @@ export const AdminWikiFileSnapshotCounts = zodRoute({
           template_id: true,
           owner_user_id: true,
           definition: true,
+          shell_policy: true,
+          pinned_template_version_id: true,
           permissions: {
             where: { role_id: { in: roleIds } },
             select: { role_id: true, level: true },
