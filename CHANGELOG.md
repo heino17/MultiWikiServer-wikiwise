@@ -5048,6 +5048,61 @@ numbered), and it includes the MWS-mode tests that read and write through
 `/recipe/<slug>/batch`, so the exchange itself is covered and not only the
 look of the thing.
 
+## 106. Feature: a wiki holds on to its template's shell version
+
+**Why.** §105 documented a mechanism that everyone can feel: one save of a
+template rewrote the interface of *every* wiki built from it, at the same
+moment, without being asked. For an operator who serves dozens of wikis from
+one template, "update" was not an option but a fact. A wiki needs a way to
+hold on to the shell version it serves — to stay on a known-good interface,
+to take a new one deliberately, or to leave the choice to each wiki — and to
+hear about a new release instead of waking up with it. This change makes the
+shell versioned and the wiki in charge.
+
+**What.** Every template save now creates a numbered **release**: an immutable
+snapshot of the template, with a release number that is per-template and
+strictly ascending and an optional human-readable label taken from a
+`<meta name="mws-shell-version" content="...">` tag in the shell. A wiki
+follows its template under a **shell policy**, set in the wiki's template field
+and shown in the overview. New wikis default to `notify`, so a template release
+never lands unannounced:
+- `auto` serves the newest release, exactly as before;
+- `notify` stays on the current one and asks before moving on;
+- `pin` stays on one release.
+
+`/status` and the index answer the wiki with its policy and the served and
+newest release (`$:/config/multiwikiclient/shell-policy`, `-release`,
+`-release-label`, `-latest-release`, `-latest-release-label`), so the client
+can compare them without a round trip.
+
+**The update banner.** Under `notify`, when the newest release is newer than
+the served one, a banner above the page tells the wiki owner — and site admins
+— that a new template version exists, shows that version and offers an
+*Update* button; `pin` stays quiet by design, and `auto` serves the newest
+release anyway. The button calls `PUT /recipe/<slug>/shell/update`, which moves
+the served release to the newest without changing the policy (pin stays pin,
+notify stays notify) and recompiles the wiki against it. The wiki owner and
+admins may call it (the same gate as the settings form); everyone else gets
+`403`, a template without releases answers `409`. After a success the banner
+hides and the page reloads to serve the new shell, unless the syncer has
+unsaved changes to protect — then it reloads later.
+
+**The client knows who is an admin.** The adaptor writes `$:/status/IsAdmin`
+("yes"/"no") with every status response, so the banner can tell the owner and
+the admins from other readers. Like all other `$:/status/...` tiddlers it stays
+out of the store.
+
+**Verified.** `npm run tsc2`, the admin-app typecheck and `npm run build` are
+clean. One migration, `20261007182014_shell_versions`, adds the
+`TemplateVersion` table (release, label, frozen definition) and
+`recipes.pinned_template_version_id`, and backfills the current definition of
+every existing template as release 1, so no wiki ever believes there is no
+release to talk about; it applied itself to the dev store on the next start.
+The rebuilt client plugin ships the banner tiddler, the update module and the
+six new strings in all eight languages. The banner itself still wants a
+browser: save a template whose wiki has the `notify` policy, open that wiki as
+its owner and as someone with fewer rights, and click the button.
+
 ## 111. The default template has a name, templates show their version
 
 **Why.** The default TiddlyWiki template was still called "Blank Template" —
@@ -5294,6 +5349,163 @@ a role created through the admin app shows its real date with the matching hour 
 the tooltip. Wikis, bags and users show a date in every row of all four tables,
 the admin typecheck and `npm run tsc2` are clean, and the browser reported no
 console or page errors while clicking through the four tables.
+
+## 101. Feature: a snapshot of a wiki, taken by hand
+
+**Why.** Until now a snapshot was a by-product: an import that replaces a wiki
+wrote a backup on the way, and §97–§99 made those backups visible. But
+"replace" is not the only moment when the past is worth keeping. Before trying
+something in a wiki — an edit that may not work out, an experiment with pages
+or templates — the natural thing is to put a copy aside *before* touching
+anything. That was not possible: the snapshot came with the import, and
+importing an empty file to trigger one is a hack, not a feature. The persons
+who may replace a wiki (the gate `resolveWikiTarget` with `mode: "replace"`:
+write on the default write bag, or `C_admin`, owner, site admin) are exactly
+the persons who should be able to make a backup. So the button belongs next to
+the replace, in the wiki dialog.
+
+**What.** The wiki dialog gains a snapshot button next to upload and restore.
+It asks a new route, `PUT /api/wiki-file/snapshot/create`, which takes the same
+gate as a restore (`resolveWikiTarget`, `mode: "replace"`), so it cannot become
+a second way around it. An empty wiki is refused with `WIKI_FILE_INVALID` and
+a reason of its own rather than storing a snapshot that nobody could restore.
+
+The manual snapshot has a budget of its own. An import leaves 10 snapshots; a
+backup somebody asked for is the fifth at most, and the two budgets do not
+touch each other — five imports can no longer push a wanted backup out of the
+store. Which budget a snapshot belongs to is read from the `manual-` prefix of
+its bag name, so pruning does not have to open every snapshot to find out.
+Snapshots that existed before this change are imports, as they always were,
+and keep working unchanged. The restore dialog now names both rules and shows
+a wanted backup as *Manual backup* instead of its raw source marker.
+
+The wikis tab asks `/api/wiki-file/snapshot-counts` anyway; that route now
+reports a wiki with a count of **zero** as well. It is the same list that
+decides where the button is offered, and a count of zero is exactly what a
+wiki shows when somebody wants to back it up for the first time. The hint
+above the list drops the zeros itself.
+
+**Verified.** No migration, no new dependency. On a dev instance on port 5000
+(`admin`): six backups in a row left five and reported the sixth as pruned,
+the ten imports of `neues-admin-empty` were untouched by them, an empty wiki
+was refused, and an anonymous request was denied with `403`.
+
+## 102. Feature: a wiki file from SimpleWiki can be imported
+
+**Why.** The import knew exactly one format: a TiddlyWiki file. A file that
+SimpleWiki writes — the `.html` and the `.json` of its small single-page wiki —
+has no `application-name` and no TiddlyWiki store, so it came out as *not a
+TiddlyWiki file*. True, and useless to somebody who had just saved their wiki
+from SimpleWiki on purpose. The exchange between the two worlds was one-way.
+
+**What.** A SimpleWiki file is recognised before the TiddlyWiki markers and
+read into the same shape a TiddlyWiki file produces, so the plan, the dialog,
+the writer and the snapshot that a replace takes on the way all work on both
+without knowing which one they got. Every page becomes a tiddler, the start
+page becomes `$:/DefaultTiddlers`, and the dialog names the format instead of
+printing an empty TiddlyWiki version.
+
+The file is checked as a whole, and a refusal is whole. A file that announces
+a higher format version is refused rather than read in part: half a format the
+server does not know loses fields on the next export, and the person would find
+out much later. Two pages with one title are refused too, because the title is
+the identity on both sides and TiddlyWiki would keep only the last one. A file
+whose start page is not one of its own pages is refused as well, rather than
+opening the wiki on something else.
+
+**The `wiki:` links become TiddlyWiki links.** SimpleWiki writes a page
+reference as `[Text](wiki:Title)`, which TiddlyWiki shows as an ordinary link
+into the void; `[Text](<wiki:Title>)` is the same thing with a title that has
+spaces in it. Both become `[[Text|Title]]`. `[[Title]]` and `[[Text|Title]]`
+mean the same on both sides and are left alone, and so is everything else on
+the page — a fenced block or an inline code span may well show the syntax as
+an example, and rewriting it there would change what the page teaches.
+
+**Dates and tags land in TiddlyWiki's own format.** SimpleWiki writes ISO 8601
+in UTC; TiddlyWiki writes `YYYYMMDDhhmmssSSS`, and its `parseDate` reads that
+form digit by digit. An ISO string is therefore not an invalid date but a
+plausible wrong one: a page created on the third of October comes out as the
+first of January, silently, in every modified-time listing and in the info
+pane. The import converts — a reformatting and not a shift, because both name
+the same instant in UTC. Tags are written as a TiddlyWiki list, matching every
+other tiddler in the store instead of being the one JSON array among ~900
+list fields.
+
+**Verified.** On a dev instance on port 5000 and against
+`simplewiki_export.json`, `simplewiki_export.html` and `simplewiki-leer.html`:
+the `.json` and the `.html` produce the same 8 tiddlers, the empty file
+produces a wiki with 0 pages and no `$:/DefaultTiddlers`, and a replace into an
+existing wiki takes a snapshot first and then rewrites all 7 pages. Refused as
+intended: format version 2, a duplicate title, a start page that is not one of
+the pages, a page without a title, and a truncated `.json`. A TiddlyWiki 5
+file still imports exactly as before (49 tiddlers, 3 plugins left out) and a
+TiddlyWiki 2 file still gets the save-with-5 hint. The date format was checked
+against `$tw.utils.parseDate` from `boot/boot.js` of 5.4.1, the tag format
+against a real TiddlyWiki import of the same build. The dialog itself was not
+clicked through — the admin API answers `403` without a session and no
+password was guessed, so the two greyed-out checkboxes and the *SimpleWiki* in
+the file line still want a look in a browser. Two dev wikis were created for
+the attempt, `sw-phase1` and `sw-links`, plus `tw5-probe` for the counter-test;
+they can be deleted like any other wiki. No migration, no new dependency, no
+plugin added: an imported page keeps its Markdown as text, and a wiki that
+wants it rendered needs the `tiddlywiki/markdown` plugin in its recipe.
+
+## 103. Feature: a wiki can be a SimpleWiki
+
+**Why.** A template with its own HTML already existed, but it meant TiddlyWiki
+in a different shape: the custom shell still rendered tiddlers. SimpleWiki
+turns the idea around — it is a page wiki served by MWS itself under
+`/wiki/<slug>/`, a shell that shows pages instead of tiddlers and writes every
+change straight to MWS. Building such a wiki here needed three missing pieces:
+a template carrying the shell, a command to load it, and a creation path that
+chooses it. This change is all three.
+
+**What.** **One click.** The "Create a wiki" dropdown gains a second entry,
+`1-click wiki creation as SimpleWiki`, next to the plain one-click creation; it
+opens the same dialog with the template pre-set. The entry appears only when
+the template `SimpleWiki` exists *and* carries `customHtmlEnabled`, so no store
+gets an entry that fails on the server. `PUT /admin/wiki` accepts an optional
+`templateName`; without it the blank TiddlyWiki template is used exactly as
+before, so the old entry's request stays the same byte for byte.
+
+**Where the shell gets its store.** The shell contains
+`<script class="simplewiki-store-point"></script>` exactly once, and a
+`$tw.preloadTiddler` in front of it. For such a recipe MWS writes
+`<script>$tw.preloadTiddler({…});</script>` before the *first* occurrence of
+`injectionLocation` and then calls `injectionFunction` (`$tw.preloadTiddler`).
+`injectDefaultPreloadScript` stays off for custom HTML — that is why the shell
+brings its own `$tw`. `</head>` is not a usable marker: the document contains
+that literal text earlier, in the document comment and in the bundled toast
+code, and the server's plain `indexOf` would write the store into the
+invisible.
+
+**An empty start.** The TiddlyWiki welcome tiddler and a `$:/DefaultTiddlers`
+pointing at it would be wiki markup in a shell that cannot render it, and
+SimpleWiki reads `$:/DefaultTiddlers` as the name of a page that has to exist.
+Such a wiki starts with nothing but `$:/SiteTitle`, set to the display name.
+
+**`provision-simplewiki`** reads a `simplewiki.html`, checks the rules above
+and stores it as the template `SimpleWiki`. It is the counterpart to
+`import-wiki-file`, which reads a wiki *out* of a file.
+
+**The write route is a PUT.** `POST /recipe/<slug>/batch/save` answers
+`400 NO_ROUTE_MATCHED`: the route in `RecipeRoutes.ts` takes nothing but
+`PUT`. A stand-in test server that understands `POST` confirms whatever it was
+told to confirm and knows nothing about the real route; `tests/mwsserver.py`
+and `tests/t_mwsmode.py` in the SimpleWiki repository now say `PUT` as well.
+
+**Verified.** On the dev instance, in the browser: the "Create a wiki"
+dropdown places **"1-click wiki creation as SimpleWiki"** between the one-click
+and the defined creation in German; clicking it opens the dialog headed
+**"SimpleWiki-Wiki auf einen Klick anlegen"**, with the SimpleWiki sentence
+and the name field prefilled with "admins Wiki"; "Wiki anlegen" answers 200
+and closes the dialog. The new wiki carries the SimpleWiki `template_id` and
+serves the shell (about 1.1 MB, store before the marker, no JSON island). The
+page the browser writes appears in the table of contents after a reload;
+without write permission MWS answers `403 BAG_NO_WRITE_PERMISSION` and the
+shell shows its read-only note. A bag without a single permission row is
+closed even for readers (`RecipeResolver.ts`), so a public wiki needs an
+`A_read` row for `ANON`. No migration, no schema change.
 
 ## 98. Feature: the snapshot hint folds away, the sum stays
 
@@ -11388,6 +11600,67 @@ Tag datiert statt nummeriert), und sie enthält die MWS-Modus-Tests, die über
 `/recipe/<slug>/batch` lesen und schreiben. Damit ist der Austausch selbst
 abgedeckt und nicht nur das Aussehen.
 
+## 106. Feature: eine Wiki kann an der Schalen-Version ihres Templates festhalten
+
+**Warum.** §105 hat einen Mechanismus beschrieben, den jede und jeder spürt:
+Ein Speichern eines Templates schrieb die Oberfläche *aller* Wikis aus diesem
+Template neu, im selben Moment, ohne gefragt zu werden. Für einen Betreiber,
+der Dutzende Wikis aus einem Template versorgt, war „Aktualisieren" keine
+Option, sondern eine Tatsache. Eine Wiki braucht die Möglichkeit, an der
+Schalen-Version festzuhalten, die sie ausliefert — auf einer bewährten
+Oberfläche zu bleiben, eine neue bewusst zu übernehmen, oder die Wahl jeder
+Wiki zu überlassen — und von einer neuen Version zu hören, statt mit ihr
+aufzuwachen. Diese Änderung macht die Schale versioniert und die Wiki
+zuständig.
+
+**Was.** Jedes Speichern eines Templates erzeugt jetzt eine nummerierte
+**Version**: eine unveränderliche Momentaufnahme des Templates, mit einer
+Versionsnummer, die pro Template streng aufsteigend ist, und einer optionalen,
+menschenlesbaren Bezeichnung aus einem
+`<meta name="mws-shell-version" content="...">`-Tag in der Schale. Eine Wiki
+folgt ihrem Template über eine **Schalen-Policy**, eingestellt im Template-Feld
+der Wiki und in der Übersicht zu sehen. Neue Wikis stehen standardmäßig auf
+`notify`, eine Template-Version landet also nie unangekündigt:
+- `auto` liefert die neueste Version, genau wie bisher;
+- `notify` bleibt auf der aktuellen und fragt vor einem Wechsel;
+- `pin` bleibt auf einer Version stehen.
+
+`/status` und der Index liefern der Wiki ihre Policy sowie gespeicherte und
+neueste Version (`$:/config/multiwikiclient/shell-policy`, `-release`,
+`-release-label`, `-latest-release`, `-latest-release-label`), sodass der
+Client ohne zusätzliche Anfrage vergleichen kann.
+
+**Der Update-Hinweis.** Unter `notify`, wenn die neueste Version neuer als die
+gespeicherte ist, zeigt ein Banner über der Seite der Wiki-Besitzerin — und
+den Admins —, dass eine neue Template-Version existiert, nennt diese Version
+und bietet einen *Aktualisieren*-Button an; `pin` bleibt bewusst still, und
+`auto` liefert die neueste Version sowieso. Der Button ruft
+`PUT /recipe/<slug>/shell/update` auf, das die gespeicherte Version auf die
+neueste verschiebt, ohne die Policy zu ändern (pin bleibt pin, notify bleibt
+notify), und die Wiki dagegen neu übersetzt. Aufrufen dürfen das die
+Wiki-Besitzerin und Admins (dieselbe Hürde wie die Einstellungen), alle
+anderen bekommen `403`, ein Template ohne Versionen antwortet `409`. Nach
+Erfolg verschwindet das Banner und die Seite lädt neu, um die neue Schale zu
+liefern — außer der Syncer hat ungespeicherte Änderungen zu schützen; dann
+später.
+
+**Der Client weiß, wer Admin ist.** Der Adaptor schreibt bei jeder
+Status-Antwort `$:/status/IsAdmin` ("yes"/"no"), damit das Banner die
+Besitzerin und die Admins von anderen Lesern unterscheiden kann. Wie alle
+anderen `$:/status/...`-Tiddler bleibt es außerhalb des Stores.
+
+**Geprüft.** `npm run tsc2`, der Admin-App-Typecheck und `npm run build` sind
+sauber. Eine Migration, `20261007182014_shell_versions`, legt die Tabelle
+`TemplateVersion` (Version, Bezeichnung, eingefrorene Definition) und
+`recipes.pinned_template_version_id` an und kopiert die aktuelle Definition
+jedes vorhandenen Templates als Version 1 zurück, sodass keine Wiki je glaubt,
+es gäbe keine Version; sie hat sich auf dem Dev-Store beim nächsten Start
+angewendet. Das neu gebaute Client-Plugin enthält das Banner-Tiddler, das
+Update-Modul und die sechs neuen Texte in allen acht Sprachen. Das Banner
+selbst will noch einen Browser: ein Template mit einer Wiki in der Policy
+`notify` speichern, die Wiki als Besitzerin und als Person mit weniger Rechten
+öffnen und den Button klicken.
+
 ## 111. Das Standard-Template hat einen Namen, Templates zeigen ihre Version
 
 **Warum.** Das Standard-TiddlyWiki-Template hieß noch „Blank Template" — ein
@@ -11650,6 +11923,177 @@ Admin-App angelegte Rolle zeigt ihr echtes Datum mit passender Stunde im Tooltip
 Wikis, Bags und Benutzer zeigen in allen Zeilen aller vier Tabellen ein Datum, der
 Admin-Typecheck und `npm run tsc2` sind sauber, und der Browser meldete beim
 Durchklicken der vier Tabellen keine Konsolen- oder Seitenfehler.
+
+## 101. Feature: ein Snapshot von Hand im Wiki-Dialog
+
+**Warum.** Bisher war ein Snapshot ein Nebenprodukt: Ein Import, der eine Wiki
+ersetzt, legte nebenbei eine Sicherung an, und §97–§99 machten diese
+Sicherungen sichtbar. Aber „ersetzen" ist nicht der einzige Moment, in dem die
+Vergangenheit das Aufbewahren lohnt: Wer in einer Wiki etwas ausprobieren
+will — eine Änderung, die vielleicht nicht funktioniert, ein Experiment mit
+Seiten oder Templates —, lege sich vorher eine Kopie *beiseite*. Das ging
+nicht: Der Snapshot kam mit dem Import, und eine leere Datei zu importieren,
+um einen auszulösen, ist ein Trick, kein Feature. Genau die Personen, die eine
+Wiki ersetzen dürfen (das Gate `resolveWikiTarget` mit `mode: "replace"`:
+Schreiben auf der Standard-Schreib-Bag oder `C_admin`, Owner, Site-Admin),
+sollen auch eine Sicherung anlegen können. Der Knopf gehört also neben das
+Ersetzen, in den Wiki-Dialog.
+
+**Was.** Der Wiki-Dialog bekommt einen Snapshot-Knopf neben Hochladen und
+Wiederherstellen. Er fragt eine neue Route, `PUT /api/wiki-file/snapshot/create`,
+die dasselbe Gate nimmt wie eine Wiederherstellung (`resolveWikiTarget`,
+`mode: "replace"`) — er kann also kein zweiter Weg daran vorbei werden. Ein
+leeres Wiki wird mit `WIKI_FILE_INVALID` und einem eigenen Grund abgelehnt,
+statt einen Snapshot zu speichern, den niemand wiederherstellen kann.
+
+Der manuelle Snapshot hat ein eigenes Budget. Ein Import hinterlässt 10
+Snapshots; ein Backup, um das jemand gebeten hat, ist höchstens das fünfte,
+und die beiden Budgets fassen einander nicht an — fünf Importe können ein
+gewolltes Backup nicht aus dem Store drängen. Zu welchem Budget ein Snapshot
+gehört, steht im `manual-`-Präfix seines Bag-Namens, damit das Pruning nicht
+jeden Snapshot öffnen muss, um es zu erfahren. Snapshots, die es vor dieser
+Änderung schon gab, sind Imports, wie sie es immer waren, und funktionieren
+unverändert. Der Wiederherstellen-Dialog nennt jetzt beide Regeln und zeigt
+ein gewolltes Backup als *Manuelles Backup* statt als rohe Quellmarkierung.
+
+Der Wikis-Tab fragt `/api/wiki-file/snapshot-counts` ohnehin; diese Route
+meldet ein Wiki mit dem Zähler **null** jetzt ebenfalls. Es ist dieselbe
+Liste, die entscheidet, wo der Knopf angeboten wird, und ein Zähler von null
+ist genau das, was ein Wiki zeigt, wenn jemand es zum ersten Mal sichern
+will. Der Hinweis über der Liste verwirft die Nullen selbst.
+
+**Geprüft.** Keine Migration, keine neue Dependency. An einer Dev-Instanz auf
+Port 5000 (`admin`): sechs Backups hintereinander ließen fünf übrig und
+meldeten das sechste als verworfen, die zehn Importe von `neues-admin-empty`
+blieben unberührt, ein leeres Wiki wurde abgelehnt, und eine anonyme Anfrage
+wurde mit `403` abgewiesen.
+
+## 102. Feature: eine Wiki-Datei aus SimpleWiki lässt sich importieren
+
+**Warum.** Der Import kannte genau ein Format: eine TiddlyWiki-Datei. Eine
+Datei, die SimpleWiki schreibt — die `.html` und die `.json` seines kleinen
+Single-Page-Wikis —, hat kein `application-name` und keinen
+TiddlyWiki-Speicher, sie kam also als *das ist keine TiddlyWiki-Datei* heraus.
+Wahr und nutzlos für jemanden, der gerade absichtlich sein Wiki aus SimpleWiki
+gesichert hat. Der Austausch zwischen den beiden Welten war einseitig.
+
+**Was.** Eine SimpleWiki-Datei wird vor den TiddlyWiki-Merkmalen erkannt und
+in dieselbe Form gelesen, die eine TiddlyWiki-Datei liefert, damit Plan,
+Dialog, Schreiber und der Snapshot, den ein Ersetzen unterwegs anlegt, für
+beide arbeiten, ohne zu wissen, welche sie bekommen haben. Jede Seite wird ein
+Tiddler, die Startseite wird `$:/DefaultTiddlers`, und der Dialog nennt das
+Format, statt eine leere TiddlyWiki-Version zu drucken.
+
+Die Datei wird als Ganzes geprüft, und eine Ablehnung ist vollständig. Eine
+Datei, die eine höhere Formatversion nennt, wird abgelehnt, statt Teil für
+Teil gelesen: Wer die Hälfte eines Formats liest, das der Server nicht kennt,
+verliert Felder beim nächsten Export, und das merkt man viel später. Zwei
+Seiten mit demselben Titel werden abgelehnt, denn der Titel ist auf beiden
+Seiten die Identität, und TiddlyWiki behielte nur die letzte. Auch eine Datei,
+deren Startseite nicht eine ihrer eigenen Seiten ist, wird abgelehnt, statt
+die Wiki auf etwas anderem zu öffnen.
+
+**Die `wiki:`-Links werden TiddlyWiki-Links.** SimpleWiki schreibt einen
+Seitenverweis als `[Text](wiki:Titel)`, den TiddlyWiki als gewöhnlichen Link
+ins Leere anzeigt; `[Text](<wiki:Titel>)` ist dasselbe mit einem Titel, der
+Leerzeichen enthält. Beides wird zu `[[Text|Titel]]`. `[[Titel]]` und
+`[[Text|Titel]]` meinen auf beiden Seiten dasselbe und bleiben stehen, und
+sonst bleibt auf der Seite alles stehen — ein Codeblock oder Inline-Code kann
+die Syntax gut als Beispiel zeigen, und das Umschreiben dort würde
+verändern, was die Seite lehrt.
+
+**Daten und Schlagwörter landen in TiddlyWikis eigenem Format.** SimpleWiki
+schreibt ISO 8601 in UTC; TiddlyWiki schreibt `YYYYMMDDhhmmssSSS`, und sein
+`parseDate` liest diese Form Ziffer für Ziffer. Ein ISO-String ist also kein
+ungültiges Datum, sondern ein plausibles falsches: Eine Seite vom 3. Oktober
+kommt still als 1. Januar heraus, in jeder Liste nach Änderungszeit und in der
+Infobox. Der Import rechnet um — ein Umschreiben und keine Verschiebung, weil
+beide denselben Zeitpunkt in UTC benennen. Schlagwörter werden als
+TiddlyWiki-Liste geschrieben, passend zu jedem anderen Tiddler im Store statt
+das eine JSON-Array unter rund 900 Listenfeldern zu sein.
+
+**Geprüft.** An einer Dev-Instanz auf Port 5000 und gegen
+`simplewiki_export.json`, `simplewiki_export.html` und `simplewiki-leer.html`:
+Die `.json` und die `.html` ergeben dieselben 8 Tiddler, die leere Datei ergibt
+eine Wiki mit 0 Seiten und ohne `$:/DefaultTiddlers`, und ein Ersetzen in eine
+vorhandene Wiki legt zuerst einen Snapshot an und schreibt danach alle 7 Seiten
+neu. Wie gewollt abgelehnt: Formatversion 2, ein doppelter Titel, eine
+Startseite, die nicht eine der Seiten ist, eine Seite ohne Titel und eine
+abgeschnittene `.json`. Eine TiddlyWiki-5-Datei importiert genau wie vorher
+(49 Tiddler, 3 Plugins ausgelassen), eine TiddlyWiki-2-Datei bekommt
+weiterhin den Hinweis, mit 5 zu speichern. Das Datumsformat ist gegen
+`$tw.utils.parseDate` aus `boot/boot.js` von 5.4.1 geprüft, das
+Schlagwortformat gegen einen echten TiddlyWiki-Import desselben Builds. Der
+Dialog selbst wurde nicht durchgeklickt — die Admin-API antwortet ohne Sitzung
+mit `403`, und es wurde kein Passwort geraten, die beiden ausgegrauten
+Kontrollkästchen und das *SimpleWiki* in der Dateizeile wollen also noch einen
+Blick in den Browser. Für den Versuch sind im Dev-Store zwei Wikis entstanden,
+`sw-phase1` und `sw-links`, dazu `tw5-probe` für die Gegenprobe; sie lassen
+sich wie jede andere Wiki löschen. Keine Migration, keine neue Dependency und
+kein Plugin im Rezept: Eine importierte Seite behält ihren Markdown als Text,
+und eine Wiki, die ihn gerendert haben will, braucht das Plugin
+`tiddlywiki/markdown` im Rezept.
+
+## 103. Feature: eine Wiki kann SimpleWiki sein
+
+**Warum.** Ein Template mit eigenem HTML gab es schon, aber es bedeutete
+TiddlyWiki in anderer Form: Die eigene Schale rendert immer noch Tiddler.
+SimpleWiki dreht die Idee um — es ist eine Seiten-Wiki, die MWS selbst unter
+`/wiki/<slug>/` ausliefert, eine Schale, die Seiten statt Tiddler zeigt und
+jede Änderung sofort nach MWS schreibt. Eine solche Wiki hier zu bauen,
+brauchte drei fehlende Stücke: ein Template, das die Schale trägt, einen
+Befehl, der sie lädt, und einen Erstellungspfad, der sie wählt. Diese Änderung
+ist alle drei.
+
+**Was.** **Ein Klick.** Das Aufklappmenü „Wiki erstellen" bekommt einen zweiten
+Eintrag, `1-click wiki creation as SimpleWiki`, neben der schlichten
+Ein-Klick-Anlage; er öffnet denselben Dialog mit voreingestelltem Template.
+Der Eintrag erscheint nur, wenn es das Template `SimpleWiki` gibt *und* es
+`customHtmlEnabled` trägt, damit kein Store einen Eintrag bekommt, der am
+Server scheitert. `PUT /admin/wiki` nimmt ein optionales `templateName`; ohne
+sie gilt wie bisher das leere TiddlyWiki-Template, die Anfrage des alten
+Eintrags bleibt also Byte für Byte dieselbe.
+
+**Wo die Schale ihren Speicher einsetzt.** Die Schale enthält genau einmal
+`<script class="simplewiki-store-point"></script>` und davor ein
+`$tw.preloadTiddler`. Für ein solches Rezept schreibt MWS
+`<script>$tw.preloadTiddler({…});</script>` vor den *ersten* Treffer von
+`injectionLocation` und ruft danach `injectionFunction` (`$tw.preloadTiddler`).
+`injectDefaultPreloadScript` bleibt bei eigenem HTML aus — deshalb bringt die
+Schale ihr eigenes `$tw` mit. `</head>` taugt als Marke nicht: Das Dokument
+enthält den literalen Text früher, im Dokumentkommentar und im eingebetteten
+Toast-Code, und das einfache `indexOf` des Servers schriebe den Speicher an
+eine unsichtbare Stelle.
+
+**Ein leerer Start.** Der TiddlyWiki-Willkommenstiddler und ein
+`$:/DefaultTiddlers`, das darauf zeigt, wären Wiki-Markup in einer Schale, die
+es nicht darstellen kann, und SimpleWiki liest `$:/DefaultTiddlers` als Namen
+einer Seite, die es geben muss. Eine solche Wiki startet mit nichts als
+`$:/SiteTitle`, gesetzt auf den Anzeigenamen.
+
+**`provision-simplewiki`** liest eine `simplewiki.html`, prüft die Regeln oben
+und legt sie als Template `SimpleWiki` ab. Er ist das Gegenstück zu
+`import-wiki-file`, der eine Wiki *aus* einer Datei liest.
+
+**Die Schreibroute ist ein PUT.** `POST /recipe/<slug>/batch/save` antwortet
+`400 NO_ROUTE_MATCHED`: Die Route in `RecipeRoutes.ts` nimmt ausschließlich
+`PUT`. Ein Ersatz-Testserver, der `POST` versteht, bestätigt nur, was man ihm
+vorgegeben hat, und sagt nichts über die echte Route; `tests/mwsserver.py` und
+`tests/t_mwsmode.py` im SimpleWiki-Repository sagen jetzt ebenfalls `PUT`.
+
+**Geprüft.** An der Dev-Instanz im Browser: Das Dropdown „Wiki erstellen"
+stellt **„1-Klick Wiki als SimpleWiki"** zwischen die Ein-Klick- und die
+definierte Anlage; ein Klick darauf öffnet den Dialog mit der Überschrift
+**„SimpleWiki-Wiki auf einen Klick anlegen"**, dem SimpleWiki-Satz und dem auf
+„admins Wiki" vorbelegten Namensfeld; „Wiki anlegen" antwortet mit 200 und
+schließt den Dialog. Die neue Wiki trägt die SimpleWiki-`template_id` und
+liefert die Schale (rund 1,1 MB, Speicher vor der Marke, keine JSON-Insel).
+Die Seite, die der Browser schreibt, erscheint nach dem Neuladen im
+Inhaltsverzeichnis; ohne Schreibrecht antwortet MWS mit
+`403 BAG_NO_WRITE_PERMISSION` und die Schale zeigt ihren Nur-Lesen-Hinweis.
+Ein Bag ohne eine einzige Berechtigungszeile ist auch für Lesende
+geschlossen (`RecipeResolver.ts`), eine öffentliche Wiki braucht also eine
+`A_read`-Zeile für `ANON`. Keine Migration, keine Schemaänderung.
 
 ## 98. Feature: der Snapshot-Hinweis klappt sich weg, die Summe bleibt
 
