@@ -5048,6 +5048,155 @@ numbered), and it includes the MWS-mode tests that read and write through
 `/recipe/<slug>/batch`, so the exchange itself is covered and not only the
 look of the thing.
 
+## 111. The default template has a name, templates show their version
+
+**Why.** The default TiddlyWiki template was still called "Blank Template" —
+a name for an empty form, not for what it is. And while SimpleWiki had
+declared its version `v0.1.0` (§110), the templates tab showed it nowhere:
+the version lived only in the "Shell version" fields of the wiki rows.
+
+**What.** The default template is renamed to "Tiddlywiki". This is a real
+rename, not a second row: the store seed creates the new name, the server
+constant `DEFAULT_TEMPLATE` (`TabUpserts.ts`) and the `load-wiki-folder`
+default now point at it, and a data migration renames the existing template
+row in every store that still has the old name. Recipes reference the
+template by id, so nothing else moves. The templates tab gains a "Version"
+column that shows the newest shell release of each template: the label a
+shell declares (`v0.1.0` for SimpleWiki), otherwise the plain release number
+(the default template currently has release 1). Saving a template bumps the
+number; provisioning a labeled shell makes the label appear.
+
+**Verified.** `npm run tsc2`, the admin typecheck and the root `npm run build`
+are clean. The migration was applied to a copy of the dev store: the
+template renamed to "Tiddlywiki" and all 15 dev recipes still map to it by
+id. The maintainer confirmed the click-through in the dev instance: after
+the dev server restart (which applied the migration), the templates tab
+lists "Tiddlywiki" and "SimpleWiki", the latter with `v0.1.0` in the
+Version column.
+
+## 112. The Tiddlywiki template shows the version it serves
+
+**Why.** The Version column (§111) fell back to the plain release number for
+the default template, so its cell read "1" — counting saves, not what the
+template is. But that row is TiddlyWiki itself, and every wiki built from it
+declares its real version in its head: an opened wiki says
+`<meta name="tiddlywiki-version" content="5.4.1" />`. The column should
+mirror that, not the counter.
+
+**What.** For a release without a shell label, the column (and the immediate
+response after saving a template) now derives the version: for shell-less
+TiddlyWiki templates that is the TiddlyWiki version they serve —
+`pluginCache.versionFromTemplate(definition.twVersion)`, the same value the
+served index.html reports in `tiddlywiki-version`. In the dev instance this
+resolves to `5.4.1`. Custom shells keep their behavior (§110, label from
+`<meta name="mws-shell-version">`); only templates without their own shell
+change, and they change from a counter to a real version. The version is
+derived live, not stamped into the immutable release: if `update-tiddlywiki`
+later upgrades the bundled TiddlyWiki, the column shows the new version
+automatically. `TemplateDataAdapter` receives the plugin cache from the
+admin routes where it was already available.
+
+**Verified.** `npm run tsc2`, the admin typecheck and the root `npm run build`
+are clean. The dev plugin cache resolves `5.4.1` (`dev/wiki/tw5/5.4.1`) —
+the same value an opened dev wiki declares. The click-through awaits the
+maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
+instead of `1`.
+
+## 110. A wiki's shell version shows its name, not just a number
+
+**Why.** Two places claimed a version number where only a counter existed.
+The SimpleWiki shell shined no version at all, so its update notice said
+"This wiki runs on 6. Ready to take over: 10." — counting how often the
+shell was saved, not what it is. And the admin app showed those raw release
+numbers in "Shell version" even when a shell declared a name
+(`<meta name="mws-shell-version">`, §107). The notice in the client had
+learned to prefer that name; the admin simply did not ask for it.
+
+**What.** SimpleWiki now declares `v0.1.0` in its head
+(`<meta name="mws-shell-version" content="v0.1.0">`), and the admin app
+shows the declared name wherever it displays a shell version: the overview
+table and the detail view fill "Shell version" and "Newest shell version"
+with the label first and fall back to the release number — the same rule the
+update notice already applied. The release numbers alone still decide what
+is newer and what gets served; only the display changes. Older releases
+without a label keep showing their number until the wiki takes over a
+labeled one, so a store can see numbers and names side by side while rolling
+out.
+
+**Verified.** The SimpleWiki suite runs 751 checks green, including the
+exchange-format and update-notice tests. `npm run tsc2` and the root
+`npm run build` are clean. The click-through in the dev instance awaits the
+maintainer: after provisioning the SimpleWiki template again, the admin
+"Shell version" fields and the wiki's update notice show `v0.1.0` instead of
+a bare number.
+
+## 109. SimpleWiki creation for every account that may create own wikis
+
+**Why.** The "1-click wiki creation as SimpleWiki" entry in the admin app is
+gated on the `SimpleWiki` template showing up in the templates list. That list
+only showed templates a role you hold is granted on — plus "Blank Template"
+for teachers. A student such as "Schüler 1", who holds no roles at all, could
+never create a SimpleWiki wiki, even though server-side creation is only
+limited by the wiki quota, never by template permissions (§103, §105). The
+entry simply never appeared.
+
+**What.** The `SimpleWiki` template is now part of the list every account
+sees. `template/getList` gains a `name: "SimpleWiki"` branch next to the
+"Blank Template" branch for both teachers and students (admins already see
+everything). To keep the server's spellings in one place, the constant
+`SIMPLEWIKI_TEMPLATE` now lives in `TabUpserts.ts` next to
+`DEFAULT_TEMPLATE`; `provision-simplewiki` re-exports it instead of defining
+its own copy, so the command and the list can never drift. Creation itself is
+unchanged: the entry appears on any account that may create own wikis, and
+making a wiki still walks the same `AdminCreateWiki` route with the same
+wiki-quota check.
+
+**Verified.** `npm run tsc2` and the root `npm run build` are clean. In the
+dev store "Schüler 1" has no roles, owns one wiki of two allowed, and the
+`SimpleWiki` template is granted to teachers only — before the change the
+template list for that account was empty; after it, the template and with it
+the one-click creation entry are present. The click-through in the dev
+instance awaits the maintainer: log in as "Schüler 1" and create a SimpleWiki
+wiki.
+
+## 108. Default sorting: most recently created on top
+
+**Why.** Every record tab opened in the plain server order: unsorted, and on
+the wikis tab grouped into "My wikis / Shared with you / System wikis". A
+freshly created wiki stayed invisible at the bottom of its group unless you
+remembered to sort. The natural default for everyday use is "Erstellt am",
+descending — the thing that was just created is the thing you are looking
+for, and it should be the first thing the eye meets.
+
+**What.** Every list tab now opens pre-sorted by its freshness column,
+descending: `createdAt` ("Created at") for wikis, bags, roles and users,
+`lastUpdatedAt` ("Updated") for templates, which carry no created date. The
+default is a real list view state, so the column header already shows the
+descending arrow from the start. "Clear sorting" means "back to the standard":
+it restores the tab's default sort (created/updated, descending) and keeps the
+search field, and it hides itself while the list already shows that standard.
+Only a third click on the active column still restores the plain server order,
+and with it, on the wikis tab, the grouping — the one road back to the grouped
+view. The grouped default is thereby gone from the wikis tab — an explicit
+sort flattens the groups for exactly this reason, and the default now *is*
+such a sort.
+
+**Verified.** `npm run tsc` in `packages/admin-vanilla` and the root
+`npm run build` (which bundles the admin app) are clean. The first browser
+check found the five record tabs sorted as described — and a regression: the
+"Storage", "Pinboard" and "My files" panels are synthetic tabs without an
+entry in the tab definitions, and the new default made `getListView` look
+such entries up, which threw while rendering those panels. The fallback now
+treats any tab without a default sort field like the old server order, and
+typecheck and build stay clean again; the three panels await a confirming
+click-through. A further click-through then showed that "Clear sorting"
+dropped back to the raw server order instead of the tab's standard sort; the
+button now returns the standard sort and hides when the list already shows it,
+while only the third column click still reaches the server order and, with
+it, the wikis grouping. Typecheck and build stay clean.
+
+**Translations:** none new — "Created at" and "Updated" already exist.
+
 ## 107. Documentation: SimpleWiki and versioned shells in the READMEs
 
 **Why.** The summaries (§102–§106) told of SimpleWiki wikis and the shell
@@ -11238,6 +11387,165 @@ Repository (`python3 tests/alle.py`, 23 Testdateien; dessen Changelog ist nach
 Tag datiert statt nummeriert), und sie enthält die MWS-Modus-Tests, die über
 `/recipe/<slug>/batch` lesen und schreiben. Damit ist der Austausch selbst
 abgedeckt und nicht nur das Aussehen.
+
+## 111. Das Standard-Template hat einen Namen, Templates zeigen ihre Version
+
+**Warum.** Das Standard-TiddlyWiki-Template hieß noch „Blank Template" — ein
+Name für eine leere Form, nicht für das, was es ist. Und obwohl SimpleWiki
+seine Version `v0.1.0` nannte (§110), zeigte der Templates-Tab sie
+nirgends: Die Version lebte nur in den Feldern „Shell version" der
+Wiki-Zeilen.
+
+**Was.** Das Standard-Template heißt jetzt „Tiddlywiki". Das ist eine echte
+Umbenennung, keine zweite Zeile: Der Store-Seed legt den neuen Namen an, die
+Server-Konstante `DEFAULT_TEMPLATE` (`TabUpserts.ts`) und der
+`load-wiki-folder`-Default zeigen auf ihn, und eine Daten-Migration benennt
+die vorhandene Template-Zeile in jedem Store um, der noch den alten Namen
+trägt. Rezepte referenzieren das Template per ID, sonst bewegt sich nichts.
+Der Templates-Tab bekommt eine Spalte „Version", die die neueste
+Schalen-Ausgabe jedes Templates zeigt: das Label, das die Schale nennt
+(`v0.1.0` bei SimpleWiki), sonst die schlichte Release-Nummer (das
+Standard-Template hat aktuell Release 1). Ein Speichern erhöht die Nummer;
+wer eine beschriftete Schale provisioniert, macht das Label sichtbar.
+
+**Geprüft.** `npm run tsc2`, der Admin-Typecheck und der Root-`npm run build`
+sind sauber. Die Migration wurde auf einer Kopie des Dev-Stores angewandt:
+Das Template heißt nun „Tiddlywiki", und alle 15 Dev-Rezepte zeigen weiter
+per ID darauf. Der Maintainer bestätigte den Klick-Durchlauf in der
+Dev-Instanz: Nach dem Dev-Serverneustart (der die Migration anwendete)
+listet der Templates-Tab „Tiddlywiki" und „SimpleWiki", letzteres mit
+`v0.1.0` in der Versions-Spalte.
+
+## 112. Das Tiddlywiki-Template zeigt die Version, die es ausliefert
+
+**Warum.** Die Versions-Spalte (§111) fiel für das Standard-Template auf die
+schlichte Release-Nummer zurück, ihre Zelle las also „1" — das zählte
+Speichervorgänge, nicht was das Template ist. Dabei ist diese Zeile
+TiddlyWiki selbst, und jedes daraus gebaute Wiki nennt seine echte Version
+im Header: Ein geöffnetes Wiki sagt
+`<meta name="tiddlywiki-version" content="5.4.1" />`. Die Spalte sollte das
+spiegeln, nicht den Zähler.
+
+**Was.** Für eine Ausgabe ohne Schalen-Label leitet die Spalte (und die
+unmittelbare Antwort nach dem Speichern eines Templates) die Version jetzt
+ab: Bei schalenlosen TiddlyWiki-Templates ist das die TiddlyWiki-Version,
+die sie ausliefern — `pluginCache.versionFromTemplate(definition.twVersion)`,
+derselbe Wert, den das ausgelieferte `index.html` in `tiddlywiki-version`
+meldet. In der Dev-Instanz ergibt das `5.4.1`. Eigene Schalen behalten ihr
+Verhalten (§110, Label aus `<meta name="mws-shell-version">`); es ändern
+sich nur Templates ohne eigene Schale, und zwar vom Zähler zur echten
+Version. Die Version wird live abgeleitet, nicht in die unveränderliche
+Ausgabe gestempelt: Aktualisiert `update-tiddlywiki` später das gebündelte
+TiddlyWiki, zeigt die Spalte die neue Version automatisch.
+`TemplateDataAdapter` bekommt den Plugin-Cache aus den Admin-Routen, wo er
+ohnehin schon vorlag.
+
+**Geprüft.** `npm run tsc2`, der Admin-Typecheck und der Root-`npm run build`
+sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
+(`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
+deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
+„Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 110. Die Schalen-Version einer Wiki zeigt ihren Namen, nicht nur eine Zahl
+
+**Warum.** Zwei Stellen behaupteten eine Versionsnummer, wo nur ein Zähler
+existierte. Die SimpleWiki-Schale nannte gar keine Version, ihr
+Update-Hinweis sagte also „Diese Wiki läuft auf 6. Zum Übernehmen bereit
+steht 10." — gezählt, wie oft die Schale gespeichert wurde, nicht, was sie
+ist. Und die Verwaltung zeigte in „Shell version" diese nackten
+Release-Nummern, selbst wenn eine Schale einen Namen nannte
+(`<meta name="mws-shell-version">`, §107). Der Hinweis im Client hatte
+gelernt, diesen Namen zu bevorzugen; die Verwaltung fragte ihn schlicht
+nicht ab.
+
+**Was.** SimpleWiki nennt jetzt `v0.1.0` in seinem Kopf
+(`<meta name="mws-shell-version" content="v0.1.0">`), und die Verwaltung
+zeigt den genannten Namen überall dort, wo sie eine Schalen-Version anzeigt:
+Übersichtstabelle und Detailansicht füllen „Shell version" und „Newest shell
+version" zuerst mit dem Label und fallen auf die Release-Nummer zurück —
+dieselbe Regel, die der Update-Hinweis schon anwandte. Was neuer ist und was
+ausgeliefert wird, entscheidet weiterhin allein die Release-Nummer; nur die
+Anzeige ändert sich. Ältere Releases ohne Label behalten ihre Nummer, bis
+die Wiki ein beschriftetes übernimmt — beim Rollout kann ein Store also
+Zahlen und Namen nebeneinander sehen.
+
+**Geprüft.** Die SimpleWiki-Suite läuft mit 751 Prüfungen grün, darunter die
+Tests zum Austauschformat und zum Update-Hinweis. `npm run tsc2` und der
+Root-`npm run build` sind sauber. Der Klick-Durchlauf in der Dev-Instanz
+wartet auf den Maintainer: Nach dem erneuten Provisionieren des
+SimpleWiki-Templates zeigen die Felder „Shell version" in der Verwaltung und
+der Update-Hinweis der Wiki `v0.1.0` statt einer bloßen Zahl.
+
+## 109. SimpleWiki-Anlage für jeden Account, der eigene Wikis anlegen darf
+
+**Warum.** Der Eintrag „Einfache Wiki-Anlage als SimpleWiki" („1-Click Wiki
+Creation as SimpleWiki") in der Admin-App hängt daran, dass das Template
+`SimpleWiki` in der Template-Liste auftaucht. Diese Liste zeigte nur
+Templates, auf die eine eigene Rolle Berechtigung hat — plus „Blank
+Template" für Lehrkräfte. Ein Schüler wie „Schüler 1", der keinerlei Rollen
+hält, konnte nie ein SimpleWiki anlegen, obwohl die Anlage serverseitig nur
+durch das Wiki-Kontingent begrenzt ist, nie durch Template-Rechte (§103,
+§105). Der Eintrag erschien schlicht gar nicht.
+
+**Was.** Das Template `SimpleWiki` gehört jetzt zu der Liste, die jeder
+Account sieht. `template/getList` bekommt einen `name: "SimpleWiki"`-Zweig
+neben dem „Blank Template"-Zweig, für Lehrkräfte wie für Schüler/Studierende
+(Admins sehen ohnehin alles). Damit die serverseitigen Schreibweisen nur an
+einer Stelle liegen, lebt die Konstante `SIMPLEWIKI_TEMPLATE` nun in
+`TabUpserts.ts` neben `DEFAULT_TEMPLATE`; `provision-simplewiki` re-exportiert
+sie statt eine eigene Kopie zu pflegen, sodass Befehl und Liste nie
+auseinanderlaufen können. Die Anlage selbst ist unverändert: Der Eintrag
+erscheint auf jedem Account, der eigene Wikis anlegen darf, und das Anlegen
+durchläuft weiterhin dieselbe `AdminCreateWiki`-Route mit derselben
+Kontingent-Prüfung.
+
+**Geprüft.** `npm run tsc2` und der Root-`npm run build` sind sauber. Im
+Dev-Store hat „Schüler 1" keine Rollen, besitzt eine von zwei erlaubten Wikis,
+und das Template `SimpleWiki` ist nur Lehrkräften zugeteilt — vor der Änderung
+war die Template-Liste dieses Accounts leer, nach ihr sind das Template und
+mit ihm der 1-Klick-Eintrag da. Der Klick-Durchlauf in der Dev-Instanz wartet
+auf den Maintainer: als „Schüler 1" anmelden und ein SimpleWiki anlegen.
+
+## 108. Standard-Sortierung: zuletzt erstellte oben
+
+**Warum.** Jeder Datensatz-Tab öffnete in der reinen Server-Reihenfolge:
+unsortiert, und im Tab „Wikis" gruppiert in „Meine Wikis / Für dich
+freigegeben / System-Wikis". Eine frisch angelegte Wiki blieb am unteren
+Ende ihrer Gruppe unsichtbar, wenn man nicht an das Sortieren dachte. Die
+natürliche Vorgabe für den Alltag ist „Erstellt am", absteigend – gerade das
+Geschaffene ist das Gesuchte und soll das Erste sein, das das Auge trifft.
+
+**Was.** Jeder Listen-Tab öffnet nun bereits sortiert nach seiner
+Frische-Spalte, absteigend: `createdAt` („Created at") für Wikis, Bags,
+Rollen und Benutzer, `lastUpdatedAt` („Updated") für Templates, die kein
+Erstellungsdatum tragen. Die Vorgabe ist ein echter Listen-Zustand, also
+zeigt der Spaltenkopf von Anfang an den Abwärtspfeil. „Sortierung
+zurücksetzen" heißt „zurück zur Standard-Sortierung": Der Button stellt die
+Vorgabe des Tabs wieder her (erstellt/aktualisiert, absteigend), behält das
+Suchfeld und blendet sich aus, solange die Liste schon diese Vorgabe zeigt.
+Nur der dritte Klick auf die aktive Spalte stellt weiterhin die reine
+Server-Reihenfolge wieder her und damit im Tab „Wikis" auch die Gruppierung —
+der eine Weg zurück zur gruppierten Ansicht. Die gruppierte Vorgabe ist damit
+im Wiki-Tab weg — eine explizite Sortierung macht die Gruppen genau deshalb
+flach, und die Vorgabe *ist* jetzt so eine Sortierung.
+
+**Geprüft.** `npm run tsc` in `packages/admin-vanilla` und der Root-`npm
+run build` (bündelt die Admin-App) sind sauber. Der erste Browser-Check fand
+die fünf Datensatz-Tabs wie beschrieben sortiert — und eine Regression: Die
+Panels „Speicher", „Pinnwand" und „Meine Dateien" sind synthetische Tabs
+ohne Eintrag in den Tab-Definitionen, und die neue Vorgabe ließ
+`getListView` solche Einträge suchen, was nun beim Rendern dieser Panels
+warf. Der Fallback behandelt jetzt jeden Tab ohne Standard-Sortierfeld wie
+die alte Server-Reihenfolge, und Typecheck wie Build bleiben sauber; die
+drei Panels warten auf einen bestätigenden Click-through. Ein weiterer
+Klick-Test zeigte dann, dass „Sortierung zurücksetzen" in die rohe
+Server-Reihenfolge sprang statt in die Standard-Sortierung; der Button kehrt
+nun zur Vorgabe zurück und verschwindet, sobald die Liste sie wieder zeigt,
+während nur der dritte Spaltenklick noch die Server-Reihenfolge und damit
+die Wiki-Gruppierung erreicht. Typecheck und Build bleiben sauber.
+
+**Übersetzungen:** keine neuen — „Created at" und „Updated" existieren
+bereits.
 
 ## 107. Dokumentation: SimpleWiki und versionierte Hüllen in den READMEs
 

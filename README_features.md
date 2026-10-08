@@ -58,7 +58,10 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
   Wiki-Markup, und jede Änderung wird sofort nach MWS geschrieben, ganz ohne
   Speichern-Knopf. Voraussetzung ist das Template aus
   `npm start provision-simplewiki <simplewiki.html>`; fehlt es oder trägt es
-  kein eigenes HTML, steht der Eintrag nicht im Menü. Eine so angelegte Wiki
+  kein eigenes HTML, steht der Eintrag nicht im Menü. Sobald das Template
+  eingerichtet ist, erscheint der Eintrag für **jeden Account, der eigene
+  Wikis anlegen darf** — er setzt keine zusätzliche Freigabe voraus, auch
+  keine Rollen für Lernende (siehe §109 der CHANGELOG). Eine so angelegte Wiki
   startet leer und trägt nur den Anzeigenamen als Seitentitel – der erste
   SimpleWiki-Eintrag legt selbst die erste Seite an. Wie bei jeder anderen Wiki
   entscheidet das Wiki-Rezept, wer sie öffnen darf; für eine öffentliche Wiki
@@ -79,7 +82,10 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
   (`PUT /recipe/<slug>/shell/update`); die Politik bleibt dabei, wie sie ist
   (pin bleibt pin, notify bleibt notify). Der Hinweis weiß seit §106 über
   `$:/status/IsAdmin` ("yes"/"no"), wer mehr ist als eine Leserin oder ein
-  Leser
+  Leser. Der Templates-Tab zeigt die neueste Ausgabe als Spalte **„Version"**
+  (Label, sonst die TiddlyWiki-Version, die das Template ausliefert, sonst
+  die Release-Nummer), und das Standard-Template heißt jetzt „Tiddlywiki"
+  (§111, §112)
 - **Snapshot von Hand anlegen (Wiki-Dialog):** Wer den Inhalt einer Wiki ersetzen darf, hat im Wiki-Dialog unten den Knopf **„Snapshot erstellen"**. Er legt eine Sicherung des aktuellen Stands an, ohne dass ein Import etwas auslösen muss, und sagt danach, wie viele Tiddler darin sind. Die Rechte sind dieselben wie beim Ersetzen (Schreiben auf der Standard-Schreib-Bag plus Administratorrecht auf der Wiki) – wer nur zusammenführen darf, bekommt den Knopf gar nicht erst zu sehen. Ein Wiki ohne Tiddler lehnt der Server mit einer klaren Meldung ab, statt einen leeren Snapshot zu schreiben. Solche **manuellen Backups** haben ein eigenes Budget: die **5 neuesten** bleiben, ältere werden verworfen – unabhängig von den **10 Snapshots**, die ein Import hinterlässt. Im Snapshot-Fenster stehen beide Regeln, und ein manuelles Backup ist als **„Manuelles Backup"** erkennbar.
 - **Snapshot wiederherstellen (Dialog):** Im selben Dropdown „Wiki erstellen" steht **„Snapshot wiederherstellen"** mit einem eigenen Fenster: Wiki auswählen, Liste der Snapshots mit Datum, Tiddlerzahl und Herkunft – der neueste zuerst. Hinter jedem Eintrag steht ein **beschrifteter** Knopf „Diesen Snapshot wiederherstellen"; ein Klick klappt die Zeile zu einer Rückfrage auf (welche Wiki, welches Datum, wie viele Tiddler) und nennt, dass der aktuelle Stand zuerst als neuer Snapshot gesichert wird. Erst „Jetzt wiederherstellen" schreibt, „Aktuellen Stand behalten" bricht ab. Vor jedem Restore entsteht also ein neuer Snapshot – auch das Wiederherstellen ist rückholbar. Es stehen die letzten 10 Snapshots pro Wiki, wer nur zusammenführen darf, sieht keine
 - **Snapshot-Hinweis auf den Wikis:** Weil Snapshots nur bei einem Import mit „Ersetzen" anfallen, sammeln sie sich unbemerkt an – und jeder Import belegt Platz. Steht in mindestens einer Wiki ein Snapshot, erscheint über der Liste eine **eingeklappte** Zeile („Ihre Wikis enthalten **5** Snapshots") mit einem Pfeil am rechten Rand. Ein Klick darauf – oder die Tastatur – klappt sie auf und zeigt die betroffenen Wikis mit ihren Zählern, die Erklärung und den Knopf **„Snapshots ansehen und aufräumen"**; ein Klick auf eine Wiki öffnet direkt das Snapshot-Fenster mit dieser Wiki. Eingeklappt ist sie eine Zeile hoch, damit sie die Liste nicht wegschiebt. Wer nur zusammenführen darf, sieht nichts. Ohne Snapshots bleibt der Hinweis weg, statt einen leeren Bereich zu zeigen. Gelöscht wird ausschließlich im Snapshot-Fenster, hinter jedem einzelnen Eintrag
@@ -156,6 +162,7 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
 
 - **Suche in allen sechs Listen** (Wikis, Templates, Bags, Rollen, Benutzer, Meine Dateien): ein Feld filtert beim Tippen, dazu Trefferzahl „X von Y" und ein Klick-Button zum Leeren. Groß-/Kleinschreibung, Umlaute und „ß" werden ignoriert – „schuler" findet „Schüler", „strasse" findet „Straße". Durchsucht werden nur benannte, sichtbare Spalten; Badge-Spalten sind über ihren Klartext auffindbar – „private" findet die Wikis ohne geteilten Bereich, „shared" die geteilten, obwohl in der Zelle kein Wort steht
 - **Sortieren per Spaltenkopf:** Klick aufsteigend, nochmal absteigend, dritter Klick nimmt die Sortierung weg. Zahlen in Textfeldern zählen numerisch („10 Bags" hinter „9 Bags"), ISO-Daten chronologisch, „3 / 5" bzw. „3 / ∞" nach dem aktuellen Verbrauch, **Dateigrößen nach den echten Bytes** („950.4 KB" vor „2.3 MB"). Leere Werte bleiben in beiden Richtungen ganz unten. Aktive Spalte mit Pfeil, `aria-sort` und Screenreader-Angabe, Taste mit sprechendem Namen („Sort by Slug")
+- **Zuletzt erstellte zuoberst:** jeder Datensatz-Tab öffnet bereits sortiert nach „Erstellt am", absteigend – die neueste Wiki, der neueste Bag, die neueste Rolle und der neueste Benutzer stehen oben. Der Tab „Templates" hat kein Erstellungsdatum und sortiert stattdessen nach „Updated". „Sortierung zurücksetzen" springt zur Standard-Sortierung zurück und verschwindet, sobald die Liste sie wieder zeigt; nur der dritte Klick auf die aktive Spalte stellt weiterhin die Server-Reihenfolge wieder her – in der Wiki-Liste damit auch die Gruppierung (§108)
 - **Erstellungsdatum in vier Listen:** Wikis, Bags, Rollen und Benutzer führen eine Spalte „Erstellt am" – kurzes Datum in der Zelle, der vollständige Zeitstempel mit Stunde im Tooltip, sortierbar wie jede andere Spalte. Bei Rollen ist das Datum absichtlich **nullable**: Rollen, die schon da waren, zeigen `—`, denn der Tag der Migration ist kein Erstellungsdatum
 - **Gruppierung weicht der Sortierung:** in der Wiki-Liste stehen sonst „Meine Wikis", „Für dich freigegeben" und „System-Wikis". Sobald sortiert wird, gibt es **eine** flache Liste über alle Gruppen – sonst würde die Gruppierung das Ergebnis in drei Blöcke zerreißen; der dritte Klick stellt sie wieder her
 - **Je Tab eigener Zustand:** Query und Sortierung bleiben beim Tabwechsel erhalten, aber nur im Arbeitsspeicher – eine gespeicherte Sortierung würde ein Update überleben, in dem die Spalte umbenannt wurde, und dann nach nichts sortieren
@@ -243,7 +250,10 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
   markup, and every change is written to MWS on the spot, with no save button
   anywhere. It needs the template from `npm start provision-simplewiki
   <simplewiki.html>`; without that template, or without custom HTML on it, the
-  entry stays out of the menu. A wiki created that way starts empty and carries
+  entry stays out of the menu. Once the template is in place, the entry shows
+  for **every account that may create own wikis** — it needs no extra grant
+  and no roles, not even for learners (see §109 of the CHANGELOG). A wiki
+  created that way starts empty and carries
   the display name as its page title – the first entry made in SimpleWiki writes
   the first page itself. As with any other wiki, the wiki recipe decides who
   may open it; a public wiki needs an `A_read` row for `ANON` on the bag
@@ -261,7 +271,10 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
   carrying the version name and an **"Update"** button
   (`PUT /recipe/<slug>/shell/update`); the policy stays as it is (pin stays
   pin, notify stays notify). Since §106, the banner knows from
-  `$:/status/IsAdmin` ("yes"/"no") who is more than a reader
+  `$:/status/IsAdmin` ("yes"/"no") who is more than a reader. The templates tab
+  shows the newest release in a **Version** column (label, or the TiddlyWiki
+  version the template serves, or the release number), and the default
+  template is now named **Tiddlywiki** (§111, §112)
 - **Taking a snapshot by hand (wiki dialog):** whoever may replace the content of a wiki gets a **"Create snapshot"** button at the bottom of the wiki dialog. It writes a backup of the current state without an import having to trigger one, and afterwards says how many tiddlers it holds. The rights are the same as for replacing (write on the default write bag plus administrator rights on the wiki) – those who may only merge never see the button at all. The server refuses a wiki without tiddlers with a clear message instead of writing an empty snapshot. Such **manual backups** have a budget of their own: the **5 newest** are kept and older ones are dropped, independently of the **10 snapshots** an import leaves behind. The snapshot dialog states both rules, and a manual backup is recognisable as **"Manual backup"**.
 - **Restoring a snapshot (dialog):** The same "Create a wiki" dropdown carries **"Restore a snapshot"**, which opens its own window: pick a wiki, see the snapshots with date, tiddler count and origin, newest first. Each row has a **written** "Restore this snapshot" button; clicking it expands that row into a confirmation naming the wiki, the date and the count, and stating that the current state is saved as a new snapshot first. Only "Restore now" writes, "Keep the current state" cancels. Every restore therefore creates a snapshot of its own — a restore is undoable, too. The last 10 snapshots per wiki are kept; those who may only merge see none
 - **Snapshot hint on the wikis page:** snapshots only pile up from an import with "Replace", and they quietly take up space. As soon as at least one wiki has a snapshot, a **folded** line appears above the list ("Your wikis hold **5** snapshots") with an arrow at the right edge. Clicking it – or using the keyboard – unfolds it and shows the wikis involved with their counts, the explanation and the **"Show snapshots and tidy up"** button; clicking a wiki opens the snapshot dialog with that wiki preselected. Folded it is one line high, so it does not push the list away. Those who may only merge see nothing. Without snapshots the hint is absent rather than showing an empty box. Deleting happens exclusively in the snapshot dialog, behind each single entry
@@ -329,6 +342,7 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
 ### **User Interface & Languages**
 - **Search in all six lists** (wikis, templates, bags, roles, users, my files): one field filters as you type, with a hit count "X of Y" and a one-click clear button. Case, umlauts and "ß" are ignored – "schuler" finds "Schüler", "strasse" finds "Straße". Only named, visible columns are searched; badge columns are findable by their plain wording – "private" finds the wikis without a shared area, "shared" the shared ones, even though the cell holds no word at all
 - **Sort by column header:** click for ascending, click again for descending, a third click removes the sort. Numbers inside text fields count numerically ("10 bags" after "9 bags"), ISO dates sort chronologically, "3 / 5" resp. "3 / ∞" by current usage, and **file sizes by their real byte count** ("950.4 KB" before "2.3 MB"). Empty values stay at the bottom in both directions. The active column gets an arrow, `aria-sort` and a screen-reader note; the button has a speaking name ("Sort by Slug")
+- **Most recently created on top:** every record tab already opens sorted by "Created at", descending – the newest wiki, bag, role and user sit at the top. The "Templates" tab has no created date and sorts by "Updated" instead. "Clear sorting" jumps back to the standard order and disappears once the list shows it again; only a third click on the active column still restores the server order – on the wiki list that also brings the grouping back (§108)
 - **Creation date in four lists:** wikis, bags, roles and users carry a "Created at" column – the short date in the cell, the full timestamp including the hour in the tooltip, sortable like any other column. For roles the date is deliberately **nullable**: the roles that were already there show `—`, because the day of the migration is not a creation date
 - **Grouping yields to sorting:** the wiki list otherwise shows "My wikis", "Shared with you" and "System wikis". As soon as a column is sorted, there is **one** flat list across all groups – otherwise the grouping would tear the result into three blocks; the third click restores it
 - **State per tab:** query and sort survive a tab switch, but in memory only – a stored sort would outlive an update that renamed the column and then sort by nothing
