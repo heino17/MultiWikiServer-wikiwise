@@ -63,6 +63,23 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
   SimpleWiki-Eintrag legt selbst die erste Seite an. Wie bei jeder anderen Wiki
   entscheidet das Wiki-Rezept, wer sie öffnen darf; für eine öffentliche Wiki
   braucht der Bag eine `A_read`-Zeile für `ANON`
+- **Hüllen-Versionen im Template (Schalen-Politik):** Jedes Speichern des
+  Templates erzeugt ein nummeriertes **Release** — unveränderlich, pro Template
+  streng aufsteigend, mit einem optionalen Namen aus dem `<meta
+  name="mws-shell-version" content="…">`-Tag der Hülle, wenn sie eines trägt.
+  Eine Wiki folgt ihrem Template unter einer **Schalen-Politik** im
+  Template-Feld: `auto` liefert immer das neueste Release (genau wie vorher),
+  `notify` bleibt auf dem aktuellen und fragt vor dem Weitergleiten, `pin`
+  bleibt auf einem Release stehen. **Neue Wikis beginnen mit `notify`**, damit
+  ein Release nie unangekündigt landet. Eine **einzige**
+  `provision-simplewiki <simplewiki.html>`-Ausführung erreicht danach alle
+  Wikis des Templates — nichts ist zu migrieren. Unter `notify` mit neuerem
+  Release zeigt eine TiddlyWiki-Hülle der **Besitzerin und den Admins** einen
+  Hinweis mit dem Versionsnamen und einem **„Update“**-Knopf
+  (`PUT /recipe/<slug>/shell/update`); die Politik bleibt dabei, wie sie ist
+  (pin bleibt pin, notify bleibt notify). Der Hinweis weiß seit §106 über
+  `$:/status/IsAdmin` ("yes"/"no"), wer mehr ist als eine Leserin oder ein
+  Leser
 - **Snapshot von Hand anlegen (Wiki-Dialog):** Wer den Inhalt einer Wiki ersetzen darf, hat im Wiki-Dialog unten den Knopf **„Snapshot erstellen"**. Er legt eine Sicherung des aktuellen Stands an, ohne dass ein Import etwas auslösen muss, und sagt danach, wie viele Tiddler darin sind. Die Rechte sind dieselben wie beim Ersetzen (Schreiben auf der Standard-Schreib-Bag plus Administratorrecht auf der Wiki) – wer nur zusammenführen darf, bekommt den Knopf gar nicht erst zu sehen. Ein Wiki ohne Tiddler lehnt der Server mit einer klaren Meldung ab, statt einen leeren Snapshot zu schreiben. Solche **manuellen Backups** haben ein eigenes Budget: die **5 neuesten** bleiben, ältere werden verworfen – unabhängig von den **10 Snapshots**, die ein Import hinterlässt. Im Snapshot-Fenster stehen beide Regeln, und ein manuelles Backup ist als **„Manuelles Backup"** erkennbar.
 - **Snapshot wiederherstellen (Dialog):** Im selben Dropdown „Wiki erstellen" steht **„Snapshot wiederherstellen"** mit einem eigenen Fenster: Wiki auswählen, Liste der Snapshots mit Datum, Tiddlerzahl und Herkunft – der neueste zuerst. Hinter jedem Eintrag steht ein **beschrifteter** Knopf „Diesen Snapshot wiederherstellen"; ein Klick klappt die Zeile zu einer Rückfrage auf (welche Wiki, welches Datum, wie viele Tiddler) und nennt, dass der aktuelle Stand zuerst als neuer Snapshot gesichert wird. Erst „Jetzt wiederherstellen" schreibt, „Aktuellen Stand behalten" bricht ab. Vor jedem Restore entsteht also ein neuer Snapshot – auch das Wiederherstellen ist rückholbar. Es stehen die letzten 10 Snapshots pro Wiki, wer nur zusammenführen darf, sieht keine
 - **Snapshot-Hinweis auf den Wikis:** Weil Snapshots nur bei einem Import mit „Ersetzen" anfallen, sammeln sie sich unbemerkt an – und jeder Import belegt Platz. Steht in mindestens einer Wiki ein Snapshot, erscheint über der Liste eine **eingeklappte** Zeile („Ihre Wikis enthalten **5** Snapshots") mit einem Pfeil am rechten Rand. Ein Klick darauf – oder die Tastatur – klappt sie auf und zeigt die betroffenen Wikis mit ihren Zählern, die Erklärung und den Knopf **„Snapshots ansehen und aufräumen"**; ein Klick auf eine Wiki öffnet direkt das Snapshot-Fenster mit dieser Wiki. Eingeklappt ist sie eine Zeile hoch, damit sie die Liste nicht wegschiebt. Wer nur zusammenführen darf, sieht nichts. Ohne Snapshots bleibt der Hinweis weg, statt einen leeren Bereich zu zeigen. Gelöscht wird ausschließlich im Snapshot-Fenster, hinter jedem einzelnen Eintrag
@@ -230,6 +247,21 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
   the display name as its page title – the first entry made in SimpleWiki writes
   the first page itself. As with any other wiki, the wiki recipe decides who
   may open it; a public wiki needs an `A_read` row for `ANON` on the bag
+- **Versioned shells in the template (shell policy):** Every save of the
+  template creates a numbered **release** — immutable, strictly ascending per
+  template, with an optional name taken from the `<meta
+  name="mws-shell-version" content="…">` tag of the shell, when it carries one.
+  A wiki follows its template under a **shell policy** in the template field:
+  `auto` always serves the newest release (exactly as before), `notify` stays
+  on the current one and asks before moving on, `pin` stays on one release.
+  **New wikis start with `notify`**, so a release never lands unannounced. A
+  **single** `provision-simplewiki <simplewiki.html>` run after that reaches
+  every wiki of the template — nothing to migrate. Under `notify` with a newer
+  release, a TiddlyWiki shell tells **the owner and the admins** with a banner
+  carrying the version name and an **"Update"** button
+  (`PUT /recipe/<slug>/shell/update`); the policy stays as it is (pin stays
+  pin, notify stays notify). Since §106, the banner knows from
+  `$:/status/IsAdmin` ("yes"/"no") who is more than a reader
 - **Taking a snapshot by hand (wiki dialog):** whoever may replace the content of a wiki gets a **"Create snapshot"** button at the bottom of the wiki dialog. It writes a backup of the current state without an import having to trigger one, and afterwards says how many tiddlers it holds. The rights are the same as for replacing (write on the default write bag plus administrator rights on the wiki) – those who may only merge never see the button at all. The server refuses a wiki without tiddlers with a clear message instead of writing an empty snapshot. Such **manual backups** have a budget of their own: the **5 newest** are kept and older ones are dropped, independently of the **10 snapshots** an import leaves behind. The snapshot dialog states both rules, and a manual backup is recognisable as **"Manual backup"**.
 - **Restoring a snapshot (dialog):** The same "Create a wiki" dropdown carries **"Restore a snapshot"**, which opens its own window: pick a wiki, see the snapshots with date, tiddler count and origin, newest first. Each row has a **written** "Restore this snapshot" button; clicking it expands that row into a confirmation naming the wiki, the date and the count, and stating that the current state is saved as a new snapshot first. Only "Restore now" writes, "Keep the current state" cancels. Every restore therefore creates a snapshot of its own — a restore is undoable, too. The last 10 snapshots per wiki are kept; those who may only merge see none
 - **Snapshot hint on the wikis page:** snapshots only pile up from an import with "Replace", and they quietly take up space. As soon as at least one wiki has a snapshot, a **folded** line appears above the list ("Your wikis hold **5** snapshots") with an arrow at the right edge. Clicking it – or using the keyboard – unfolds it and shows the wikis involved with their counts, the explanation and the **"Show snapshots and tidy up"** button; clicking a wiki opens the snapshot dialog with that wiki preselected. Folded it is one line high, so it does not push the list away. Those who may only merge see nothing. Without snapshots the hint is absent rather than showing an empty box. Deleting happens exclusively in the snapshot dialog, behind each single entry

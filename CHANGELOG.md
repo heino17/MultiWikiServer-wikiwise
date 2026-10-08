@@ -438,7 +438,51 @@ finally follow the language they are counted in.
   pages and rights untouched, and the existing wiki is the best place to look,
   because it has content while a fresh one is empty. The other side of the
   same fact: on a real server a teacher's wikis change too, at the same
-  moment. There is no per-wiki pinning of a shell version.
+  moment. §106 is the counterpart: it lets a wiki hold on to the shell
+  version it serves.
+
+- **A wiki can hold on to its template's shell version** (§106). Until now
+  every template save rewrote the interface of all of that template's wikis
+  at the same moment (§105). Since this change each save creates a numbered
+  *release* instead: an immutable snapshot of the template where the release
+  number is per-template and strictly ascending, with an optional
+  human-readable label taken from a `<meta name="mws-shell-version"
+  content="...">` tag in the shell. A wiki now follows its template under a
+  **shell policy**, set in the wiki's template field and shown in the
+  overview; new wikis default to `notify`, so a template release never lands
+  unannounced: `auto` serves the newest release, exactly as before; `notify`
+  stays on the current one and asks before moving on; `pin` stays on one
+  release. `/status` and the index answer the wiki with its policy and the
+  served and newest release (`$:/config/multiwikiclient/shell-policy`,
+  `-release`, `-release-label`, `-latest-release`, `-latest-release-label`),
+  so the client can compare them without a round trip.
+- **A TiddlyWiki wiki offers the pending update** (§106). Under `notify`,
+  when the newest release is newer than the served one, a banner above the
+  page tells the wiki owner — and site admins — that a new template version
+  exists, shows that version, and offers an *Update* button; `pin` stays
+  quiet by design, and `auto` serves the newest release anyway. The button
+  calls `PUT /recipe/<slug>/shell/update`, which moves the served release to
+  the newest without changing the policy (pin stays pin, notify stays notify)
+  and recompiles the wiki against it. The wiki owner and admins may call it
+  (the same gate as the settings form), everyone else gets `403`, a template
+  without releases answers `409`. After a success the banner hides and the
+  page reloads to serve the new shell, unless the syncer has unsaved changes
+  to protect — then it reloads later.
+- **The client knows who is an admin** (§106). The adaptor writes
+  `$:/status/IsAdmin` ("yes"/"no") with every status response, so the banner
+  can tell the owner and the admins from other readers. Like all other
+  `$:/status/...` tiddlers it stays out of the store.
+- One migration: `20261007182014_shell_versions` adds the `TemplateVersion`
+  table (release, label, frozen definition) and
+  `recipes.pinned_template_version_id`, and backfills the current definition
+  of every existing template as release 1, so no wiki ever believes there is
+  no release to talk about. It applies itself on the next start.
+- Verified: `npm run tsc2`, the admin-app typecheck and `npm run build` are
+  clean, the migration applied to the dev store on the next start, and the
+  rebuilt client plugin ships the banner tiddler, the update module and the
+  six new strings in all eight languages. The banner itself still wants a
+  browser: save a template whose wiki has the `notify` policy, open that wiki
+  as its owner and as someone with fewer rights, and click the button.
 
 ---
 
@@ -5004,6 +5048,32 @@ numbered), and it includes the MWS-mode tests that read and write through
 `/recipe/<slug>/batch`, so the exchange itself is covered and not only the
 look of the thing.
 
+## 107. Documentation: SimpleWiki and versioned shells in the READMEs
+
+**Why.** The summaries (§102–§106) told of SimpleWiki wikis and the shell
+version mechanism, but the user-facing pages had not caught up: the README
+highlights still ended at §79, and `README_features.md` knew the SimpleWiki
+import and the one-click creation (§102, §103) — not, however, the stories
+behind the shell: that one `provision-simplewiki` run replaces the interface
+of *every* wiki of the template (§105), and that a wiki now holds on to its
+template's shell version under a policy (`auto | notify | pin`, new wikis
+`notify`) with an update banner for owner and admins (§106). Someone reading
+only the READMEs would not know that SimpleWiki exists — and no template
+release stays loud: under §105 a save reached all wikis silently, under §106
+it must be taken over explicitly.
+
+**What.** One bullet in the highlights of `README.md` (both language halves),
+after the "Wikis you can actually manage" bullet, pointing at §102–§106. One
+bullet in "Managing Wikis"/„Wikis verwalten" of `README_features.md` (both
+halves), between the SimpleWiki creation and the snapshots, spelling out
+releases, policy, `PUT /recipe/<slug>/shell/update` and `$:/status/IsAdmin`.
+Both halves carry the same identifiers and the same §-references.
+
+**Verified.** Both language halves of both files compared line by line —
+structure, identifiers and §-references match. Docs only: `npm run tsc2` stays
+clean and `npm run build` succeeds (no code changed), and `git status` shows
+no generated artifact (`dist/` stays ignored).
+
 ## 99. Cleanup: the copy-pasted CSS block at the end of `app.inline.css`
 
 **Why.** §98 left a note about duplicated rules further down `app.inline.css` and
@@ -6458,8 +6528,55 @@ Admin-App folgen endlich der Sprache, in der sie gezählt werden.
   Template, Seiten und Rechte bleiben unberührt, und die vorhandene Wiki ist der
   beste Ort zum Nachsehen, weil in ihr Inhalt steht, während eine neue leer ist.
   Die andere Seite derselben Tatsache: Auf einem echten Server ändern sich auch
-  die Wikis einer Lehrkraft, im selben Moment. Es gibt keine Version der
-  Schale, die eine Wiki festhalten könnte.
+  die Wikis einer Lehrkraft, im selben Moment. §106 ist das Gegenstück: Es
+  lässt eine Wiki an der Schalen-Version festhalten, die sie ausliefert.
+
+- **Eine Wiki kann an der Schalen-Version ihres Templates festhalten** (§106).
+  Bisher schrieb jede Template-Speicherung die Oberfläche aller Wikis aus
+  diesem Template im selben Moment neu (§105). Mit dieser Änderung erzeugt
+  jede Speicherung stattdessen eine nummerierte *Version*: eine
+  unveränderliche Momentaufnahme des Templates, deren Nummer pro Template
+  streng aufsteigend ist, mit optionaler menschenlesbarer Bezeichnung aus
+  einem `<meta name="mws-shell-version" content="...">`-Tag in der Schale.
+  Eine Wiki folgt ihrem Template nun über eine **Schalen-Policy**, eingestellt
+  im Template-Feld der Wiki und in der Übersicht zu sehen; neue Wikis stehen
+  standardmäßig auf `notify`, eine Template-Version landet also nie
+  unangekündigt: `auto` liefert die neueste Version, genau wie bisher;
+  `notify` bleibt auf der aktuellen und fragt vor einem Wechsel; `pin` bleibt
+  auf einer Version stehen. `/status`
+  und der Index liefern der Wiki ihre Policy sowie gespeicherte und neueste
+  Version (`$:/config/multiwikiclient/shell-policy`, `-release`,
+  `-release-label`, `-latest-release`, `-latest-release-label`), sodass der
+  Client ohne zusätzliche Anfrage vergleichen kann.
+- **Eine TiddlyWiki-Wiki bietet das anstehende Update an** (§106). Unter
+  `notify`, wenn die neueste Version neuer als die gespeicherte ist, zeigt
+  ein Banner über der Seite der Wiki-Besitzerin — und den Admins —, dass eine
+  neue Template-Version existiert, nennt diese Version und bietet einen
+  *Aktualisieren*-Button an; `pin` bleibt bewusst still, und `auto` liefert
+  die neueste Version sowieso. Der Button ruft `PUT /recipe/<slug>/shell/update`
+  auf, das die gespeicherte Version auf die neueste verschiebt, ohne die
+  Policy zu ändern (pin bleibt pin, notify bleibt notify), und die Wiki
+  dagegen neu übersetzt. Aufrufen dürfen das die Wiki-Besitzerin und Admins
+  (dieselbe Hürde wie die Einstellungen), alle anderen bekommen `403`, ein
+  Template ohne Versionen antwortet `409`. Nach Erfolg verschwindet das Banner
+  und die Seite lädt neu, um die neue Schale zu liefern — außer der Syncer
+  hat ungespeicherte Änderungen zu schützen; dann später.
+- **Der Client weiß, wer Admin ist** (§106). Der Adaptor schreibt bei jeder
+  Status-Antwort `$:/status/IsAdmin` ("yes"/"no"), damit das Banner die
+  Besitzerin und die Admins von anderen Lesern unterscheiden kann. Wie alle
+  anderen `$:/status/...`-Tiddler bleibt es außerhalb des Stores.
+- Eine Migration: `20261007182014_shell_versions` legt die Tabelle
+  `TemplateVersion` (Version, Bezeichnung, eingefrorene Definition) und
+  `recipes.pinned_template_version_id` an und kopiert die aktuelle Definition
+  jedes vorhandenen Templates als Version 1 zurück, sodass keine Wiki je
+  glaubt, es gäbe keine Version. Sie wendet sich beim nächsten Start selbst an.
+- Verifiziert: `npm run tsc2`, der Admin-App-Typecheck und `npm run build`
+  sind sauber, die Migration hat sich auf dem Dev-Store beim nächsten Start
+  angewendet, und das neu gebaute Client-Plugin enthält das Banner-Tiddler,
+  das Update-Modul und die sechs neuen Texte in allen acht Sprachen. Das
+  Banner selbst will noch einen Browser: ein Template mit einer Wiki in der
+  Policy `notify` speichern, die Wiki als Besitzerin und als andere Person
+  öffnen und den Button klicken.
 
 ---
 
@@ -11121,6 +11238,34 @@ Repository (`python3 tests/alle.py`, 23 Testdateien; dessen Changelog ist nach
 Tag datiert statt nummeriert), und sie enthält die MWS-Modus-Tests, die über
 `/recipe/<slug>/batch` lesen und schreiben. Damit ist der Austausch selbst
 abgedeckt und nicht nur das Aussehen.
+
+## 107. Dokumentation: SimpleWiki und versionierte Hüllen in den READMEs
+
+**Warum.** Die Zusammenfassungen (§102–§106) erzählten von SimpleWiki-Wikis
+und dem Hüllen-Versionierungsmechanismus, aber die benutzerzugewandten Seiten
+waren nicht mitgekommen: Die Highlights im README endeten bei §79, und
+`README_features.md` kannte den SimpleWiki-Import und die Ein-Klick-Anlage
+(§102, §103) — nicht aber die Geschichten hinter der Hülle: dass ein
+`provision-simplewiki`-Durchlauf die Oberfläche *aller* Wikis des Templates
+ersetzt (§105) und dass eine Wiki unter einer Politik an der Schalen-Version
+ihres Templates festhält (`auto | notify | pin`, neue Wikis `notify`) mit
+einem Update-Hinweis für Besitzerin und Admins (§106). Wer nur die READMEs
+läse, wüsste nicht, dass SimpleWiki existiert — und kein Template-Release
+bliebe leise: unter §105 erreichte ein Speichern alle Wikis still, unter
+§106 muss es ausdrücklich übernommen werden.
+
+**Was.** Ein Bullet in den Highlights von `README.md` (beide Sprachhälften),
+hinter dem Bullet „Wikis, die man wirklich verwalten kann", mit Verweis auf
+§102–§106. Ein Bullet in „Wikis verwalten"/"Managing Wikis" der
+`README_features.md` (beide Hälften), zwischen SimpleWiki-Anlage und
+Snapshots, mit Releases, Politik, `PUT /recipe/<slug>/shell/update` und
+`$:/status/IsAdmin`. Beide Hälften tragen dieselben Bezeichner und denselben
+§-Verweis.
+
+**Geprüft.** Beide Sprachhälften beider Dateien Zeile für Zeile verglichen —
+Aufbau, Bezeichner und §-Verweise stimmen überein. Nur Doku: `npm run tsc2`
+bleibt sauber und `npm run build` gelingt (kein Code geändert), und
+`git status` zeigt kein generiertes Artefakt (`dist/` bleibt ignoriert).
 
 ## 99. Aufräumen: der kopierte CSS-Block am Ende von `app.inline.css`
 
