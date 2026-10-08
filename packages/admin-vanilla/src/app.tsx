@@ -2774,7 +2774,9 @@ function renderListCellValue(columnKey: string, value: string | undefined, onThu
   // The date columns want a <time> with the machine-readable value in the
   // attribute and the full timestamp in the tooltip, so they are read before
   // formatFieldValue, which would otherwise turn the ISO string into plain text.
-  if (columnKey === "createdAt") {
+  // "Created at" exists on the wikis, bags, roles and users tabs, "Updated" on
+  // the templates tab; both carry an ISO timestamp.
+  if (columnKey === "createdAt" || columnKey === "lastUpdatedAt") {
     const stamp = shortDate(value);
     if (!stamp) return <span class="list-access-names is-empty">—</span>;
     return <time class="list-date" datetime={stamp.dateTime} title={stamp.full}>{stamp.short}</time>;
