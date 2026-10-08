@@ -2,7 +2,7 @@ import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
 import { PluginCache, bootTiddlyWikiVersion, loadWikiTiddlers } from "../plugin-cache";
 import { TiddlerFields, TW } from "tiddlywiki";
 import * as path from "path";
-import { WikiStore, BagDataAdapter, RecipeDataAdapter, toMappingRows } from "../new-managers";
+import { WikiStore, BagDataAdapter, RecipeDataAdapter, toMappingRows, DEFAULT_TEMPLATE } from "../new-managers";
 import { IdString } from "@mws/admin-vanilla/src/definition/tabs";
 
 const info: CommandInfo = {
@@ -54,7 +54,7 @@ export class LoadWikiFolderCommand extends BaseCommand<[string], {
 		if (!this.options["recipe-description"]?.length)
 			throw new Error("missing required option recipe-description");
 
-		const templateName = this.options["template-name"]?.[0] ?? "Blank Template";
+		const templateName = this.options["template-name"]?.[0] ?? DEFAULT_TEMPLATE;
 
 		const overwrite = !!this.options["overwrite"];
 		const skipExisting = !!this.options["skip-existing"];

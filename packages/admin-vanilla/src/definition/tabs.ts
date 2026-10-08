@@ -408,6 +408,7 @@ const tabs = {
       { key: "name", label: "Name", type: "string", section: "authored", mode: "create edit" },
       { key: "description", label: "Description", type: "text", section: "authored", mode: "create edit" },
       { key: "lastUpdatedAt", label: "Updated", type: "string", section: "runtime", mode: "server" },
+      { key: "shellVersion", label: "Version", type: "string", section: "runtime", mode: "server", architecture: "The newest shell release of this template, shown as the name the shell declares in its mws-shell-version tag, or as the release number when there is no label." },
       { key: "ownerUsername", label: "Created by", type: "string", section: "runtime", mode: "server" },
       {
         key: "writablePrefixBags",
@@ -934,6 +935,7 @@ export interface TemplateAdminRecord {
   id: IdString;
   type: TemplateTypes;
   name: string;
+  shellVersion: string;
   description: string;
   writablePrefixBags: readonly WritablePrefixRow[];
   readonlyBags: readonly string[];

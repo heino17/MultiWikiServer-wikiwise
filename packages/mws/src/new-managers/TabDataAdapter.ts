@@ -45,6 +45,7 @@ import { deleteThumbnail } from "./WikiThumbnailRoutes";
 import { pruneSnapshotBags } from "./WikiSnapshotBag";
 import { HIDDEN_PREFIX } from "./LandingRoutes";
 import { isShellPolicy, resolveShellVersionStatus, type ShellPolicy, type ShellVersionStatus } from "./template-releases";
+import type { PluginCache } from "../plugin-cache";
 import type { PasswordService } from "../services/PasswordService";
 
 
@@ -62,6 +63,7 @@ export type TemplateDefinition = Omit<
   | "id"
   | "name"
   | "lastUpdatedAt"
+  | "shellVersion"
   | "templatePermissions"
   | "dependentWikis"
   | "templateUsers"
@@ -825,8 +827,26 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
 }
 
 // #region Template
-
 export class TemplateDataAdapter extends TabDataAdapter<"templates"> {
+
+  constructor(user: ServerRequest["user"], private pluginCache?: PluginCache) {
+    super(user);
+  }
+
+  /**
+   * Version label for a release without an explicit shell label. A template
+   * that serves its own shell declares its version via
+   * <meta name="mws-shell-version">; a shell-less TiddlyWiki template has no
+   * such meta tag, so its version is the TiddlyWiki version it serves — the
+   * same value an opened wiki reports in <meta name="tiddlywiki-version">
+   * (resolved from the plugin cache). Custom shells keep the plain release
+   * number as before.
+   */
+  private templateVersionLabel(definition: TemplateDefinition) {
+    if (definition.customHtmlEnabled) return undefined;
+    return this.pluginCache?.versionFromTemplate(definition.twVersion);
+  }
+
   async saveRow(prisma: PrismaTxnClient, data: DataSave["templates"][number]): Promise<DataStore["templates"][number]> {
     const importer = new TemplateImportWriter(prisma, false);
     await importer.checkExisting(data.id, data.name, this.user);
@@ -935,12 +955,26 @@ export class TemplateDataAdapter extends TabDataAdapter<"templates"> {
       ? (await prisma.users.findUnique({ where: { user_id: record.owner_user_id }, select: { username: true } }))?.username ?? ""
       : this.user.username;
 
+    // The save just created the newest shell release; report it as the
+    // "Version" column would (label over TiddlyWiki version over release
+    // number, "" when none).
+    const newestShellVersion = await prisma.templateVersion.findFirst({
+      where: { template_id },
+      orderBy: { release: "desc" },
+      select: { release: true, label: true },
+    });
+
     return {
       ...template.definition,
       id: new IdString(template_id),
       name: data.name,
       type: "simpleV1",
       lastUpdatedAt: updated.toISOString(),
+      shellVersion: newestShellVersion
+        ? (newestShellVersion.label
+          ?? this.templateVersionLabel(template.definition)
+          ?? String(newestShellVersion.release))
+        : "",
       templateAdmins: templatePermissions.filter(e => e.level === "B_write").map(e => e.role),
       templateUsers: templatePermissions.filter(e => e.level === "A_read").map(e => e.role),
       ownerUsername,
@@ -997,16 +1031,35 @@ export class TemplateDataAdapter extends TabDataAdapter<"templates"> {
         : []
     ).map(e => [e.user_id, e.username]));
 
+    // Newest shell release per template: the "Version" column shows the shell
+    // label a custom shell declares (`v0.1.0`), or — for shell-less TiddlyWiki
+    // templates — the TiddlyWiki version they serve, or the release number.
+    const latestVersionByTemplate = new Map<string, { release: number; label: string | null }>();
+    if (templates.length) {
+      const versions = await prisma.templateVersion.findMany({
+        where: { template_id: { in: templates.map(e => e.id) } },
+        select: { template_id: true, release: true, label: true },
+        orderBy: { release: "asc" },
+      });
+      for (const version of versions) latestVersionByTemplate.set(version.template_id, version);
+    }
+
     return templates.map((template): ITemplateRow => {
       /* @deprecated - version 0.2 */
       if (template.definition.twVersion?.startsWith("tw5-"))
         template.definition.twVersion = template.definition.twVersion.slice(4);
+      const latest = latestVersionByTemplate.get(template.id);
       return {
         ...template.definition,
         id: new IdString(template.id),
         name: template.name,
         type: "simpleV1",
         lastUpdatedAt: template.updated.toISOString(),
+        shellVersion: latest
+          ? (latest.label
+            ?? this.templateVersionLabel(template.definition)
+            ?? String(latest.release))
+          : "",
         ownerUsername: template.owner_user_id ? ownerNames.get(template.owner_user_id) ?? "" : "",
         templateAdmins: template.permissions.filter(e => e.level === "B_write").map(e => roles(new IdString(e.role_id))),
         templateUsers: template.permissions.filter(e => e.level === "A_read").map(e => roles(new IdString(e.role_id))),
@@ -1503,7 +1556,7 @@ export const AdminSave = zodRoute({
       if (op !== "save") throw new Error(`Unsupported admin operation: ${op}`);
       switch (tab) {
         case "wikis": return await new RecipeDataAdapter(state.user).saveRow(prisma, data as IRecipeRow);
-        case "templates": return await new TemplateDataAdapter(state.user).saveRow(prisma, data as ITemplateRow);
+        case "templates": return await new TemplateDataAdapter(state.user, state.pluginCache).saveRow(prisma, data as ITemplateRow);
         case "bags": return await new BagDataAdapter(state.user).saveRow(prisma, data as IBagRow);
         case "roles": return await new RoleDataAdapter(state.user).saveRow(prisma, data as IRoleRow);
         case "users": return await new UserDataAdapter(state.user, state.PasswordService).saveRow(prisma, data as IUserRow);
@@ -1533,7 +1586,7 @@ export const AdminLoad = zodRoute({
       const roles = await new RoleImportWriter(prisma, false).getIdMapper();
       return {
         wikis: await new RecipeDataAdapter(state.user).getList(prisma, roles),
-        templates: await new TemplateDataAdapter(state.user).getList(prisma, roles),
+        templates: await new TemplateDataAdapter(state.user, state.pluginCache).getList(prisma, roles),
         bags: await new BagDataAdapter(state.user).getList(prisma, roles),
         roles: await new RoleDataAdapter(state.user).getList(prisma),
         users: await new UserDataAdapter(state.user).getList(prisma, roles),

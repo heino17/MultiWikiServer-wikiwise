@@ -3,7 +3,7 @@ import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
 import { existsSync } from "fs";
 import { resolve } from "path";
 import { LoadWikiFolderCommand } from "./load-wiki-folder";
-import { RoleImportWriter, TemplateImportWriter, UserImportWriter } from "../new-managers";
+import { RoleImportWriter, TemplateImportWriter, UserImportWriter, DEFAULT_TEMPLATE } from "../new-managers";
 import { IdString } from "@mws/admin-vanilla/src/definition/tabs";
 
 const info: CommandInfo = {
@@ -37,7 +37,7 @@ export class InitStoreCommand extends BaseCommand {
 
 
 			await new TemplateImportWriter(prisma, true).upsert([{
-				name: "Blank Template",
+				name: DEFAULT_TEMPLATE,
 				definition: {
 					type: "simpleV1",
 					description: "The default template, blank and uneditable.",

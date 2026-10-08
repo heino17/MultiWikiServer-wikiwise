@@ -14,7 +14,7 @@ import { createTemplateRelease } from "./template-releases";
 import { IdString, TabId } from "@mws/admin-vanilla/src/definition/tabs";
 import { Debug } from "@prisma/client/runtime/client";
 
-export const DEFAULT_TEMPLATE = "Blank Template";
+export const DEFAULT_TEMPLATE = "Tiddlywiki";
 export const SIMPLEWIKI_TEMPLATE = "SimpleWiki";
 
 export type ImportedRoleRows = Awaited<ReturnType<PrismaTxnClient["roles"]["findMany"]>>;
