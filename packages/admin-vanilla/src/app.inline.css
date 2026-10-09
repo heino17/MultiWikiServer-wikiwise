@@ -778,6 +778,7 @@ h6 {
 .tab-strip {
 	display: flex;
 	flex-wrap: wrap;
+	justify-content: center;
 	gap: 12px;
 	margin-top: 24px;
 	padding-bottom: 4px;

@@ -5157,6 +5157,23 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 118. The admin tab strip sits centered on the page
+
+**Why.** The tab strip under the header (`<nav class="tab-strip">` — the
+"Admin sections" buttons) always sat flush left. As the block that orients
+the user across the whole admin shell, it reads calmer centered above the
+content.
+
+**What.** `.tab-strip` now centres its buttons (`justify-content: center`).
+When the strip wraps onto a second line on narrow screens, each line centres
+its own buttons — the block stays balanced instead of hugging the left edge.
+
+**Verified.** `npm run tsc` in `packages/admin-vanilla` and the root
+`npm run build` are clean. The click-through awaits the maintainer: the
+Wikis / Templates / … tab buttons are centered under the header.
+
+**Translations:** none new.
+
 ## 117. The admin menus close when a click lands outside them
 
 **Why.** Every admin menu is a native <details> element, and an open <details>
@@ -11860,6 +11877,25 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 118. Die Admin-Tab-Leiste liegt zentriert auf der Seite
+
+**Warum.** Die Tab-Leiste unter dem Kopf (`<nav class="tab-strip">` — die
+Buttons „Verwaltungsbereiche") lag immer linksbündig. Als der Block, der den
+Anwender durch die ganze Admin-Oberfläche orientiert, wirkt er zentriert über
+dem Inhalt ruhiger.
+
+**Was.** `.tab-strip` zentriert seine Buttons jetzt
+(`justify-content: center`). Wenn die Leiste auf schmalen Bildschirmen in
+eine zweite Zeile umbricht, zentriert jede Zeile ihre eigenen Buttons — der
+Block bleibt balanciert statt an der linken Kante zu kleben.
+
+**Geprüft.** `npm run tsc` in `packages/admin-vanilla` und das
+Root-`npm run build` sind sauber. Der Klick-Durchlauf wartet auf den
+Maintainer: Die Tab-Buttons (Wikis / Templates / …) liegen zentriert unter
+dem Kopf.
+
+**Übersetzungen:** keine neuen.
 
 ## 117. Die Admin-Menüs schließen bei einem Klick in den freien Bereich
 
