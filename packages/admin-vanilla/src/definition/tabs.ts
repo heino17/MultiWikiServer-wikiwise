@@ -165,6 +165,10 @@ export interface ColumnDefinition {
   width?: number;
   /** Caps the displayed cell text at this many characters (grid view only). */
   truncate?: number;
+  /** Text column that wraps its lines inside a flexible track instead of
+   *  holding its widest single line — for descriptions that would otherwise
+   *  push the whole table wider or get cut off. */
+  wrap?: boolean;
 }
 
 export interface TabDefinition {
@@ -398,7 +402,7 @@ const tabs = {
     columns: [
       { key: "name", label: "Name", width: 2 },
       { key: "shellVersion", label: "Version", width: 2 },
-      { key: "description", label: "Description", width: 3 },
+      { key: "description", label: "Description", width: 3, wrap: true },
       { key: "ownerUsername", label: "Created by" },
       { key: "readonlyBagsSummary", label: "Readonly bags" },
       // { key: "writablePrefixSummary", label: "Writable prefixes" },

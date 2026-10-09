@@ -5157,6 +5157,28 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 116. The templates table wraps its descriptions and slims its header
+
+**Why.** The templates table was rigid in two places: its header cells carried
+the full body-cell padding (14px), making the header row needlessly tall for
+short uppercase labels, and the description column held its widest single line
+(`minmax(max-content, 1fr)`), so long descriptions pushed the table wide or
+fell into an ellipsis instead of using the space the rows already give them.
+
+**What.** A `wrap` column flag turns a text column into a flexible one: its
+track may compress to the longest word everywhere, and its cell breaks long
+words (`overflow-wrap: anywhere`). The templates description uses the flag and
+now wraps into the width its three grid tracks fill. The column headers keep
+only 8px of vertical padding (`.list-head.list-cell`), so the header row sits
+at the height of the body cells instead of towering above them.
+
+**Verified.** `npm run tsc` in `packages/admin-vanilla` and the root
+`npm run build` are clean. The click-through awaits the maintainer: in the
+templates tab long descriptions wrap over several lines, and the header row
+is visibly slimmer than before.
+
+**Translations:** none new.
+
 ## 115. The templates "Updated" column shows a real date
 
 **Why.** The templates list rendered the "Updated" column as a raw ISO
@@ -11813,6 +11835,30 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 116. Die Template-Tabelle: Beschreibung bricht um, Kopfzeile wird schlanker
+
+**Warum.** Die Template-Tabelle wirkte an zwei Stellen starr: Ihre Kopfzellen
+trugen das volle Zellen-Padding der Inhalte (14px) und machten die Kopfzeile
+für kurze Großbuchstaben-Labels unnötig hoch; und die Beschreibungsspalte
+hielt ihre breiteste einzelne Zeile (`minmax(max-content, 1fr)`), sodass
+lange Beschreibungen die Tabelle in die Breite zogen oder in einer Ellipse
+endeten, statt den Platz zu nutzen, den die Zeilen ohnehin haben.
+
+**Was.** Ein `wrap`-Spalten-Flag macht eine Textspalte flexibel: Ihre Spur
+darf überall bis zum längsten Wort schrumpfen, und ihre Zelle bricht lange
+Wörter um (`overflow-wrap: anywhere`). Die Templates-Beschreibung nutzt das
+und bricht jetzt in die Breite um, die ihre drei Grid-Spuren ausfüllen. Die
+Spaltenköpfe behalten nur noch 8px vertikales Padding
+(`.list-head.list-cell`), die Kopfzeile liegt damit auf der Höhe der
+Inhaltszellen statt darüber hinauszuragen.
+
+**Geprüft.** `npm run tsc` in `packages/admin-vanilla` und das
+Root-`npm run build` sind sauber. Der Klick-Durchlauf wartet auf den
+Maintainer: Im Templates-Tab brechen lange Beschreibungen über mehrere Zeilen
+um, und die Kopfzeile ist sichtbar schlanker als zuvor.
+
+**Übersetzungen:** keine neuen.
 
 ## 115. Die Spalte „Aktualisiert" der Templates zeigt ein echtes Datum
 

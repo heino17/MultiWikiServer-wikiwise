@@ -1022,6 +1022,18 @@ h6 {
 	text-overflow: ellipsis;
 }
 
+/* Compact headers: the column labels are short, so the inherited 14px cell
+   padding made the header row needlessly tall next to the body rows. */
+.list-head.list-cell {
+	padding: 8px 16px;
+}
+
+/* A `wrap` column (see buildListGridTemplate): long words must break instead
+   of overflowing, so the row stays at its track width. */
+.list-cell-wrap {
+	overflow-wrap: anywhere;
+}
+
 .list-access-names {
 	display: flex;
 	flex-direction: column;

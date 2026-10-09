@@ -2580,7 +2580,7 @@ export class App extends JSXElement {
                     >{renderListCellValue(column.key, value, (src) => { this.thumbnailSrc = src; }, column.truncate)}</a>;
                   }
                   return (
-                    <div class={"list-cell" + (column.width && column.width > 1 ? " span-" + column.width : "")}>
+                    <div class={"list-cell" + (column.width && column.width > 1 ? " span-" + column.width : "") + (column.wrap ? " list-cell-wrap" : "")}>
                       {renderListCellValue(column.key, value, (src) => { this.thumbnailSrc = src; }, column.truncate)}
                       {/* {(() => {
 
@@ -2762,10 +2762,13 @@ function buildListGridTemplate(columns: readonly ColumnDefinition[]): string {
     // Description-style columns snuggly fit their full text on wide screens
     // (--truncate-min = max-content); on narrow screens (below 800px) a CSS
     // media rule switches the minimum to min-content so the column can shrink
-    // and the text wraps instead of overflowing.
-    const track = column.truncate
-      ? "minmax(var(--truncate-min, max-content), 1fr)"
-      : "minmax(max-content, 1fr)";
+    // and the text wraps instead of overflowing. A `wrap` column compresses
+    // everywhere and wraps its lines into the space it fills (§116).
+    const track = column.wrap
+      ? "minmax(min-content, 1fr)"
+      : column.truncate
+        ? "minmax(var(--truncate-min, max-content), 1fr)"
+        : "minmax(max-content, 1fr)";
     return Array.from({ length: column.width ?? 1 }, () => track).join(" ");
   }).join(" ");
 }
