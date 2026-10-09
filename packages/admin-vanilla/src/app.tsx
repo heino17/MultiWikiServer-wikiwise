@@ -1484,14 +1484,6 @@ export class App extends JSXElement {
     toggleTheme();
     this.themeMode = getEffectiveTheme();
   };
-  private readonly handleAccountMenuClick = (event: MouseEvent) => {
-    const accountMenu = this.querySelector(".hero-account-menu");
-    if (!(accountMenu instanceof HTMLDetailsElement) || !accountMenu.open) return;
-
-    const target = event.target;
-    if (target instanceof Node && accountMenu.contains(target)) return;
-    accountMenu.open = false;
-  };
 
   constructor() {
     super()
@@ -1834,7 +1826,6 @@ export class App extends JSXElement {
 
   connectedCallback(): void {
     super.connectedCallback();
-    document.addEventListener("click", this.handleAccountMenuClick, true);
     window.addEventListener("pageshow", this.handlePageShow);
     void this.loadAdminRecords().then(() => this.loadSnapshotCounts());
     void this.loadBackups();
@@ -1846,7 +1837,6 @@ export class App extends JSXElement {
   }
 
   disconnectedCallback(): void {
-    document.removeEventListener("click", this.handleAccountMenuClick, true);
     window.removeEventListener("pageshow", this.handlePageShow);
     if (this.pinboardTimer !== null) {
       window.clearInterval(this.pinboardTimer);

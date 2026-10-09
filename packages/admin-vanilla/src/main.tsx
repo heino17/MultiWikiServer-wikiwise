@@ -11,6 +11,7 @@ import { SettingsForm } from "./app-settings";
 import { LegalNoticePage } from "./legal-notice";
 import { initializeTheme } from "./theme";
 import { CookieConsent } from "./cookie-consent";
+import { closeMenusOnOutsideClick } from "./menu-close";
 
 // disables the "flash of white" styles
 document.documentElement.classList.add("loaded");
@@ -20,6 +21,10 @@ window.addEventListener("drop", (e) => {
   e.preventDefault();
   console.log("Prevented the default browser behavior of doing stuff with dropped stuff. If you have a use case for this, please open an issue.");
 });
+
+// One listener for every route: a native <details> menu only closes when its
+// trigger is clicked again — clicking into the free space now closes it too.
+document.addEventListener("click", closeMenusOnOutsideClick, true);
 
 
 declare global {

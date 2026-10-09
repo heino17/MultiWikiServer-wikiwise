@@ -5157,6 +5157,31 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 117. The admin menus close when a click lands outside them
+
+**Why.** Every admin menu is a native <details> element, and an open <details>
+only closes when its summary is clicked once more. So an open menu stayed
+open until the user re-clicked its trigger, even though the eye expects it to
+close when a click goes somewhere else — a stray click even reopened the menu
+when it hit the trigger instead.
+
+**What.** One document-level capture click handler
+(`closeMenusOnOutsideClick`) now closes any open menu whose element
+(`.hero-locale-menu`, `.hero-account-menu`, `.create-wiki-menu` — the
+language, account, backups and create-wiki lists) does not contain the click
+target; the trigger keeps its native toggle, and the accordion <details>
+sections inside the wiki-file import dialog keep their expand-by-click
+behaviour. The old App-local handler for the account menu is replaced by
+this one place, which also covers the landing and the legal-notice pages
+with their locale menu.
+
+**Verified.** `npm run tsc` in `packages/admin-vanilla` and the root
+`npm run build` are clean. The click-through awaits the maintainer: open the
+language, account, backups or create-wiki menu and click on an empty area —
+the menu closes; clicking inside it keeps it open.
+
+**Translations:** none new.
+
 ## 116. The templates table wraps its descriptions and slims its header
 
 **Why.** The templates table was rigid in two places: its header cells carried
@@ -11835,6 +11860,33 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 117. Die Admin-Menüs schließen bei einem Klick in den freien Bereich
+
+**Warum.** Jedes Admin-Menü ist ein natives <details>-Element, und ein
+geöffnetes <details> schließt nur, wenn seine Zusammenfassung erneut
+angeklickt wird. Ein offenes Menü blieb also offen, bis der Anwender den
+Auslöser nochmals antippte, obwohl man erwartet, dass es dichtmacht, wenn ein
+Klick woandershin geht — ein Streifklick hat es sogar wieder geöffnet, wenn
+er den Auslöser traf.
+
+**Was.** Ein document-weiter Capture-Klick-Handler (`closeMenusOnOutsideClick`)
+schließt jetzt jedes offene Menü, dessen Element (`.hero-locale-menu`,
+`.hero-account-menu`, `.create-wiki-menu` — die Listen für Sprache, Konto,
+Backups und Wiki-Anlage) den Klick-Zielpunkt nicht enthält; der Auslöser
+behält sein natives Umschalten, und die <details>-Abschnitte im
+Wiki-Datei-Import-Dialog verhalten sich weiterhin wie Aufklapp-Inhalte. Der
+bisherige App-lokale Handler für das Konto-Menü wird durch diesen einen Ort
+ersetzt, der auch die Landing- und die Impressum-Seite mit ihrem Sprachmenü
+abdeckt.
+
+**Geprüft.** `npm run tsc` in `packages/admin-vanilla` und das
+Root-`npm run build` sind sauber. Der Klick-Durchlauf wartet auf den
+Maintainer: Sprach-, Konto-, Backups- oder Wiki-Anlage-Menü öffnen und in
+einen freien Bereich klicken — das Menü schließt; ein Klick hinein hält es
+offen.
+
+**Übersetzungen:** keine neuen.
 
 ## 116. Die Template-Tabelle: Beschreibung bricht um, Kopfzeile wird schlanker
 
