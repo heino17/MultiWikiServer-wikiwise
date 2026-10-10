@@ -595,7 +595,12 @@ class WikiStoreWriter extends StoreWriter {
   ) {
     super();
     this.ownerUsername = ownerUsername;
-    this.shellStatus = index.versionInfo;
+    // Shell releases only mean something for templates that serve their own
+    // shell (SimpleWiki and other custom shells). A shell-less TiddlyWiki
+    // template has no shell version to update — its releases are save-counters
+    // (§112) — so it gets no shell-policy/release tiddlers and the wiki-side
+    // update banner never reveals. The served shell's own definition decides.
+    this.shellStatus = index.template.customHtmlEnabled ? index.versionInfo : undefined;
     this.bagTiddlers = index.bagTiddlers;
     this.injectionFunction = index.template.injectionFunction;
     this.externalPlugins = index.template.externalPlugins;

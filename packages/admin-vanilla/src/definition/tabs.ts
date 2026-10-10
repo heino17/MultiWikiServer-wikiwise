@@ -316,7 +316,7 @@ const tabs = {
         type: "string",
         section: "runtime",
         mode: "server",
-        architecture: "Version name this wiki serves: the label from the shell's <meta name=\"mws-shell-version\" content=\"...\"> tag when it declares one, else the release number. Empty while the store has no releases yet.",
+        architecture: "Version name this wiki serves: the label from the shell's <meta name=\"mws-shell-version\" content=\"...\"> tag when it declares one, else the release number. For a shell-less TiddlyWiki template it is the TiddlyWiki version the template serves instead of the bare release number. Empty while the store has no releases yet.",
       },
       {
         key: "shellLatestRelease",
@@ -324,7 +324,7 @@ const tabs = {
         type: "string",
         section: "runtime",
         mode: "server",
-        architecture: "Newest version the template has published (label from the shell's meta tag, else the release number). When it exceeds the served version, the wiki offers an update.",
+        architecture: "Newest version the template has published (label from the shell's meta tag, else the release number; for a shell-less TiddlyWiki template the TiddlyWiki version it serves). When it exceeds the served version, the wiki offers an update.",
       },
       {
         key: "compileValidation",
@@ -366,7 +366,7 @@ const tabs = {
         { title: "Access", description: "Controls who can edit the wiki settings.", keys: ["recipePermissions"], width: fullWidth },
       ],
       runtime: [
-        { title: "Shell version", description: "Which template shell version this wiki serves, and the newest one the template has published. Shows the name the shell declares in its mws-shell-version tag; otherwise the release number.", keys: ["shellRelease", "shellLatestRelease"], width: halfWidth },
+        { title: "Shell version", description: "Which template shell version this wiki serves, and the newest one the template has published. Shows the name the shell declares in its mws-shell-version tag; for a shell-less TiddlyWiki template the TiddlyWiki version it serves; otherwise the release number.", keys: ["shellRelease", "shellLatestRelease"], width: halfWidth },
         { title: "Shared areas", description: "Bags that users other than the owner can write to. Every writer can currently read all of the wiki's tiddlers, so share these areas with care — or keep them in their own wiki.", keys: ["sharedWritableBags"], width: fullWidth },
         // { title: "Computed Write Prefix", description: "", keys: ["effectiveWritableBags"], width: fullWidth },
         // { title: "Computed Bag Order", description: "", keys: ["effectiveReadonlyBags"], width: halfWidth },

@@ -354,7 +354,7 @@ async function syncRecipePermissionsToBags(
 }
 
 abstract class TabDataAdapter<TAB extends TabId> {
-  constructor(protected user: ServerRequest["user"]) { }
+  constructor(protected user: ServerRequest["user"], protected pluginCache?: PluginCache) { }
   abstract saveRow(prisma: PrismaTxnClient, data: DataSave[TAB][number]): Promise<DataStore[TAB][number]>;
   // roles aren't connected to data tables so they can be swapped out for SSO
   abstract getList(prisma: PrismaTxnClient, roles: (key: IdString) => string): Promise<DataStore[TAB]>;
@@ -557,11 +557,12 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
       landingVisible,
       shellPolicy: persistedPolicy,
       shellStatus,
+      templateDefinition: template.definition,
     });
 
   }
 
-  private buildResponse({ definition, plugins, allbags, id, slug, templateName, lastCompiledAt, createdAt, recipePermissions, ownerUsername = "", myRights = "", sharedWritableBags = [], landingVisible = true, shellPolicy = "notify", shellStatus }: {
+  private buildResponse({ definition, plugins, allbags, id, slug, templateName, lastCompiledAt, createdAt, recipePermissions, ownerUsername = "", myRights = "", sharedWritableBags = [], landingVisible = true, shellPolicy = "notify", shellStatus, templateDefinition }: {
     id: IdString;
     slug: string;
     lastCompiledAt: Date;
@@ -582,6 +583,8 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
     shellPolicy?: ShellPolicy;
     /** resolved release numbers for the runtime readout */
     shellStatus?: ShellVersionStatus;
+    /** the template head, to resolve a shell-less template's TiddlyWiki version */
+    templateDefinition?: TemplateDefinition;
   }): DataStore["wikis"][number] {
     const effectivePluginSet = plugins;
     const effectiveReadonlyBags = allbags
@@ -613,12 +616,33 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
       landingVisible,
       shellPolicy,
       // The shell's own version name (v0.1.0) when it declares one in a
-      // <meta name="mws-shell-version"> tag; the bare release number only
-      // for shells without a label. "" while a store has no release yet
+      // <meta name="mws-shell-version"> tag. A shell-less TiddlyWiki template
+      // shows the TiddlyWiki version it serves (the same value the template
+      // list shows, §112) instead of the bare release number, so it never
+      // looks like an update is pending. "" while a store has no release yet
       // (pre-backfill stores only).
-      shellRelease: shellStatus?.servedLabel ?? (shellStatus?.servedRelease != null ? String(shellStatus.servedRelease) : ""),
-      shellLatestRelease: shellStatus?.latestLabel ?? (shellStatus?.latestRelease != null ? String(shellStatus.latestRelease) : ""),
+      shellRelease: this.shellVersionDisplay(shellStatus?.servedRelease ?? null, shellStatus?.servedLabel ?? null, templateDefinition),
+      shellLatestRelease: this.shellVersionDisplay(shellStatus?.latestRelease ?? null, shellStatus?.latestLabel ?? null, templateDefinition),
     };
+  }
+
+  /**
+   * Display name for a shell version. A release that carries a label shows it;
+   * a shell-less TiddlyWiki template shows the TiddlyWiki version it serves —
+   * the same value the template list shows (§112) — so a wiki of such a
+   * template never looks like it has an update pending. A custom shell without
+   * a label keeps its bare release number.
+   */
+  private shellVersionDisplay(
+    release: number | null,
+    label: string | null,
+    definition?: TemplateDefinition,
+  ): string {
+    if (release == null) return "";
+    if (label) return label;
+    if (definition && !definition.customHtmlEnabled)
+      return this.pluginCache?.versionFromTemplate(definition.twVersion) ?? String(release);
+    return String(release);
   }
 
   async getList(prisma: PrismaTxnClient, roles: (key: IdString) => string) {
@@ -679,9 +703,21 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
     });
 
     // these are connected but I figured this could result in simpler queries
-    // it could also lend itself better to future changes
+    // it could also lend itself better for future changes
     const templates = await new TemplateImportWriter(prisma, false).getIdMapper();
     const bags = await new BagImportWriter(prisma, false).getIdMapper();
+
+    // Template head definitions, so the runtime shell readout can resolve the
+    // TiddlyWiki version of a shell-less template (§112). customHtmlEnabled is
+    // a property of the template, not of a single release, so the head is a
+    // faithful proxy for whatever release a wiki currently serves.
+    const templateIds = Array.from(new Set(recipes.map(r => r.template_id)));
+    const templateDefinitionById = new Map((
+      templateIds.length
+        ? await prisma.template.findMany({ where: { id: { in: templateIds } }, select: { id: true, definition: true } })
+        : []
+    ).map(e => [e.id, e.definition]));
+
 
     // Unfiltered bag permissions for the shared-area classification: the
     // select above is (deliberately) filtered to the current user's roles, so
@@ -821,6 +857,7 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
         landingVisible: !hiddenLandingIds.has(recipe.id),
         shellPolicy: isShellPolicy(recipe.shell_policy) ? recipe.shell_policy : "notify",
         shellStatus: shellStatusFor(recipe),
+        templateDefinition: templateDefinitionById.get(recipe.template_id),
       });
     })
   }
@@ -829,10 +866,6 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
 
 // #region Template
 export class TemplateDataAdapter extends TabDataAdapter<"templates"> {
-
-  constructor(user: ServerRequest["user"], private pluginCache?: PluginCache) {
-    super(user);
-  }
 
   /**
    * Version label for a release without an explicit shell label. A template
@@ -1653,7 +1686,7 @@ export const AdminSave = zodRoute({
       const { pathParams: { op, tab }, data } = state;
       if (op !== "save") throw new Error(`Unsupported admin operation: ${op}`);
       switch (tab) {
-        case "wikis": return await new RecipeDataAdapter(state.user).saveRow(prisma, data as IRecipeRow);
+        case "wikis": return await new RecipeDataAdapter(state.user, state.pluginCache).saveRow(prisma, data as IRecipeRow);
         case "templates": return await new TemplateDataAdapter(state.user, state.pluginCache).saveRow(prisma, data as ITemplateRow);
         case "bags": return await new BagDataAdapter(state.user).saveRow(prisma, data as IBagRow);
         case "roles": return await new RoleDataAdapter(state.user).saveRow(prisma, data as IRoleRow);
@@ -1683,7 +1716,7 @@ export const AdminLoad = zodRoute({
     const res = await state.$transaction(async prisma => {
       const roles = await new RoleImportWriter(prisma, false).getIdMapper();
       return {
-        wikis: await new RecipeDataAdapter(state.user).getList(prisma, roles),
+        wikis: await new RecipeDataAdapter(state.user, state.pluginCache).getList(prisma, roles),
         templates: await new TemplateDataAdapter(state.user, state.pluginCache).getList(prisma, roles),
         bags: await new BagDataAdapter(state.user).getList(prisma, roles),
         roles: await new RoleDataAdapter(state.user).getList(prisma),
