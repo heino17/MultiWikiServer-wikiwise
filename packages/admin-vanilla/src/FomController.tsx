@@ -155,7 +155,10 @@ export class FomController<T extends AdminRecord> {
             </div>
           </header>
 
-          <div class="login-card-body">
+          <form class="login-card-body" onsubmit={(event) => {
+            event.preventDefault();
+            void submitAction();
+          }}>
             {content}
 
             {this.submitMessage ? (
@@ -167,9 +170,8 @@ export class FomController<T extends AdminRecord> {
             {isStart ? (
               <button
                 class="primary-button login-submit"
-                type="button"
+                type="submit"
                 disabled={submitDisabled}
-                onclick={submitAction}
               >{submitLabel}</button>
             ) : (
               <footer class="login-actions">
@@ -181,15 +183,14 @@ export class FomController<T extends AdminRecord> {
                   >{backLabel}</button>}
                   <button
                     class="primary-button login-submit"
-                    type="button"
+                    type="submit"
                     disabled={submitDisabled}
-                    onclick={submitAction}
                   >{submitLabel}</button>
                 </div>
               </footer>
             )}
 
-          </div>
+          </form>
         </section>
       </div>
     );
