@@ -519,6 +519,42 @@ h6 {
 	color: var(--color-text-subtle);
 }
 
+/* Settings page: three cards side by side on wide screens, stacked below
+   1080 px like the other admin columns (see the media query). */
+.settings-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 22px;
+	align-items: start;
+}
+
+.settings-card {
+	display: grid;
+	gap: 16px;
+	align-content: start;
+	padding: 22px;
+	border: 1px solid var(--color-border-soft);
+	border-radius: 22px;
+	background: var(--color-surface-card);
+}
+
+.settings-card-title {
+	margin: 0;
+	font-size: 1.05rem;
+	color: var(--color-text-strong);
+}
+
+.settings-feedback {
+	margin: 0 0 6px;
+}
+
+.settings-footer {
+	display: flex;
+	justify-content: flex-end;
+	gap: 12px;
+	margin-top: 22px;
+}
+
 .hero-theme-toggle material-symbol {
 	display: inline-flex;
 	width: 20px;
@@ -2768,7 +2804,8 @@ table.value-table td {
 	.hero-panel,
 	.section-header,
 	.modal-section-header,
-	.section-field-grid {
+	.section-field-grid,
+	.settings-grid {
 		grid-template-columns: 1fr;
 	}
 

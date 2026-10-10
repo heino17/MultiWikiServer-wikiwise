@@ -1,8 +1,7 @@
 import { addstyles, customElement, JSXElement, state } from "@tiddlywiki/jsx-lit";
 import css from "./app.inline.css";
-import closeIcon from "@material-symbols/svg-400/outlined/close.svg";
-import { MaterialSymbol } from "./material-symbol";
 import { localeLabels, supportedLocales, t } from "./i18n";
+import "./app-header";
 
 async function apiJson(path: string, init?: RequestInit): Promise<any> {
   const response = await fetch(pathPrefix + path, {
@@ -206,19 +205,29 @@ export class SettingsForm extends JSXElement {
   protected render() {
     return (
       <div class="admin-shell">
-        <section class="modal-card" aria-label={t("Settings")} style="max-width: 34rem; margin: 0 auto; width: 100%;">
-          <header class="login-card-header settings-card-header">
-            <div class="login-card-title">
-              <h3>{t("Settings")}</h3>
-              <p class="login-card-copy">{t("Choose the language and theme every visitor sees on their first load.")}</p>
-            </div>
-            <div class="close-button settings-close-button" onclick={this.onCancel} aria-label={t("Close")}>
-              <MaterialSymbol icon={closeIcon} />
-            </div>
-          </header>
+        <mws-app-header />
 
-          <div class="login-card-body">
-            <div class="login-fields">
+        <section class="section-header">
+          <div>
+            <p class="eyebrow">{t("Settings")}</p>
+            <h2>{t("Settings")}</h2>
+          </div>
+          <p class="section-copy">{t("Choose the language and theme every visitor sees on their first load.")}</p>
+          <button class="ghost-button" type="button" onclick={this.onCancel}>
+            {t("Back to the wiki overview")}
+          </button>
+        </section>
+
+        {(this.message || this.error) ? (
+          <div class="login-feedback settings-feedback" role="status" aria-live="polite">
+            <p>{this.error || this.message}</p>
+          </div>
+        ) : null}
+
+        <div class="settings-grid">
+          <section class="settings-card" aria-label={t("General")}>
+            <h4 class="settings-card-title">{t("General")}</h4>
+            <div class="settings-toggle-list">
               <div class="login-field">
                 <span class="login-field-label">{t("Language on first load")}</span>
                 <select
@@ -245,297 +254,292 @@ export class SettingsForm extends JSXElement {
                   ))}
                 </select>
               </div>
+
+              <label class="settings-toggle-row">
+                <span class="settings-toggle-copy">
+                  <strong>{t("Show the language selector")}</strong>
+                  <p>{t("The language dropdown in the header.")}</p>
+                </span>
+                <input
+                  class="header-switch-input"
+                  type="checkbox"
+                  checked={this.showLocaleSelect}
+                  disabled={!this.isAdmin}
+                  onchange={(event) => this.onLocaleSelectChange((event.currentTarget as HTMLInputElement).checked)}
+                />
+                <span class={this.showLocaleSelect ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
+                  <span class="header-switch-thumb"></span>
+                </span>
+              </label>
             </div>
 
-            {this.isAdmin ? (
-              <p class="settings-hint">{t("A visitor's own language or theme choice always wins. Feature switches apply to everyone.")}</p>
-            ) : (
-              <p class="settings-hint">{t("Only administrators can change installation-wide defaults.")}</p>
-            )}
+            <p class="settings-hint">{this.isAdmin
+              ? t("A visitor's own language or theme choice always wins. Feature switches apply to everyone.")
+              : t("Only administrators can change installation-wide defaults.")}</p>
+          </section>
 
-            <div class="login-field">
-              <span class="login-field-label">{t("Features")}</span>
-              <div class="settings-toggle-list">
-                <label class="settings-toggle-row">
-                  <span class="settings-toggle-copy">
-                    <strong>{t("Show pinboard")}</strong>
-                    <p>{t("A wall of notes for everyone.")}</p>
-                  </span>
-                  <input
-                    class="header-switch-input"
-                    type="checkbox"
-                    checked={this.showPinboard}
-                    disabled={!this.isAdmin}
-                    onchange={(event) => this.onPinboardChange((event.currentTarget as HTMLInputElement).checked)}
-                  />
-                  <span class={this.showPinboard ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
-                    <span class="header-switch-thumb"></span>
-                  </span>
-                </label>
+          <section class="settings-card" aria-label={t("Features")}>
+            <h4 class="settings-card-title">{t("Features")}</h4>
+            <div class="settings-toggle-list">
+              <label class="settings-toggle-row">
+                <span class="settings-toggle-copy">
+                  <strong>{t("Show pinboard")}</strong>
+                  <p>{t("A wall of notes for everyone.")}</p>
+                </span>
+                <input
+                  class="header-switch-input"
+                  type="checkbox"
+                  checked={this.showPinboard}
+                  disabled={!this.isAdmin}
+                  onchange={(event) => this.onPinboardChange((event.currentTarget as HTMLInputElement).checked)}
+                />
+                <span class={this.showPinboard ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
+                  <span class="header-switch-thumb"></span>
+                </span>
+              </label>
 
-                <label class="settings-toggle-row">
-                  <span class="settings-toggle-copy">
-                    <strong>{t("Show \"My files\"")}</strong>
-                    <p>{t("Per-account file uploads and shares.")}</p>
-                  </span>
-                  <input
-                    class="header-switch-input"
-                    type="checkbox"
-                    checked={this.showUserFiles}
-                    disabled={!this.isAdmin}
-                    onchange={(event) => this.onUserFilesChange((event.currentTarget as HTMLInputElement).checked)}
-                  />
-                  <span class={this.showUserFiles ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
-                    <span class="header-switch-thumb"></span>
-                  </span>
-                </label>
+              <label class="settings-toggle-row">
+                <span class="settings-toggle-copy">
+                  <strong>{t("Show \"My files\"")}</strong>
+                  <p>{t("Per-account file uploads and shares.")}</p>
+                </span>
+                <input
+                  class="header-switch-input"
+                  type="checkbox"
+                  checked={this.showUserFiles}
+                  disabled={!this.isAdmin}
+                  onchange={(event) => this.onUserFilesChange((event.currentTarget as HTMLInputElement).checked)}
+                />
+                <span class={this.showUserFiles ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
+                  <span class="header-switch-thumb"></span>
+                </span>
+              </label>
 
-                <label class={"settings-toggle-row" + (this.showUserFiles ? "" : " is-disabled")}>
-                  <span class="settings-toggle-copy">
-                    <strong>{t("Upload files from wikis")}</strong>
-                    <p>{this.showUserFiles
-                      ? t("Lets the wiki toolbox upload files into the owner's files.")
-                      : t("Requires \"My files\".")}</p>
-                  </span>
-                  <input
-                    class="header-switch-input"
-                    type="checkbox"
-                    checked={this.showUserFiles && this.showWikiUpload}
-                    disabled={!this.isAdmin || !this.showUserFiles}
-                    onchange={(event) => this.onWikiUploadChange((event.currentTarget as HTMLInputElement).checked)}
-                  />
-                  <span class={this.showUserFiles && this.showWikiUpload ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
-                    <span class="header-switch-thumb"></span>
-                  </span>
-                </label>
+              <label class={"settings-toggle-row" + (this.showUserFiles ? "" : " is-disabled")}>
+                <span class="settings-toggle-copy">
+                  <strong>{t("Upload files from wikis")}</strong>
+                  <p>{this.showUserFiles
+                    ? t("Lets the wiki toolbox upload files into the owner's files.")
+                    : t("Requires \"My files\".")}</p>
+                </span>
+                <input
+                  class="header-switch-input"
+                  type="checkbox"
+                  checked={this.showUserFiles && this.showWikiUpload}
+                  disabled={!this.isAdmin || !this.showUserFiles}
+                  onchange={(event) => this.onWikiUploadChange((event.currentTarget as HTMLInputElement).checked)}
+                />
+                <span class={this.showUserFiles && this.showWikiUpload ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
+                  <span class="header-switch-thumb"></span>
+                </span>
+              </label>
 
-                <label class="settings-toggle-row">
-                  <span class="settings-toggle-copy">
-                    <strong>{t("Show the language selector")}</strong>
-                    <p>{t("The language dropdown in the header.")}</p>
-                  </span>
-                  <input
-                    class="header-switch-input"
-                    type="checkbox"
-                    checked={this.showLocaleSelect}
-                    disabled={!this.isAdmin}
-                    onchange={(event) => this.onLocaleSelectChange((event.currentTarget as HTMLInputElement).checked)}
-                  />
-                  <span class={this.showLocaleSelect ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
-                    <span class="header-switch-thumb"></span>
-                  </span>
-                </label>
+              <label class="settings-toggle-row">
+                <span class="settings-toggle-copy">
+                  <strong>{t("Login animal puzzle")}</strong>
+                  <p>{t("Tap all the animals before logging in.")}</p>
+                </span>
+                <input
+                  class="header-switch-input"
+                  type="checkbox"
+                  checked={this.showLoginPuzzle}
+                  disabled={!this.isAdmin}
+                  onchange={(event) => this.onLoginPuzzleChange((event.currentTarget as HTMLInputElement).checked)}
+                />
+                <span class={this.showLoginPuzzle ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
+                  <span class="header-switch-thumb"></span>
+                </span>
+              </label>
 
-                <label class="settings-toggle-row">
-                  <span class="settings-toggle-copy">
-                    <strong>{t("Login animal puzzle")}</strong>
-                    <p>{t("Tap all the animals before logging in.")}</p>
-                  </span>
-                  <input
-                    class="header-switch-input"
-                    type="checkbox"
-                    checked={this.showLoginPuzzle}
-                    disabled={!this.isAdmin}
-                    onchange={(event) => this.onLoginPuzzleChange((event.currentTarget as HTMLInputElement).checked)}
-                  />
-                  <span class={this.showLoginPuzzle ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
-                    <span class="header-switch-thumb"></span>
-                  </span>
-                </label>
+              <label class="settings-toggle-row">
+                <span class="settings-toggle-copy">
+                  <strong>{t("Show wiki thumbnails")}</strong>
+                  <p>{t("Screenshot previews in the Wikis list.")}</p>
+                </span>
+                <input
+                  class="header-switch-input"
+                  type="checkbox"
+                  checked={this.showThumbnails}
+                  disabled={!this.isAdmin}
+                  onchange={(event) => this.onThumbnailsChange((event.currentTarget as HTMLInputElement).checked)}
+                />
+                <span class={this.showThumbnails ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
+                  <span class="header-switch-thumb"></span>
+                </span>
+              </label>
 
-                <label class="settings-toggle-row">
-                  <span class="settings-toggle-copy">
-                    <strong>{t("Show wiki thumbnails")}</strong>
-                    <p>{t("Screenshot previews in the Wikis list.")}</p>
-                  </span>
-                  <input
-                    class="header-switch-input"
-                    type="checkbox"
-                    checked={this.showThumbnails}
-                    disabled={!this.isAdmin}
-                    onchange={(event) => this.onThumbnailsChange((event.currentTarget as HTMLInputElement).checked)}
-                  />
-                  <span class={this.showThumbnails ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
-                    <span class="header-switch-thumb"></span>
-                  </span>
-                </label>
+              <div class="settings-toggle-row is-input-row">
+                <span class="settings-toggle-copy">
+                  <strong>{t("Thumbnail cache time (hours)")}</strong>
+                  <p>{t("How long a wiki's screenshot preview stays cached. Leave empty to use the default of 24 hours.")}</p>
+                </span>
+                <input
+                  class="field-input settings-number-input"
+                  type="number"
+                  min="1"
+                  max="2160"
+                  step="1"
+                  value={this.thumbnailTtlHours ?? ""}
+                  disabled={!this.isAdmin}
+                  oninput={(event) => this.onThumbnailTtlChange((event.target as HTMLInputElement).value)}
+                />
+              </div>
 
-                <label class="settings-toggle-row">
-                  <span class="settings-toggle-copy">
-                    <strong>{t("Show the cookie consent")}</strong>
-                    <p>{t("The cookie notice shown to visitors on their first visit.")}</p>
-                  </span>
-                  <input
-                    class="header-switch-input"
-                    type="checkbox"
-                    checked={this.showCookieConsent}
-                    disabled={!this.isAdmin}
-                    onchange={(event) => this.onCookieConsentChange((event.currentTarget as HTMLInputElement).checked)}
-                  />
-                  <span class={this.showCookieConsent ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
-                    <span class="header-switch-thumb"></span>
-                  </span>
-                </label>
-
-                <div class="settings-toggle-row is-input-row">
-                  <span class="settings-toggle-copy">
-                    <strong>{t("Thumbnail cache time (hours)")}</strong>
-                    <p>{t("How long a wiki's screenshot preview stays cached. Leave empty to use the default of 24 hours.")}</p>
-                  </span>
-                  <input
-                    class="field-input settings-number-input"
-                    type="number"
-                    min="1"
-                    max="2160"
-                    step="1"
-                    value={this.thumbnailTtlHours ?? ""}
-                    disabled={!this.isAdmin}
-                    oninput={(event) => this.onThumbnailTtlChange((event.target as HTMLInputElement).value)}
-                  />
-                </div>
-
-                <div class="settings-toggle-row is-input-row">
-                  <span class="settings-toggle-copy">
-                    <strong>{t("Wikis per page")}</strong>
-                    <p>{t("How many wikis the Wikis list shows at once. 0 shows all wikis in a single list. Leave empty to use the default of 10.")}</p>
-                  </span>
-                  <input
-                    class="field-input settings-number-input"
-                    type="number"
-                    min="0"
-                    max="200"
-                    step="1"
-                    value={this.wikisPerPage ?? ""}
-                    disabled={!this.isAdmin}
-                    oninput={(event) => this.onWikisPerPageChange((event.target as HTMLInputElement).value)}
-                  />
-                </div>
-
-                <label class="settings-toggle-row">
-                  <span class="settings-toggle-copy">
-                    <strong>{t("Show the public landing page")}</strong>
-                    <p>{t("Anonymous visitors get an overview with statistics and the public wikis instead of the login form.")}</p>
-                  </span>
-                  <input
-                    class="header-switch-input"
-                    type="checkbox"
-                    checked={this.showLanding}
-                    disabled={!this.isAdmin}
-                    onchange={(event) => this.onLandingChange((event.currentTarget as HTMLInputElement).checked)}
-                  />
-                  <span class={this.showLanding ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
-                    <span class="header-switch-thumb"></span>
-                  </span>
-                </label>
-
-                <div class="settings-toggle-row settings-text-field">
-                  <span class="settings-toggle-copy">
-                    <strong>{t("Landing welcome message")}</strong>
-                    <p>{t("A welcome text on the public page. Markdown is supported.")}</p>
-                  </span>
-                  <textarea
-                    class="field-textarea settings-textarea"
-                    rows="4"
-                    placeholder={t("A welcome text on the public page. Markdown is supported.")}
-                    disabled={!this.isAdmin}
-                    ref={(element) => { if (element && element.value !== this.landingMessage) element.value = this.landingMessage; }}
-                    oninput={(event) => this.onLandingMessageChange((event.target as HTMLTextAreaElement).value)}
-                  ></textarea>
-                </div>
-
-                <div class="settings-toggle-row settings-text-field">
-                  <span class="settings-toggle-copy">
-                    <strong>{t("Landing news")}</strong>
-                    <p>{t("A collapsible block visitors can close with the X for the rest of their session. Markdown is supported.")}</p>
-                  </span>
-                  <textarea
-                    class="field-textarea settings-textarea"
-                    rows="4"
-                    placeholder={t("News shown on the public page. Markdown is supported.")}
-                    disabled={!this.isAdmin}
-                    ref={(element) => { if (element && element.value !== this.landingNews) element.value = this.landingNews; }}
-                    oninput={(event) => this.onLandingNewsChange((event.target as HTMLTextAreaElement).value)}
-                  ></textarea>
-                </div>
-
-                <div class="settings-toggle-row is-input-row">
-                  <span class="settings-toggle-copy">
-                    <strong>{t("News block style")}</strong>
-                    <p>{t("Background of the news block on the public page, e.g. reddish for an important notice.")}</p>
-                  </span>
-                  <span class="news-style-picker">
-                    <span class={"news-style-swatch is-" + this.landingNewsStyle} aria-hidden="true"></span>
-                    <select
-                      class="field-select"
-                      disabled={!this.isAdmin}
-                      onchange={(event) => { this.touched = true; this.landingNewsStyle = (event.target as HTMLSelectElement).value; }}
-                    >
-                      {newsStyleOptions.map((option) => (
-                        <option value={option.value} selected={this.landingNewsStyle === option.value}>{t(option.labelKey)}</option>
-                      ))}
-                    </select>
-                  </span>
-                </div>
-
-                <label class="settings-toggle-row">
-                  <span class="settings-toggle-copy">
-                    <strong>{t("Show the legal notice")}</strong>
-                    <p>{t("Show or hide the Impressum page and the links to it in the footers.")}</p>
-                  </span>
-                  <input
-                    class="header-switch-input"
-                    type="checkbox"
-                    checked={this.showLegalNotice}
-                    disabled={!this.isAdmin}
-                    onchange={(event) => this.onShowLegalNoticeChange((event.currentTarget as HTMLInputElement).checked)}
-                  />
-                  <span class={this.showLegalNotice ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
-                    <span class="header-switch-thumb"></span>
-                  </span>
-                </label>
-
-                <div class="settings-toggle-row settings-text-field">
-                  <span class="settings-toggle-copy">
-                    <strong>{t("Legal notice")}</strong>
-                    <p>{t("The Impressum text published on the public page. Markdown is supported.")}</p>
-                  </span>
-                  <textarea
-                    class="field-textarea settings-textarea"
-                    rows="6"
-                    placeholder={t("The Impressum text published on the public page. Markdown is supported.")}
-                    disabled={!this.isAdmin}
-                    ref={(element) => { if (element && element.value !== this.legalNotice) element.value = this.legalNotice; }}
-                    oninput={(event) => this.onLegalNoticeChange((event.target as HTMLTextAreaElement).value)}
-                  ></textarea>
-                </div>
+              <div class="settings-toggle-row is-input-row">
+                <span class="settings-toggle-copy">
+                  <strong>{t("Wikis per page")}</strong>
+                  <p>{t("How many wikis the Wikis list shows at once. 0 shows all wikis in a single list. Leave empty to use the default of 10.")}</p>
+                </span>
+                <input
+                  class="field-input settings-number-input"
+                  type="number"
+                  min="0"
+                  max="200"
+                  step="1"
+                  value={this.wikisPerPage ?? ""}
+                  disabled={!this.isAdmin}
+                  oninput={(event) => this.onWikisPerPageChange((event.target as HTMLInputElement).value)}
+                />
               </div>
             </div>
+          </section>
 
-            {(this.message || this.error) ? (
-              <div class="login-feedback" role="status" aria-live="polite">
-                <p>{this.error || this.message}</p>
+          <section class="settings-card" aria-label={t("Start page and legal")}>
+            <h4 class="settings-card-title">{t("Start page and legal")}</h4>
+            <div class="settings-toggle-list">
+              <label class="settings-toggle-row">
+                <span class="settings-toggle-copy">
+                  <strong>{t("Show the public landing page")}</strong>
+                  <p>{t("Anonymous visitors get an overview with statistics and the public wikis instead of the login form.")}</p>
+                </span>
+                <input
+                  class="header-switch-input"
+                  type="checkbox"
+                  checked={this.showLanding}
+                  disabled={!this.isAdmin}
+                  onchange={(event) => this.onLandingChange((event.currentTarget as HTMLInputElement).checked)}
+                />
+                <span class={this.showLanding ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
+                  <span class="header-switch-thumb"></span>
+                </span>
+              </label>
+
+              <div class="settings-toggle-row settings-text-field">
+                <span class="settings-toggle-copy">
+                  <strong>{t("Landing welcome message")}</strong>
+                  <p>{t("A welcome text on the public page. Markdown is supported.")}</p>
+                </span>
+                <textarea
+                  class="field-textarea settings-textarea"
+                  rows="4"
+                  placeholder={t("A welcome text on the public page. Markdown is supported.")}
+                  disabled={!this.isAdmin}
+                  ref={(element) => { if (element && element.value !== this.landingMessage) element.value = this.landingMessage; }}
+                  oninput={(event) => this.onLandingMessageChange((event.target as HTMLTextAreaElement).value)}
+                ></textarea>
               </div>
-            ) : null}
 
-            <footer class="login-actions">
-              <div class="login-action-row">
-                <button class="ghost-button" type="button" disabled={this.isSubmitting} onclick={this.onCancel}>
-                  {t("Close")}
-                </button>
-                {this.isAdmin ? (
-                  <button
-                    class="primary-button login-submit"
-                    type="button"
-                    disabled={this.isSubmitting}
-                    onclick={this.handleSave}
+              <div class="settings-toggle-row settings-text-field">
+                <span class="settings-toggle-copy">
+                  <strong>{t("Landing news")}</strong>
+                  <p>{t("A collapsible block visitors can close with the X for the rest of their session. Markdown is supported.")}</p>
+                </span>
+                <textarea
+                  class="field-textarea settings-textarea"
+                  rows="4"
+                  placeholder={t("News shown on the public page. Markdown is supported.")}
+                  disabled={!this.isAdmin}
+                  ref={(element) => { if (element && element.value !== this.landingNews) element.value = this.landingNews; }}
+                  oninput={(event) => this.onLandingNewsChange((event.target as HTMLTextAreaElement).value)}
+                ></textarea>
+              </div>
+
+              <div class="settings-toggle-row is-input-row">
+                <span class="settings-toggle-copy">
+                  <strong>{t("News block style")}</strong>
+                  <p>{t("Background of the news block on the public page, e.g. reddish for an important notice.")}</p>
+                </span>
+                <span class="news-style-picker">
+                  <span class={"news-style-swatch is-" + this.landingNewsStyle} aria-hidden="true"></span>
+                  <select
+                    class="field-select"
+                    disabled={!this.isAdmin}
+                    onchange={(event) => { this.touched = true; this.landingNewsStyle = (event.target as HTMLSelectElement).value; }}
                   >
-                    {t("Save settings")}
-                  </button>
-                ) : null}
+                    {newsStyleOptions.map((option) => (
+                      <option value={option.value} selected={this.landingNewsStyle === option.value}>{t(option.labelKey)}</option>
+                    ))}
+                  </select>
+                </span>
               </div>
-            </footer>
-          </div>
-        </section>
+
+              <label class="settings-toggle-row">
+                <span class="settings-toggle-copy">
+                  <strong>{t("Show the cookie consent")}</strong>
+                  <p>{t("The cookie notice shown to visitors on their first visit.")}</p>
+                </span>
+                <input
+                  class="header-switch-input"
+                  type="checkbox"
+                  checked={this.showCookieConsent}
+                  disabled={!this.isAdmin}
+                  onchange={(event) => this.onCookieConsentChange((event.currentTarget as HTMLInputElement).checked)}
+                />
+                <span class={this.showCookieConsent ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
+                  <span class="header-switch-thumb"></span>
+                </span>
+              </label>
+
+              <label class="settings-toggle-row">
+                <span class="settings-toggle-copy">
+                  <strong>{t("Show the legal notice")}</strong>
+                  <p>{t("Show or hide the Impressum page and the links to it in the footers.")}</p>
+                </span>
+                <input
+                  class="header-switch-input"
+                  type="checkbox"
+                  checked={this.showLegalNotice}
+                  disabled={!this.isAdmin}
+                  onchange={(event) => this.onShowLegalNoticeChange((event.currentTarget as HTMLInputElement).checked)}
+                />
+                <span class={this.showLegalNotice ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
+                  <span class="header-switch-thumb"></span>
+                </span>
+              </label>
+
+              <div class="settings-toggle-row settings-text-field">
+                <span class="settings-toggle-copy">
+                  <strong>{t("Legal notice")}</strong>
+                  <p>{t("The Impressum text published on the public page. Markdown is supported.")}</p>
+                </span>
+                <textarea
+                  class="field-textarea settings-textarea"
+                  rows="6"
+                  placeholder={t("The Impressum text published on the public page. Markdown is supported.")}
+                  disabled={!this.isAdmin}
+                  ref={(element) => { if (element && element.value !== this.legalNotice) element.value = this.legalNotice; }}
+                  oninput={(event) => this.onLegalNoticeChange((event.target as HTMLTextAreaElement).value)}
+                ></textarea>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <footer class="settings-footer">
+          <button class="ghost-button" type="button" disabled={this.isSubmitting} onclick={this.onCancel}>
+            {t("Close")}
+          </button>
+          {this.isAdmin ? (
+            <button
+              class="primary-button login-submit"
+              type="button"
+              disabled={this.isSubmitting}
+              onclick={this.handleSave}
+            >
+              {t("Save settings")}
+            </button>
+          ) : null}
+        </footer>
       </div>
     );
   }
