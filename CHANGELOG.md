@@ -5157,6 +5157,198 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 126. The admin shows a shell-less wiki's TiddlyWiki version, not its release count
+
+**Why.** §125 silenced the banner for shell-less wikis, but the admin app still
+read the raw release numbers there: `wiki-frau-meyer` (default Tiddlywiki
+template, shell-less, release 1 served, release 9 newest) rendered "Served
+shell version 1" and "Newest shell version 9" — the same save-counting that
+used to drive the banner. Like the templates tab (§112), the wiki detail view
+should name the version, not count saves.
+
+**What.** The runtime shell fields of a wiki are now derived by one rule in
+`shellVersionDisplay`: a declared label (from the shell's
+`mws-shell-version` meta tag) wins, a shell-less TiddlyWiki template shows the
+TiddlyWiki version it serves (plugin cache, same as the templates tab), and a
+custom shell without a label keeps the release number. `RecipeDataAdapter`
+receives the plugin cache like `TemplateDataAdapter` does, moved up into the
+base `TabDataAdapter`; `buildResponse` takes the template head definition so
+`customHtmlEnabled` decides between the two cases. Releases still decide
+what is served and what is newer — only the display changes.
+
+**Verified.** `npm run tsc2`, the admin typecheck and the root `npm run build`
+are clean. A live read of the dev store through `RecipeDataAdapter.getList`
+returns `wiki-frau-meyer` with served/newest `5.4.1` (no implied update) and
+the SimpleWiki wiki `wiki-admin-2` with `v0.1.13`/`v0.1.13` (labels intact).
+The click-through awaits the maintainer: open the "Shell version" runtime
+group of `wiki-frau-meyer` — it now reads `5.4.1`, not 1·9.
+
+## 125. The shell update banner stays out of shell-less wikis
+
+**Why.** The wiki-side update banner (§106) announces a newer **shell**
+release. A shell-less TiddlyWiki template has no shell: its releases are just
+save-counters, not versions (§112). `wiki-frau-meyer` is built from the default
+"Tiddlywiki" template, which had collected nine such releases, and — pinned to
+release 1 under `notify` — it offered an update to release 9 anyway. The banner
+belongs to templates that serve their own shell.
+
+**What.** `WikiStoreWriter` now writes the `$:/config/multiwikiclient/shell-*`
+tiddlers only when the served template has its own shell (`customHtmlEnabled`)
+— SimpleWiki and other custom shells. A shell-less TiddlyWiki template gets no
+shell policy or release tiddlers, so the banner's `$reveal` never fires.
+Nothing else moves: the served-shell identity in the index ETag still comes
+from `resolveShellVersionStatus`, and the wiki is served and compiled as
+before.
+
+**Verified.** `npm run tsc2`, the admin typecheck and the root `npm run build`
+are clean. Against the dev store: `wiki-frau-meyer` (Tiddlywiki template) no
+longer carries `shell-policy`/`shell-release`/`shell-latest-release` in its
+boot store, while the SimpleWiki wiki `wiki-admin-2` still carries them, so its
+banner keeps working. The click-through awaits the maintainer: open
+`/wiki/wiki-frau-meyer` — no update banner; open a SimpleWiki wiki with a newer
+release — the banner is still there.
+
+## 124. Three missing plural variants in the admin dictionaries
+
+**Why.** The key comparison from §123 also flagged the German and Russian
+dictionaries for three `#one` variants that existed in English but not there:
+de "Show {count} titles", de "System tiddlers in the file ({count})" and ru
+"{count} wikis in total". Without the variant `t()` falls back to the base key
+for a count of 1.
+
+**What.** The three `#one` entries are added, following the convention the
+dictionaries already use (German ships a `#one` for `{count} tiddlers` that is
+textually identical to the base). Because "Titel", "Systemtiddler" and "вики"
+do not change with the number, the new text is identical to the base form — a
+completeness fix without a visible difference. ja, ko and zh-cn need no `#one`
+at all: their plural rules have no `one` category, so the base key is always
+correct there.
+
+**Verified.** The admin typecheck (`packages/admin-vanilla` `npm run tsc`) and
+the root `npm run build` are clean. The key comparison against `en.ts` now
+reports zero missing keys for de, es, fr and ru and no duplicate keys; ja, ko
+and zh-cn still miss only `#one` variants, which their plural rules never
+select.
+
+## 123. The SimpleWiki texts reached six more languages
+
+**Why.** The admin app ships eight languages, but the SimpleWiki feature
+(§102–§109) had reached only English and German. The other six dictionaries
+were missing eighteen strings: the one-click creation entry, the "Wiki file
+(.html or .json)" import dialog, the SimpleWiki error messages and the "Open
+the manual" / "Documentation" links. Since `t()` falls back to the key, every
+one of them read as English in es, fr, ja, ko, ru and zh-cn.
+
+**What.** All eighteen keys now exist in the six extra dictionaries. None of
+them carries a count, so no plural variants are involved.
+
+**Verified.** The admin typecheck (`packages/admin-vanilla` `npm run tsc`) and
+the root `npm run build` are clean. A key comparison against `en.ts` reports
+zero missing SimpleWiki keys for es, fr, ja, ko, ru and zh-cn and no duplicate
+keys, and the freshly built `main.js` (decoded from its `\uXXXX` escapes)
+carries the new strings. The click-through awaits the maintainer: with the
+admin language set to Russian, the one-click menu entry reads "Создать вики
+SimpleWiki в один клик" and the manual link reads "Открыть руководство".
+
+## 122. Two untranslated buttons showed the fallback key
+
+**Why.** `t()` returns the key itself when a dictionary has no entry, so a
+missing translation reads as untranslated English instead of failing
+loudly. Two spots were affected: the "1-click wiki creation as SimpleWiki"
+menu entry existed only in English and German, and the "Version" column of
+the templates tab — its header and its "Sort by: Version" tooltip — had no
+entry in **any** dictionary. In Russian the sort button therefore read
+"Сортировать по: Version". The new "General" and "Start page and legal"
+headings from §120 were English/German-only, too.
+
+**What.** "1-click wiki creation as SimpleWiki" now exists in es, fr, ja, ko,
+ru and zh-cn; "Version" exists in all eight dictionaries (de/fr "Version",
+es "Versión", ja "バージョン", ko "버전", ru "Версия", zh-cn "版本");
+"General" and "Start page and legal" gained the six extra languages as well.
+
+**Verified.** The admin typecheck (`packages/admin-vanilla` `npm run tsc`)
+and the root `npm run build` are clean. The freshly built `main.js` (decoded
+from its `\uXXXX` escapes) carries both button strings in all eight locales.
+The click-through awaits the maintainer: switch the admin language to
+Russian — the SimpleWiki creation entry is Russian and the Version sort
+button reads "Сортировать по: Версия".
+
+## 121. Cleared settings defaults stay cleared across restarts
+
+**Why.** The install defaults were seeded per missing key on every server
+start ("seeded once" only when pref rows existed for everything). An admin
+clearing a pref on the Settings page — the landing welcome message, the
+landing news or the legal notice → `null` in the PUT, so the row is deleted
+to mean "off" — therefore got the placeholder text back on every restart.
+The same happened to "Follow browser language"/"Follow system theme": the
+deleted `admin.defaultLocale`/`admin.defaultTheme` rows were re-seeded with
+`en`/`dark`. Clearing the "Landing news" field and saving worked, and on the
+next server start the text was simply back — reported by the maintainer.
+
+**What.** `applyInstallDefaults` seeds exactly once, guarded by a dedicated
+marker row (`admin.installDefaultsSeeded`). A brand-new store (no pref row
+yet) still ships pre-filled; an existing store gets only the marker, so
+nothing an admin already stored or deleted is touched. The marker lives
+outside `PREF_KEYS`, so the admin PUT (which replaces only the pref keys)
+never deletes it.
+
+**Verified.** `npm run tsc2` and the root `npm run build` are clean. On the
+dev store: removed the `admin.landingNews` row (cleared news), restarted the
+server — the row stays deleted, the seed marker is present. The click-through
+awaits the maintainer: clear "Landing news" in the Settings page, save,
+restart the server — the field stays empty.
+
+## 120. The Settings page is a full-width admin page with a shared header
+
+**Why.** The Settings page was the odd one out among the admin pages: a
+narrow form card (`max-width: 34rem`) without the header every other page
+has, and with only the contact-sheet icon as escape. It fits neither the
+rest of the admin shell nor screens with room for more than one column.
+
+**What.** The page now uses the layout of the overview pages: the shared
+`<mws-app-header>` (extracted from the overview page into
+`app-header.tsx`, with the same theme toggle, language selector, language
+and account menu) and a `section-header` with title, copy and a
+"Back to the wiki overview" action. Under it, three cards share the full
+width and stack into a single column below 1080 px — "General" (language,
+theme, language selector), "Features" (pinboard, my files, upload,
+login puzzle, thumbnails, thumbnail cache time, wikis per page) and
+"Start page and legal" (public landing page, welcome message, news, news
+style, cookie notice, legal notice). A footer with "Close" and
+"Save settings" replaces the form buttons; "Save settings" still returns
+to the overview after saving.
+
+**Verified.** The admin typecheck (`packages/admin-vanilla` `npm run tsc`)
+is clean, and the watch server serves the rebuilt bundle (`mws-app-header`,
+`settings-grid`, `settings-card` and the new strings confirmed in
+`main.js`). The click-through awaits the maintainer: open `/settings` —
+the page shows the overview header, three cards that stack on a narrow
+window, and "Save settings" returns to the overview.
+
+## 119. The login form submits with the Enter key
+
+**Why.** The login card was plain markup: no `<form>`, and a submit button
+without `type="submit"`. Enter in the username or password field therefore
+did nothing, and a keyboard-only user had to tab to the button. A login is
+the one form where Enter is expected without thinking.
+
+**What.** `FomController.renderCommon` now wraps the card body in a real
+`<form>` and gives the two submit buttons a `type="submit"`. The `submit`
+event is intercepted with `preventDefault()` and the controlled submit
+action runs instead — nothing navigates and no request leaves the page
+except the one the form would have made: in login mode the implicit
+submission stays tied to the enabled submit button, so Enter sends only
+once the fields are filled and the animal puzzle is solved, exactly like a
+click. The back/cancel buttons remain `type="button"` and never submit.
+The profile page shares the same card structure and submits on Enter as
+well.
+
+**Verified.** The admin typecheck (`packages/admin-vanilla` `npm run tsc`)
+is clean, and the watch server serves the rebuilt bundle (`onsubmit` and
+`type:"submit"` confirmed in `main.js`). The click-through awaits the
+maintainer: on `/login`, fill in the fields, solve the puzzle and press
+Enter — the login starts.
+
 ## 118. The admin tab strip sits centered on the page
 
 **Why.** The tab strip under the header (`<nav class="tab-strip">` — the
@@ -11877,6 +12069,215 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 126. Die Admin-App zeigt bei schalenlosen Wikis die TiddlyWiki-Version statt des Release-Zählers
+
+**Warum.** §125 hat den Banner für schalenlose Wikis zum Schweigen gebracht,
+aber die Admin-App las dort weiter die rohen Release-Nummern:
+`wiki-frau-meyer` (Standard-Tiddlywiki-Template, schalenlos, Release 1
+ausgeliefert, Release 9 neuestes) zeigte „Served shell version 1" und
+„Newest shell version 9" — derselbe Speicherzähler, der früher den Banner
+antrieb. Wie im Templates-Tab (§112) soll die Wiki-Ansicht die Version nennen
+und nicht das Speichern zählen.
+
+**Was.** Die Laufzeit-Shellfelder eines Wikis folgen jetzt einer Regel in
+`shellVersionDisplay`: eine deklarierte Bezeichnung (aus dem
+`mws-shell-version`-Meta-Tag der Schale) gewinnt, ein schalenloses
+TiddlyWiki-Template zeigt die TiddlyWiki-Version, die es ausliefert
+(Plugin-Cache, wie im Templates-Tab), und eine eigene Schale ohne Bezeichnung
+behält die Release-Nummer. `RecipeDataAdapter` bekommt den Plugin-Cache wie
+`TemplateDataAdapter`, verschoben in die Basisklasse `TabDataAdapter`;
+`buildResponse` nimmt die Template-Kopfdefinition entgegen, sodass
+`customHtmlEnabled` zwischen den beiden Fällen entscheidet. Die Releases
+entscheiden weiterhin, was ausgeliefert wird und was neuer ist — nur die
+Anzeige ändert sich.
+
+**Geprüft.** `npm run tsc2`, der Admin-Typecheck und der Root-`npm run build`
+sind sauber. Ein Live-Lesen des Dev-Stores über `RecipeDataAdapter.getList`
+liefert für `wiki-frau-meyer` ausgeliefert/neueste Version `5.4.1` (kein
+impliziertes Update) und fürs SimpleWiki-Wiki `wiki-admin-2`
+`v0.1.13`/`v0.1.13` (Bezeichnungen intakt). Der Klick-Durchlauf wartet auf den
+Maintainer: die Laufzeitgruppe „Shell version" von `wiki-frau-meyer` öffnen —
+sie zeigt jetzt `5.4.1` statt 1·9.
+
+## 125. Der Shell-Update-Banner bleibt aus schalenlosen Wikis heraus
+
+**Warum.** Der Wiki-seitige Update-Banner (§106) meldet eine neuere
+**Schalen**-Version. Ein schalenloses TiddlyWiki-Template hat keine Schale:
+seine Releases sind bloß Speicherzähler, keine Versionen (§112).
+`wiki-frau-meyer` stammt vom Standard-Template „Tiddlywiki", das neun solcher
+Releases angesammelt hatte, und — unter `notify` auf Release 1 festgehalten —
+bot trotzdem ein Update auf Release 9 an. Der Banner gehört Templates, die eine
+eigene Schale ausliefern.
+
+**Was.** `WikiStoreWriter` schreibt die
+`$:/config/multiwikiclient/shell-*`-Tiddler jetzt nur noch, wenn das
+ausgelieferte Template eine eigene Schale hat (`customHtmlEnabled`) —
+SimpleWiki und andere eigene Schalen. Ein schalenloses TiddlyWiki-Template
+bekommt keine Shell-Policy- und Release-Tiddler, das `$reveal` des Banners
+greift also nie. Sonst bewegt sich nichts: die Identität der ausgelieferten
+Schale im Index-ETag kommt weiter aus `resolveShellVersionStatus`, und das Wiki
+wird unverändert ausgeliefert und kompiliert.
+
+**Geprüft.** `npm run tsc2`, der Admin-Typecheck und der Root-`npm run build`
+sind sauber. Gegen den Dev-Store: `wiki-frau-meyer` (Tiddlywiki-Template) trägt
+`shell-policy`/`shell-release`/`shell-latest-release` nicht mehr im Boot-Store,
+während das SimpleWiki-Wiki `wiki-admin-2` sie weiterhin trägt, sein Banner also
+funktioniert. Der Klick-Durchlauf wartet auf den Maintainer: das Wiki
+`/wiki/wiki-frau-meyer` öffnen — kein Update-Banner; ein SimpleWiki-Wiki mit
+neuerem Release öffnen — der Banner ist weiterhin da.
+
+## 124. Drei fehlende Pluralvarianten in den Admin-Wörterbüchern
+
+**Warum.** Der Schlüsselvergleich aus §123 hat zusätzlich drei `#one`-Varianten
+in den deutschen und russischen Wörterbüchern angemahnt, die es im Englischen
+gibt, dort aber nicht: de „Show {count} titles", de
+„System tiddlers in the file ({count})" und ru „{count} wikis in total". Ohne
+die Variante fällt `t()` bei der Zahl 1 auf den Grundschlüssel zurück.
+
+**Was.** Die drei `#one`-Einträge sind ergänzt, nach der Konvention, die die
+Wörterbücher schon nutzen (Deutsch führt für `{count} tiddlers` eine
+`#one`-Variante, die mit der Grundform textgleich ist). Weil „Titel",
+„Systemtiddler" und „вики" sich mit der Zahl nicht ändern, ist der neue Text
+mit der Grundform identisch — eine Vollständigkeitskorrektur ohne sichtbaren
+Unterschied. ja, ko und zh-cn brauchen gar keine `#one`: ihre Pluralregeln
+kennen keine Kategorie `one`, der Grundschlüssel ist dort immer richtig.
+
+**Geprüft.** Der Admin-Typecheck (`packages/admin-vanilla` `npm run tsc`) und
+der Root-`npm run build` sind sauber. Der Schlüsselvergleich gegen `en.ts`
+meldet jetzt null fehlende Schlüssel für de, es, fr und ru und keine doppelten
+Schlüssel; ja, ko und zh-cn fehlen weiterhin nur `#one`-Varianten, die ihre
+Pluralregeln nie auswählen.
+
+## 123. Die SimpleWiki-Texte gibt es jetzt in sechs weiteren Sprachen
+
+**Warum.** Die Admin-App liefert acht Sprachen, aber die SimpleWiki-Funktion
+(§102–§109) hatte nur Englisch und Deutsch erreicht. Den übrigen sechs
+Wörterbüchern fehlten achtzehn Strings: der Eintrag zum Ein-Klick-Anlegen, der
+Import-Dialog „Wiki-Datei (.html oder .json)", die SimpleWiki-Fehlermeldungen
+und die Links „Bedienungsanleitung öffnen" / „Dokumentation". Da `t()` auf den
+Schlüssel zurückfällt, las sich jeder davon in es, fr, ja, ko, ru und zh-cn wie
+Englisch.
+
+**Was.** Alle achtzehn Schlüssel stehen jetzt in den sechs weiteren
+Wörterbüchern. Keiner davon trägt eine Zahl, es geht also um keine
+Pluralvarianten.
+
+**Geprüft.** Der Admin-Typecheck (`packages/admin-vanilla` `npm run tsc`) und
+der Root-`npm run build` sind sauber. Ein Schlüsselvergleich gegen `en.ts`
+meldet null fehlende SimpleWiki-Schlüssel für es, fr, ja, ko, ru und zh-cn und
+keine doppelten Schlüssel; das frisch gebaute `main.js` (aus seinen
+`\uXXXX`-Escapes dekodiert) trägt die neuen Texte. Der Klick-Durchlauf wartet
+auf den Maintainer: Mit der Admin-Sprache Russisch liest der Ein-Klick-Eintrag
+„Создать вики SimpleWiki в один клик" und der Link zur Anleitung „Открыть
+руководство".
+
+## 122. Zwei unübersetzte Buttons zeigten den Ersatzschlüssel
+
+**Warum.** `t()` gibt den Schlüssel selbst zurück, wenn ein Wörterbuch keinen
+Eintrag hat — eine fehlende Übersetzung sieht also nach englischem
+Originaltext aus, statt laut zu scheitern. Zwei Stellen waren betroffen: Den
+Menüeintrag „1-click wiki creation as SimpleWiki" gab es nur auf Englisch und
+Deutsch, und die Spalte „Version" im Templates-Tab — ihre Kopfzeile und ihr
+„Sort by: Version"-Tooltip — hatte in **keinem** Wörterbuch einen Eintrag. Auf
+Russisch las der Sortier-Button daher „Сортировать по: Version". Auch die neuen
+Überschriften „General" und „Start page and legal" aus §120 gab es nur auf
+Englisch/Deutsch.
+
+**Was.** „1-click wiki creation as SimpleWiki" gibt es jetzt in es, fr, ja, ko,
+ru und zh-cn; „Version" gibt es in allen acht Wörterbüchern (de/fr „Version",
+es „Versión", ja „バージョン", ko „버전", ru „Версия", zh-cn „版本");
+„General" und „Start page and legal" haben ebenfalls die sechs weiteren
+Sprachen bekommen.
+
+**Geprüft.** Der Admin-Typecheck (`packages/admin-vanilla` `npm run tsc`) und
+der Root-`npm run build` sind sauber. Das frisch gebaute `main.js` (aus seinen
+`\uXXXX`-Escapes dekodiert) trägt beide Button-Strings in allen acht Sprachen.
+Der Klick-Durchlauf wartet auf den Maintainer: die Admin-Sprache auf Russisch
+stellen — der SimpleWiki-Eintrag ist russisch und der Version-Sortierbutton
+liest „Сортировать по: Версия".
+
+## 121. Gelöschte Einstellungs-Vorgaben bleiben über Neustarts gelöscht
+
+**Warum.** Die Install-Vorgaben wurden bei jedem Serverstart pro fehlendem
+Schlüssel neu eingespielt („einmalig angelegt" nur, solange zu allen Schlüsseln
+Zeilen existierten). Räumt ein Admin in den Einstellungen ein Textfeld leer —
+Begrüßungstext, News der Startseite oder Impressum → `null` im PUT, die Zeile
+wird also gelöscht = „aus" —, kam der Platzhaltertext bei jedem Neustart
+zurück. Dasselbe galt für „Browser-Sprache folgen"/„System-Theme folgen": Die
+gelöschten Zeilen `admin.defaultLocale`/`admin.defaultTheme` wurden wieder mit
+`en`/`dark` angelegt. Das Leeren des Feldes „News-Block der Startseite" und
+Speichern klappte, beim nächsten Serverstart war der Text schlicht wieder da —
+vom Maintainer gemeldet.
+
+**Was.** `applyInstallDefaults` spielt die Vorgaben genau einmal ein,
+abgesichert über eine extra Markierungszeile (`admin.installDefaultsSeeded`).
+Ein nagelneuer Store (noch keine Vorgaben-Zeile) kommt weiterhin vorbefüllt
+daher; ein vorhandener Store bekommt nur die Markierung, sodass nichts angetastet
+wird, was ein Admin gespeichert oder gelöscht hat. Die Markierung liegt außerhalb
+von `PREF_KEYS` und überlebt damit jeden Admin-PUT (der nur die Vorgaben-Schlüssel
+ersetzt).
+
+**Geprüft.** `npm run tsc2` und der Root-`npm run build` sind sauber. Im
+Dev-Store die Zeile `admin.landingNews` entfernt (News geleert) und den Server
+neu gestartet — die Zeile bleibt gelöscht, die Markierung ist da. Der
+Klick-Durchlauf wartet auf den Maintainer: „News-Block der Startseite" in den
+Einstellungen leeren, speichern, Server neu starten — das Feld bleibt leer.
+
+## 120. Die Einstellungsseite ist eine volle Verwaltungsseite mit geteiltem Kopf
+
+**Warum.** Die Einstellungsseite war der Fremdling unter den
+Verwaltungsseiten: eine schmale Formularkarte (`max-width: 34rem`) ohne den
+Kopf, den jede andere Seite trägt, und mit nur dem Kontaktblatt-Symbol als
+Ausweg. Sie passte weder zum Rest der Admin-Oberfläche noch zu Bildschirmen
+mit Platz für mehr als eine Spalte.
+
+**Was.** Die Seite nutzt jetzt das Layout der Übersichtsseiten: den
+geteilten `<mws-app-header>` (aus der Übersichtsseite nach `app-header.tsx`
+extrahiert, mit demselben Theme-Umschalter, Sprachumschalter und
+Konto-Menü) und einen `section-header` mit Titel, Copy und einem
+„Zurück zur Wiki-Übersicht"-Button. Darunter verteilen sich drei Karten über
+die volle Breite und stapeln sich unter 1080 px zu einer Spalte —
+„Allgemein" (Sprache, Theme, Sprachumschalter), „Funktionen" (Pinnwand,
+Meine Dateien, Upload, Login-Rätsel, Vorschaubilder, Thumbnail-Cachezeit,
+Wikis pro Seite) und „Startseite und Rechtliches" (öffentliche Startseite,
+Begrüßung, News, News-Stil, Cookie-Hinweis, Impressum). Ein Fußbereich mit
+„Schließen" und „Einstellungen speichern" ersetzt die Formular-Buttons;
+„Einstellungen speichern" kehrt nach dem Speichern weiterhin zur Übersicht
+zurück.
+
+**Geprüft.** Der Admin-Typecheck (`packages/admin-vanilla` `npm run tsc`)
+ist sauber, und der Watch-Server liefert das neu gebaute Bündel
+(`mws-app-header`, `settings-grid`, `settings-card` und die neuen Strings in
+`main.js` bestätigt). Der Klick-Durchlauf wartet auf den Maintainer:
+`/settings` öffnen — die Seite zeigt den Übersichts-Kopf, drei Karten, die
+sich auf einem schmalen Fenster stapeln, und „Einstellungen speichern" führt
+zur Übersicht zurück.
+
+## 119. Das Login-Formular schickt mit der Enter-Taste ab
+
+**Warum.** Die Anmeldekarte war reines Markup: kein `<form>`, ein
+Abschicken-Button ohne `type="submit"`. Enter im Benutzernamen- oder
+Passwortfeld tat daher nichts, wer nur die Tastatur nutzt, musste zum
+Button tabben. Beim Login ist Enter die selbstverständlich erwartete Taste.
+
+**Was.** `FomController.renderCommon` umschließt den Kartenkörper jetzt mit
+echtem `<form>` und gibt den beiden Abschicken-Buttons `type="submit"`.
+Das `submit`-Ereignis wird mit `preventDefault()` abgefangen und die
+geregelte Abschick-Aktion läuft — nichts navigiert, keine Anfrage verlässt
+die Seite außer der, die das Formular ohnehin abgeschickt hätte: Im
+Login-Modus bleibt die implizite Übermittlung an den aktivierten
+Abschicken-Button gebunden, Enter schickt also erst ab, wenn die Felder
+gefüllt und das Tierrätsel gelöst sind — genau wie ein Klick. Die
+Abbrechen-Buttons bleiben `type="button"` und übermitteln nie. Die
+Profilseite teilt dieselbe Kartenstruktur und schickt ebenfalls mit Enter
+ab.
+
+**Geprüft.** Der Admin-Typecheck (`packages/admin-vanilla` `npm run tsc`)
+ist sauber, und der Watch-Server liefert das neu gebaute Bündel
+(`onsubmit` und `type:"submit"` in `main.js` bestätigt). Der
+Klick-Durchlauf wartet auf den Maintainer: Auf `/login` die Felder füllen,
+das Tierrätsel lösen und Enter drücken — der Login startet.
 
 ## 118. Die Admin-Tab-Leiste liegt zentriert auf der Seite
 
