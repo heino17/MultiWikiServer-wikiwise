@@ -74,8 +74,13 @@ export interface ServerPrefs {
 const validThemes = new Set<string>(THEMES);
 const ALL_KEYS: string[] = Object.values(PREF_KEYS);
 
-/** Fresh-install defaults. Seeded once when the settings table is empty, so a
- *  brand-new server already ships pre-filled ("landing welcome text",
+/** Row that records "the install defaults were seeded". Lives outside
+ *  `PREF_KEYS`, so the admin PUT — which replaces only the PREF_KEYS rows —
+ *  never deletes it. */
+export const INSTALL_SEED_MARKER = "admin.installDefaultsSeeded";
+
+/** Fresh-install defaults. Seeded exactly once, when the settings table has no
+ *  pref row yet — a brand-new server ships pre-filled ("landing welcome text",
  *  "landing news", en/dark, thumbnail TTL 24h) and every feature switch on. */
 export const INSTALL_DEFAULTS: { key: string; value: string }[] = [
   { key: PREF_KEYS.locale, value: "en" },
@@ -106,18 +111,31 @@ export const INSTALL_DEFAULTS: { key: string; value: string }[] = [
   { key: PREF_KEYS.showLegalNotice, value: "true" },
 ];
 
-/** Writes the install defaults for every pref key without a row yet. Keeps any
- *  value an admin has already stored. */
+/** Writes the install defaults exactly once, for a brand-new store. Seeding
+ *  per missing key on every server start would resurrect rows an admin
+ *  cleared — the admin PUT deletes a pref row to mean "off" (empty text,
+ *  "follow browser/system"), and the seeder must not undo that decision.
+ *  Existing stores still get the seed marker, so the behaviour sticks from
+ *  the first start after the upgrade on. */
 export async function applyInstallDefaults(prisma: PrismaTxnClient): Promise<void> {
+  const marker = await prisma.settings.findUnique({
+    where: { key: INSTALL_SEED_MARKER },
+    select: { key: true },
+  });
+  if (marker) return;
+
   const existing = await prisma.settings.findMany({
     where: { key: { in: INSTALL_DEFAULTS.map((entry) => entry.key) } },
     select: { key: true },
   });
-  const have = new Set(existing.map((row) => row.key));
-  for (const entry of INSTALL_DEFAULTS) {
-    if (have.has(entry.key)) continue;
-    await prisma.settings.create({ data: { key: entry.key, value: entry.value } });
+
+  if (existing.length === 0) {
+    for (const entry of INSTALL_DEFAULTS) {
+      await prisma.settings.create({ data: { key: entry.key, value: entry.value } });
+    }
   }
+
+  await prisma.settings.create({ data: { key: INSTALL_SEED_MARKER, value: "true" } });
 }
 
 /** Boolean prefs are stored as "true"/"false"; an absent row means the default. */
