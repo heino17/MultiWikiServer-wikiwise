@@ -181,6 +181,7 @@ export const enStrings: Record<string, string> = {
   "Final wiki instances built from a template plus per-wiki customizations.": "Final wiki instances built from a template plus per-wiki customizations.",
   "Slug": "Slug",
   "Display name": "Display name",
+  "Subtitle": "Subtitle",
   "Template": "Template",
   "Created by": "Created by",
   "Created at": "Created at",

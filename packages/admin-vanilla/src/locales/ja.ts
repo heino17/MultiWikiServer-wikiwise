@@ -172,6 +172,7 @@ export const jaStrings: Record<string, string> = {
   "Final wiki instances built from a template plus per-wiki customizations.": "テンプレートと Wiki ごとのカスタマイズから構築された最終的な Wiki インスタンス。",
   "Slug": "スラッグ",
   "Display name": "表示名",
+  "Subtitle": "サブタイトル",
   "Template": "テンプレート",
   "Created by": "作成者",
   "Created at": "作成日時",

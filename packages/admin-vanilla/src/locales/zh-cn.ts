@@ -172,6 +172,7 @@ export const zhCnStrings: Record<string, string> = {
   "Final wiki instances built from a template plus per-wiki customizations.": "由模板构建的最终 Wiki 实例，并带有各 Wiki 的自定义设置。",
   "Slug": "Slug",
   "Display name": "显示名称",
+  "Subtitle": "副标题",
   "Template": "模板",
   "Created by": "创建者",
   "Created at": "创建时间",

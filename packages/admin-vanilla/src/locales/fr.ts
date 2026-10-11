@@ -173,6 +173,7 @@ export const frStrings: Record<string, string> = {
   "Final wiki instances built from a template plus per-wiki customizations.": "Instances finales de wiki construites à partir d'un modèle plus des personnalisations par wiki.",
   "Slug": "Slug",
   "Display name": "Nom affiché",
+  "Subtitle": "Sous-titre",
   "Template": "Modèle",
   "Created by": "Créé par",
   "Created at": "Créé le",

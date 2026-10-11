@@ -174,6 +174,7 @@ export const ruStrings: Record<string, string> = {
   "Final wiki instances built from a template plus per-wiki customizations.": "Готовые экземпляры вики, собранные из шаблона с индивидуальными настройками.",
   "Slug": "Слаг",
   "Display name": "Отображаемое имя",
+  "Subtitle": "Подзаголовок",
   "Template": "Шаблон",
   "Created by": "Создано",
   "Created at": "Дата создания",

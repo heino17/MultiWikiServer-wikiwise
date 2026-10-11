@@ -157,6 +157,7 @@ export class LoadWikiFolderCommand extends BaseCommand<[string], {
 						slug: recipeName,
 						templateName: template.name,
 						displayName: recipeName,
+						subtitle: "",
 						description: recipeDescription,
 						plugins: pluginTitles,
 						readonlyBags: bags.slice(1).map(e => e.bagName),

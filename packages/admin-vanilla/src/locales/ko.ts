@@ -172,6 +172,7 @@ export const koStrings: Record<string, string> = {
   "Final wiki instances built from a template plus per-wiki customizations.": "템플릿과 Wiki별 사용자 지정으로 구축된 최종 Wiki 인스턴스.",
   "Slug": "슬러그",
   "Display name": "표시 이름",
+  "Subtitle": "부제",
   "Template": "템플릿",
   "Created by": "만든 사람",
   "Created at": "생성일",

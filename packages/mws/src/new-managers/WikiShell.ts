@@ -66,6 +66,7 @@ export async function createWikiShell(prisma: PrismaTxnClient, options: WikiShel
     slug: options.slug,
     templateName: template.name,
     displayName: options.displayName,
+    subtitle: "",
     description: options.description ?? "",
     plugins: [],
     readonlyBags: [],

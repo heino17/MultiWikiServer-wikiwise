@@ -221,6 +221,7 @@ const tabs = {
     fields: [
       { key: "slug", label: "Slug", type: "string", section: "authored", mode: "create edit" },
       { key: "displayName", label: "Display name", type: "string", section: "authored", mode: "create edit" },
+      { key: "subtitle", label: "Subtitle", type: "string", section: "authored", mode: "create edit" },
       { key: "description", label: "Description", type: "text", section: "authored", mode: "create edit" },
       { key: "templateName", label: "Template", type: "search", section: "authored", mode: "create" },
       { key: "readonlyBags", label: "Bag name", type: "search-multiselect", section: "authored", mode: "create edit" },
@@ -345,7 +346,7 @@ const tabs = {
     ],
     fieldGroups: {
       authored: [
-        { title: "Basic Info", keys: ["slug", "displayName", "description", "templateName"], width: fullWidth, layout: stackLayout },
+        { title: "Basic Info", keys: ["slug", "displayName", "subtitle", "description", "templateName"], width: fullWidth, layout: stackLayout },
         {
           title: "Writable bags",
           description: "Tiddlers are written to and read from the longest matching prefix; unmatched titles use the default bag.",
@@ -894,6 +895,8 @@ export interface WikiAdminRecord {
   id: IdString;
   slug: string;
   displayName: string;
+  // short subtitle line shown under the site title in shells that support it
+  subtitle: string;
   description: string;
   templateName: string;
   writablePrefixBags: readonly WritablePrefixRow[];

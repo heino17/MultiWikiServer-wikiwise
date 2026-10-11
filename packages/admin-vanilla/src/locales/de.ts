@@ -180,6 +180,7 @@ export const deStrings: Record<string, string> = {
   "Final wiki instances built from a template plus per-wiki customizations.": "Fertige Wiki-Instanzen aus einem Template plus anpassungen pro Wiki.",
   "Slug": "Kurzname",
   "Display name": "Anzeigename",
+  "Subtitle": "Untertitel",
   "Template": "Template",
   "Created by": "Erstellt von",
   "Created at": "Erstellt am",

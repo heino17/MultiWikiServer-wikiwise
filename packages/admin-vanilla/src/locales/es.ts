@@ -175,6 +175,7 @@ export const esStrings: Record<string, string> = {
   "Final wiki instances built from a template plus per-wiki customizations.": "Instancias finales de wiki creadas a partir de una plantilla más personalizaciones por wiki.",
   "Slug": "Slug",
   "Display name": "Nombre mostrado",
+  "Subtitle": "Subtítulo",
   "Template": "Plantilla",
   "Created by": "Creado por",
   "Created at": "Creado el",

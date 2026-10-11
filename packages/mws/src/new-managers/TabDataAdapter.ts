@@ -207,16 +207,20 @@ async function followDefaultBagOnSlugRename(
 }
 
 /**
- * Mirrors a wikI display-name edit into the starter tiddlers of its default
- * bag — but only while they still hold the untouched default content
- * ($:/SiteTitle text and the unmodified "Willkommen" starter teaser).
- * Customized tiddlers are left alone.
+ * Mirrors the wiki's display name and subtitle into the site tiddlers of its
+ * default bag — $:/SiteTitle and $:/SiteSubtitle. These are what a shell reads
+ * for its heading; SimpleWiki shows the title with the subtitle as a line under
+ * it. The subtitle tiddler is written when the author set one and removed when
+ * they clear it. The display-name mirror runs on every save of an existing
+ * wiki: it also heals tiddlers left behind by edits made before this save flow
+ * existed.
  */
-async function mirrorDisplayNameIntoStarterTiddlers(
+async function mirrorSiteFieldsIntoTiddlers(
   prisma: PrismaTxnClient,
   recipeId: IdString,
   defaultBagName: string,
   newDisplayName: string,
+  newSubtitle: string,
 ) {
   const bag = await prisma.bag.findUnique({ where: { name: defaultBagName }, select: { id: true } });
   if (!bag) return;
@@ -234,6 +238,31 @@ async function mirrorDisplayNameIntoStarterTiddlers(
       bag_id: bagId,
       fields: { ...(siteTitle?.fields as object), text: newDisplayName },
     });
+  }
+
+  // The subtitle lives in $:/SiteSubtitle, the tiddler TiddlyWiki's own title
+  // logic already reads. Written when present, deleted when cleared.
+  const subtitle = newSubtitle.trim();
+  const siteSubtitle = await prisma.tiddler.findUnique({
+    where: { bag_id_title: { bag_id: bag.id, title: "$:/SiteSubtitle" } },
+    select: { fields: true },
+  });
+  if (subtitle) {
+    const siteSubtitleText = (siteSubtitle?.fields as { text?: unknown } | null)?.text;
+    if (siteSubtitleText !== subtitle) {
+      await store.saveTiddler({
+        recipe_id: recipeId,
+        bag_id: bagId,
+        fields: {
+          ...(siteSubtitle?.fields as object),
+          title: "$:/SiteSubtitle",
+          text: subtitle,
+          type: "text/vnd.tiddlywiki",
+        },
+      });
+    }
+  } else if (siteSubtitle) {
+    await store.deleteTiddler({ recipe_id: recipeId, bag_id: bagId, title: "$:/SiteSubtitle" });
   }
 
   const welcome = await prisma.tiddler.findUnique({
@@ -396,6 +425,7 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
 
     const authoredDefinition: PrismaJson.Recipe_definition = {
       displayName: data.displayName,
+      subtitle: data.subtitle ?? "",
       description: data.description,
       readonlyBags: normalizeLineList(data.readonlyBags),
       writablePrefixBags: normalizePrefixRows(writablePrefixBags),
@@ -489,16 +519,17 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
     // Bag-Permissions scheitert (siehe syncRecipePermissionsToBags).
     await syncRecipePermissionsToBags(prisma, bags, recipePermissions, roles);
 
-    // Mirror the wiki's display name into the default bag's starter tiddlers.
-    // Runs on every save of an existing wiki: it also heals tiddlers that were
-    // left behind by edits made before this save flow existed.
+    // Mirror the wiki's display name and subtitle into the default bag's site
+    // tiddlers ($:/SiteTitle and $:/SiteSubtitle). Runs on every save of an
+    // existing wiki: it also heals tiddlers that were left behind by edits made
+    // before this save flow existed.
     if (priorRecipe) {
       // the followed name, not the submitted one: a renamed bag kept its id
       // but no longer answers to the old name
       const targetDefaultBag = writablePrefixBags.find((row) => row.prefix === "")?.bagName
         ?? bags.find((e) => e.isWritable && e.prefix === "")?.bagName;
       if (targetDefaultBag)
-        await mirrorDisplayNameIntoStarterTiddlers(prisma, new IdString(id), targetDefaultBag, data.displayName);
+        await mirrorSiteFieldsIntoTiddlers(prisma, new IdString(id), targetDefaultBag, data.displayName, data.subtitle ?? "");
     }
 
     // Persist whether the wiki should appear on the public landing page. The
@@ -599,6 +630,8 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
       ...definition,
       // legacy definitions predate cspAllow — default to empty
       cspAllow: definition.cspAllow ?? [],
+      // legacy definitions predate subtitle — default to empty
+      subtitle: definition.subtitle ?? "",
       id,
       slug,
       templateName,
@@ -2083,6 +2116,7 @@ export const AdminCreateWiki = zodRoute({
   zodPathParams: z => ({}),
   zodRequestBody: z => z.object({
     displayName: z.string().min(1).max(120),
+    subtitle: z.string().max(200).optional(),
     description: z.string().max(400).optional(),
     /** Which template the new wiki is built from. Defaults to the blank
         TiddlyWiki template; the SimpleWiki entry passes its own name so a
@@ -2099,7 +2133,7 @@ export const AdminCreateWiki = zodRoute({
     state.assertReferer(["/"]);
     state.asserted = state.user.isLoggedIn;
 
-    const { displayName, description, templateName, shellPolicy } = state.data;
+    const { displayName, subtitle, description, templateName, shellPolicy } = state.data;
 
     return await state.$transaction(async (prisma) => {
       await assertWikiCreationAllowed(prisma, state.user);
@@ -2140,6 +2174,7 @@ export const AdminCreateWiki = zodRoute({
       await recipeWriter.checkExisting(new IdString(""), slug, state.user, { allowCreate: true });
       const authoredDefinition: PrismaJson.Recipe_definition = {
         displayName,
+        subtitle: subtitle ?? "",
         description: description ?? "",
         readonlyBags: [],
         writablePrefixBags: [{ prefix: "", bagName }],
@@ -2179,10 +2214,20 @@ export const AdminCreateWiki = zodRoute({
       const recipeIdString = new IdString(recipeId);
       const bagId = new IdString(bag.id);
       const welcomeTitle = "Willkommen";
+      // A shell reads $:/SiteSubtitle for a line under the heading; written
+      // only when the author gave a subtitle.
+      const subtitleText = (subtitle ?? "").trim();
+      const subtitleTiddler = subtitleText
+        ? [{ title: "$:/SiteSubtitle", text: subtitleText }]
+        : [];
       const startingTiddlers = customShell
-        ? [{ title: "$:/SiteTitle", text: displayName }]
+        ? [
+          { title: "$:/SiteTitle", text: displayName },
+          ...subtitleTiddler,
+        ]
         : [
           { title: "$:/SiteTitle", text: displayName },
+          ...subtitleTiddler,
           { title: "$:/DefaultTiddlers", text: welcomeTitle },
           { title: welcomeTitle, text: welcomeText(displayName) },
         ];
