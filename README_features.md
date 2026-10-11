@@ -53,7 +53,7 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
   Text bleibt Markdown – wer ihn gerendert haben will, braucht das Plugin
   `tiddlywiki/markdown` im Wiki-Rezept
 - **SimpleWiki-Wiki anlegen (ein Klick):** Im Dropdown „Wiki erstellen" steht
-  **„1-Klick Wiki als SimpleWiki"** – derselbe Dialog wie beim 1-Klick-Eintrag,
+  **„1-Klick SimpleWiki erstellen"** – derselbe Dialog wie beim 1-Klick-Eintrag,
   nur mit dem Template SimpleWiki vorbelegt. Die neue Wiki wird unter
   `/wiki/<slug>/` von MWS selbst ausgeliefert: Seiten statt Tiddler, kein
   Wiki-Markup, und jede Änderung wird sofort nach MWS geschrieben, ganz ohne
@@ -248,7 +248,7 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
   `[[Text|Page]]`; `[[Page]]` stays, code stays code. The text stays Markdown –
   to have it rendered, the wiki recipe needs the `tiddlywiki/markdown` plugin
 - **Creating a SimpleWiki wiki (one click):** the "Create a wiki" dropdown
-  carries **"1-click wiki creation as SimpleWiki"** – the same dialog as the
+  carries **"1-click SimpleWiki creation"** – the same dialog as the
   1-click entry, only with the SimpleWiki template pre-set. The new wiki is
   served by MWS itself under `/wiki/<slug>/`: pages instead of tiddlers, no wiki
   markup, and every change is written to MWS on the spot, with no save button

@@ -5157,6 +5157,27 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 128. The one-click entries name the kind of wiki they build
+
+**Why.** The "Create a wiki" dropdown had two one-click entries, "1-click wiki
+creation" and "1-click wiki creation as SimpleWiki". Both opened the same dialog
+with the same default name, `…'s Wiki`, so the second entry never said which kind
+of wiki it would build — and the pre-filled name did not say it either.
+
+**What.** The two entries now read **"1-click Tiddlywiki creation"** and
+**"1-click SimpleWiki creation"** (all eight admin languages). The dialog's
+default name names the kind too: `startNewWiki` derives it from the template —
+`…'s Tiddlywiki` for the plain entry, `…'s SimpleWiki` for the SimpleWiki entry —
+through the new string `"{username}'s {kind}"`. The old keys `"1-click wiki
+creation"`, `"1-click wiki creation as SimpleWiki"` and `"{username}'s Wiki"`
+were replaced rather than left beside the new ones, so no orphan remains.
+
+**Verified.** `npm run tsc2`, the admin typecheck and the root `npm run build`
+are clean. Clicked through the running dev instance (login `admin`): the dropdown
+shows **"1-Klick Tiddlywiki erstellen"** and **"1-Klick SimpleWiki erstellen"**;
+the first opens the dialog with the name **"admins Tiddlywiki"**, the second with
+**"admins SimpleWiki"**.
+
 ## 127. A wiki carries a subtitle beside its display name
 
 **Why.** §103 gave SimpleWiki the wiki's display name as its heading, read from
@@ -12100,6 +12121,28 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 128. Die Ein-Klick-Einträge nennen die Art der Wiki, die sie anlegen
+
+**Warum.** Das Menü „Ein Wiki erstellen" hatte zwei Ein-Klick-Einträge,
+„1-Klick Wiki erstellen" und „1-Klick Wiki als SimpleWiki". Beide öffneten
+denselben Dialog mit demselben Vorgabenamen „…s Wiki", sodass der zweite Eintrag
+nie sagte, welche Art Wiki er baut — und der vorbelegte Name auch nicht.
+
+**Was.** Die zwei Einträge heißen jetzt **„1-Klick Tiddlywiki erstellen"** und
+**„1-Klick SimpleWiki erstellen"** (alle acht Verwaltungssprachen). Der
+Vorgabename des Dialogs nennt die Art ebenfalls: `startNewWiki` leitet ihn aus
+dem Template ab — „…s Tiddlywiki" für den schlichten Eintrag, „…s SimpleWiki"
+für den SimpleWiki-Eintrag — über den neuen String `"{username}'s {kind}"`. Die
+alten Schlüssel `"1-click wiki creation"`,
+`"1-click wiki creation as SimpleWiki"` und `"{username}'s Wiki"` wurden ersetzt
+statt danebengestellt, es bleibt also keine Waise zurück.
+
+**Geprüft.** `npm run tsc2`, der Admin-Typecheck und der Root-`npm run build`
+sind sauber. In der laufenden Dev-Instanz durchgeklickt (Login `admin`): das
+Menü zeigt **„1-Klick Tiddlywiki erstellen"** und
+**„1-Klick SimpleWiki erstellen"**; der erste öffnet den Dialog mit dem Namen
+**„admins Tiddlywiki"**, der zweite mit **„admins SimpleWiki"**.
 
 ## 127. Eine Wiki trägt einen Untertitel neben dem Anzeigenamen
 
