@@ -5157,6 +5157,37 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 127. A wiki carries a subtitle beside its display name
+
+**Why.** §103 gave SimpleWiki the wiki's display name as its heading, read from
+the tiddler `$:/SiteTitle`. A name alone is often too bare; a short line under
+it — a motto, a class, a term — tells a reader which wiki they are in. That line
+is authored like the name is, so it belongs in the admin app next to "Display
+name", and the shell reads it the same way it reads the title.
+
+**What.** The wikis tab gains a **Subtitle** field directly below "Display name"
+in the *Basic Info* group (`tabs.ts`), stored in the recipe `definition` as
+`subtitle`; `PUT /admin/wiki` accepts an optional `subtitle` of at most 200
+characters. The starter-tiddler mirror is renamed and widened to
+`mirrorSiteFieldsIntoTiddlers` (was `mirrorDisplayNameIntoStarterTiddlers`): on
+every save of an existing wiki it writes `$:/SiteSubtitle` next to
+`$:/SiteTitle` and deletes that tiddler when the field is cleared; a new wiki
+gets `$:/SiteSubtitle` from the start only when a subtitle was given. The label
+exists in all eight admin languages. SimpleWiki reads `$:/SiteSubtitle` and
+shows it as a muted line under the heading; an absent or empty subtitle leaves
+the heading exactly as before. The index `<title>` already appended the subtitle
+with an em dash when present (`RecipeIndexSender.getTitle`), and now receives
+one from the new field.
+
+**Verified.** `npm run tsc2`, the admin typecheck and the root `npm run build`
+are clean; the built admin bundle contains the new field (`key:"subtitle"`,
+`"Subtitle"`, `"Untertitel"`). The SimpleWiki side is covered by its own suite:
+`tests/t_mwsmode.py` (in the SimpleWiki repository) loads `/wiki/alpha` with
+`$:/SiteSubtitle` = "Klein und fein" and asserts the line "Klein und fein" under
+the heading "Alpha-Wiki" — 1016 checks, green. The admin click-through awaits
+the maintainer: open a wiki, see **Subtitle** under **Display name**, set it,
+save, and open the SimpleWiki wiki to read the line under the name.
+
 ## 126. The admin shows a shell-less wiki's TiddlyWiki version, not its release count
 
 **Why.** §125 silenced the banner for shell-less wikis, but the admin app still
@@ -12069,6 +12100,40 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 127. Eine Wiki trägt einen Untertitel neben dem Anzeigenamen
+
+**Warum.** §103 gab SimpleWiki den Anzeigenamen der Wiki als Überschrift,
+gelesen aus dem Tiddler `$:/SiteTitle`. Ein Name allein ist oft zu nackt; eine
+kurze Zeile darunter — ein Motto, eine Klasse, ein Halbjahr — sagt dem Leser, in
+welcher Wiki er ist. Diese Zeile wird wie der Name gepflegt, gehört also in die
+Verwaltung neben „Anzeigename", und die Schale liest sie genauso wie den Titel.
+
+**Was.** Der Wikis-Tab bekommt ein Feld **Untertitel** direkt unter
+„Anzeigename" in der Gruppe *Grundinformationen* (`tabs.ts`), gespeichert in der
+Recipe-`definition` als `subtitle`; `PUT /admin/wiki` nimmt ein optionales
+`subtitle` von höchstens 200 Zeichen an. Der Spiegel in die Start-Tiddler heißt
+jetzt `mirrorSiteFieldsIntoTiddlers` (vorher
+`mirrorDisplayNameIntoStarterTiddlers`) und ist weiter gefasst: Bei jedem
+Speichern einer bestehenden Wiki schreibt er `$:/SiteSubtitle` neben
+`$:/SiteTitle` und löscht diesen Tiddler, wenn das Feld geleert wird; eine neue
+Wiki bekommt `$:/SiteSubtitle` von Anfang an nur, wenn ein Untertitel angegeben
+wurde. Die Beschriftung gibt es in allen acht Verwaltungssprachen. SimpleWiki
+liest `$:/SiteSubtitle` und zeigt ihn als gedämpfte Zeile unter der Überschrift;
+fehlt er oder ist er leer, bleibt die Überschrift genau wie vorher. Der
+Index-`<title>` hängte den Untertitel schon mit einem Gedankenstrich an, wenn
+einer da war (`RecipeIndexSender.getTitle`), und bekommt jetzt einen aus dem
+neuen Feld.
+
+**Geprüft.** `npm run tsc2`, der Admin-Typecheck und der Root-`npm run build`
+sind sauber; das gebaute Admin-Bundle enthält das neue Feld (`key:"subtitle"`,
+`"Subtitle"`, `"Untertitel"`). Die SimpleWiki-Seite deckt deren eigene Suite ab:
+`tests/t_mwsmode.py` (im SimpleWiki-Repository) lädt `/wiki/alpha` mit
+`$:/SiteSubtitle` = „Klein und fein" und prüft die Zeile „Klein und fein" unter
+der Überschrift „Alpha-Wiki" — 1016 Prüfungen, grün. Der Klick-Durchlauf in der
+Verwaltung wartet auf den Maintainer: eine Wiki öffnen, unter **Anzeigename**
+das Feld **Untertitel** sehen, füllen, speichern und die SimpleWiki-Wiki öffnen,
+um die Zeile unter dem Namen zu lesen.
 
 ## 126. Die Admin-App zeigt bei schalenlosen Wikis die TiddlyWiki-Version statt des Release-Zählers
 

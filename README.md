@@ -23,7 +23,7 @@ Multiple users, multiple wikis for TiddlyWiki.
 Highlights only – the full story, with file names, code and background, lives in the [CHANGELOG](CHANGELOG.md).
 
 - 🏫 **A teacher area for school operation.** A school operator creates teachers, and each teacher manages **only their own class** – walled off from colleagues by personal roles and a server-side role guard, while class roles hand students targeted read access and cooperation by invitation stays possible. (§21–§27)
-- 📚 **Wikis you can actually manage.** Create a wiki with a single click (or from a full form), rename slug and display name, delete, get live validation of every name, see "real names" instead of "recipe" in the UI – and page through long lists. (§10–§13, §17, §30, §76, §78)
+- 📚 **Wikis you can actually manage.** Create a wiki with a single click (or from a full form), rename slug and display name, delete, get live validation of every name, see "real names" instead of "recipe" in the UI – and page through long lists. A short **subtitle** line can sit under a wiki's display name and shows in shells like SimpleWiki. (§10–§13, §17, §30, §76, §78, §127)
 - 🧩 **SimpleWiki wikis, and shells that keep their place.** Import a wiki
   file that SimpleWiki saved as `.html` or `.json`, create a wiki as SimpleWiki
   in one click — and let a wiki hold on to its template's shell version: a
@@ -252,7 +252,7 @@ Mehrere Nutzer, mehrere Wikis für TiddlyWiki.
 Nur Highlights – die vollständige Geschichte mit Dateinamen, Code und Hintergrund steht im [CHANGELOG](CHANGELOG.md).
 
 - 🏫 **Ein Lehrer-Bereich für den Schulbetrieb.** Ein Schulbetreiber legt Lehrer an, und jeder Lehrer verwaltet **nur seine eigene Klasse** – von den Kollegen abgetrennt durch persönliche Rollen und einen serverseitigen Rollen-Guard, während Klassenrollen Schülern gezielten Lesezugriff geben und eine Kooperation per Einladung möglich bleibt. (§21–§27)
-- 📚 **Wikis, die man wirklich verwalten kann.** Ein Wiki mit einem Klick anlegen (oder aus einem Vollformular), Slug und Anzeigename umbenennen, löschen, jeden Namen live prüfen lassen – und in der Oberfläche „Klarnamen" statt „Recipe" sehen, auch auf langen Listen. (§10–§13, §17, §30, §76, §78)
+- 📚 **Wikis, die man wirklich verwalten kann.** Ein Wiki mit einem Klick anlegen (oder aus einem Vollformular), Slug und Anzeigename umbenennen, löschen, jeden Namen live prüfen lassen – und in der Oberfläche „Klarnamen" statt „Recipe" sehen, auch auf langen Listen. Eine kurze **Untertitel**-Zeile kann unter dem Anzeigenamen stehen und erscheint in Schalen wie SimpleWiki. (§10–§13, §17, §30, §76, §78, §127)
 - 🧩 **SimpleWiki-Wikis, und Hüllen, die an ihrem Platz bleiben.** Eine
   `.html`- oder `.json`-Wiki übernehmen, die SimpleWiki gespeichert hat, eine
   Wiki per Klick als SimpleWiki anlegen — und eine Wiki an der Schalen-Version

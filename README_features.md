@@ -34,6 +34,7 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
 
 - **1-Klick-Wiki-Erstellung:** nur einen Anzeigenamen eingeben – Slug, Standard-Bag, Recipe und Start-Tiddler entstehen serverseitig atomar; alternativ „Definiertes Wiki erstellen" mit vollem Formular (beides in einem Dropdown gebündelt)
 - **Umbenennen:** Slug (URL) und Anzeigename getrennt änderbar – das Standard-Bag wird automatisch mit umbenannt, Tiddler, Rechte und Verknüpfungen bleiben vollständig erhalten
+- **Untertitel:** neben dem Anzeigenamen trägt jede Wiki eine kurze Untertitel-Zeile (Motto, Klasse, Halbjahr). Sie steht als Tiddler `$:/SiteSubtitle` im Standard-Bag, und eine Schale wie SimpleWiki zeigt sie gedämpft unter dem Namen; ein leeres Feld entfernt sie wieder (§127)
 - **Live-Validierung beim Tippen:** Slug-Format (`mein-wiki`), und Verfügbarkeit von Slug/Bag-Namen/Benutzernamen sofort sichtbar (grün = frei, rot = vergeben)
 - **Löschen:** mit Bestätigung, Owner-/Admin-Schutz, geteilte Bags bleiben erhalten
 - **Öffentlich machen:** Wiki-Rezept und Bags geben an `ANON`→Lesen frei; ein öffentlich lesbares Wiki lässt sich zusätzlich von der Startseite nehmen (Pro-Wiki-Schalter)
@@ -229,6 +230,7 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
 ### **Managing Wikis**
 - **One-click wiki creation:** just enter a display name – slug, default bag, recipe and start tiddlers are created atomically server-side; alternatively "Create a defined wiki" with the full form (both in a single dropdown)
 - **Renaming:** slug (URL) and display name are changeable separately – the default bag is renamed automatically, while tiddlers, rights and links are fully preserved
+- **Subtitle:** next to the display name every wiki carries a short subtitle line (a motto, a class, a term). It lives as the tiddler `$:/SiteSubtitle` in the default bag, and a shell like SimpleWiki shows it muted under the name; an empty field removes it again (§127)
 - **Live validation while typing:** slug format (`my-wiki`) and availability of slug/bag name/username are shown instantly (green = free, red = taken)
 - **Deleting:** with confirmation, owner/admin protection; shared bags stay intact
 - **Going public:** wiki recipe and bags grant `ANON`→read; a publicly readable wiki can additionally be removed from the start page (per-wiki switch)
