@@ -124,7 +124,7 @@ export const koStrings: Record<string, string> = {
   "This removes the role from all user accounts and permission entries.": "이렇게 하면 모든 사용자 계정과 권한 항목에서 역할이 삭제됩니다.",
   "Their wikis, bags, templates and roles are kept and are then managed only by the 'admin' account.": "그들의 Wiki, 백, 템플릿, 역할은 유지되며 이후 'admin' 계정만 관리합니다.",
   "My Wiki": "내 Wiki",
-  "{username}'s Wiki": "{username}의 Wiki",
+  "{username}'s {kind}": "{username}의 {kind}",
   "Name of the wiki": "Wiki 이름",
   "Create a wiki with a single click": "한 번의 클릭으로 Wiki 만들기",
   "Create a SimpleWiki wiki with a single click": "한 번의 클릭으로 SimpleWiki 만들기",
@@ -287,8 +287,8 @@ export const koStrings: Record<string, string> = {
   "This name is available.": "이 이름을 사용할 수 있습니다.",
 
   "Create a wiki": "Wiki 만들기",
-  "1-click wiki creation": "1클릭 Wiki 생성",
-  "1-click wiki creation as SimpleWiki": "1클릭 Wiki 생성 (SimpleWiki)",
+  "1-click Tiddlywiki creation": "1클릭 Tiddlywiki 생성",
+  "1-click SimpleWiki creation": "1클릭 SimpleWiki 생성",
   "Defined wiki creation": "세부 설정 Wiki 생성",
 
   "Switch to light mode": "라이트 모드로 전환",

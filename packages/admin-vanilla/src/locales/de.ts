@@ -129,7 +129,7 @@ export const deStrings: Record<string, string> = {
   "Bags that are used by a wiki recipe cannot be deleted.": "Bags, die von einem Wiki-Rezept verwendet werden, können nicht gelöscht werden.",
   "This removes the role from all user accounts and permission entries.": "Die Rolle wird aus allen Benutzerkonten und Berechtigungseinträgen entfernt.",
   "My Wiki": "Mein Wiki",
-  "{username}'s Wiki": "{username}s Wiki",
+  "{username}'s {kind}": "{username}s {kind}",
   "Name of the wiki": "Name des Wikis",
   "Create a wiki with a single click": "Wiki auf einen Klick anlegen",
   "Create a SimpleWiki wiki with a single click": "SimpleWiki-Wiki auf einen Klick anlegen",
@@ -295,8 +295,8 @@ export const deStrings: Record<string, string> = {
   "This name is available.": "Dieser Name ist verfügbar.",
 
   "Create a wiki": "Ein Wiki erstellen",
-  "1-click wiki creation": "1-Klick Wiki erstellen",
-  "1-click wiki creation as SimpleWiki": "1-Klick Wiki als SimpleWiki",
+  "1-click Tiddlywiki creation": "1-Klick Tiddlywiki erstellen",
+  "1-click SimpleWiki creation": "1-Klick SimpleWiki erstellen",
   "Defined wiki creation": "Definiertes Wiki erstellen",
 
   "Switch to light mode": "Zum hellen Modus wechseln",

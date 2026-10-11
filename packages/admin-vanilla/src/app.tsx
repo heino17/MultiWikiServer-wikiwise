@@ -1596,7 +1596,10 @@ export class App extends JSXElement {
 
   private readonly startNewWiki = (templateName = "") => {
     const username = embeddedServerResponse.userState.username;
-    this.newWikiName = username ? t("{username}'s Wiki", { username }) : t("My Wiki");
+    // The two one-click entries build different kinds of wiki, so the default
+    // name names the kind; otherwise both would open as "…'s Wiki".
+    const kind = templateName === SIMPLEWIKI_TEMPLATE ? "SimpleWiki" : "Tiddlywiki";
+    this.newWikiName = username ? t("{username}'s {kind}", { username, kind }) : t("My Wiki");
     this.newWikiTemplate = templateName;
     this.newWikiError = "";
     this.newWikiOpen = true;
@@ -2127,7 +2130,7 @@ export class App extends JSXElement {
                     role="menuitem"
                     onclick={() => { this.startNewWiki(); this.closeCreateWikiMenu(); }}
                     disabled={isLoadingData || perTabStore.isOpeningItem || perTabStore.isSaving}
-                  >{t("1-click wiki creation")}</button>
+                  >{t("1-click Tiddlywiki creation")}</button>
                   {/* Same dialog, other template. The dialog text and the
                       request body follow newWikiTemplate. */}
                   {simpleWikiVorhanden ? (
@@ -2137,7 +2140,7 @@ export class App extends JSXElement {
                       role="menuitem"
                       onclick={() => { this.startNewWiki(SIMPLEWIKI_TEMPLATE); this.closeCreateWikiMenu(); }}
                       disabled={isLoadingData || perTabStore.isOpeningItem || perTabStore.isSaving}
-                    >{t("1-click wiki creation as SimpleWiki")}</button>
+                    >{t("1-click SimpleWiki creation")}</button>
                   ) : null}
                   {isAdmin || isTeacher ? (
                     <button

@@ -126,7 +126,7 @@ export const ruStrings: Record<string, string> = {
   "This removes the role from all user accounts and permission entries.": "Роль будет удалена из всех учётных записей и записей прав.",
   "Their wikis, bags, templates and roles are kept and are then managed only by the 'admin' account.": "Их вики, бэги, шаблоны и роли сохраняются и далее управляются только учётной записью 'admin'.",
   "My Wiki": "Моя вики",
-  "{username}'s Wiki": "Вики пользователя {username}",
+  "{username}'s {kind}": "{kind} пользователя {username}",
   "Name of the wiki": "Название вики",
   "Create a wiki with a single click": "Создать вики в один клик",
   "Create a SimpleWiki wiki with a single click": "Создать вики SimpleWiki в один клик",
@@ -289,8 +289,8 @@ export const ruStrings: Record<string, string> = {
   "This name is available.": "Это имя доступно.",
 
   "Create a wiki": "Создать вики",
-  "1-click wiki creation": "Создание вики в 1 клик",
-  "1-click wiki creation as SimpleWiki": "Создание вики в 1 клик как SimpleWiki",
+  "1-click Tiddlywiki creation": "Создание Tiddlywiki в 1 клик",
+  "1-click SimpleWiki creation": "Создание SimpleWiki в 1 клик",
   "Defined wiki creation": "Создание вики с настройками",
 
   "Switch to light mode": "Переключить на светлую тему",

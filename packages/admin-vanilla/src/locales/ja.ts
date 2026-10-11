@@ -124,7 +124,7 @@ export const jaStrings: Record<string, string> = {
   "This removes the role from all user accounts and permission entries.": "これにより、すべてのユーザーアカウントと権限エントリからロールが削除されます。",
   "Their wikis, bags, templates and roles are kept and are then managed only by the 'admin' account.": "彼らの Wiki、バッグ、テンプレート、ロールは保持され、以降は 'admin' アカウントのみが管理します。",
   "My Wiki": "マイ Wiki",
-  "{username}'s Wiki": "{username} の Wiki",
+  "{username}'s {kind}": "{username} の {kind}",
   "Name of the wiki": "Wiki の名前",
   "Create a wiki with a single click": "ワンクリックで Wiki を作成",
   "Create a SimpleWiki wiki with a single click": "ワンクリックで SimpleWiki を作成",
@@ -287,8 +287,8 @@ export const jaStrings: Record<string, string> = {
   "This name is available.": "この名前は使用できます。",
 
   "Create a wiki": "Wiki を作成",
-  "1-click wiki creation": "ワンクリック Wiki 作成",
-  "1-click wiki creation as SimpleWiki": "ワンクリック Wiki 作成 (SimpleWiki)",
+  "1-click Tiddlywiki creation": "ワンクリック Tiddlywiki 作成",
+  "1-click SimpleWiki creation": "ワンクリック SimpleWiki 作成",
   "Defined wiki creation": "詳細設定付き Wiki 作成",
 
   "Switch to light mode": "ライトモードに切り替え",

@@ -124,7 +124,7 @@ export const zhCnStrings: Record<string, string> = {
   "This removes the role from all user accounts and permission entries.": "这将从所有用户账户和权限记录中移除该角色。",
   "Their wikis, bags, templates and roles are kept and are then managed only by the 'admin' account.": "他们的 Wiki、袋、模板和角色将保留，此后仅由 'admin' 账户管理。",
   "My Wiki": "我的 Wiki",
-  "{username}'s Wiki": "{username} 的 Wiki",
+  "{username}'s {kind}": "{username} 的 {kind}",
   "Name of the wiki": "Wiki 名称",
   "Create a wiki with a single click": "一键创建 Wiki",
   "Create a SimpleWiki wiki with a single click": "一键创建 SimpleWiki Wiki",
@@ -287,8 +287,8 @@ export const zhCnStrings: Record<string, string> = {
   "This name is available.": "此名称可用。",
 
   "Create a wiki": "创建 Wiki",
-  "1-click wiki creation": "一键创建 Wiki",
-  "1-click wiki creation as SimpleWiki": "一键创建 SimpleWiki Wiki",
+  "1-click Tiddlywiki creation": "一键创建 Tiddlywiki",
+  "1-click SimpleWiki creation": "一键创建 SimpleWiki",
   "Defined wiki creation": "自定义创建 Wiki",
 
   "Switch to light mode": "切换到浅色模式",

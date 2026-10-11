@@ -130,7 +130,7 @@ export const enStrings: Record<string, string> = {
   "This removes the role from all user accounts and permission entries.": "This removes the role from all user accounts and permission entries.",
   "Their wikis, bags, templates and roles are kept and are then managed only by the 'admin' account.": "Their wikis, bags, templates and roles are kept and are then managed only by the 'admin' account.",
   "My Wiki": "My Wiki",
-  "{username}'s Wiki": "{username}'s Wiki",
+  "{username}'s {kind}": "{username}'s {kind}",
   "Name of the wiki": "Name of the wiki",
   "Create a wiki with a single click": "Create a wiki with a single click",
   "Create a SimpleWiki wiki with a single click": "Create a SimpleWiki wiki with a single click",
@@ -296,8 +296,8 @@ export const enStrings: Record<string, string> = {
   "This name is available.": "This name is available.",
 
   "Create a wiki": "Create a wiki",
-  "1-click wiki creation": "1-click wiki creation",
-  "1-click wiki creation as SimpleWiki": "1-click wiki creation as SimpleWiki",
+  "1-click Tiddlywiki creation": "1-click Tiddlywiki creation",
+  "1-click SimpleWiki creation": "1-click SimpleWiki creation",
   "Defined wiki creation": "Defined wiki creation",
 
   "Switch to light mode": "Switch to light mode",
