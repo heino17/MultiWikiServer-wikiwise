@@ -2521,14 +2521,23 @@ table.value-table td {
 	background: var(--color-surface-field);
 	border: 1px solid var(--color-border-soft);
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) max-content;
-
+	gap: 8px;
 }
 
 .field-callout p {
 	margin: 0;
 	color: var(--color-text-muted);
 	line-height: 1.6;
+}
+
+/* A callout that carries a list or a table puts it under the sentence at full
+   width. The list keeps its rows but drops the box padding it uses when it
+   stands alone; the callout already frames it. */
+.field-callout > .value-list,
+.field-callout > .timeline-list,
+.field-callout > .value-ordered-list {
+	padding: 0 0 0 18px;
+	gap: 6px;
 }
 
 .wiki-limit-banner {
@@ -2544,11 +2553,9 @@ table.value-table td {
 
 /* The snapshot hint sits above the wikis list, so it stays quiet: one line of
    headline, the wikis as buttons, and the explanation in the muted colour the
-   callout already uses. */
-/* .field-callout is a two-column grid, which would lay this out as a 2x2
-   block. The hint is one column, and the children keep the full width so the
-   toggle stays at the right edge in both states instead of jumping next to
-   the text when it opens. */
+   callout already uses. The children keep the full width so the toggle stays
+   at the right edge in both states instead of jumping next to the text when
+   it opens. */
 .snapshot-hint {
 	margin-bottom: 8px;
 	padding: 10px 12px;

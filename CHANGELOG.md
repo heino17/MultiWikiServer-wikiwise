@@ -5157,6 +5157,36 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 129. The template callouts stack, and Shell version moves beside Template updates
+
+**Why.** The wiki dialog showed two things wrong in its settings. The "Readonly
+bags from template" and "Plugins from template" notes are a sentence with a
+list, and "Writable bags inherited from template:" is a sentence with a table —
+but `.field-callout` was a two-column grid, so the sentence landed in the left
+column and the list or table was pushed into the narrow `max-content` right
+column of a half-width card. And "Template updates" (the policy) and "Shell
+version" (which shell the wiki serves and which is newest) describe one topic,
+yet sat in two different sections, so they never shared a row.
+
+**What.** `.field-callout` is a one-column grid again: a sentence that carries a
+list or a table puts it underneath at full width, and a scoped rule drops the
+list's own box padding so it does not sit twice inside the callout. The
+"Template updates" and "Shell version" cards now live in the same authored
+section, one after the other, so the two half-width cards share a row. "Landing
+page" is now a full-width row of its own, directly under the Readers and Editors
+row. No label, key or value changes, and the read-only "Shell version" values
+keep their `server` mode.
+
+**Verified.** `npm run tsc2`, the admin typecheck and the root `npm run build`
+are clean. The callouts and the card grid were measured in a headless browser
+against the built `app.inline.css` at 1400px: for all three callouts the
+sentence and the list or table share the left edge and the list or table starts
+below the sentence, the "Template updates" and "Shell version" cards sit side by
+side on one top edge, and "Landing page" spans the full grid width below the
+Readers and Editors row. At the 1100px breakpoint the grid still collapses to
+one column as before. The click-through in the dev instance awaits the
+maintainer.
+
 ## 128. The one-click entries name the kind of wiki they build
 
 **Why.** The "Create a wiki" dropdown had two one-click entries, "1-click wiki
@@ -12121,6 +12151,38 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 129. Die Template-Hinweise stapeln sich, die Schalen-Version rückt daneben
+
+**Warum.** Der Wiki-Dialog zeigte in den Einstellungen zwei Dinge falsch. Die
+Hinweise „Schreibgeschützte Bags vom Template" und „Plugins vom Template" sind
+ein Satz mit einer Liste, „Beschreibbare Bags vom Template vererbt:" ein Satz
+mit einer Tabelle — `.field-callout` war aber ein zweispaltiges Raster, also
+landete der Satz in der linken Spalte und die Liste bzw. Tabelle wurde in die
+schmale rechte `max-content`-Spalte einer halbbreiten Karte gedrängt. Und
+„Template-Updates" (die Regel) und „Schalen-Version" (welche Schale die Wiki
+ausliefert und welche die neueste ist) beschreiben ein Thema, standen aber in
+zwei verschiedenen Abschnitten und teilten deshalb nie eine Zeile.
+
+**Was.** `.field-callout` ist wieder ein einspaltiges Raster: Ein Satz, der eine
+Liste oder Tabelle trägt, stellt sie darunter über die volle Breite, und eine
+gezielte Regel nimmt der Liste ihren eigenen Box-Innenabstand, damit sie nicht
+doppelt im Hinweis sitzt. Die Karten „Template-Updates" und
+„Schalen-Version" liegen jetzt im selben Autor-Abschnitt direkt hintereinander,
+sodass die beiden halbbreiten Karten eine Zeile teilen. „Startseite" ist jetzt
+eine eigene Zeile über die volle Breite, direkt unter der Zeile mit „Leser" und
+„Bearbeiter". Kein Label, kein Schlüssel und kein Wert ändert sich, und die
+schreibgeschützten Werte der Schalen-Version behalten ihren `server`-Modus.
+
+**Geprüft.** `npm run tsc2`, der Admin-Typecheck und der Root-`npm run build`
+sind sauber. Hinweise und Kartenraster wurden im kopflosen Browser gegen die
+gebaute `app.inline.css` bei 1400px vermessen: Bei allen drei Hinweisen teilen
+Satz und Liste bzw. Tabelle die linke Kante und die Liste bzw. Tabelle beginnt
+unter dem Satz, die Karten „Template-Updates" und „Schalen-Version" stehen auf
+einer Oberkante nebeneinander, und „Startseite" spannt über die volle
+Rasterbreite unter der Zeile aus Leser und Editoren. Am Umbruch bei 1100px
+fällt das Raster weiterhin wie bisher auf eine Spalte zusammen. Der
+Klick-Durchlauf in der Dev-Instanz wartet auf den Maintainer.
 
 ## 128. Die Ein-Klick-Einträge nennen die Art der Wiki, die sie anlegen
 
