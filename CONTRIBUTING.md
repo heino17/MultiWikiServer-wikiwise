@@ -88,7 +88,7 @@ This fork documents itself in both languages, and a change is not finished
 before the documentation follows:
 
 - **`CHANGELOG.md`** — every user-visible change gets a new numbered section
-  (`§92` is next), newest section first, in *both* the English and the German
+  (`§131` is next), newest section first, in *both* the English and the German
   half. The section number has to be identical on both sides, inline code,
   identifiers, file names and command lines stay literally the same, and prose
   is wrapped at about 80 columns. Release sections additionally carry a release
@@ -117,6 +117,10 @@ contributor does not have to guess:
 4. `npm run build`, then `npm pack` → `mws-wikiwise-X.Y.Z.tgz`.
 5. Commit as `release: Version X.Y.Z`, then create the annotated tag `vX.Y.Z`.
 6. Publish a GitHub release for that tag and attach the tarball.
+
+Write the GitHub release description in **English**. The bilingual contract
+covers `CHANGELOG.md`, `README.md` and `README_features.md`; the release notes
+are English only.
 
 The fork is **not** published to npm, and that is deliberate: the registry path
 (reserved names, 2FA, tokens) costs more than it is worth for a single
@@ -233,7 +237,7 @@ Dieser Fork dokumentiert sich zweisprachig, und eine Änderung ist nicht fertig,
 bevor die Dokumentation nachgezogen ist:
 
 - **`CHANGELOG.md`** — jede nutzersichtbare Änderung bekommt einen neuen
-  nummerierten Abschnitt (`§92` ist der nächste), den neuesten zuerst, in
+  nummerierten Abschnitt (`§131` ist der nächste), den neuesten zuerst, in
   *beiden* Hälften, der englischen und der deutschen. Die Abschnittsnummer
   muss auf beiden Seiten gleich sein, Inline-Code, Bezeichner, Dateinamen und
   Kommandozeilen bleiben wörtlich gleich, Fließtext wird bei etwa 80 Spalten
@@ -265,6 +269,10 @@ Mitwirkende nicht raten müssen:
 5. Commit als `release: Version X.Y.Z`, dann den annotierten Tag `vX.Y.Z`
    anlegen.
 6. Für diesen Tag ein GitHub-Release veröffentlichen und das Tarball anhängen.
+
+Die GitHub-Release-Beschreibung wird auf **Englisch** geschrieben. Der
+zweisprachige Vertrag gilt für `CHANGELOG.md`, `README.md` und
+`README_features.md`; die Release-Notes sind englisch.
 
 Der Fork ist **nicht** auf npm veröffentlicht, und das ist Absicht: Der
 Registry-Weg (reservierte Namen, 2FA, Tokens) kostet für eine einzelne

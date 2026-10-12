@@ -47,8 +47,11 @@ orgs or accounts. `create-package/README.md` records why.
 - **Documentation is bilingual by contract.** `README.md`,
   `README_features.md` and `CHANGELOG.md` each carry an English and a German
   half with the same structure. A new section goes into both halves.
+- **Release notes are written in English.** The GitHub release description for
+  a tag is English only; the bilingual contract above covers `CHANGELOG.md` and
+  the `README*.md` files, not the release notes.
 - **The CHANGELOG is the development story.** Every user-visible change gets a
-  new numbered section (`§92` is next), newest first, with the same number in
+  new numbered section (`§131` is next), newest first, with the same number in
   both language halves. Inline code, identifiers, file names and command lines
   stay literally identical across halves; prose is wrapped at about 80 columns.
 - **Do not weaken the security invariants** (`ARCHITECTURE.md`,
