@@ -67,10 +67,16 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
   SimpleWiki-Eintrag legt selbst die erste Seite an. Wie bei jeder anderen Wiki
   entscheidet das Wiki-Rezept, wer sie öffnen darf; für eine öffentliche Wiki
   braucht der Bag eine `A_read`-Zeile für `ANON`
-- **Hüllen-Versionen im Template (Schalen-Politik):** Jedes Speichern des
-  Templates erzeugt ein nummeriertes **Release** — unveränderlich, pro Template
-  streng aufsteigend, mit einem optionalen Namen aus dem `<meta
-  name="mws-shell-version" content="…">`-Tag der Hülle, wenn sie eines trägt.
+- **Hüllen-Versionen im Template (Schalen-Politik):** Ein Speichern des
+  Templates, das die Hülle ändert, erzeugt ein nummeriertes **Release** —
+  unveränderlich, pro Template streng aufsteigend, mit einem optionalen Namen
+  aus dem `<meta name="mws-shell-version" content="…">`-Tag der Hülle, wenn sie
+  eines trägt. Dieselbe Hülle noch einmal zu speichern (etwa ein wiederholtes
+  `provision-simplewiki`) legt **kein** neues Release an, und von den älteren
+  Releases bleiben nur die neueste und die gepinnten übrig — der Store wächst
+  nicht mehr mit jedem Schreibvorgang. Das Kommando `prune-template-releases`
+  räumt einen Store auf, der vorher gewachsen ist, und kompaktiert die Datei
+  (§130).
   Eine Wiki folgt ihrem Template unter einer **Schalen-Politik** im
   Template-Feld: `auto` liefert immer das neueste Release (genau wie vorher),
   `notify` bleibt auf dem aktuellen und fragt vor dem Weitergleiten, `pin`
@@ -261,10 +267,15 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
   the display name as its page title – the first entry made in SimpleWiki writes
   the first page itself. As with any other wiki, the wiki recipe decides who
   may open it; a public wiki needs an `A_read` row for `ANON` on the bag
-- **Versioned shells in the template (shell policy):** Every save of the
-  template creates a numbered **release** — immutable, strictly ascending per
-  template, with an optional name taken from the `<meta
+- **Versioned shells in the template (shell policy):** A save of the template
+  that changes the shell creates a numbered **release** — immutable, strictly
+  ascending per template, with an optional name taken from the `<meta
   name="mws-shell-version" content="…">` tag of the shell, when it carries one.
+  Saving the identical shell again (a repeated `provision-simplewiki`, say)
+  creates **no** new release, and of the older releases only the newest and the
+  pinned ones stay — the store no longer grows with every write. The
+  `prune-template-releases` command cleans up a store that grew before this and
+  compacts the file (§130).
   A wiki follows its template under a **shell policy** in the template field:
   `auto` always serves the newest release (exactly as before), `notify` stays
   on the current one and asks before moving on, `pin` stays on one release.

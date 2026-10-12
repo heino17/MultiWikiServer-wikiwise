@@ -6,6 +6,7 @@ import { InitStoreCommand } from "./init-store";
 import { ImportWikiFileCommand } from "./import-wiki-file";
 import { LoadWikiFolderCommand } from "./load-wiki-folder";
 import { ProvisionSimpleWikiCommand } from "./provision-simplewiki";
+import { PruneTemplateReleasesCommand } from "./prune-template-releases";
 import { RenamePersonalRolesCommand } from "./rename-personal-roles";
 import { RestoreWikiSnapshotCommand } from "./restore-wiki-snapshot";
 import { TestArgsCommand } from "./test-args";
@@ -36,6 +37,7 @@ export const COMMANDS = {
   "import-wiki-file": ImportWikiFileCommand,
   "load-wiki-folder": LoadWikiFolderCommand,
   "provision-simplewiki": ProvisionSimpleWikiCommand,
+  "prune-template-releases": PruneTemplateReleasesCommand,
   "rename-personal-roles": RenamePersonalRolesCommand,
   "restore-wiki-snapshot": RestoreWikiSnapshotCommand,
   "test-args": TestArgsCommand,
@@ -55,6 +57,7 @@ export * from "./init-store";
 export * from "./import-wiki-file";
 export * from "./load-wiki-folder";
 export * from "./provision-simplewiki";
+export * from "./prune-template-releases";
 export * from "./rename-personal-roles";
 export * from "./restore-wiki-snapshot";
 export * from "./test-args";

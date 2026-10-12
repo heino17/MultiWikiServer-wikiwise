@@ -5157,6 +5157,40 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 130. Template releases no longer pile up
+
+**Why.** A release is an immutable snapshot of a whole template definition, and
+a custom HTML shell runs into the megabytes. Every write to a template minted
+one — an admin save, and just as much a `provision-simplewiki` that shipped the
+identical shell again. No old release was ever deleted. A dev store had grown
+to 102 MB, 80 MB of it 64 SimpleWiki releases; 27 of the 73 releases stored
+byte-identical definitions, and only a handful were pinned, so the store
+carried tens of megabytes that no wiki served.
+
+**What.** `createTemplateRelease`
+(`packages/mws/src/new-managers/template-releases.ts`) compares the freshly
+written definition with the newest release and returns that release untouched
+when the two serialize identically, so a repeated provision or a save without
+a change writes no row. After a real change it deletes every older release of
+that template except the ones wikis have pinned
+(`recipe.pinned_template_version_id`); the newest release, what "auto" wikis
+serve and what the update banner compares against, always stays. The new
+`prune-template-releases` command runs the same prune over all templates for a
+store that grew before this and compacts the file with `VACUUM` afterwards.
+Nothing a running wiki serves is touched: a pinned release survives by
+construction.
+
+**Verified.** `npm run tsc2`, the admin typecheck and the root `npm run build`
+are clean. The prune first ran against a copy: it kept the newest release of
+each template and the five pinned releases (four SimpleWiki, one TiddlyWiki),
+deleted 67 of 73 rows, and the file fell from 101.6 MB to 29.6 MB. Then
+`npm start prune-template-releases` ran against the dev store: 67 of 73
+releases pruned across 2 templates, the file compacted from 102 MB to 31 MB,
+and the `-wal` checkpointed to zero. With the dev server left running, every
+tested wiki answered `200` (`julias-rezeptbuch` and the pinned `wiki-admin-2`,
+`wiki-admin-neu`, `wiki-frau-meyer-3`, `wiki-schuler-1-2`), and no recipe has a
+dangling pin. The click-through in the admin app awaits the maintainer.
+
 ## 129. The template callouts stack, and Shell version moves beside Template updates
 
 **Why.** The wiki dialog showed two things wrong in its settings. The "Readonly
@@ -5183,7 +5217,7 @@ against the built `app.inline.css` at 1400px: for all three callouts the
 sentence and the list or table share the left edge and the list or table starts
 below the sentence, the "Template updates" and "Shell version" cards sit side by
 side on one top edge, and "Landing page" spans the full grid width below the
-Readers and Editors row. At the 1100px breakpoint the grid still collapses to
+Readers and Editors row. At the 1080px breakpoint the grid still collapses to
 one column as before. The click-through in the dev instance awaits the
 maintainer.
 
@@ -12152,6 +12186,42 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
 
+## 130. Template-Releases häufen sich nicht mehr an
+
+**Warum.** Eine Release ist ein unveränderliches Abbild einer ganzen
+Template-Definition, und eine eigene HTML-Schale geht in die Megabytes. Jeder
+Schreibvorgang legte eine an — ein Admin-Speichern ebenso wie ein
+`provision-simplewiki`, das dieselbe Schale erneut auslieferte. Gelöscht wurde
+nie eine. Ein Dev-Store war auf 102 MB gewachsen, davon 80 MB aus 64
+SimpleWiki-Releases; 27 der 73 Releases trugen byte-identische Definitionen,
+und nur wenige waren gepinnt, der Store schleppte also zig Megabytes mit, die
+keine Wiki auslieferte.
+
+**Was.** `createTemplateRelease`
+(`packages/mws/src/new-managers/template-releases.ts`) vergleicht die frisch
+geschriebene Definition mit der neuesten Release und gibt diese unverändert
+zurück, wenn beide identisch serialisieren — ein wiederholtes Provisionieren
+oder ein Speichern ohne Änderung schreibt also keine Zeile. Nach einer echten
+Änderung löscht es jede ältere Release dieses Templates außer denen, an die
+Wikis gepinnt sind (`recipe.pinned_template_version_id`); die neueste Release,
+die „auto"-Wikis ausliefern und mit der der Update-Banner vergleicht, bleibt
+immer. Das neue Kommando `prune-template-releases` führt denselben Schnitt über
+alle Templates für einen Store aus, der vorher gewachsen ist, und kompaktiert
+die Datei danach mit `VACUUM`. Nichts, was eine laufende Wiki ausliefert, wird
+angetastet: Eine gepinnte Release überlebt von der Konstruktion her.
+
+**Geprüft.** `npm run tsc2`, der Admin-Typecheck und der Root-`npm run build`
+sind sauber. Der Schnitt lief zuerst gegen eine Kopie: Er behielt die neueste
+Release je Template und die fünf gepinnten Releases (vier SimpleWiki, eine
+TiddlyWiki), löschte 67 von 73 Zeilen, und die Datei fiel von 101,6 MB auf
+29,6 MB. Danach lief `npm start prune-template-releases` gegen den Dev-Store:
+67 von 73 Releases über 2 Templates geschnitten, die Datei von 102 MB auf
+31 MB kompaktiert, und die `-wal` auf null zurückgesetzt. Der Dev-Server lief
+dabei weiter, jede getestete Wiki antwortete mit `200` (`julias-rezeptbuch` und
+die gepinnten `wiki-admin-2`, `wiki-admin-neu`, `wiki-frau-meyer-3`,
+`wiki-schuler-1-2`), und kein Rezept hat einen toten Pin. Der Klick-Durchlauf
+in der Admin-App wartet auf den Maintainer.
+
 ## 129. Die Template-Hinweise stapeln sich, die Schalen-Version rückt daneben
 
 **Warum.** Der Wiki-Dialog zeigte in den Einstellungen zwei Dinge falsch. Die
@@ -12180,7 +12250,7 @@ gebaute `app.inline.css` bei 1400px vermessen: Bei allen drei Hinweisen teilen
 Satz und Liste bzw. Tabelle die linke Kante und die Liste bzw. Tabelle beginnt
 unter dem Satz, die Karten „Template-Updates" und „Schalen-Version" stehen auf
 einer Oberkante nebeneinander, und „Startseite" spannt über die volle
-Rasterbreite unter der Zeile aus Leser und Editoren. Am Umbruch bei 1100px
+Rasterbreite unter der Zeile aus Leser und Editoren. Am Umbruch bei 1080px
 fällt das Raster weiterhin wie bisher auf eine Spalte zusammen. Der
 Klick-Durchlauf in der Dev-Instanz wartet auf den Maintainer.
 
