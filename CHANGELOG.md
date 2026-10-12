@@ -243,7 +243,13 @@ finally follow the language they are counted in.
 
 ---
 
-## Unreleased
+## Release 0.6.0 — 2026-10-12
+
+38 commits since 0.5.0, 93 files, +8608/−653. The centre of gravity is the
+SimpleWiki — a wiki with its own shell that MWS serves itself (§103–§106) —
+beside importing a SimpleWiki file (§102) and a hand-taken snapshot from the
+wiki dialog (§101); around it a long row of admin-app and wording fixes
+(§107–§130).
 
 **Added**
 
@@ -7148,7 +7154,13 @@ Admin-App folgen endlich der Sprache, in der sie gezählt werden.
 
 ---
 
-## Unveröffentlicht
+## Release 0.6.0 — 2026-10-12
+
+38 Commits seit 0.5.0, 93 Dateien, +8608/−653. Im Zentrum steht die SimpleWiki
+— eine Wiki mit eigener Schale, die MWS selbst ausliefert (§103–§106) —, daneben
+der Import einer SimpleWiki-Datei (§102) und ein Snapshot von Hand im
+Wiki-Dialog (§101); drumherum eine lange Reihe von Admin-App- und
+Textkorrekturen (§107–§130).
 
 **Hinzugefügt**
 
