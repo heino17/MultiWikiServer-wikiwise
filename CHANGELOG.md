@@ -492,6 +492,39 @@ wiki dialog (§101); around it a long row of admin-app and wording fixes
 
 ---
 
+## Release 0.6.1 — 2026-10-12
+
+3 commits since 0.6.0, 14 files, +9144/−215.
+
+A small follow-up in the 0.6 line: a fresh installation now brings the
+`SimpleWiki` template with it (§132), and the READMEs no longer claim that
+`npm update` updates MWS (§131).
+
+**Added**
+
+- **A fresh data folder already has the `SimpleWiki` template** (§132).
+  `init-store` provisions it from a `templates/simplewiki.html` that ships in
+  the package, so the "1-click wiki creation as SimpleWiki" entry is there on
+  day one instead of having to be set up by hand with `provision-simplewiki`.
+  It seeds the template only when it is absent — an existing store is left
+  untouched, and `provision-simplewiki` stays the way to bring a newer shell
+  in. The shell file in the repository is a build artifact of SimpleWiki, not a
+  source file here; refresh it from the SimpleWiki build before a release.
+
+**Changed**
+
+- **The READMEs no longer claim that `npm update` updates MWS** (§131). MWS is
+  not on npm, the dependency is pinned to a tarball URL, so `npm update` does
+  nothing. Both READMEs now name installing the new release tarball as the
+  update path.
+- Verified: `npm run tsc2` and `npm run build` are clean, the package contains
+  `templates/simplewiki.html`, and a scratch store (`init-store`) gets the
+  `SimpleWiki` template: release 1, `v0.1.31`, `customHtmlEnabled`, 1,311.1 kB
+  of content, `ADMIN` `B_write` + `TEACHER` `A_read`; a second run leaves it in
+  place.
+
+---
+
 ## 1. Missing dependency: `escape-string-regexp`
 
 **Files:** `package.json` (root)
@@ -7459,6 +7492,40 @@ Textkorrekturen (§107–§130).
   Banner selbst will noch einen Browser: ein Template mit einer Wiki in der
   Policy `notify` speichern, die Wiki als Besitzerin und als andere Person
   öffnen und den Button klicken.
+
+---
+
+## Release 0.6.1 — 2026-10-12
+
+3 Commits seit 0.6.0, 14 Dateien, +9144/−215.
+
+Ein kleiner Folgeschritt im 0.6-Zweig: Eine frische Installation bringt das
+Template `SimpleWiki` gleich mit (§132), und die README behauptet nicht länger,
+dass `npm update` MWS aktualisiert (§131).
+
+**Hinzugefügt**
+
+- **Ein frischer Datenordner hat das Template `SimpleWiki` schon** (§132).
+  `init-store` legt es aus einer mitgelieferten `templates/simplewiki.html` an,
+  sodass der Eintrag „1-click wiki creation as SimpleWiki" vom ersten Tag an da
+  ist, statt von Hand mit `provision-simplewiki` eingerichtet werden zu müssen.
+  Angelegt wird nur, wenn das Template fehlt — ein bestehender Store bleibt
+  unangetastet, und `provision-simplewiki` bleibt der Weg, eine neuere Schale
+  einzubringen. Die Schalendatei im Repository ist ein Build-Artefakt von
+  SimpleWiki, keine Quelldatei hier; vor einem Release wird sie aus dem
+  SimpleWiki-Build erneuert.
+
+**Geändert**
+
+- **Die README behauptet nicht mehr, `npm update` aktualisiere MWS** (§131).
+  MWS liegt nicht auf npm, die Abhängigkeit ist auf eine Tarball-URL festgelegt,
+  `npm update` bewirkt also nichts. Beide README nennen jetzt das Installieren
+  des neuen Release-Tarballs als Update-Weg.
+- Geprüft: `npm run tsc2` und `npm run build` sind sauber, das Paket enthält
+  `templates/simplewiki.html`, und ein Probestore (`init-store`) bekommt das
+  Template `SimpleWiki`: Release 1, `v0.1.31`, `customHtmlEnabled`, 1.311,1 kB
+  Inhalt, `ADMIN` `B_write` + `TEACHER` `A_read`; ein zweiter Lauf lässt es
+  stehen.
 
 ---
 
