@@ -5163,6 +5163,26 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 131. The README no longer claims `npm update` updates MWS
+
+**Why.** MWS is not published on npm, only as a GitHub release tarball, so the
+dependency of an installed data folder is pinned to one tarball URL. `npm
+update` resolves that same URL again and never moves to a newer version — which
+is how a test installation stayed on `0.4.1` after the maintainer had run
+`npm update` and restarted. The README promised the opposite under "Updates",
+and `README_features.md` repeated it.
+
+**What.** The "Updates" section of `README.md` and the notes at the top of
+`README_features.md` now state that MWS is not on npm and that an update means
+installing the tarball of the new release from the Releases page; the
+TiddlyWiki line stays `npx mws update-tiddlywiki`. Both language halves carry
+the same wording.
+
+**Verified.** Documentation only, no code change. Observed on the test
+installation: after `npm update` it still reported `mwsVersion 0.4.x` with only
+`cache/mws/0.4.1`, and only installing the `0.6.0` tarball by URL moved it to
+`0.6.0`.
+
 ## 130. Template releases no longer pile up
 
 **Why.** A release is an immutable snapshot of a whole template definition, and
@@ -12197,6 +12217,27 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 131. Die README behauptet nicht mehr, `npm update` aktualisiere MWS
+
+**Warum.** MWS ist nicht auf npm veröffentlicht, sondern nur als
+GitHub-Release-Tarball; die Abhängigkeit eines installierten Datenordners ist
+damit auf eine Tarball-URL gepinnt. `npm update` löst dieselbe URL erneut auf
+und bewegt sich nie auf eine neuere Version — so blieb eine Testinstallation
+auf `0.4.1`, nachdem der Maintainer `npm update` ausgeführt und neu gestartet
+hatte. Die README versprach unter „Updates" das Gegenteil, und
+`README_features.md` wiederholte es.
+
+**Was.** Der Abschnitt „Updates" der `README.md` und die Hinweise oben in
+`README_features.md` sagen jetzt, dass MWS nicht auf npm liegt und ein Update
+bedeutet, das Tarball des neuen Releases von der Releases-Seite zu
+installieren; die TiddlyWiki-Zeile bleibt `npx mws update-tiddlywiki`. Beide
+Sprachhälften tragen dieselbe Formulierung.
+
+**Geprüft.** Reine Doku, keine Codeänderung. Beobachtet an der
+Testinstallation: Nach `npm update` meldete sie weiterhin `mwsVersion 0.4.x`
+mit nur `cache/mws/0.4.1`, und erst das per URL installierte `0.6.0`-Tarball
+brachte sie auf `0.6.0`.
 
 ## 130. Template-Releases häufen sich nicht mehr an
 

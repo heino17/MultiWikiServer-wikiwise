@@ -18,7 +18,7 @@ Standard-Sprache und Standard-Theme fürs erste Laden stellt der Betreiber in de
 3. Eigener Datenordner (empfohlen für den Betrieb): `npm pack`, dann `mkdir mein-ordner && cp create-package/files/* mein-ordner/`, `cd mein-ordner && npm install ../mws-wikiwise-0.6.0.tgz`, `npx mws update-tiddlywiki`, `npx mws init-store`, `npx mws listen --listener`
 4. Im Browser öffnen: Port `8080` (bzw. wie konfiguriert) – Erstanmeldung mit `admin` / `1234` (Passwort danach ändern).
 
-Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Cert möglich (z. B. hinter einem Reverse-Proxy wie Apache). Die Daten liegen in einer SQLite-Datei im `store`-Ordner – **immer komplett sichern** (⇒ Admin-Backup). Updates: `npm update` und `npx mws update-tiddlywiki`.
+Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Cert möglich (z. B. hinter einem Reverse-Proxy wie Apache). Die Daten liegen in einer SQLite-Datei im `store`-Ordner – **immer komplett sichern** (⇒ Admin-Backup). Updates: MWS liegt nicht auf npm, `npm update` bringt hier also nichts — installiere stattdessen das Tarball des neuen Releases; TiddlyWiki per `npx mws update-tiddlywiki`.
 
 ## Funktionen
 
@@ -222,7 +222,7 @@ The operator sets the default language and theme for the very first load in "Set
 3. Own data folder (recommended for real operation): `npm pack`, then `mkdir my-folder && cp create-package/files/* my-folder/`, `cd my-folder && npm install ../mws-wikiwise-0.6.0.tgz`, `npx mws update-tiddlywiki`, `npx mws init-store`, `npx mws listen --listener`
 4. Open in your browser: port `8080` (or as configured) – first login with `admin` / `1234` (change the password afterwards).
 
-Notes: The server speaks plain HTTP by default; HTTPS is possible via your own key/cert (e.g. behind a reverse proxy like Apache). Data lives in a single SQLite file inside the `store` folder – **always back it up completely** (⇒ admin backup). Updates: `npm update` and `npx mws update-tiddlywiki`.
+Notes: The server speaks plain HTTP by default; HTTPS is possible via your own key/cert (e.g. behind a reverse proxy like Apache). Data lives in a single SQLite file inside the `store` folder – **always back it up completely** (⇒ admin backup). Updates: MWS is not on npm, so `npm update` does nothing here — install the tarball of the new release instead; TiddlyWiki via `npx mws update-tiddlywiki`.
 
 ## **Features**
 
