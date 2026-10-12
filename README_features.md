@@ -57,9 +57,10 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
   nur mit dem Template SimpleWiki vorbelegt. Die neue Wiki wird unter
   `/wiki/<slug>/` von MWS selbst ausgeliefert: Seiten statt Tiddler, kein
   Wiki-Markup, und jede Änderung wird sofort nach MWS geschrieben, ganz ohne
-  Speichern-Knopf. Voraussetzung ist das Template aus
-  `npm start provision-simplewiki <simplewiki.html>`; fehlt es oder trägt es
-  kein eigenes HTML, steht der Eintrag nicht im Menü. Sobald das Template
+  Speichern-Knopf. Das Template `SimpleWiki` legt
+  `npm start init-store` bei einer frischen Installation selbst an, und ein
+  vorhandenes aktualisiert `npm start provision-simplewiki <simplewiki.html>`;
+  fehlt es oder trägt es kein eigenes HTML, steht der Eintrag nicht im Menü. Sobald das Template
   eingerichtet ist, erscheint der Eintrag für **jeden Account, der eigene
   Wikis anlegen darf** — er setzt keine zusätzliche Freigabe voraus, auch
   keine Rollen für Lernende (siehe §109 der CHANGELOG). Eine so angelegte Wiki
@@ -258,9 +259,10 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
   1-click entry, only with the SimpleWiki template pre-set. The new wiki is
   served by MWS itself under `/wiki/<slug>/`: pages instead of tiddlers, no wiki
   markup, and every change is written to MWS on the spot, with no save button
-  anywhere. It needs the template from `npm start provision-simplewiki
-  <simplewiki.html>`; without that template, or without custom HTML on it, the
-  entry stays out of the menu. Once the template is in place, the entry shows
+  anywhere. A fresh installation creates the
+  template in `npm start init-store`, and an existing one is updated with
+  `npm start provision-simplewiki <simplewiki.html>`; without the template, or
+  without custom HTML on it, the entry stays out of the menu. Once the template is in place, the entry shows
   for **every account that may create own wikis** — it needs no extra grant
   and no roles, not even for learners (see §109 of the CHANGELOG). A wiki
   created that way starts empty and carries

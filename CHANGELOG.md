@@ -5163,6 +5163,28 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 132. A fresh store ships the SimpleWiki template
+
+**Why.** The SimpleWiki template existed only after an operator ran
+`provision-simplewiki` by hand. A new installation therefore had no
+`SimpleWiki` row, and with it neither the one-click entry nor any way to try a
+SimpleWiki wiki without first finding a `simplewiki.html` and the command.
+
+**What.** `init-store` now calls the provisioning code itself, so a fresh data
+folder carries the `SimpleWiki` template next to the default `Tiddlywiki` one.
+The shell is copied into the package as `templates/simplewiki.html` and added
+to the npm `files` list. `init-store` seeds the template only when the store
+does not have it, so a repeated init does not roll back a shell an admin
+updated; `provision-simplewiki` stays the update path. Validation and creation
+moved out of the command into
+`packages/mws/src/new-managers/simplewiki-template.ts`, shared by both.
+
+**Verified.** `npm run tsc2` and `npm run build` are clean. A scratch data
+folder (`init-data-folder`, `update-tiddlywiki`, `init-store`) carried both
+templates: `SimpleWiki` with `customHtmlEnabled`, 1.311,1 kB `htmlContent`,
+release 1 labelled `v0.1.31`, and permissions (ADMIN `B_write`, TEACHER
+`A_read`); a second `init-store` left it untouched.
+
 ## 131. The README no longer claims `npm update` updates MWS
 
 **Why.** MWS is not published on npm, only as a GitHub release tarball, so the
@@ -12217,6 +12239,30 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 132. Ein frischer Store bringt das SimpleWiki-Template mit
+
+**Warum.** Das Template `SimpleWiki` entstand erst, wenn ein Betreiber
+`provision-simplewiki` von Hand ausführte. Eine neue Installation hatte damit
+keine `SimpleWiki`-Zeile und mit ihr weder den 1-Klick-Eintrag noch einen Weg,
+eine SimpleWiki-Wiki auszuprobieren, ohne erst ein `simplewiki.html` und das
+Kommando zu suchen.
+
+**Was.** `init-store` ruft jetzt selbst den Provisionierungs-Code auf, ein
+frischer Datenordner trägt also das Template `SimpleWiki` neben dem
+Default-Template `Tiddlywiki`. Die Schale liegt als `templates/simplewiki.html`
+im Paket und steht in der npm-`files`-Liste. `init-store` legt das Template nur
+an, wenn der Store es nicht hat, ein wiederholtes Init rollt also keine von
+einem Admin aktualisierte Schale zurück; `provision-simplewiki` bleibt der
+Update-Weg. Validierung und Anlegen sind aus dem Kommando in
+`packages/mws/src/new-managers/simplewiki-template.ts` gezogen und werden von
+beiden genutzt.
+
+**Geprüft.** `npm run tsc2` und `npm run build` sind sauber. Ein frischer
+Datenordner (`init-data-folder`, `update-tiddlywiki`, `init-store`) trug beide
+Templates: `SimpleWiki` mit `customHtmlEnabled`, 1.311,1 kB `htmlContent`,
+Release 1 mit Label `v0.1.31` und Rechten (ADMIN `B_write`, TEACHER `A_read`);
+ein zweiter `init-store`-Lauf ließ es unangetastet.
 
 ## 131. Die README behauptet nicht mehr, `npm update` aktualisiere MWS
 

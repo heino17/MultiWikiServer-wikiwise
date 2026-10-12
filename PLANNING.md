@@ -241,6 +241,12 @@ Markers used below:
   is what the client checks — a template under that name without its own HTML
   would promise a SimpleWiki surface and deliver TiddlyWiki, which is worse
   than no entry at all.
+- ⚖️ The SimpleWiki template ships with a fresh store ([§132](CHANGELOG.md)).
+  `init-store` provisions it from a bundled `templates/simplewiki.html` (in the
+  npm `files` list), so the one-click entry is there on day one; it seeds only
+  when the template is absent, and `provision-simplewiki` stays the update path.
+  The price is a version-coupled 1,3 MB artifact of the SimpleWiki build inside
+  this repository, refreshed by hand before a release.
 - ⚖️ A wiki with a custom shell starts empty ([§103](CHANGELOG.md)). The
   TiddlyWiki welcome tiddler would be wiki markup in a shell that cannot
   render it, and SimpleWiki reads `$:/DefaultTiddlers` as the name of a page

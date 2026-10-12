@@ -2,6 +2,7 @@ import { dist_require_resolve, dist_resolve } from "@tiddlywiki/server";
 import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
 import { existsSync } from "fs";
 import { resolve } from "path";
+import { readSimpleWikiShell, upsertSimpleWikiTemplate } from "../new-managers/simplewiki-template";
 import { LoadWikiFolderCommand } from "./load-wiki-folder";
 import { RoleImportWriter, TemplateImportWriter, UserImportWriter, DEFAULT_TEMPLATE } from "../new-managers";
 import { IdString } from "@mws/admin-vanilla/src/definition/tabs";
@@ -74,6 +75,24 @@ export class InitStoreCommand extends BaseCommand {
 
 		console.log("Default user created with username 'admin' and password '1234'. Please change this password after logging in.");
 
+		// A fresh store ships the SimpleWiki template, so an operator does not
+		// have to run `provision-simplewiki` by hand after the first start. Only
+		// on a store that lacks it: an admin may have updated the shell, and a
+		// repeated init-store must not roll that back. `provision-simplewiki`
+		// stays the update path.
+		const simpleWikiShell = dist_resolve("../templates/simplewiki.html");
+		if (existsSync(simpleWikiShell)) {
+			const { html, bytes } = readSimpleWikiShell(simpleWikiShell);
+			const result = await upsertSimpleWikiTemplate(this.config.engine, html, { ifAbsentOnly: true });
+			if (result.action === "created") {
+				console.log(`Template "SimpleWiki" created from templates/simplewiki.html (${(bytes / 1024).toFixed(1)} kB).`);
+			} else {
+				console.log(`Template "SimpleWiki" already present; left untouched.`);
+			}
+		} else {
+			console.log("No templates/simplewiki.html in this build; skipping the SimpleWiki template.");
+		}
+
 		const runner = async (path: string, bagName: string, bagDesc: string, recName: string, recDesc: string, recUsers: string[] = []) => {
 			if (!existsSync(path)) {
 				console.log(`Skipping ${recName}: the wiki folder ${path} is not part of this installation.`);
@@ -108,4 +127,3 @@ export class InitStoreCommand extends BaseCommand {
 		this.config.setupRequired = false;
 	}
 }
-

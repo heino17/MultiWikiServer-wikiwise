@@ -29,7 +29,8 @@ Highlights only – the full story, with file names, code and background, lives 
   in one click — and let a wiki hold on to its template's shell version: a
   template save becomes a numbered *release*, the wiki follows it under a
   shell policy (`auto | notify | pin`, new wikis `notify`), and under `notify`
-  a banner offers the wiki owner and the admins the update. (§102–§106)
+  a banner offers the wiki owner and the admins the update. The `SimpleWiki`
+  template ships with a fresh install. (§102–§106, §132)
 - 🌍 **8 languages.** The whole admin app – and the wiki client, which follows the wiki's language automatically. With 500+ translated keys and a language switcher in the header. (§14, §46)
 - 🏠 **A public start page for anonymous visitors.** Hero area, statistic cards, wiki cards with preview images, an operator welcome text, a news block and a version footer – instead of a login form. (§48)
 - 📌 **A pinboard.** Shared post-its for all logged-in users, addressed globally, to a class or to one person, with important notes pinned to the top, an unread badge and moderation. (§42)
@@ -259,7 +260,8 @@ Nur Highlights – die vollständige Geschichte mit Dateinamen, Code und Hinterg
   ihres Templates festhalten lassen: Ein Template-Speichern wird zu einem
   nummerierten *Release*, die Wiki folgt ihm unter einer Schalen-Politik
   (`auto | notify | pin`, neue Wikis `notify`), und unter `notify` bietet ein
-  Hinweis der Besitzerin und den Admins das Update an. (§102–§106)
+  Hinweis der Besitzerin und den Admins das Update an. Das Template
+  `SimpleWiki` kommt bei einer frischen Installation mit. (§102–§106, §132)
 - 🌍 **8 Sprachen.** Die komplette Admin-App – und der Wiki-Client, der automatisch der Wiki-Sprache folgt. Mit über 500 übersetzten Keys und einem Sprachumschalter in der Kopfzeile. (§14, §46)
 - 🏠 **Eine öffentliche Startseite für anonyme Besucher.** Hero-Bereich, Statistik-Kacheln, Wiki-Karten mit Vorschaubildern, ein Willkommenstext des Betreibers, ein News-Block und ein Versions-Footer – statt eines Login-Formulars. (§48)
 - 📌 **Eine Pinnwand.** Gemeinsame Zettel für alle angemeldeten Nutzer: global, an eine Klasse oder an eine einzelne Person adressiert, mit wichtigen Zetteln oben, Ungelesen-Badge und Moderation. (§42)
