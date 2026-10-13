@@ -1,0 +1,27 @@
+title: Rechte und Rollen
+created: 20261012193225900
+modified: 20261012204443760
+tags: [[Deutsch]]
+eltern: Zusammenarbeiten
+reihenfolge: 0024
+sw-id: 1791833545911
+
+Jede Person hat **Rollen**, jede Rolle Rechte an Wikis:
+
+* **Lesen** — das Wiki öffnen und ansehen.
+* **Schreiben** — Inhalte ändern und Dateien hochladen.
+* **Verwalten** — z. B. andere einladen, umbenennen, löschen.
+
+Der Wiki-Besitzer entscheidet, wer sein Wiki sehen und bearbeiten darf (siehe [[Jemanden einladen]]). Liegt ein Wiki in einer Vorlage, gelten deren voreingestellte Rechte.
+
+Technisch stehen die Freigaben als Zeilen in der Zugriffsliste (ACL) eines Bags oder Rezepts:
+
+* `A_read` — lesen, `B_write` — schreiben, `C_admin` — verwalten.
+* `ADMIN`, `USER` und `ANON` sind **System-Rollen**: unlöschbar und nur vom Site-Admin änderbar.
+* **Owner-Schutz:** Wer ein Wiki, einen Bag, eine Vorlage, eine Rolle oder ein Konto angelegt hat, behält die Kontrolle — nur der Ersteller oder `admin` darf bearbeiten oder löschen. Über die API kann sich niemand selbst Rechte geben.
+
+Technisch stehen die Freigaben als Zeilen in der Zugriffsliste (ACL) eines Bags oder Rezepts:
+
+* `A_read` — lesen, `B_write` — schreiben, `C_admin` — verwalten.
+* `ADMIN`, `USER` und `ANON` sind **System-Rollen**: unlöschbar und nur vom Site-Admin änderbar.
+* **Owner-Schutz:** Wer ein Wiki, einen Bag, eine Vorlage, eine Rolle oder ein Konto angelegt hat, behält die Kontrolle — nur der Ersteller oder `admin` darf bearbeiten oder löschen. Über die API kann sich niemand selbst Rechte geben.

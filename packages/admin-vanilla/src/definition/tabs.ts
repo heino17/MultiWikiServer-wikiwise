@@ -951,7 +951,7 @@ export interface TemplateAdminRecord {
   shellVersion: string;
   /** Read-only route to the documentation this template serves, as a path
    *  fragment: `/tw5/<version>` for shell-less TiddlyWiki templates, or
-   *  `/wiki/bedienungsanleitung` for templates with their own HTML shell.
+   *  `/wiki/simplewiki-manual` for templates with their own HTML shell.
    *  "" when there is nothing to link to. Rendered with `pathPrefix`. */
   docsUrl: string;
   description: string;

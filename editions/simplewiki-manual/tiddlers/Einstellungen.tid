@@ -1,0 +1,15 @@
+title: Einstellungen
+created: 20261012201338731
+modified: 20261012204443760
+tags: [[Deutsch]]
+eltern: Admin-Bereich
+reihenfolge: 0036
+sw-id: 1791836018740
+
+Die **Einstellungen** öffnet der Admin über das Zahnrad-Symbol.
+
+* **Beim ersten Laden:** Standard-Sprache und Standard-Theme (oder „Browser/System folgen"). Die Wahl eines Besuchers gewinnt immer.
+* **Funktionen** einzeln an- und abschalten: Pinnwand, Meine Dateien, Upload im Wiki, Sprachwahl anzeigen, Vorschaubilder, Öffentliche Startseite, Cookie-Hinweis, Impressum.
+* **Vorschaubild-Cache-Zeit** (leer = 24 Stunden) und **Wikis pro Seite** (leer = 10, `0` = alle in einer Liste).
+* **Markdown-Texte** für Begrüßung, News und Impressum.
+Für Nicht-Admins ist die Seite schreibgeschützt. **„Schließen"** oder **„Zurück zur Wiki-Übersicht"** verlassen sie ohne Speichern.

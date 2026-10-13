@@ -1,0 +1,14 @@
+title: Die Hülle aktualisieren
+created: 20261012201338731
+modified: 20261012204443760
+tags: [[Deutsch]]
+eltern: SimpleWiki
+reihenfolge: 0014
+sw-id: 1791836018736
+
+* Das Aussehen von SimpleWiki (die **Hülle**) pflegt MWS als Vorlage mit nummerierten **Releases**.
+
+* Eine Wiki folgt ihrem Template über eine **Schalen-Politik**: `auto` nimmt immer das Neueste, `notify` bleibt stehen und fragt vorher, `pin` bleibt auf einem Release. Neue Wikis beginnen mit `notify`.
+* Gibt es unter `notify` ein neueres Release, sehen **Besitzerin und Admins** einen Hinweis: einen Punkt am Zahnrad und im Einstellungsdialog einen Knopf **„Übernehmen"**. Er ruft `PUT /recipe/<slug>/shell/update`, der Server setzt die Wiki auf das neue Release und lädt sie neu.
+* **Der Inhalt Deiner Wiki wird dabei nicht verändert!** Den Hinweis kannst Du wegklicken (bis zur nächsten angebotenen Version oder für einen Monat).
+* Wer nur schreiben darf, sieht den Hinweis nicht — eine Hülle zu übernehmen ist eine Besitzer-Entscheidung.

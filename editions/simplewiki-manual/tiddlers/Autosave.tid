@@ -1,0 +1,13 @@
+title: Autosave
+created: 20261012193225900
+modified: 20261012204443760
+tags: [[American]]
+eltern: 🇺🇸 Overview
+reihenfolge: 0052
+sw-id: 1791833545924
+
+* The MultiWiki server saves every change **automatically** — nothing needs manual backup.
+
+
+* While you work in a wiki, each change is stored.
+* Note: the [[Preview image]] is not redrawn on every save — it shows the state after the latest editing pause.

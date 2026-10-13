@@ -24,8 +24,8 @@
   ],
   "files": [
     "dist",
-    "editions/bedienungsanleitung/tiddlers",
-    "editions/bedienungsanleitung/tiddlywiki.info",
+    "editions/simplewiki-manual/tiddlers",
+    "editions/simplewiki-manual/tiddlywiki.info",
     "editions/mws-docs",
     "templates",
     "plugins",

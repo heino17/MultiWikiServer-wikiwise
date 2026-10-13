@@ -1,0 +1,19 @@
+title: Uploading a file
+created: 20261012193225900
+modified: 20261012204443760
+tags: [[American]]
+eltern: 🇺🇸 Overview
+reihenfolge: 0080
+sw-id: 1791833545941
+
+* Under **My files** you can upload files into your personal area.
+* There you see the number of your files and can delete old ones.
+* The files are then available for embedding in a wiki ([[Using a file in a wiki]]).
+
+* Each file is stored **content-addressed** on disk (`store/files/<sha256>/`); only metadata is in the database.
+
+* The default limit is **100 MB per file** (`MWS_USERFILE_SIZE_LIMIT`).
+
+* Each file is stored **content-addressed** on disk (`store/files/<sha256>/`); only metadata is in the database.
+
+* The default limit is **100 MB per file** (`MWS_USERFILE_SIZE_LIMIT`).

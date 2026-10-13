@@ -1,0 +1,13 @@
+title: Cookie-Hinweis und Impressum
+created: 20261012201338731
+modified: 20261012204443760
+tags: [[Deutsch]]
+eltern: Admin-Bereich
+reihenfolge: 0041
+sw-id: 1791836018743
+
+* Beim ersten Besuch zeigt die Seite einen **Cookie-Hinweis** mit Kategorien: technisch erforderlich, Einstellungen (lokal), extern nur nach Zustimmung. Es gibt **kein Tracking** und **keine externen Schriften**.
+
+* Der Admin kann den Hinweis in den [[Einstellungen]] abschalten.
+* Unter `/legal-notice` liegt ein **Impressum** mit eigenem Markdown-Text (HTML wird entschärft); es ist im Footer von Startseite und Verwaltung verlinkt.
+* Über **„Cookie-Einstellungen"** im Footer lässt sich die Auswahl jederzeit ändern.

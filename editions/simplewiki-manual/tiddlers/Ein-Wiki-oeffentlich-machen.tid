@@ -1,0 +1,13 @@
+title: Ein Wiki öffentlich machen
+created: 20261012201338731
+modified: 20261012204443760
+tags: [[Deutsch]]
+eltern: Eigene Wikis verwalten
+reihenfolge: 0018
+sw-id: 1791836018737
+
+* **Öffentlich** heißt: Auch Besucher, die nicht angemeldet sind, dürfen das Wiki **lesen**. Technisch bekommt die Rolle `ANON` eine `A_read`-Freigabe am Rezept und am Bag.
+
+* Im Wiki-Dialog setzt Du das mit einem Schalter. Ein öffentlich lesbares Wiki kannst Du zusätzlich **von der Startseite nehmen**, damit es dort nicht mehr erscheint.
+* Das Schreiben ändert sich dadurch nicht: Gäste können lesen, aber nichts bearbeiten.
+* Ohne diese Freigabe bleiben Name und Inhalt privat — Fremde bekommen nur einen 404 zu sehen.

@@ -1,0 +1,15 @@
+title: Settings
+created: 20261012201338731
+modified: 20261012204443760
+tags: [[American]]
+eltern: 🇺🇸 Overview
+reihenfolge: 0074
+sw-id: 1791836018752
+
+The admin opens **Settings** via the gear icon.
+
+* **On first load:** default language and default theme (or "follow browser/system"). A visitor's own choice always wins.
+* Switch **features** on and off: pinboard, My files, upload in the wiki, show language chooser, preview images, public start page, cookie notice, legal notice.
+* **Preview image cache time** (empty = 24 hours) and **wikis per page** (empty = 10, `0` = all in one list).
+* **Markdown texts** for welcome, news and legal notice.
+For non-admins the page is read-only. **"Close"** or **"Back to the wiki overview"** leaves it without saving.

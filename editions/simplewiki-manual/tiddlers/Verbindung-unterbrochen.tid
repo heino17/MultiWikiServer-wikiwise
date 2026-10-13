@@ -1,0 +1,14 @@
+title: Verbindung unterbrochen
+created: 20261012201338731
+modified: 20261012204443760
+tags: [[Deutsch]]
+eltern: Wikis nutzen
+reihenfolge: 0010
+sw-id: 1791836018732
+
+* Ist das Netz weg, zeigt die Wiki **einen** Hinweis („Verbindung zum Server unterbrochen …") statt eines Alarms bei jedem Fehlversuch.
+
+* Deine ungespeicherten Änderungen bleiben erhalten.
+* Der Hinweis verschwindet von selbst, sobald wieder gespeichert werden kann.
+* Die Wiederholungen werden langsamer (5 → 10 → 30 → 60 Sekunden), damit ein Laptop nach dem Aufwachen nicht dauernd nachfragt.
+* Antwortet der Server mit einem Fehler (z. B. 403 oder 503), erscheint weiterhin die normale Meldung — nur ein echter Netzausfall zeigt den Verbindungshinweis.

@@ -1,0 +1,14 @@
+title: Creating a SimpleWiki
+created: 20261012201338731
+modified: 20261012204443760
+tags: [[American]]
+eltern: 🇺🇸 Overview
+reihenfolge: 0054
+sw-id: 1791836018746
+
+* In the **Create a wiki** dropdown there is **Create a SimpleWiki (one click)** — the same dialog as the normal one, only with the **SimpleWiki** template preselected.
+
+* The new wiki is served by MWS at `/wiki/<slug>/`: pages instead of tiddlers, no TiddlyWiki markup.
+* It starts empty and carries only the display name as its page title — you create the first page yourself.
+* Whether you may do this depends, as always, on whether your account may create wikis; no extra permission is needed.
+* The entry appears only if the **SimpleWiki** template is set up. A fresh install creates it with `npm start init-store`; an update uses `npm start provision-simplewiki <simplewiki.html>`.

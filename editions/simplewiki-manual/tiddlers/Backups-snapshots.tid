@@ -1,0 +1,15 @@
+title: Backups (snapshots)
+created: 20261012201338731
+modified: 20261012204443760
+tags: [[American]]
+eltern: 🇺🇸 Overview
+reihenfolge: 0060
+sw-id: 1791836018750
+
+* A **snapshot** is a copy of the wiki's state in a hidden bag.
+
+* **Automatic:** replacing a wiki file triggers a snapshot first.
+* **By hand:** the wiki dialog has a **"Create snapshot"** button at the bottom (needs replace rights; an empty wiki is refused).
+* **Restore:** under **Create a wiki → Restore a snapshot** you pick the wiki and the state. Before restoring, another snapshot is taken — nothing is lost for good.
+* **Overview and cleanup:** a collapsible line above the wiki list ("Your wikis contain **N** snapshots") leads to the affected wikis; deleting happens only there, one at a time.
+* **Retention:** of manual snapshots the **5 newest** stay, of import snapshots the **10 newest** per wiki. Older ones are discarded.

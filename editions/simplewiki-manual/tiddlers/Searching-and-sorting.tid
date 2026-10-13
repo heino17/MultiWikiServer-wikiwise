@@ -1,0 +1,14 @@
+title: Searching and sorting
+created: 20261012201338731
+modified: 20261012204443760
+tags: [[American]]
+eltern: 🇺🇸 Overview
+reihenfolge: 0076
+sw-id: 1791836018754
+
+* In every list (wikis, templates, bags, roles, users, My files) a **search field** filters as you type and shows "X of Y" with a clear button.
+
+* Case, umlauts and "ß" are ignored: "schuler" finds "Schüler", "strasse" finds "Straße".
+* **Sort by clicking** a column header: ascending, again descending, a third click removes the sorting. Numbers count numerically, dates chronologically, "3 / 5" as numbers.
+* The wiki list normally sits in groups ("My wikis", "Shared with you", "System wikis"); once you sort, it becomes **one flat list**.
+* Search and sorting survive switching tabs (in memory only).

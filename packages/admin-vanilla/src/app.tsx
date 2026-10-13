@@ -1015,8 +1015,11 @@ class RecordModalElement extends JSXElement {
 
     const currentUsername = embeddedServerResponse.userState.username;
     const ownerUsername = String((fieldState.draft as Partial<WikiAdminRecord>).ownerUsername ?? "");
-    const canDeleteWiki = selectedTab.id === "wikis" && (
-      currentUsername === "admin" || (ownerUsername !== "" && ownerUsername === currentUsername)
+    // A system wiki has no creator (ownerUsername is empty, shown as "—") and
+    // ships with the installation, so it is never deletable — not even for the
+    // site admin `admin`. The server refuses it as well (§134).
+    const canDeleteWiki = selectedTab.id === "wikis" && ownerUsername !== "" && (
+      currentUsername === "admin" || ownerUsername === currentUsername
     );
     // The snapshot counts arrive pre-filtered: the route leaves out every wiki
     // the person may not replace, which is the same gate the create route puts

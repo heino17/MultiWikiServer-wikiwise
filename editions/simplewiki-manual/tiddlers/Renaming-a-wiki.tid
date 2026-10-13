@@ -1,0 +1,12 @@
+title: Renaming a wiki
+created: 20261012193225900
+modified: 20261012204443760
+tags: [[American]]
+eltern: 🇺🇸 Overview
+reihenfolge: 0061
+sw-id: 1791833545927
+
+* As the owner (or an admin), open the wiki list and click **Edit** next to the wiki.
+* Change the **display name** — that is what the class sees in the list.
+* The slug stays stable for links; only change it if you want to update the old links.
+* After renaming, the preview image is re-rendered on the next open.

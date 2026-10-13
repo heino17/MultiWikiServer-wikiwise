@@ -1,0 +1,14 @@
+title: Public start page
+created: 20261012201338731
+modified: 20261012204443760
+tags: [[American]]
+eltern: 🇺🇸 Overview
+reihenfolge: 0075
+sw-id: 1791836018753
+
+* Anonymous visitors see a **start page** instead of the login form, with a welcome, **stat tiles** (tiddlers, public wikis, users, online) and **wiki cards** with preview images, plus a footer with the versions.
+
+* **Welcome text** and **news** are maintained in the [[Settings]] (Markdown). Visitors can dismiss news; the style (info/success/warning/danger) is selectable.
+* The **login button** leads to the usual form; signed-in users see "Back to the wiki overview".
+* **Return path:** `/login?redirect=<path>` brings you back where you came from after signing in. Values pointing at another server or above `pathPrefix` are ignored.
+* The operator can **switch the start page off** — then the server redirects to `/login` again.

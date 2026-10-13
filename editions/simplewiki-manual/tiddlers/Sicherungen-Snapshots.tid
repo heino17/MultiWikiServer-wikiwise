@@ -1,0 +1,15 @@
+title: Sicherungen (Snapshots)
+created: 20261012201338731
+modified: 20261012204443760
+tags: [[Deutsch]]
+eltern: Eigene Wikis verwalten
+reihenfolge: 0019
+sw-id: 1791836018738
+
+* Eine **Sicherung (Snapshot)** ist eine Kopie des Wiki-Stands in einem versteckten Bag.
+
+* **Automatisch:** Wer eine Wiki-Datei **ersetzt**, löst vorher eine Sicherung aus.
+* **Von Hand:** Im Wiki-Dialog gibt es unten den Knopf **„Snapshot erstellen"** (nur mit Ersetzen-Recht; eine leere Wiki wird abgelehnt).
+* **Wiederherstellen:** Unter **Wiki erstellen → Snapshot wiederherstellen** wählst Du Wiki und Stand. Vor dem Zurückholen wird noch einmal eine Sicherung angelegt — nichts geht endgültig verloren.
+* **Überblick und Aufräumen:** Eine einklappbare Zeile über der Wiki-Liste („Ihre Wikis enthalten **N** Snapshots") führt zu den betroffenen Wikis; gelöscht wird nur dort, einzeln.
+* **Aufbewahrung:** Von manuellen Sicherungen bleiben die **5 neuesten**, von Import-Sicherungen die **10 neuesten** pro Wiki. Ältere werden verworfen.

@@ -1,0 +1,14 @@
+title: Suchen und Sortieren
+created: 20261012201338731
+modified: 20261012204443760
+tags: [[Deutsch]]
+eltern: Admin-Bereich
+reihenfolge: 0038
+sw-id: 1791836018742
+
+* In allen Listen (Wikis, Vorlagen, Bags, Rollen, Benutzer, Meine Dateien) filtert ein **Suchfeld** beim Tippen und zeigt „X von Y" samt Knopf zum Leeren.
+
+* Groß-/Kleinschreibung, Umlaute und „ß" zählen nicht: „schuler" findet „Schüler", „strasse" findet „Straße".
+* **Sortieren per Klick** auf einen Spaltenkopf: aufsteigend, nochmals absteigend, ein dritter Klick nimmt die Sortierung weg. Zahlen zählen numerisch, Daten chronologisch, „3 / 5" als Zahlen.
+* Die Wiki-Liste steht sonst in Gruppen („Meine Wikis", „Für dich freigegeben", „System-Wikis"); sobald Du sortierst, wird daraus **eine flache Liste**.
+* Suche und Sortierung bleiben beim Tabwechsel erhalten (nur im Arbeitsspeicher).

@@ -918,12 +918,12 @@ export class TemplateDataAdapter extends TabDataAdapter<"templates"> {
    * Documentation route for a template, shown as its sidebar link. A shell-less
    * TiddlyWiki template points at the docs of the TiddlyWiki version it serves
    * (`/tw5/<version>`), a template with its own HTML shell (SimpleWiki) at the
-   * fork's manual wiki (`/wiki/bedienungsanleitung`, seeded by `init-store`);
+   * fork's manual wiki (`/wiki/simplewiki-manual`, seeded by `init-store`);
    * "" when nothing is installed. Only the route fragment — the admin app
    * prepends its own `pathPrefix` when it renders the link (see §113).
    */
   private templateDocsUrl(definition: TemplateDefinition) {
-    if (definition.customHtmlEnabled) return "/wiki/bedienungsanleitung";
+    if (definition.customHtmlEnabled) return "/wiki/simplewiki-manual";
     const version = this.templateVersionLabel(definition);
     return version ? `/tw5/${version}` : "";
   }
@@ -2256,6 +2256,10 @@ export const AdminCreateWiki = zodRoute({
  * user who created the wiki (owner) or the site admin account ("admin")
  * may delete it. Recipes whose slug is missing return 404; shared bags
  * referenced by other recipes are kept (RecipeBag.bag has onDelete Restrict).
+ *
+ * A system wiki has no owner and its bag is the shipped `editions/<slug>`.
+ * It is part of the installation, not a user's content, so it is never
+ * deletable — not even by the site admin `admin`.
  */
 export const AdminDeleteWiki = zodRoute({
   method: ["PUT"],
@@ -2279,6 +2283,11 @@ export const AdminDeleteWiki = zodRoute({
       });
       if (!recipe)
         throw new SendError("RECIPE_NOT_FOUND", 404, { recipeName: slug });
+
+      // Ownerless wikis are the system wikis (`editions/<slug>`); they ship
+      // with the installation and are protected from deletion (§134).
+      if (recipe.owner_user_id == null)
+        throw new SendError("ACCESS_DENIED", 403, { reason: "This is a system wiki without an owner and cannot be deleted." });
 
       const isOwner = !!recipe.owner_user_id && recipe.owner_user_id === state.user.user_id;
       const isSiteAdmin = state.user.username === "admin";

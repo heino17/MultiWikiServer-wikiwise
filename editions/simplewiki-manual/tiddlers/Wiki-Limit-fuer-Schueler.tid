@@ -1,0 +1,13 @@
+title: Wiki-Limit für Schüler
+created: 20261012193225900
+modified: 20261012204443760
+tags: [[Deutsch]]
+eltern: Lehrer-Bereich
+reihenfolge: 0031
+sw-id: 1791833545916
+
+* Im Users-Tab stellst Du pro Schüler eine **Wiki-Grenze** ein (0 = gar nicht, oder eine feste Anzahl).
+
+
+* Ein leerer Wert bedeutet: kein Limit.
+* Überschreitet der Schüler die Grenze, erscheint die Meldung, dass er nicht mehr anlegen darf.

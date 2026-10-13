@@ -1,0 +1,16 @@
+title: Nutzer verwalten
+created: 20261012193225900
+modified: 20261012204443760
+tags: [[Deutsch]]
+eltern: Admin-Bereich
+reihenfolge: 0033
+sw-id: 1791833545917
+
+* Im **Users-Tab** siehst Du alle Konten mit ihren Rollen.
+
+
+* **Einladen:** Neues Konto anlegen (Name, E-Mail) — das Passwort setzt die Person selbst.
+* **Rollen:** Rollen zuweisen oder entziehen.
+* **Passwort zurücksetzen:** Wenn jemand ausgesperrt ist, kannst Du ein neues Passwort setzen.
+* **Löschen:** Konten entfernen; bedenke, dass damit auch der Zugriff auf deren Wikis entfällt.
+* System-Rollen (z. B. `ADMIN`) sind geschützt und können nicht gelöscht werden.

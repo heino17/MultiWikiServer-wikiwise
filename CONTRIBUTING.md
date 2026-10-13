@@ -98,7 +98,7 @@ before the documentation follows:
   half with a matching structure. When you add a section, add it to both
   halves.
 - **`editions/mws-docs/tiddlers/Installation.md`** and the wiki edition
-  `editions/bedienungsanleitung` — installation instructions and the manual.
+  `editions/simplewiki-manual` — installation instructions and the manual.
   These are TiddlyWiki files, not Markdown; keep their syntax valid.
 - **New UI strings** — the admin app is bilingual, so add the German *and* the
   English text.
@@ -248,7 +248,7 @@ bevor die Dokumentation nachgezogen ist:
   eine deutsche Hälfte mit gleicher Struktur. Neuer Abschnitt in beide
   Hälften.
 - **`editions/mws-docs/tiddlers/Installation.md`** und die Wiki-Ausgabe
-  `editions/bedienungsanleitung` — Installationsanleitung und Handbuch. Das
+  `editions/simplewiki-manual` — Installationsanleitung und Handbuch. Das
   sind TiddlyWiki-Dateien, kein Markdown; halte die Syntax gültig.
 - **Neue Oberflächentexte** — die Admin-App ist zweisprachig, also gehören
   deutscher *und* englischer Text dazu.

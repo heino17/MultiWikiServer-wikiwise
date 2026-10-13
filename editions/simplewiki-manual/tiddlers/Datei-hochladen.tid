@@ -1,0 +1,21 @@
+title: Datei hochladen
+created: 20261012193225900
+modified: 20261012204443760
+tags: [[Deutsch]]
+eltern: Meine Dateien
+reihenfolge: 0043
+sw-id: 1791833545922
+
+* Unter **Meine Dateien** kannst Du Dateien in Deinen persönlichen Bereich hochladen.
+
+
+* Dort siehst Du die Anzahl Deiner Dateien und kannst alte löschen.
+* Die Dateien stehen Dir dann zur Verfügung, um sie in ein Wiki einzubinden ([[Datei in einem Wiki verwenden]]).
+
+* Jede Datei liegt **content-addressed** auf der Platte (`store/files/<sha256>/`), in der Datenbank stehen nur Metadaten.
+
+* Das Standardlimit ist **100 MB pro Datei** (`MWS_USERFILE_SIZE_LIMIT`).
+
+* Jede Datei liegt **content-addressed** auf der Platte (`store/files/<sha256>/`), in der Datenbank stehen nur Metadaten.
+
+* Das Standardlimit ist **100 MB pro Datei** (`MWS_USERFILE_SIZE_LIMIT`).

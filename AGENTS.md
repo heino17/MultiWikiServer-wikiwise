@@ -44,7 +44,7 @@ orgs or accounts. `create-package/README.md` records why.
   Refresh it from the SimpleWiki build before a release; never edit it in this
   repository (§132 records why it is bundled).
 - **TiddlyWiki files are not Markdown.** `editions/**/tiddlers/*` uses `.tid`
-  and `.multids` syntax, and `editions/bedienungsanleitung` is a wiki edition,
+  and `.multids` syntax, and `editions/simplewiki-manual` is a wiki edition,
   not a Markdown site. Do not "fix" formatting there.
 - **New user-visible strings need both languages.** Use `t("...")` and add the
   German and the English entry; the admin app is bilingual by contract.
@@ -129,5 +129,5 @@ tables — read §70 before touching an old store.
 - `CHANGELOG.md` — the development story, §1 …
 - `README.md`, `README_features.md` — bilingual user documentation
 - `editions/mws-docs/tiddlers/Installation.md` — installation manual
-- `editions/bedienungsanleitung` — the manual as a wiki edition
+- `editions/simplewiki-manual` — the manual as a SimpleWiki system wiki
 - `CONTRIBUTING.md` — the human-facing contribution guide

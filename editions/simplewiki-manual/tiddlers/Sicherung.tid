@@ -1,0 +1,14 @@
+title: Sicherung
+created: 20261012193225900
+modified: 20261012204443760
+tags: [[Deutsch]]
+eltern: Admin-Bereich
+reihenfolge: 0039
+sw-id: 1791833545920
+
+* Der MultiWiki-Server bietet ein **Admin-Backup**: Eine einzige Datei mit Datenbank, Schlüsseln und Konfiguration.
+
+
+* Im **Backup-Bereich** startest Du den Download.
+* Bewahre Backups an einem sicheren Ort auf (Betriebsgeheimnisse sind darin enthalten).
+* Erstelle regelmäßig ein Backup, bevor Du größere Umbauten machst.

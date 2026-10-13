@@ -1,0 +1,22 @@
+title: Preview image
+created: 20261012193225900
+modified: 20261012204443760
+tags: [[American]]
+eltern: 🇺🇸 Overview
+reihenfolge: 0063
+sw-id: 1791833545929
+
+* In the wiki list every wiki shows a **preview image** (a screenshot of its start page).
+* The image is created **lazily**: only when needed, and re-rendered at most once a day (unless something changes).
+* After an edit it is not redrawn immediately — it shows the state after the latest editing pause.
+* If the preview is missing (e.g. right after creation), it appears within a few seconds of opening the wiki.
+
+* The image is rendered server-side with **Chromium** (default 2 in parallel, `MWS_THUMBNAIL_RENDER_CONCURRENCY`). Anonymous visitors are served from the cache only.
+
+* After a change the old image stays during a **grace period** (default 30 seconds, `MWS_THUMBNAIL_GRACE_SECONDS`) before it is redrawn.
+* The cache expires after `MWS_THUMBNAIL_TTL_HOURS` (default 24 hours, configurable under [[Settings]] → "Preview image cache time").
+
+* The image is rendered server-side with **Chromium** (default 2 in parallel, `MWS_THUMBNAIL_RENDER_CONCURRENCY`). Anonymous visitors are served from the cache only.
+
+* After a change the old image stays during a **grace period** (default 30 seconds, `MWS_THUMBNAIL_GRACE_SECONDS`) before it is redrawn.
+* The cache expires after `MWS_THUMBNAIL_TTL_HOURS` (default 24 hours, configurable under [[Settings]] → "Preview image cache time").

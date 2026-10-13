@@ -1,0 +1,14 @@
+title: Öffentliche Startseite
+created: 20261012201338731
+modified: 20261012204443760
+tags: [[Deutsch]]
+eltern: Admin-Bereich
+reihenfolge: 0037
+sw-id: 1791836018741
+
+* Anonyme Besucher sehen statt des Login-Formulars eine **Startseite** mit Begrüßung, **Statistik-Kacheln** (Tiddler, öffentliche Wikis, Nutzer, Online) und **Wiki-Karten** mit Vorschaubild, dazu einen Footer mit den Versionen.
+
+* **Begrüßungstext** und **News** pflegst Du in den [[Einstellungen]] (Markdown). News kann der Besucher wegklicken, der Stil (Hinweis/Erfolg/Warnung/Gefahr) ist wählbar.
+* Der **Login-Knopf** führt zum gewohnten Formular; Eingeloggte sehen „Zurück zur Wiki-Übersicht".
+* **Rückweg:** `/login?redirect=<pfad>` bringt nach dem Anmelden dorthin zurück, wo man hergekommen ist. Werte auf einen anderen Server oder oberhalb von `pathPrefix` werden übergangen.
+* Der Betreiber kann die Startseite per Schalter **abschalten** — dann leitet der Server wieder auf `/login`.

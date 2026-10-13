@@ -1,0 +1,14 @@
+title: Connection interrupted
+created: 20261012201338731
+modified: 20261012204443760
+tags: [[American]]
+eltern: 🇺🇸 Overview
+reihenfolge: 0053
+sw-id: 1791836018745
+
+* If the network is gone, the wiki shows **one** notice ("Connection to the server interrupted …") instead of an alarm on every failed attempt.
+
+* Your unsaved changes are kept.
+* The notice disappears by itself once saving works again.
+* The retries slow down (5 → 10 → 30 → 60 seconds) so a laptop waking up does not keep asking.
+* If the server answers with an error (e.g. 403 or 503), you still get the normal message — only a real outage shows the connection notice.

@@ -1,0 +1,14 @@
+title: Updating the shell
+created: 20261012201338731
+modified: 20261012204443760
+tags: [[American]]
+eltern: 🇺🇸 Overview
+reihenfolge: 0056
+sw-id: 1791836018748
+
+* The look of SimpleWiki (the **shell**) is kept by MWS as a template with numbered **releases**.
+
+* A wiki follows its template under a **shell policy**: `auto` always takes the newest, `notify` stays and asks first, `pin` stays on one release. New wikis start with `notify`.
+* Under `notify`, a newer release shows a sign to the **owner and the administrators**: a dot on the gear and, in the Settings dialog, a button **"Adopt"**. It calls `PUT /recipe/<slug>/shell/update`, the server moves the wiki to the new release and reloads it.
+* **The contents of your wiki are not changed!** You can dismiss the hint (until the next offered version or for a month).
+* Whoever may only write does not see the hint — adopting a shell is an owner decision.

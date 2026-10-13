@@ -1,0 +1,16 @@
+title: So funktioniert SimpleWiki
+created: 20261012201338731
+modified: 20261012204443760
+tags: [[Deutsch]]
+eltern: SimpleWiki
+reihenfolge: 0013
+sw-id: 1791836018735
+
+* SimpleWiki kennt **Seiten** statt Tiddler. Jede Seite hat einen Titel, einen Text (Markdown) und optional eine übergeordnete Seite.
+
+* Gespeichert wird **sofort und automatisch** — einen Speichern-Knopf gibt es nicht.
+* Verweise schreibst Du als `[[Seite]]` oder `[[Text|Seite]]`; beim Bearbeiten hilft ein Dialog dabei.
+* Das ☰-Menü ist das Inhaltsverzeichnis, **+ Neue Seite** legt eine Seite an, das Symbol unten rechts schaltet den Editor ein.
+* Unterseiten ordnest Du per Ziehen oder mit Alt + Pfeiltasten: ↑/↓ gleiche Ebene, → einrücken, ← ausrücken. Nach einem Neuladen sind Unterseiten zunächst eingeklappt (der ▼-Zähler klappt auf).
+* Die **Suche** im Kopf durchsucht Titel, Text und Schlagworte. Rechts oben wählst Du Sprache und Hell/Dunkel, daneben die Farbwelt.
+* Unten findest Du die **Backlinks** (Verweise auf diese Seite und von ihr weg) und die **Flussansicht**, die alle Seiten zum Drucken bzw. als PDF aneinanderreiht.

@@ -1,0 +1,18 @@
+title: Passwort setzen oder ändern
+created: 20261012185625154
+modified: 20261012204443760
+tags: [[Deutsch]]
+eltern: Anmelden & Konto
+reihenfolge: 0004
+sw-id: 1791831385154
+
+* Nach der Einladung hat der Nutzer noch kein Passwort — er setzt es beim ersten Anmelden selbst.
+
+
+* Passwort ändern: Menü oben rechts → **Profil** → **Passwort ändern**.
+* Nutze die Zufallsfunktion neben dem Feld, um ein sicheres Passwort zu erzeugen.
+* Der Admin kann ein Passwort jederzeit zurücksetzen (siehe [[Nutzer verwalten]]).
+
+Der **🎲 Generator** neben einem Neupasswort-Feld erzeugt ein sicheres Passwort: Länge 8–32, garantiert gemischter Zeichensatz, dazu eine **Entropie-Anzeige** und ein farbiger **Stärkebalken**. Das Ergebnis wird in beide Felder übernommen.
+
+Der **🎲 Generator** neben einem Neupasswort-Feld erzeugt ein sicheres Passwort: Länge 8–32, garantiert gemischter Zeichensatz, dazu eine **Entropie-Anzeige** und ein farbiger **Stärkebalken**. Das Ergebnis wird in beide Felder übernommen.

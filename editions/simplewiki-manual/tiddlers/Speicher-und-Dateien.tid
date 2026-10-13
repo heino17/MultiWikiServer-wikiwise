@@ -1,0 +1,22 @@
+title: Speicher und Dateien
+created: 20261012193225900
+modified: 20261012204443760
+tags: [[Deutsch]]
+eltern: Admin-Bereich
+reihenfolge: 0040
+sw-id: 1791833545921
+
+* Der **Speicher-Tab** zeigt die Auslastung: Wikis, Dateien und die größten Speicherverbraucher.
+
+
+* Die Sektion **„Blobs & Dateien"** listet hochgeladene Dateien samt Herkunft.
+* Ungültige Reste (abgebrochene Uploads, verwaiste Dateien) kannst Du nach Vorschau der Liste bereinigen.
+* Mit **„Speicherverbrauch pro User (Top 10)"** siehst Du, wer am meisten Platz belegt.
+
+* Die **System-Festplatte** zeigt einen Ampel-Status; dazu die Speicherbelegung der App und Record-Zählungen (Tiddler/Bags/Wikis/Vorlagen/User).
+
+* **Binärinhalte** liegen als base64 in der Datenbank, der **Dateispeicher** unter `store/files/`. Die Übersicht nennt auch **Inbox** und **verwaiste Dateien**.
+
+* Die **System-Festplatte** zeigt einen Ampel-Status; dazu die Speicherbelegung der App und Record-Zählungen (Tiddler/Bags/Wikis/Vorlagen/User).
+
+* **Binärinhalte** liegen als base64 in der Datenbank, der **Dateispeicher** unter `store/files/`. Die Übersicht nennt auch **Inbox** und **verwaiste Dateien**.

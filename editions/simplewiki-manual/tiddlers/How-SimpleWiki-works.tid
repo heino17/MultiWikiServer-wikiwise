@@ -1,0 +1,16 @@
+title: How SimpleWiki works
+created: 20261012201338731
+modified: 20261012204443760
+tags: [[American]]
+eltern: 🇺🇸 Overview
+reihenfolge: 0055
+sw-id: 1791836018747
+
+* SimpleWiki knows **pages** instead of tiddlers. Each page has a title, a text (Markdown) and optionally a parent page.
+
+* Saving is **immediate and automatic** — there is no save button.
+* Links are written as `[[Page]]` or `[[Label|Page]]`; a dialog helps while editing.
+* The ☰ menu is the table of contents, **+ New page** creates a page, the button at the bottom right switches the editor on.
+* Sub-pages are arranged by dragging or with Alt + arrows: ↑/↓ on the same level, → indent, ← outdent. After a reload sub-pages start folded (the ▼ counter unfolds them).
+* **Search** in the header covers title, content and tags. Top right you choose language and light/dark, next to it the colour world.
+* At the bottom you find the **backlinks** (links to and from this page) and the **flow** view, which lines up all pages for printing as a PDF.

@@ -1,0 +1,13 @@
+title: Dateien teilen und ansehen
+created: 20261012201338731
+modified: 20261012204443760
+tags: [[Deutsch]]
+eltern: Meine Dateien
+reihenfolge: 0044
+sw-id: 1791836018744
+
+* **Ansehen:** Bilder, Audio, Video, PDF, Text, **Markdown** und **ODT** öffnest Du direkt im Browser; Audio und Video kannst Du spulen (Range-Support).
+
+* **Teilen:** Admin-Freigaben erreichen alle, Lehrkräfte ihre Klassen (nie andere Lehrkräfte), Schülerinnen und Schüler nur konkret gewählte Empfänger. Nicht geteilte Dateien sind für andere nur ein 404.
+* Der Abschnitt **„Geteilt mit mir"** zeigt, was andere mit Dir geteilt haben, mit eigenem Leerzustand.
+* Ein **Suchfeld für beide Tabellen** filtert eigene und geteilte Dateien zusammen; durchsucht werden Name, Typ, Besitzer und der „Geteilt"-Text — nicht der Dateiinhalt.

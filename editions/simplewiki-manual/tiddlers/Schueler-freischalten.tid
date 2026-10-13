@@ -1,0 +1,23 @@
+title: Schüler freischalten
+created: 20261012193225900
+modified: 20261012204443760
+tags: [[Deutsch]]
+eltern: Lehrer-Bereich
+reihenfolge: 0030
+sw-id: 1791833545915
+
+* Im Users-Tab legst Du die Schüler-Konten an (Einladung) und weist ihnen eine Klassen-Rolle zu.
+
+
+* Mit dieser Rolle kann kein Schüler in fremde Wikis schauen — er sieht nur, was ihm explizit freigegeben wurde ([[Wiki mit einer Klasse teilen]]).
+* Lege danach fest, **wie viele eigene Wikis** ein Schüler anlegen darf ([[Wiki-Limit für Schüler]]).
+
+* **Trennung der Lehrkräfte:** Jede Lehrkraft hat eine private Rolle und sieht nur die eigene Klasse; die Wikis einer Kollegin sind für sie nicht sichtbar.
+
+* **Rollen-Guard:** Lehrkräfte dürfen weder `ADMIN`/`TEACHER` noch fremde persönliche Rollen vergeben — das Admin-UI blendet fremde Rollen aus.
+* Will eine Lehrkraft mit einer Kollegin zusammenarbeiten, lädt sie diese gezielt ins eigene Wiki ein ([[Mit Kolleginnen zusammenarbeiten]]).
+
+* **Trennung der Lehrkräfte:** Jede Lehrkraft hat eine private Rolle und sieht nur die eigene Klasse; die Wikis einer Kollegin sind für sie nicht sichtbar.
+
+* **Rollen-Guard:** Lehrkräfte dürfen weder `ADMIN`/`TEACHER` noch fremde persönliche Rollen vergeben — das Admin-UI blendet fremde Rollen aus.
+* Will eine Lehrkraft mit einer Kollegin zusammenarbeiten, lädt sie diese gezielt ins eigene Wiki ein ([[Mit Kolleginnen zusammenarbeiten]]).

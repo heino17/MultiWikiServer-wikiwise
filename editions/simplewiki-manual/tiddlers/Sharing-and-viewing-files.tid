@@ -1,0 +1,13 @@
+title: Sharing and viewing files
+created: 20261012201338731
+modified: 20261012204443760
+tags: [[American]]
+eltern: 🇺🇸 Overview
+reihenfolge: 0081
+sw-id: 1791836018756
+
+* **View:** images, audio, video, PDF, text, **Markdown** and **ODT** open right in the browser; audio and video can be seeked (range support).
+
+* **Share:** admin shares reach everyone, teachers their classes (never other teachers), students only chosen recipients. Files not shared are only a 404 for others.
+* The **"Shared with me"** section shows what others shared with you, with its own empty state.
+* One **search field for both tables** filters your own and shared files together; it searches name, type, owner and the "shared" text — not the file content.

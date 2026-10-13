@@ -1,0 +1,14 @@
+title: Ein SimpleWiki anlegen
+created: 20261012201338731
+modified: 20261012204443760
+tags: [[Deutsch]]
+eltern: SimpleWiki
+reihenfolge: 0012
+sw-id: 1791836018734
+
+* Im Dropdown **Wiki erstellen** gibt es **1-Klick SimpleWiki erstellen** — derselbe Dialog wie beim normalen Anlegen, nur mit der Vorlage **SimpleWiki** vorbelegt.
+
+* Die neue Wiki wird von MWS unter `/wiki/<slug>/` ausgeliefert: Seiten statt Tiddler, kein TiddlyWiki-Markup.
+* Sie startet leer und trägt nur den Anzeigenamen als Seitentitel — die erste Seite legst Du selbst an.
+* Ob Du das darfst, hängt wie immer daran, ob Dein Konto eigene Wikis anlegen darf; eine zusätzliche Freigabe braucht es nicht.
+* Der Eintrag erscheint nur, wenn die Vorlage **SimpleWiki** eingerichtet ist. Bei einer frischen Installation legt `npm start init-store` sie an; ein Update macht `npm start provision-simplewiki <simplewiki.html>`.

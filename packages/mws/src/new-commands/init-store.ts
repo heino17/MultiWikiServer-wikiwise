@@ -93,7 +93,12 @@ export class InitStoreCommand extends BaseCommand {
 			console.log("No templates/simplewiki.html in this build; skipping the SimpleWiki template.");
 		}
 
-		const runner = async (path: string, bagName: string, bagDesc: string, recName: string, recDesc: string, recUsers: string[] = []) => {
+		// System wikis are the ownerless wikis: their bag falls back to
+		// `editions/<slug>` instead of `editions/<owner-id>/<slug>` and they are
+		// loaded from a folder that ships with the installation. `templateName`
+		// chooses the shell the wiki serves; the manual uses the SimpleWiki
+		// template, the documentation the default TiddlyWiki one.
+		const runner = async (path: string, bagName: string, bagDesc: string, recName: string, recDesc: string, recUsers: string[] = [], templateName = DEFAULT_TEMPLATE) => {
 			if (!existsSync(path)) {
 				console.log(`Skipping ${recName}: the wiki folder ${path} is not part of this installation.`);
 				return;
@@ -104,6 +109,7 @@ export class InitStoreCommand extends BaseCommand {
 				"recipe-name": [recName],
 				"recipe-description": [recDesc],
 				"recipe-users": recUsers,
+				"template-name": [templateName],
 				"overwrite": false,
 				"owner-roles": ["ADMIN"]
 			});
@@ -117,11 +123,16 @@ export class InitStoreCommand extends BaseCommand {
 			"mws-docs", "MWS Documentation from https://mws.tiddlywiki.com",
 		);
 
+		// The manual is a system wiki too, but it serves the SimpleWiki shell
+		// rather than a TiddlyWiki page. Its content lives in `editions/simplewiki-manual`
+		// and is loaded with the SimpleWiki template, so a fresh installation has
+		// the manual at `/wiki/simplewiki-manual` without anyone clicking it
+		// together first.
 		await runner(
-			dist_resolve("../editions/bedienungsanleitung"),
-			"bedienungsanleitung", "MWS Bedienungsanleitung (DE/EN)",
-			"bedienungsanleitung", "MWS Bedienungsanleitung (DE/EN)",
-			["ANON"]
+			dist_resolve("../editions/simplewiki-manual"),
+			"simplewiki-manual", "MWS Bedienungsanleitung (SimpleWiki)",
+			"simplewiki-manual", "MWS Bedienungsanleitung (SimpleWiki)",
+			["ANON"], "SimpleWiki"
 		);
 
 		this.config.setupRequired = false;

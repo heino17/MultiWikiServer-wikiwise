@@ -1,0 +1,13 @@
+title: Making a wiki public
+created: 20261012201338731
+modified: 20261012204443760
+tags: [[American]]
+eltern: 🇺🇸 Overview
+reihenfolge: 0059
+sw-id: 1791836018749
+
+* **Public** means: even visitors who are not signed in may **read** the wiki. Technically the `ANON` role gets an `A_read` grant on the recipe and on the bag.
+
+* A switch in the wiki dialog sets this. A publicly readable wiki can additionally be taken **off the start page** so it no longer appears there.
+* It does not change writing: guests can read but not edit.
+* Without that grant the name and content stay private — strangers only get a 404.

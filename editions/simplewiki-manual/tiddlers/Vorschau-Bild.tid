@@ -1,0 +1,24 @@
+title: Vorschau-Bild
+created: 20261012193225900
+modified: 20261012204443760
+tags: [[Deutsch]]
+eltern: Eigene Wikis verwalten
+reihenfolge: 0022
+sw-id: 1791833545910
+
+* In der Wiki-Liste zeigt jedes Wiki ein **Vorschaubild** (Screenshot der Startseite).
+
+
+* Das Bild wird **lazy** erzeugt: nur bei Bedarf und höchstens einmal pro Tag neu gerendert (sofern sich nichts ändert).
+* Nach einer Bearbeitung wird es nicht sofort neu gezeichnet — es zeigt den Stand nach der letzten Bearbeitungspause.
+* Fehlt das Vorschau-Bild (z. B. direkt nach dem Anlegen), erscheint es nach dem ersten Öffnen des Wikis innerhalb weniger Sekunden.
+
+* Erzeugt wird das Bild serverseitig mit **Chromium** (Standard: 2 parallel, `MWS_THUMBNAIL_RENDER_CONCURRENCY`). Anonyme Besucher bekommen es nur aus dem Cache.
+
+* Nach einer Änderung bleibt das alte Bild während einer **Schonfrist** stehen (Vorgabe 30 Sekunden, `MWS_THUMBNAIL_GRACE_SECONDS`), erst danach wird neu gerendert.
+* Der Cache läuft nach `MWS_THUMBNAIL_TTL_HOURS` ab (Vorgabe 24 Stunden, einstellbar unter [[Einstellungen]] → „Vorschaubild-Cache-Zeit").
+
+* Erzeugt wird das Bild serverseitig mit **Chromium** (Standard: 2 parallel, `MWS_THUMBNAIL_RENDER_CONCURRENCY`). Anonyme Besucher bekommen es nur aus dem Cache.
+
+* Nach einer Änderung bleibt das alte Bild während einer **Schonfrist** stehen (Vorgabe 30 Sekunden, `MWS_THUMBNAIL_GRACE_SECONDS`), erst danach wird neu gerendert.
+* Der Cache läuft nach `MWS_THUMBNAIL_TTL_HOURS` ab (Vorgabe 24 Stunden, einstellbar unter [[Einstellungen]] → „Vorschaubild-Cache-Zeit").

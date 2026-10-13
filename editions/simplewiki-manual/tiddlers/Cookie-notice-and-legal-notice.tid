@@ -1,0 +1,13 @@
+title: Cookie notice and legal notice
+created: 20261012201338731
+modified: 20261012204443760
+tags: [[American]]
+eltern: 🇺🇸 Overview
+reihenfolge: 0079
+sw-id: 1791836018755
+
+* On the first visit the page shows a **cookie notice** with categories: technically necessary, settings (local), external only after consent. There is **no tracking** and **no external fonts**.
+
+* The admin can switch the notice off in the [[Settings]].
+* Under `/legal-notice` there is a legal notice with its own Markdown text (HTML is escaped); it is linked in the footer of the start page and the admin app.
+* **"Cookie settings"** in the footer lets you change the choice at any time.

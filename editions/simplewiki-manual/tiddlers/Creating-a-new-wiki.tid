@@ -1,0 +1,23 @@
+title: Creating a new wiki
+created: 20261012193225900
+modified: 20261012204443760
+tags: [[American]]
+eltern: 🇺🇸 Overview
+reihenfolge: 0057
+sw-id: 1791833545925
+
+* Go to the home page and click **New wiki**.
+
+
+* Enter a display name (and optionally a description).
+* A **slug** (short name, e.g. `my-wiki`) is generated; it may only contain lowercase letters, numbers and hyphens, and must be free.
+* Teachers and admins can choose from [[Templates]]; students get their own starter wiki.
+* Students: whether you may create wikis depends on the limit your teacher set ([[Wiki limits for students]]).
+
+* As you type, the server checks whether the **name**, **slug** or a role is **free**: green = free, red = taken.
+
+* The wiki list shows **10 wikis per page** with back/next and "page X of Y". Set the number under **Settings → Wikis per page** (0 = all in one list).
+
+* As you type, the server checks whether the **name**, **slug** or a role is **free**: green = free, red = taken.
+
+* The wiki list shows **10 wikis per page** with back/next and "page X of Y". Set the number under **Settings → Wikis per page** (0 = all in one list).

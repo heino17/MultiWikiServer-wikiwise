@@ -1,0 +1,20 @@
+title: Storage and files
+created: 20261012193225900
+modified: 20261012204443760
+tags: [[American]]
+eltern: 🇺🇸 Overview
+reihenfolge: 0078
+sw-id: 1791833545940
+
+* The **Storage tab** shows usage: wikis, files and the biggest storage consumers.
+* The **"Blobs & files"** section lists uploaded files and where they come from.
+* Invalid leftovers (aborted uploads, orphaned files) can be cleaned up after previewing the list.
+* **"Storage usage per user (top 10)"** shows who uses the most space.
+
+* The **system disk** shows a traffic-light status, plus the app's storage and record counts (tiddlers/bags/wikis/templates/users).
+
+* **Binary content** is stored as base64 in the database, the **file store** under `store/files/`. The overview also names the **inbox** and **orphaned files**.
+
+* The **system disk** shows a traffic-light status, plus the app's storage and record counts (tiddlers/bags/wikis/templates/users).
+
+* **Binary content** is stored as base64 in the database, the **file store** under `store/files/`. The overview also names the **inbox** and **orphaned files**.

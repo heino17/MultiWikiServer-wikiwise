@@ -1,0 +1,13 @@
+title: Autospeicherung
+created: 20261012190643472
+modified: 20261012204443760
+tags: [[Deutsch]]
+eltern: Wikis nutzen
+reihenfolge: 0009
+sw-id: 1791832003472
+
+* Der MultiWiki-Server speichert jede Änderung **automatisch** — Du brauchst nichts manuell zu sichern.
+
+
+* Solange Du in einem Wiki arbeitest, wird bei jedem Wechsel gespeichert.
+* Hinweis: Die Vorschau ([[Vorschau-Bild]]) wird nicht bei jedem Speichern aktualisiert — sie zeigt den Stand nach der letzten Bearbeitungspause.

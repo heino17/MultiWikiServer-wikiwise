@@ -1,0 +1,36 @@
+title: Manual
+created: 20261012202638296
+modified: 20261012211334416
+tags: [[American]]
+palette: pergament
+reihenfolge: 0001
+sprache: de
+sw-id: 1791836798296
+thema: light
+
+## Welcome to your SimpleWiki! 🎉
+
+Your new, simple wiki.
+
+## What You Can Do Here
+
+## 👈 Read the user manual!
+
+⚠️ Optimal usability when used with MultiWikiServer-wikiwise!
+Without MWS-wikiwise, you'll have to save changes manually! To do so, click ⚙️ -> “Save as File” and overwrite the existing file!
+
+* [[🇩🇪 Inhaltsübersicht]]
+* [[🇺🇸 Overview]]
+
+Also:
+
+* **Create pages** – via the menu ☰ or “+ New Page”
+* **Writing** – Markdown is supported
+* **Linking** – [[Page Name]] in the text or the 🔗 button while editing
+* **Copying** – the ⧉ button creates a copy of the page
+* **Search** – at the top of the page
+* **Select language** – top right
+* **Light / Dark** – the sun and the moon
+* **Set Options** \- ⚙️
+
+**Have fun!** ✍️

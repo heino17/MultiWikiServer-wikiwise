@@ -1,0 +1,14 @@
+title: Wiki löschen
+created: 20261012193225900
+modified: 20261012204443760
+tags: [[Deutsch]]
+eltern: Eigene Wikis verwalten
+reihenfolge: 0021
+sw-id: 1791833545909
+
+* Nur der **Besitzer** des Wikis oder der **Admin** kann es löschen.
+
+
+* Wiki-Liste → **Bearbeiten** → **Löschen** und bestätigen.
+* Beim Löschen verschwinden auch die Inhalte des Wikis und das Vorschau-Bild **sofort** — es gibt keine Wiederherstellung.
+* Übrig gebliebene Vorschau-Dateien gelöschter Wikis werden beim Serverstart automatisch aufgeräumt.

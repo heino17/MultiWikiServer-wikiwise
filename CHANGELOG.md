@@ -5196,6 +5196,54 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 134. System wikis cannot be deleted
+
+**Why.** System wikis are the ownerless wikis whose bag is the shipped
+`editions/<slug>`. They belong to the installation, not to a user's content. The
+delete route still let the `admin` account remove any of them, so `mws-docs` and
+the manual could be clicked away. The "Created by" column showed "—" for the
+missing creator, but the button stayed.
+
+**What.** `PUT /admin/wiki/delete` refuses an ownerless recipe with
+`403 ACCESS_DENIED` before the owner/admin check, for everyone. The admin app
+hides the button to match: `canDeleteWiki` now requires a non-empty
+`ownerUsername`, so a system wiki (whose creator reads "—") never offers it.
+
+**Verified.** Against a fresh store: deleting `simplewiki-manual` and `mws-docs`
+with the `admin` session answered `403 ACCESS_DENIED` and left both wikis in
+place; an unknown slug still answered `404 RECIPE_NOT_FOUND`; a user-owned
+recipe deleted with `200 {deleted:true}` and its bag was removed as before.
+`npm run tsc2`, `npm run build` and the admin app's `tsc` are clean.
+
+## 133. The manual is a shipped system wiki
+
+**Why.** The fork had two manuals. `editions/bedienungsanleitung` was a
+TiddlyWiki wiki that `init-store` loaded as a system wiki, and it had gone stale;
+the manual the fork actually maintains is the SimpleWiki one, which lived only in
+a dev store and had to be clicked together by hand. A fresh installation had no
+manual for the SimpleWiki shell — the very shell a new wiki shows.
+
+**What.** `editions/simplewiki-manual` now ships the manual as a wiki edition,
+generated from the running wiki's store (86 tiddlers with `eltern`, `reihenfolge`
+and `sw-id` intact). `init-store` loads it with the `SimpleWiki` template and the
+`ANON` read role, so a fresh data folder carries it as an **ownerless system
+wiki** at `/wiki/simplewiki-manual` — bag `editions/simplewiki-manual`, `notify`
+shell policy, only `ADMIN` may write. The `runner` helper gained a `template-name`
+option for that. `editions/bedienungsanleitung` and its runner are removed, and
+the npm `files` list swaps the old edition's `tiddlers`/`tiddlywiki.info` entries
+for the new one. The templates tab links a template with its own HTML shell to
+`/wiki/simplewiki-manual` (`templateDocsUrl`) instead of the removed
+`/wiki/bedienungsanleitung`.
+
+**Verified.** `npm run tsc2` and `npm run build` are clean. A scratch data folder
+(`init-store` against a fresh store) carried `simplewiki-manual` with
+`owner_user_id` null, template `SimpleWiki`, bag `editions/simplewiki-manual`,
+`B_write` for `ADMIN` and `A_read` for `ANON`, and all 86 tiddlers with
+`eltern`/`reihenfolge`/`sw-id` preserved. A server started from that store
+answered `/wiki/simplewiki-manual` with `200`, the SimpleWiki shell with the
+store injected, and `/recipe/simplewiki-manual/store.json` with 84 pages, 46
+tagged `Deutsch` and 38 tagged `American`.
+
 ## 132. A fresh store ships the SimpleWiki template
 
 **Why.** The SimpleWiki template existed only after an operator ran
@@ -12306,6 +12354,58 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 134. System-Wikis sind nicht löschbar
+
+**Warum.** System-Wikis sind die Eigentümer-losen Wikis, deren Bag das
+mitgelieferte `editions/<slug>` ist. Sie gehören zur Installation, nicht zu den
+Inhalten eines Nutzers. Das Löschen ließ das `admin`-Konto bisher jede von ihnen
+entfernen, auch `mws-docs` und das Handbuch. Die Spalte „Erstellt von" zeigte
+zwar „—", doch der Knopf blieb.
+
+**Was.** `PUT /admin/wiki/delete` weist eine Eigentümer-lose Recipe jetzt mit
+`403 ACCESS_DENIED` ab, bevor die Owner-/Admin-Prüfung greift — für alle. Der
+Löschknopf in der Admin-App verschwindet entsprechend: `canDeleteWiki` verlangt
+einen nicht-leeren `ownerUsername` („—" zählt nicht), eine System-Wiki bietet
+den Knopf also nie an.
+
+**Geprüft.** Gegen einen frischen Store: `simplewiki-manual` und `mws-docs` mit
+der `admin`-Sitzung zu löschen antwortete `403 ACCESS_DENIED` und ließ beide
+Wikis stehen; ein unbekannter Slug ergab weiterhin `404 RECIPE_NOT_FOUND`; eine
+nutzereigene Recipe ließ sich weiterhin mit `200 {deleted:true}` löschen und ihr
+Bag wurde mitentfernt. `npm run tsc2`, `npm run build` und das Admin-`tsc` sind
+sauber.
+
+## 133. Das Handbuch ist eine mitgelieferte System-Wiki
+
+**Warum.** Der Fork hatte zwei Handbücher. `editions/bedienungsanleitung` war
+eine TiddlyWiki-Wiki, die `init-store` als System-Wiki lud, und sie war
+veraltet; das Handbuch, das der Fork tatsächlich pflegt, ist das
+SimpleWiki-Handbuch, und das lag nur in einem Dev-Store und musste von Hand
+zusammengeklickt werden. Eine frische Installation hatte kein Handbuch für die
+SimpleWiki-Schale — genau die Schale, die eine neue Wiki zeigt.
+
+**Was.** `editions/simplewiki-manual` liefert das Handbuch jetzt als Wiki-Ausgabe
+mit, erzeugt aus dem Store der laufenden Wiki (86 Tiddler, `eltern`,
+`reihenfolge` und `sw-id` unverändert). `init-store` lädt sie mit dem Template
+`SimpleWiki` und der Lese-Rolle `ANON`, ein frischer Datenordner trägt sie also
+als **Eigentümer-lose System-Wiki** unter `/wiki/simplewiki-manual` — Bag
+`editions/simplewiki-manual`, Schalen-Politik `notify`, schreiben darf nur
+`ADMIN`. Dafür hat der `runner`-Helfer eine `template-name`-Option bekommen.
+`editions/bedienungsanleitung` und ihr Runner sind entfernt, und die
+npm-`files`-Liste tauscht die `tiddlers`/`tiddlywiki.info`-Einträge der alten
+Ausgabe gegen die neue. Der Templates-Tab verlinkt ein Template mit eigener
+HTML-Schale auf `/wiki/simplewiki-manual` (`templateDocsUrl`) statt auf das
+entfernte `/wiki/bedienungsanleitung`.
+
+**Geprüft.** `npm run tsc2` und `npm run build` sind sauber. Ein frischer
+Datenordner (`init-store` gegen einen leeren Store) trug `simplewiki-manual` mit
+`owner_user_id` null, Template `SimpleWiki`, Bag `editions/simplewiki-manual`,
+`B_write` für `ADMIN` und `A_read` für `ANON`, und alle 86 Tiddler mit
+`eltern`/`reihenfolge`/`sw-id` unverändert. Ein Server aus diesem Store
+beantwortete `/wiki/simplewiki-manual` mit `200`, die SimpleWiki-Schale mit
+eingesetztem Store, und `/recipe/simplewiki-manual/store.json` mit 84 Seiten, 46
+mit `Deutsch` und 38 mit `American` getaggt.
 
 ## 132. Ein frischer Store bringt das SimpleWiki-Template mit
 

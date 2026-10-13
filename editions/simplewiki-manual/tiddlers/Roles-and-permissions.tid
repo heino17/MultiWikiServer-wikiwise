@@ -1,0 +1,27 @@
+title: Roles and permissions
+created: 20261012193225900
+modified: 20261012204443760
+tags: [[American]]
+eltern: 🇺🇸 Overview
+reihenfolge: 0064
+sw-id: 1791833545930
+
+Every person has **roles**, and every role has rights on wikis:
+
+* **Read** — open and view the wiki.
+* **Write** — change content and upload files.
+* **Manage** — e.g. invite others, rename, delete.
+
+The wiki owner decides who may see and edit the wiki \(see \[\[Inviting someone\]\]\)\. Wikis created from a \[\[template\|Templates\]\] inherit its default rights\.
+
+Technically the grants are rows in the access list (ACL) of a bag or recipe:
+
+* `A_read` — read, `B_write` — write, `C_admin` — manage.
+* `ADMIN`, `USER` and `ANON` are **system roles**: they cannot be deleted and only the site admin may change them.
+* **Owner protection:** whoever created a wiki, bag, template, role or account keeps control — only the creator or `admin` may edit or delete. Nobody can give themselves rights over the API.
+
+Technically the grants are rows in the access list (ACL) of a bag or recipe:
+
+* `A_read` — read, `B_write` — write, `C_admin` — manage.
+* `ADMIN`, `USER` and `ANON` are **system roles**: they cannot be deleted and only the site admin may change them.
+* **Owner protection:** whoever created a wiki, bag, template, role or account keeps control — only the creator or `admin` may edit or delete. Nobody can give themselves rights over the API.
