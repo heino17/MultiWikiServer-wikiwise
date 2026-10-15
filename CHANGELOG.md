@@ -5196,6 +5196,27 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 135. A helper script to reload the manual into the store
+
+**Why.** The manual is a shipped system wiki whose content lives in
+`editions/simplewiki-manual`; `init-store` loads it only on a fresh store, and
+reloading an existing store means the full `load-wiki-folder` call with all its
+options. Typing that by hand is error-prone, and the obvious shortcut does not
+work: `npm start load-wiki-folder …` loses the `--options` (npm swallows them),
+and `scripts.mjs` passes the arguments through a shell without quoting, so the
+spaces and parentheses in the manual's description split the call.
+
+**What.** `update-simplewiki-manual.sh` in the repository root runs the same
+call `init-store` makes for the manual, with `--overwrite` so an existing bag is
+replaced instead of refused. It resolves its own directory, works from any
+working directory, and calls `mws.dev.mjs` directly — after the same `tsup` step
+`npm start` uses — so the arguments arrive intact.
+
+**Verified.** Ran against the dev store: `load-wiki-folder complete`, the
+manual's bag kept its 86 tiddlers, its `notify` shell policy and its pinned
+release untouched. The dev server has to be stopped first, because the store is
+a single SQLite file.
+
 ## 134. System wikis cannot be deleted
 
 **Why.** System wikis are the ownerless wikis whose bag is the shipped
@@ -12354,6 +12375,29 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 135. Ein Helfer-Skript lädt das Handbuch in den Store
+
+**Warum.** Das Handbuch ist eine mitgelieferte System-Wiki, deren Inhalt in
+`editions/simplewiki-manual` liegt; `init-store` lädt sie nur in einen frischen
+Store, und ein bestehender Store braucht den vollen `load-wiki-folder`-Aufruf
+mit allen Optionen. Den von Hand zu tippen ist fehleranfällig, und die
+naheliegende Abkürzung funktioniert nicht: `npm start load-wiki-folder …`
+verliert die `--Optionen` (npm schluckt sie), und `scripts.mjs` reicht die
+Argumente über eine Shell ohne Anführungszeichen weiter, sodass die Leerzeichen
+und Klammern in der Beschreibung des Handbuchs den Aufruf zerlegen.
+
+**Was.** `update-simplewiki-manual.sh` im Repo-Wurzelverzeichnis ruft denselben
+Aufruf auf, den `init-store` für das Handbuch macht, mit `--overwrite`, damit
+eine vorhandene Bag ersetzt statt abgelehnt wird. Es löst sein eigenes
+Verzeichnis auf, arbeitet aus jedem Arbeitsverzeichnis und ruft `mws.dev.mjs`
+direkt auf — nach demselben `tsup`-Schritt, den `npm start` benutzt —, damit
+die Argumente unversehrt ankommen.
+
+**Geprüft.** Gegen den Dev-Store gelaufen: `load-wiki-folder complete`, die Bag
+des Handbuchs behielt ihre 86 Tiddler, ihre `notify`-Shell-Policy und ihr
+gepinntes Release unangetastet. Der Dev-Server muss vorher gestoppt sein, weil
+der Store eine einzelne SQLite-Datei ist.
 
 ## 134. System-Wikis sind nicht löschbar
 
