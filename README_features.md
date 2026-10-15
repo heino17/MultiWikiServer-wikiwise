@@ -58,8 +58,11 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
   `/wiki/<slug>/` von MWS selbst ausgeliefert: Seiten statt Tiddler, kein
   Wiki-Markup, und jede Änderung wird sofort nach MWS geschrieben, ganz ohne
   Speichern-Knopf. Das Template `SimpleWiki` legt
-  `npm start init-store` bei einer frischen Installation selbst an, und ein
-  vorhandenes aktualisiert `npm start provision-simplewiki <simplewiki.html>`;
+  `npm start init-store` bei einer frischen Installation selbst an. Ein neueres
+  mitgeliefertes SimpleWiki erreicht einen bestehenden Store beim nächsten
+  Serverstart von selbst (nur vorwärts, anhand der `mws-shell-version`); von Hand
+  geht es mit `npm start update-simplewiki`, eine eigene Schale weiterhin mit
+  `npm start provision-simplewiki <simplewiki.html>`;
   fehlt es oder trägt es kein eigenes HTML, steht der Eintrag nicht im Menü. Sobald das Template
   eingerichtet ist, erscheint der Eintrag für **jeden Account, der eigene
   Wikis anlegen darf** — er setzt keine zusätzliche Freigabe voraus, auch
@@ -83,8 +86,12 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
   `notify` bleibt auf dem aktuellen und fragt vor dem Weitergleiten, `pin`
   bleibt auf einem Release stehen. **Neue Wikis beginnen mit `notify`**, damit
   ein Release nie unangekündigt landet. Eine **einzige**
+    **Neue Wikis beginnen mit `notify`**, damit
+  ein Release nie unangekündigt landet. Eine **einzige**
   `provision-simplewiki <simplewiki.html>`-Ausführung erreicht danach alle
-  Wikis des Templates — nichts ist zu migrieren. Unter `notify` mit neuerem
+  Wikis des Templates — nichts ist zu migrieren. Denselben Hebel benutzt der
+  Serverstart: Ist die mitgelieferte `simplewiki.html` neuer, legt der Start das
+  Release selbst an (`update-simplewiki` erzwingt es von Hand). Unter `notify` mit neuerem
   Release zeigt eine TiddlyWiki-Hülle der **Besitzerin und den Admins** einen
   Hinweis mit dem Versionsnamen und einem **„Update“**-Knopf
   (`PUT /recipe/<slug>/shell/update`); die Politik bleibt dabei, wie sie ist
@@ -260,8 +267,10 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
   served by MWS itself under `/wiki/<slug>/`: pages instead of tiddlers, no wiki
   markup, and every change is written to MWS on the spot, with no save button
   anywhere. A fresh installation creates the
-  template in `npm start init-store`, and an existing one is updated with
-  `npm start provision-simplewiki <simplewiki.html>`; without the template, or
+  template in `npm start init-store`. A newer bundled SimpleWiki reaches an
+  existing store by itself on the next server start (forward only, by the
+  `mws-shell-version`); by hand with `npm start update-simplewiki`, and a custom
+  shell still with `npm start provision-simplewiki <simplewiki.html>`; without the template, or
   without custom HTML on it, the entry stays out of the menu. Once the template is in place, the entry shows
   for **every account that may create own wikis** — it needs no extra grant
   and no roles, not even for learners (see §109 of the CHANGELOG). A wiki
@@ -283,7 +292,9 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
   on the current one and asks before moving on, `pin` stays on one release.
   **New wikis start with `notify`**, so a release never lands unannounced. A
   **single** `provision-simplewiki <simplewiki.html>` run after that reaches
-  every wiki of the template — nothing to migrate. Under `notify` with a newer
+  every wiki of the template — nothing to migrate. A server start does the same
+  by itself: when the bundled `simplewiki.html` is newer, the start creates the
+  release (`update-simplewiki` forces it by hand). Under `notify` with a newer
   release, a TiddlyWiki shell tells **the owner and the admins** with a banner
   carrying the version name and an **"Update"** button
   (`PUT /recipe/<slug>/shell/update`); the policy stays as it is (pin stays

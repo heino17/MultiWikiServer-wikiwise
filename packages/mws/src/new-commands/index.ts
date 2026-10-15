@@ -11,6 +11,7 @@ import { RenamePersonalRolesCommand } from "./rename-personal-roles";
 import { RestoreWikiSnapshotCommand } from "./restore-wiki-snapshot";
 import { TestArgsCommand } from "./test-args";
 import { TestsCompleteCommand } from "./tests-complete";
+import { UpdateSimpleWikiCommand } from "./update-simplewiki";
 import { UpdateTiddlyWikiCommand } from "./update-tiddlywiki";
 
 /**
@@ -42,6 +43,7 @@ export const COMMANDS = {
   "restore-wiki-snapshot": RestoreWikiSnapshotCommand,
   "test-args": TestArgsCommand,
   done: TestsCompleteCommand,
+  "update-simplewiki": UpdateSimpleWikiCommand,
   "update-tiddlywiki": UpdateTiddlyWikiCommand,
 } satisfies Record<string, CommandClass>;
 
@@ -62,4 +64,5 @@ export * from "./rename-personal-roles";
 export * from "./restore-wiki-snapshot";
 export * from "./test-args";
 export * from "./tests-complete";
+export * from "./update-simplewiki";
 export * from "./update-tiddlywiki";

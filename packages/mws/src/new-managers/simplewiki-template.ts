@@ -8,9 +8,10 @@
 // The shell is a build artifact of the SimpleWiki project. The fork ships one
 // copy under `templates/simplewiki.html`; see AGENTS.md for refreshing it.
 
-import { readFileSync } from "fs";
+import { dist_resolve } from "@tiddlywiki/server";
+import { existsSync, readFileSync } from "fs";
 import { defaultPreloadFunction } from "../plugin-cache";
-import { createTemplateRelease } from "./template-releases";
+import { createTemplateRelease, extractShellLabel } from "./template-releases";
 import { SIMPLEWIKI_TEMPLATE } from "./TabUpserts";
 
 export { SIMPLEWIKI_TEMPLATE };
@@ -154,6 +155,10 @@ export type SimpleWikiUpsertOptions = {
 	/** Leave an existing template untouched instead of updating it. `init-store`
 	 *  seeds with this so a hand-updated shell survives a repeated init. */
 	ifAbsentOnly?: boolean;
+	/** Keep the permissions an existing template already carries instead of
+	 *  resetting them to the default teacher roles. The start-time shell sync
+	 *  uses this so a role choice an admin made in the admin app survives. */
+	preservePermissions?: boolean;
 };
 
 /**
@@ -200,10 +205,15 @@ export async function upsertSimpleWikiTemplate(
 		];
 
 		if (existing) {
-			await prisma.templatePermission.deleteMany({ where: { template_id: existing.id } });
+			if (!options.preservePermissions) {
+				await prisma.templatePermission.deleteMany({ where: { template_id: existing.id } });
+			}
 			await prisma.template.update({
 				where: { name: templateName },
-				data: { definition: definition as any, permissions: { create: permissions } },
+				data: {
+					definition: definition as any,
+					...(options.preservePermissions ? {} : { permissions: { create: permissions } }),
+				},
 			});
 			// A provision is a template write like an admin save: it gets a
 			// new immutable release, so pin/notify wikis see the update and
@@ -224,4 +234,123 @@ export async function upsertSimpleWikiTemplate(
 		await createTemplateRelease(prisma, { id: created.id, definition: definition as any });
 		return { action: "created" as const, id: created.id, mayUse: userRoles.map(role => role.role_name) };
 	});
+}
+
+/** The `simplewiki.html` this build ships, or null when the build has none.
+ *
+ *  `dist_resolve("..")` is the root of the installed package (`dist/mws.js`),
+ *  so this is `node_modules/@mws/wikiwise/templates/simplewiki.html` in an
+ *  installed data folder. The same path `init-store` seeds from. */
+export function bundledSimpleWikiShellPath(): string | null {
+	const shellPath = dist_resolve("../templates/simplewiki.html");
+	return existsSync(shellPath) ? shellPath : null;
+}
+
+/** Parses a shell label like `v0.1.46` into numeric segments, or null when a
+ *  segment is not a number (a date, a name). A missing segment counts as 0,
+ *  so `v0.1` is below `v0.1.1`. */
+function parseShellLabel(label: string): number[] | null {
+	const parts = label.trim().replace(/^v/i, "").split(/[.\-+_]/);
+	const nums: number[] = [];
+	for (const part of parts) {
+		const match = /^(\d+)/.exec(part);
+		if (!match) return null;
+		nums.push(parseInt(match[1], 10));
+	}
+	return nums.length ? nums : null;
+}
+
+/** Orders two shell labels, or returns null when they cannot be compared
+ *  (either missing, or not numeric). The start-time sync only moves forward on
+ *  a strict `> 0`; anything else leaves the store's shell alone. */
+export function compareShellLabels(a: string | null, b: string | null): number | null {
+	if (!a || !b) return null;
+	const left = parseShellLabel(a);
+	const right = parseShellLabel(b);
+	if (!left || !right) return null;
+	const length = Math.max(left.length, right.length);
+	for (let i = 0; i < length; i++) {
+		const x = left[i] ?? 0;
+		const y = right[i] ?? 0;
+		if (x !== y) return x < y ? -1 : 1;
+	}
+	return 0;
+}
+
+export type SimpleWikiSyncResult = {
+	/** created: the store had no template; updated: a newer shell landed;
+	 *  current: already up to date; skipped: nothing to apply. */
+	action: "created" | "updated" | "current" | "skipped";
+	/** shell label the store served before (null when it had none) */
+	fromLabel?: string | null;
+	/** shell label of the bundled shell (null when it declares none) */
+	toLabel?: string | null;
+	/** release number after the sync, when the store has a template */
+	release?: number | null;
+	/** why it was skipped */
+	reason?: string;
+};
+
+/** Brings the shell this build ships to the store's SimpleWiki template.
+ *
+ *  `forward` (the start-time default) only moves when the bundled shell
+ *  declares a strictly newer `mws-shell-version` than the store's newest
+ *  release. That is what keeps a hand-edited template of an equal or newer
+ *  label from being rolled back, and it makes a start with nothing to do a
+ *  read-only no-op. `force` (the explicit `update-simplewiki` command) applies
+ *  whatever the build ships, so an operator can also move back or to a shell
+ *  whose label cannot be ordered.
+ *
+ *  Either way the write goes through `upsertSimpleWikiTemplate`, so it mints a
+ *  release only when the shell really differs and keeps the template's existing
+ *  permissions. Wikis with policy `notify` then see the update hint; `auto`
+ *  wikis follow. */
+export async function syncBundledSimpleWikiTemplate(
+	engine: PrismaEngineClient,
+	mode: "forward" | "force" = "forward",
+): Promise<SimpleWikiSyncResult> {
+	const shellPath = bundledSimpleWikiShellPath();
+	if (!shellPath) return { action: "skipped", reason: "this build ships no templates/simplewiki.html" };
+
+	const { html } = readSimpleWikiShell(shellPath);
+	const bundledLabel = extractShellLabel(html);
+
+	const existing = await engine.template.findUnique({
+		where: { name: SIMPLEWIKI_TEMPLATE },
+		select: { id: true },
+	});
+
+	if (!existing) {
+		await upsertSimpleWikiTemplate(engine, html);
+		return { action: "created", toLabel: bundledLabel, release: null, fromLabel: null };
+	}
+
+	const latest = await engine.templateVersion.findFirst({
+		where: { template_id: existing.id },
+		orderBy: { release: "desc" },
+		select: { release: true, label: true },
+	});
+	const fromLabel = latest?.label ?? null;
+	const before = latest?.release ?? 0;
+
+	if (mode === "forward") {
+		const order = compareShellLabels(bundledLabel, fromLabel);
+		if (order === null || order <= 0) {
+			return { action: "current", fromLabel, toLabel: bundledLabel, release: before || null };
+		}
+	}
+
+	await upsertSimpleWikiTemplate(engine, html, { preservePermissions: true });
+	const after = await engine.templateVersion.findFirst({
+		where: { template_id: existing.id },
+		orderBy: { release: "desc" },
+		select: { release: true },
+	});
+	const release = after?.release ?? before;
+	return {
+		action: after && after.release > before ? "updated" : "current",
+		fromLabel,
+		toLabel: bundledLabel,
+		release: release || null,
+	};
 }

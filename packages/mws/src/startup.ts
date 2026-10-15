@@ -13,6 +13,7 @@ import { ServerState } from "./ServerState";
 import { SqliteAdapter } from "./db/sqlite-adapter";
 import { UpdateTiddlyWikiCommand } from "./new-commands";
 import { SessionManager } from "./new-managers/sessions";
+import { syncBundledSimpleWikiTemplate } from "./new-managers/simplewiki-template";
 import { bootDefaultTiddlyWiki, defaultPreloadFunction, startupCache } from "./plugin-cache";
 import { PluginCache } from "./plugin-cache/PluginCache";
 import { createPasswordService } from "./services/PasswordService";
@@ -151,6 +152,21 @@ serverEvents.on("listen.router.init", async (listen, router) => {
   }));
 
   await router.config.engine.roles.findMany({})
+
+  // A newer build ships a newer SimpleWiki shell; bring it to the store so the
+  // update is not stranded in node_modules until someone runs a command. Only
+  // forward (the bundled shell has to declare a strictly newer
+  // `mws-shell-version`), so a hand-edited template survives, and a start with
+  // nothing to do only reads. A bad shell must not keep the server from
+  // starting, so a failure here is a note, not a crash.
+  try {
+    const sync = await syncBundledSimpleWikiTemplate(router.config.engine);
+    if (sync.action === "created" || sync.action === "updated") {
+      console.log(`SimpleWiki template ${sync.action} from the bundled shell (${sync.fromLabel ?? "new"} -> ${sync.toLabel ?? "no label"}).`);
+    }
+  } catch (err) {
+    console.log("SimpleWiki template sync skipped:", err instanceof Error ? err.message : err);
+  }
 
   await serverEvents.emitAsync("mws.router.init", router);
 

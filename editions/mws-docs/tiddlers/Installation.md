@@ -39,6 +39,7 @@ To update your copy of MWS in the future with newer changes will require re-down
 - Make a backup: Copy or zip your project folder to a safe backup folder.  <<.copy-code-to-clipboard """tar -cf archive.tar "new_folder_name" """>>
 - Get the latest version. In the clone, `git pull` and `npm install` rebuild the server bundle; afterwards install the new package into your data folder as described above. <<.copy-code-to-clipboard """git pull && npm install && npm pack """>>
 - Run MWS. On startup, MWS checks the database schema and updates it automatically if there are changes. Normally this works just fine, but it can fail, which is why it's important to save a backup first. 
+- The SimpleWiki shell the build ships reaches the store on the next server start, when its `mws-shell-version` is newer than the store's; the wikis adopt it through their shell policy. To apply it by hand, run `npx mws update-simplewiki`.
 
 ### Git repo
 

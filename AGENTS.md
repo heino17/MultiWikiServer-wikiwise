@@ -55,7 +55,7 @@ orgs or accounts. `create-package/README.md` records why.
   a tag is English only; the bilingual contract above covers `CHANGELOG.md` and
   the `README*.md` files, not the release notes.
 - **The CHANGELOG is the development story.** Every user-visible change gets a
-  new numbered section (`§131` is next), newest first, with the same number in
+  new numbered section (`§138` is next), newest first, with the same number in
   both language halves. Inline code, identifiers, file names and command lines
   stay literally identical across halves; prose is wrapped at about 80 columns.
 - **Do not weaken the security invariants** (`ARCHITECTURE.md`,
@@ -79,7 +79,7 @@ orgs or accounts. `create-package/README.md` records why.
 |---|---|---|
 | Install | `npm install` | Also runs `prepare` → `build:pack`, so the first install builds everything. `npm run install-android` for Android/NDK. |
 | Develop (watch) | `npm start` | tsup in watch mode, then `mws.dev.mjs`; dev wiki on <http://localhost:8080/>, data folder `dev/wiki`, listeners and TLS in `mws.dev.mjs`. |
-| One-off CLI task | `npm start init-store`, `npm start update-tiddlywiki`, … | Everything after `start` is passed to the MWS CLI. |
+| One-off CLI task | `npm start init-store`, `npm start update-tiddlywiki`, `npm start update-simplewiki`, … | Everything after `start` is passed to the MWS CLI. `update-simplewiki` applies the bundled SimpleWiki shell to the store (a server start already does this forward-only). |
 | Documentation site | `npm run docs` | `npm start` plus the docs route. |
 | Production build | `npm run build` | Client bundle, then the runtime bundle into `dist/`. |
 | Typecheck server | `npm run tsc2` | `tsc --noEmit`. The root script `npm run tsc` is a tsup variant, not the typechecker. |

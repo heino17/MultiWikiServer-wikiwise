@@ -5269,6 +5269,40 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 137. A server start carries the SimpleWiki shell forward
+
+**Why.** MWS ships a `simplewiki.html`, and a fresh store gets the SimpleWiki
+template from it (§132). For an existing store, an update was a dead end:
+installing a newer tarball replaces the server code under
+`node_modules/@mws/wikiwise`, but nothing touches the template already in the
+store. The old shell stayed, and with it every wiki built from it, until an
+operator found a `simplewiki.html` and ran `provision-simplewiki` by hand —
+which the release notes never asked for.
+
+**What.** Two ways to bring the bundled shell to the store, both reusing the
+provisioning code:
+
+- On server start, `listen` now compares the shell this build ships with the
+  store's newest SimpleWiki release. It carries the bundled shell forward only
+  when that shell declares a strictly newer `mws-shell-version` than the store
+  has. A start with nothing to do is a read-only no-op, and an equal or newer
+  label in the store is left alone, so a hand-edited template is not rolled
+  back. The write goes through the admin-save path, so the template keeps its
+  permissions and mints a release only when the shell really differs; `notify`
+  wikis then show their owner the update hint, `auto` wikis follow.
+- `update-simplewiki` is the explicit command. It applies whatever the build
+  ships, also backwards or to a shell whose label cannot be ordered, and
+  reports the version move and the new release number.
+
+**Verified.** `npm run tsc2` and `npm run build` are clean. In the dev store:
+after a fresh `init-store` (v0.1.46), a start logged nothing and
+`npm start update-simplewiki` said "already serves the bundled shell (v0.1.46);
+nothing changed". A `provision-simplewiki` of a v0.1.45 shell with a start
+logged "SimpleWiki template updated from the bundled shell (v0.1.45 ->
+v0.1.46)", and a second start logged nothing — the sync is idempotent. A
+v0.1.99 shell in the store was left alone on start (no downgrade), and
+`update-simplewiki` brought it back to v0.1.46 (release 5).
+
 ## 136. The manual's description names SimpleWiki
 
 **Why.** The manual shows itself in the wiki list and in the admin with the
@@ -12541,6 +12575,42 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 137. Ein Serverstart trägt die SimpleWiki-Schale nach vorn
+
+**Warum.** MWS liefert eine `simplewiki.html` mit, und ein frischer Store bekommt
+daraus das SimpleWiki-Template (§132). Für einen bestehenden Store war ein
+Update eine Sackgasse: Ein neueres Tarball zu installieren ersetzt den
+Server-Code unter `node_modules/@mws/wikiwise`, aber nichts rührt das Template
+an, das schon im Store liegt. Die alte Schale blieb, und mit ihr jede daraus
+gebaute Wiki, bis jemand eine `simplewiki.html` fand und `provision-simplewiki`
+von Hand laufen ließ — wozu die Release-Notes nie aufgefordert hatten.
+
+**Was.** Zwei Wege, die mitgelieferte Schale in den Store zu bringen, beide
+über den Provisioning-Code:
+
+- Beim Serverstart vergleicht `listen` jetzt die Schale, die dieser Build
+  mitliefert, mit dem neuesten SimpleWiki-Release des Stores. Er trägt die
+  mitgelieferte Schale nur dann nach vorn, wenn sie eine strikt neuere
+  `mws-shell-version` deklariert als der Store hat. Ein Start ohne etwas zu tun
+  ist ein reiner Lesevorgang, und ein gleiches oder neueres Label im Store
+  bleibt unangetastet, damit ein von Hand bearbeitetes Template nicht
+  zurückgerollt wird. Der Schreibvorgang läuft über den Admin-Speicherpfad,
+  also behält das Template seine Rechte und legt nur dann ein Release an, wenn
+  sich die Schale wirklich unterscheidet; `notify`-Wikis zeigen ihrer
+  Besitzerin danach den Update-Hinweis, `auto`-Wikis ziehen nach.
+- `update-simplewiki` ist der ausdrückliche Befehl. Er wendet an, was der Build
+  mitliefert, auch rückwärts oder auf eine Schale, deren Label sich nicht
+  ordnen lässt, und meldet den Versionssprung und die neue Release-Nummer.
+
+**Geprüft.** `npm run tsc2` und `npm run build` sind sauber. Im Dev-Store: nach
+einem frischen `init-store` (v0.1.46) loggte ein Start nichts, und
+`npm start update-simplewiki` sagte „already serves the bundled shell (v0.1.46);
+nothing changed". Ein `provision-simplewiki` einer v0.1.45-Schale mit
+anschließendem Start loggte „SimpleWiki template updated from the bundled shell
+(v0.1.45 -> v0.1.46)", und ein zweiter Start loggte nichts — der Abgleich ist
+idempotent. Eine v0.1.99-Schale im Store blieb beim Start unangetastet (kein
+Downgrade), und `update-simplewiki` holte sie zurück auf v0.1.46 (Release 5).
 
 ## 136. Die Beschreibung des Handbuchs nennt SimpleWiki
 
