@@ -525,6 +525,28 @@ A small follow-up in the 0.6 line: a fresh installation now brings the
 
 ---
 
+## Release 0.7.1 — 2026-10-15
+
+2 commits since 0.7.0, 9 files, +594/−66.
+
+A patch release with no server change: the bundled SimpleWiki shell moves
+forward, and the manual introduces itself under the right name.
+
+**Changed**
+
+- **The bundled SimpleWiki shell is refreshed** from `v0.1.43` to `v0.1.46`.
+  New installs and a fresh `init-store` thus get the title that can be renamed
+  in the header, the per-document draft that keeps two files apart, and the
+  storage-location wording in all four export banners. An existing template is
+  brought forward with `provision-simplewiki` (see §132 for the route).
+- **The manual describes itself as `SimpleWiki-Bedienungsanleitung`** (§136).
+  The loading call no longer names the server the manual runs on.
+
+**Operating notes**
+
+- No migration, no new dependency, no server code touched. On an existing store,
+  `update-simplewiki-manual.sh` reloads the manual's description.
+
 ## Release 0.7.0 — 2026-10-15
 
 3 commits since 0.6.1, 149 files, +3103/−4195.
@@ -7662,6 +7684,30 @@ dass `npm update` MWS aktualisiert (§131).
   stehen.
 
 ---
+
+## Release 0.7.1 — 2026-10-15
+
+2 Commits seit 0.7.0, 9 Dateien, +594/−66.
+
+Eine Fehlerbehebungsfassung ohne Server-Änderung: Die mitgelieferte
+SimpleWiki-Schale fährt vor, und das Handbuch stellt sich unter dem richtigen
+Namen vor.
+
+**Geändert**
+
+- **Die mitgelieferte SimpleWiki-Schale ist aufgefrischt** von `v0.1.43` auf
+  `v0.1.46`. Neue Installationen und ein frischer `init-store` bekommen damit den
+  im Kopf umbenennbaren Wiki-Namen, den Entwurf je Dokument, der zwei Dateien
+  auseinanderhält, und den Speicherort-Hinweis in allen vier Export-Bannern. Ein
+  bestehendes Template führt man mit `provision-simplewiki` nach (§132).
+- **Das Handbuch beschreibt sich als `SimpleWiki-Bedienungsanleitung`** (§136).
+  Der Lade-Aufruf nennt nicht länger den Server, auf dem das Handbuch läuft.
+
+**Betriebshinweise**
+
+- Keine Migration, keine neue Dependency, kein Server-Code berührt. In einem
+  bestehenden Store schreibt `update-simplewiki-manual.sh` die Beschreibung des
+  Handbuchs nach.
 
 ## Release 0.7.0 — 2026-10-15
 

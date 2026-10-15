@@ -2,7 +2,10 @@
 <html lang="de"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="mws-shell-version" content="v0.1.43">
+    <meta name="mws-shell-version" content="v0.1.46">
+    <meta name="simplewiki-doc-id" content="">
+    <meta name="simplewiki-exported" content="">
+    <meta name="simplewiki-title" content="">
     <title>SimpleWiki</title>
 
     <!--
@@ -70,6 +73,35 @@
           Eine Datei ohne Seiten wird nicht eingelesen – sie würde eine
           vorhandene Wiki ersetzen. Die leere Vorlage ist zum Füllen da, nicht
           zum Laden.
+
+        Kennung, Zeitpunkt und Titel (nicht Teil dieses Blocks, sondern des
+        Kopfes)
+          Beim Sichern schreibt "Als Datei sichern" drei <meta>-Angaben in
+          den Kopf der Datei, neben mws-shell-version:
+
+            simplewiki-doc-id     die Kennung des Dokuments. Sie bleibt
+                                  beim Speichern dieselbe, damit eine Datei
+                                  ihren eigenen Entwurf im Browserspeicher
+                                  wiederfindet.
+            simplewiki-exported   der Zeitpunkt der Sicherung (ISO-8601).
+                                  "Was neuer ist, gewinnt": Ist die Datei
+                                  juenger als der Entwurf im Browser, gilt
+                                  die Datei; bei Gleichstand ebenfalls.
+            simplewiki-title      der eigene Wiki-Name, den die Person oben
+                                  im Kopf vergibt. Leer heisst: es bleibt
+                                  beim festen Namen. Er steht im Kopf, weil
+                                  er zur Datei gehoert und nicht zu den
+                                  Seiten - dieselbe Datei soll ueberall
+                                  denselben Namen tragen.
+
+          Alle drei stehen bewusst hier und nicht im Datenblock: der
+          Vertrag unten bleibt damit unveraendert, und eine fremde
+          Anwendung darf die Angaben setzen oder weglassen. Fehlen sie,
+          verhaelt sich die Datei wie vorher, und der Fingerabdruck ihres
+          Datenblocks entscheidet. Der rohe Bauplan traegt sie leer;
+          "Leeres Wiki exportieren" vergibt eine frische Kennung und laesst
+          den Titel leer, damit die leere Vorlage weder den Entwurf noch
+          den Namen der erzeugenden Person erbt.
 
         =========================================================================
     -->
@@ -803,6 +835,34 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                die Rueckfallkette steht in der eigenen Farbwelt bereit. */
             color: var(--h1-color, var(--text-primary));
             white-space: nowrap;
+        }
+
+        /* Der Name ist unter file:// anklickbar: der Cursor und ein leiser
+           Strich beim Ueberfahren sagen es. Im Serverbetrieb fehlt die
+           Klasse - dort bleibt der Name Text. */
+        .header h1.kopf-titel-editierbar {
+            cursor: text;
+        }
+
+        .header h1.kopf-titel-editierbar:hover {
+            text-decoration: underline dotted;
+            text-underline-offset: 3px;
+        }
+
+        /* Das Eingabefeld anstelle des Namens sieht aus wie die
+           Ueberschrift, damit an derselben Stelle nichts springt. */
+        .header .kopf-titel-feld {
+            font-family: inherit;
+            font-size: 1.3rem;
+            font-weight: bold;
+            line-height: 1.15;
+            color: var(--h1-color, var(--text-primary));
+            background: var(--bg-hover);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 1px 6px;
+            min-width: 10ch;
+            max-width: 60vw;
         }
 
         /* Der Titelblock: der Name oben, darunter der Untertitel aus
@@ -3216,7 +3276,18 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
         <div class="app" :class="{ zen: zenModus }">
             <header class="header">
                 <div class="kopf-titel">
-                    <h1>📚 {{ wikiTitel || t('appName') }}</h1>
+                    <!-- Unter file:// ist der Name anklickbar: er wird zum
+                         Eingabefeld, Enter uebernimmt, Escape verwirft.
+                         Im Serverbetrieb kommt er aus $:/SiteTitle und ist
+                         kein Gegenstand dieser Oberflaeche. -->
+                    <input v-if="titelBearbeiten" ref="titelFeld" class="kopf-titel-feld"
+                           v-model="titelEntwurf" :aria-label="t('titelHint')"
+                           @keydown.enter.prevent="titelSichern"
+                           @keydown.esc.prevent="titelAbbrechen"
+                           @blur="titelSichern">
+                    <h1 v-else :class="{ 'kopf-titel-editierbar': !mwsModus }"
+                        :title="!mwsModus ? t('titelHint') : ''"
+                        @click="titelStarten">📚 {{ kopfTitel() }}</h1>
                     <p v-if="wikiUntertitel" class="kopf-untertitel">{{ wikiUntertitel }}</p>
                 </div>
                 <!-- Suche. Das Feld steht im Kopf, und die Treffer kommen
@@ -3774,7 +3845,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                  Hinweis. Die Version fuehrt zum Autor. -->
             <div class="settings-fuss">
                 <div class="kopf-titel">
-                    <span class="fuss-titel">📚 {{ wikiTitel || t('appName') }}</span>
+                    <span class="fuss-titel">📚 {{ kopfTitel() }}</span>
                     <span v-if="wikiUntertitel" class="fuss-untertitel">{{ wikiUntertitel }}</span>
                 </div>
                 <a class="fuss-version" :href="autorUrl" target="_blank" rel="noopener">{{ shellVersion }}</a>
@@ -3882,12 +3953,12 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                                                                                 "dataSectionHint": "Eine JSON-Datei eines anderen Werkzeugs laden und mit „Als Datei sichern“ als Wiki-Datei weitergeben. Der Weg zurück ist derselbe: Eine Wiki-Datei bringt ihre Daten in der Dateninsel mit.",
                     "fileSaveLeer": "Leeres Wiki exportieren",
                     "fileSaveLeerHint": "Eine wiki-Datei mit leerer Dateninsel – als Vorlage für ein anderes Programm, das die Dateninsel füllen und fertige Wiki-Dateien ausgeben will.",
-                    "noticeLeerSaved": "Leere Wiki-Datei gesichert: simplewiki-leer.html",
+                    "noticeLeerSaved": "Bitte Speicherort bestimmen. Erscheint der Speichern-Dialog nicht, liegt simplewiki-leer.html jetzt wahrscheinlich in Deinem Download-Ordner.",
 "dataSection": "Wiki-Daten",
                     "fileSave": "Als Datei sichern",
                                         "fileSaveJson": "JSON exportieren",
                     "fileSaveJsonHint": "Schreibt nur die Daten als JSON – gleicher Aufbau wie beim Laden, ohne HTML-Hülle. Gedacht für Werkzeuge, die keine HTML-Datei bauen können.",
-                    "noticeJsonSaved": "JSON gesichert: {name}",
+                    "noticeJsonSaved": "Bitte Speicherort bestimmen. Erscheint der Speichern-Dialog nicht, liegt die JSON-Datei {name} jetzt wahrscheinlich in Deinem Download-Ordner.",
                     "noticeNoPages": "Die Datei enthält keine Seiten – es wurde nichts ersetzt.",
                     "noticeVersionFehlt": "Die Datei nennt keine Formatversion und wurde nicht gelesen – so geht keine Information verloren.",
                     "noticeVersionUngueltig": "Die Datei nennt die Version „{version}“. Erlaubt ist eine Zahl ab 1.",
@@ -3959,6 +4030,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "welcomeText": "Erstelle deine erste Seite oder wähle eine bestehende aus.",
                     "titlePlaceholder": "Seitentitel...",
                     "contentPlaceholder": "Schreibe hier... (Markdown wird unterstützt)",
+                    "titelHint": "Titel ändern – klicken und tippen",
                     "untitled": "Neue Seite",
                     "language": "Sprache",
                     "palette": "Farbwelt",
@@ -4080,12 +4152,12 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                                                                                 "dataSectionHint": "Load a JSON file from another tool and pass it on as a wiki file with \u201eSave as file\u201c. The way back is the same: a wiki file carries its data along in the data island.",
                     "fileSaveLeer": "Export empty wiki",
                     "fileSaveLeerHint": "A wiki file with an empty data island – a template for another program that wants to fill the island and output finished wiki files.",
-                    "noticeLeerSaved": "Empty wiki file saved: simplewiki-leer.html",
+                    "noticeLeerSaved": "Please choose where to save. If no save dialog appears, simplewiki-leer.html is now probably in your Downloads folder.",
 "dataSection": "Wiki data",
                     "fileSave": "Save as file",
                                         "fileSaveJson": "Export JSON",
                     "fileSaveJsonHint": "Writes only the data as JSON – same structure as on import, without an HTML wrapper. Meant for tools that cannot build an HTML file.",
-                    "noticeJsonSaved": "JSON saved: {name}",
+                    "noticeJsonSaved": "Please choose where to save. If no save dialog appears, the JSON file {name} is now probably in your Downloads folder.",
                     "noticeNoPages": "The file contains no pages – nothing was replaced.",
                     "noticeVersionFehlt": "The file names no format version and was not read – so no information is lost.",
                     "noticeVersionUngueltig": "The file names version \u201e{version}\u201c. A number from 1 upwards is allowed.",
@@ -4232,6 +4304,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "welcomeText": "Create your first page or select an existing one.",
                     "titlePlaceholder": "Page title...",
                     "contentPlaceholder": "Write here... (Markdown is supported)",
+                    "titelHint": "Change title – click and type",
                     "untitled": "New Page",
                     "nurLesen": "This wiki cannot be written to. You can read everything, but not create, change or delete anything.",
                     "nurLesenKurz": "Read only",
@@ -4278,12 +4351,12 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "dataSectionHint": "Загрузите JSON-файл другого инструмента и передайте его дальше как файл вики с помощью «Сохранить как файл». Обратный путь тот же: файл вики несёт свои данные в островке данных.",
                     "fileSaveLeer": "Экспортировать пустую вики",
                     "fileSaveLeerHint": "Файл вики с пустым островком данных — шаблон для другой программы, которая хочет заполнить островок и выводить готовые файлы вики.",
-                    "noticeLeerSaved": "Пустой файл вики сохранён: simplewiki-leer.html",
+                    "noticeLeerSaved": "Укажите место сохранения. Если диалог сохранения не появился, файл simplewiki-leer.html, вероятно, сейчас в папке загрузок.",
                     "dataSection": "Данные вики",
                     "fileSave": "Сохранить как файл",
                     "fileSaveJson": "Экспортировать JSON",
                     "fileSaveJsonHint": "Записывает только данные в формате JSON — та же структура, что и при импорте, без HTML-обёртки. Для инструментов, которые не могут собрать HTML-файл.",
-                    "noticeJsonSaved": "JSON сохранён: {name}",
+                    "noticeJsonSaved": "Укажите место сохранения. Если диалог сохранения не появился, JSON-файл {name}, вероятно, сейчас в папке загрузок.",
                     "noticeNoPages": "Файл не содержит страниц — ничего не заменено.",
                     "noticeVersionFehlt": "В файле не указана версия формата, и он не был прочитан — так не теряется информация.",
                     "noticeVersionUngueltig": "В файле указана версия «{version}». Допустимо число от 1 и выше.",
@@ -4355,6 +4428,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "welcomeText": "Создайте первую страницу или выберите существующую.",
                     "titlePlaceholder": "Заголовок страницы...",
                     "contentPlaceholder": "Пишите здесь... (поддерживается Markdown)",
+                    "titelHint": "Изменить заголовок – нажмите и введите",
                     "untitled": "Новая страница",
                     "language": "Язык",
                     "palette": "Палитра цветов",
@@ -4475,12 +4549,12 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "dataSectionHint": "Carga un archivo JSON de otra herramienta y pásalo como archivo wiki con «Guardar como archivo». El camino de vuelta es el mismo: un archivo wiki lleva sus datos consigo en la isla de datos.",
                     "fileSaveLeer": "Exportar wiki vacío",
                     "fileSaveLeerHint": "Un archivo wiki con una isla de datos vacía: una plantilla para otro programa que quiera rellenar la isla y generar archivos wiki terminados.",
-                    "noticeLeerSaved": "Archivo wiki vacío guardado: simplewiki-leer.html",
+                    "noticeLeerSaved": "Elige dónde guardarlo. Si no aparece el diálogo de guardado, simplewiki-leer.html está ahora probablemente en tu carpeta de descargas.",
                     "dataSection": "Datos del wiki",
                     "fileSave": "Guardar como archivo",
                     "fileSaveJson": "Exportar JSON",
                     "fileSaveJsonHint": "Escribe solo los datos como JSON: la misma estructura que al importar, sin envoltorio HTML. Pensado para herramientas que no pueden crear un archivo HTML.",
-                    "noticeJsonSaved": "JSON guardado: {name}",
+                    "noticeJsonSaved": "Elige dónde guardarlo. Si no aparece el diálogo de guardado, el archivo JSON {name} está ahora probablemente en tu carpeta de descargas.",
                     "noticeNoPages": "El archivo no contiene páginas; no se reemplazó nada.",
                     "noticeVersionFehlt": "El archivo no indica ninguna versión de formato y no se leyó, para no perder información.",
                     "noticeVersionUngueltig": "El archivo indica la versión «{version}». Se permite un número a partir de 1.",
@@ -4552,6 +4626,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "welcomeText": "Crea tu primera página o selecciona una existente.",
                     "titlePlaceholder": "Título de la página...",
                     "contentPlaceholder": "Escribe aquí... (se admite Markdown)",
+                    "titelHint": "Cambiar el título – haga clic y escriba",
                     "untitled": "Nueva página",
                     "language": "Idioma",
                     "palette": "Paleta de colores",
@@ -4672,12 +4747,12 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "dataSectionHint": "Chargez un fichier JSON d'un autre outil et transmettez-le comme fichier wiki avec « Enregistrer comme fichier ». Le chemin inverse est le même : un fichier wiki transporte ses données dans l'îlot de données.",
                     "fileSaveLeer": "Exporter un wiki vide",
                     "fileSaveLeerHint": "Un fichier wiki avec un îlot de données vide — un modèle pour un autre programme qui veut remplir l'îlot et produire des fichiers wiki finis.",
-                    "noticeLeerSaved": "Fichier wiki vide enregistré : simplewiki-leer.html",
+                    "noticeLeerSaved": "Choisissez où enregistrer. Si la boîte de dialogue n'apparaît pas, simplewiki-leer.html se trouve probablement maintenant dans votre dossier de téléchargements.",
                     "dataSection": "Données du wiki",
                     "fileSave": "Enregistrer comme fichier",
                     "fileSaveJson": "Exporter en JSON",
                     "fileSaveJsonHint": "N'écrit que les données au format JSON — même structure qu'à l'import, sans enveloppe HTML. Prévu pour les outils qui ne peuvent pas créer de fichier HTML.",
-                    "noticeJsonSaved": "JSON enregistré : {name}",
+                    "noticeJsonSaved": "Choisissez où enregistrer. Si la boîte de dialogue n'apparaît pas, le fichier JSON {name} se trouve probablement maintenant dans votre dossier de téléchargements.",
                     "noticeNoPages": "Le fichier ne contient aucune page — rien n'a été remplacé.",
                     "noticeVersionFehlt": "Le fichier n'indique aucune version de format et n'a pas été lu — ainsi aucune information n'est perdue.",
                     "noticeVersionUngueltig": "Le fichier indique la version « {version} ». Un nombre à partir de 1 est autorisé.",
@@ -4749,6 +4824,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "welcomeText": "Créez votre première page ou sélectionnez-en une existante.",
                     "titlePlaceholder": "Titre de la page...",
                     "contentPlaceholder": "Écrivez ici... (Markdown est pris en charge)",
+                    "titelHint": "Modifier le titre – cliquez et saisissez",
                     "untitled": "Nouvelle page",
                     "language": "Langue",
                     "palette": "Palette de couleurs",
@@ -4869,12 +4945,12 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "dataSectionHint": "別のツールの JSON ファイルを読み込み、「ファイルとして保存」で Wiki ファイルとして渡します。戻り道も同じです。Wiki ファイルはデータ島に自分のデータを持ち運びます。",
                     "fileSaveLeer": "空の Wiki を書き出す",
                     "fileSaveLeerHint": "データ島が空の Wiki ファイルです。島を埋めて完成した Wiki ファイルを出力したい別のプログラム向けのテンプレートです。",
-                    "noticeLeerSaved": "空の Wiki ファイルを保存しました: simplewiki-leer.html",
+                    "noticeLeerSaved": "保存先を指定してください。保存ダイアログが表示されない場合、simplewiki-leer.html は現在、おそらくダウンロードフォルダーにあります。",
                     "dataSection": "Wiki データ",
                     "fileSave": "ファイルとして保存",
                     "fileSaveJson": "JSON を書き出す",
                     "fileSaveJsonHint": "データだけを JSON で書き出します。読み込み時と同じ構造で、HTML の外枠はありません。HTML ファイルを作れないツール向けです。",
-                    "noticeJsonSaved": "JSON を保存しました: {name}",
+                    "noticeJsonSaved": "保存先を指定してください。保存ダイアログが表示されない場合、JSON ファイル {name} は現在、おそらくダウンロードフォルダーにあります。",
                     "noticeNoPages": "ファイルにページが含まれていないため、何も置き換えませんでした。",
                     "noticeVersionFehlt": "ファイルに形式のバージョンが指定されていないため読み込みませんでした。こうして情報が失われません。",
                     "noticeVersionUngueltig": "ファイルはバージョン「{version}」を指定しています。1 以上の数値が使用できます。",
@@ -4946,6 +5022,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "welcomeText": "最初のページを作成するか、既存のページを選んでください。",
                     "titlePlaceholder": "ページタイトル...",
                     "contentPlaceholder": "ここに入力...（Markdown に対応）",
+                    "titelHint": "タイトルを変更 – クリックして入力",
                     "untitled": "新しいページ",
                     "language": "言語",
                     "palette": "カラーパレット",
@@ -5066,12 +5143,12 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "dataSectionHint": "다른 도구의 JSON 파일을 불러와 「파일로 저장」으로 위키 파일로 전달합니다. 되돌아가는 길도 같습니다. 위키 파일은 데이터 섬에 자신의 데이터를 담아 갑니다.",
                     "fileSaveLeer": "빈 위키 내보내기",
                     "fileSaveLeerHint": "데이터 섬이 빈 위키 파일입니다. 데이터 섬을 채워 완성된 위키 파일을 출력하려는 다른 프로그램을 위한 템플릿입니다.",
-                    "noticeLeerSaved": "빈 위키 파일 저장됨: simplewiki-leer.html",
+                    "noticeLeerSaved": "저장 위치를 정하세요. 저장 대화 상자가 나타나지 않으면 simplewiki-leer.html 파일은 지금쯤 다운로드 폴더에 있을 것입니다.",
                     "dataSection": "위키 데이터",
                     "fileSave": "파일로 저장",
                     "fileSaveJson": "JSON 내보내기",
                     "fileSaveJsonHint": "데이터만 JSON으로 씁니다. 가져올 때와 같은 구조이며 HTML 껍데기는 없습니다. HTML 파일을 만들 수 없는 도구를 위한 것입니다.",
-                    "noticeJsonSaved": "JSON 저장됨: {name}",
+                    "noticeJsonSaved": "저장 위치를 정하세요. 저장 대화 상자가 나타나지 않으면 JSON 파일 {name}은 지금쯤 다운로드 폴더에 있을 것입니다.",
                     "noticeNoPages": "파일에 페이지가 없어 아무것도 바뀌지 않았습니다.",
                     "noticeVersionFehlt": "파일에 형식 버전이 없어 읽지 않았습니다. 그래야 정보가 사라지지 않습니다.",
                     "noticeVersionUngueltig": "파일에 버전 「{version}」이(가) 지정되어 있습니다. 1 이상의 숫자를 사용할 수 있습니다.",
@@ -5143,6 +5220,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "welcomeText": "첫 페이지를 만들거나 기존 페이지를 선택하세요.",
                     "titlePlaceholder": "페이지 제목...",
                     "contentPlaceholder": "여기에 작성하세요... (Markdown 지원)",
+                    "titelHint": "제목 변경 – 클릭하고 입력",
                     "untitled": "새 페이지",
                     "language": "언어",
                     "palette": "색상 팔레트",
@@ -5263,12 +5341,12 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "dataSectionHint": "加载其他工具的 JSON 文件，并用「另存为文件」将其作为 Wiki 文件继续传递。回程也一样：Wiki 文件在数据岛中携带自己的数据。",
                     "fileSaveLeer": "导出空 Wiki",
                     "fileSaveLeerHint": "一个数据岛为空的 Wiki 文件——供其他程序填充数据岛并输出成品 Wiki 文件的模板。",
-                    "noticeLeerSaved": "空 Wiki 文件已保存：simplewiki-leer.html",
+                    "noticeLeerSaved": "请确定保存位置。如果没有出现保存对话框，simplewiki-leer.html 现在可能已在你的下载文件夹中。",
                     "dataSection": "Wiki 数据",
                     "fileSave": "另存为文件",
                     "fileSaveJson": "导出 JSON",
                     "fileSaveJsonHint": "仅将数据以 JSON 写出——与导入时结构相同，没有 HTML 外壳。供无法构建 HTML 文件的工具使用。",
-                    "noticeJsonSaved": "JSON 已保存：{name}",
+                    "noticeJsonSaved": "请确定保存位置。如果没有出现保存对话框，JSON 文件 {name} 现在可能已在你的下载文件夹中。",
                     "noticeNoPages": "该文件不包含页面——未替换任何内容。",
                     "noticeVersionFehlt": "该文件未注明格式版本，因此未被读取——这样不会丢失任何信息。",
                     "noticeVersionUngueltig": "该文件注明版本「{version}」。允许使用 1 及以上的数字。",
@@ -5340,6 +5418,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "welcomeText": "创建你的第一个页面，或选择一个已有页面。",
                     "titlePlaceholder": "页面标题...",
                     "contentPlaceholder": "在此书写……（支持 Markdown）",
+                    "titelHint": "更改标题 – 点击并输入",
                     "untitled": "新页面",
                     "language": "语言",
                     "palette": "配色方案",
@@ -5591,8 +5670,222 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                 } catch (e) {
                     console.warn('SimpleWiki: Speichern nicht möglich –', e.message);
                 }
+            },
+            remove: function (key) {
+                try {
+                    window.localStorage.removeItem(key);
+                } catch (e) {
+                    /* gesperrter Speicher: dann ist auch nichts zu entfernen */
+                }
             }
         };
+
+        /* ---------- Welches Dokument ist geöffnet? ----------
+
+           Eine per Doppelklick geoeffnete Datei und der rohe Bauplan
+           teilen sich denselben Browserspeicher. Ohne Kennung kann das
+           Programm nicht wissen, ob die Seiten im Speicher zu der
+           gerade offenen Datei gehoeren oder zu einer anderen, die
+           vorher offen war. Genau daraus entstand der Fehler, dass eine
+           frisch geladene, leere Datei den alten Stand zeigte.
+
+           Die Kennung kommt deshalb aus der Datei selbst: "Als Datei
+           sichern" schreibt sie als <meta> in den Kopf (siehe oben).
+           Ein Dokument ohne Kennung - der rohe Bauplan, eine alte Datei
+           - bekommt eine, die im Browserspeicher bleibt. Alte Dateien
+           mit Inhalt bekommen den Fingerabdruck ihres Datenblocks: zwei
+           verschiedene Dateien haben dann verschiedene Kennungen.
+
+           Dazu der Zeitpunkt der letzten Sicherung. "Was neuer ist,
+           gewinnt": Ist die Datei juenger als der Entwurf im Browser,
+           gilt die Datei; sonst bleibt der Entwurf stehen. Bei
+           Gleichstand gewinnt die Datei - sie ist das, was weitergegeben
+           wird.
+
+           Getrennt gehalten wird ueber die Kennung: Beim Wechsel von
+           einer Datei zur anderen wandert der bisherige Stand zur Seite
+           (archivSichern) und der Stand der neuen Datei kommt zurueck
+           (archivLaden). So behaelt jede Datei ihren eigenen Entwurf.
+           Eine Datei, die hier noch nie offen war, faengt mit leerem
+           Speicher an - ihr Dateiinhalt gewinnt. */
+
+        const KENNUNG_META = 'simplewiki-doc-id';
+        const ZEIT_META = 'simplewiki-exported';
+        const TITEL_META = 'simplewiki-title';
+        const ARCHIV_PRAEFIX = 'simplewiki_archiv__';
+
+        /* Schluessel, die zum Entwurf eines Dokuments gehoeren. Beim
+           Wechsel ziehen sie mit um. simplewiki_doc_id steht bewusst
+           nicht dabei: sie ist die Kennung selbst, nicht ihr Inhalt. */
+        const ARCHIV_SCHLUESSEL = ['simplewiki_pages', 'simplewiki_startpage',
+            'simplewiki_refs', 'simplewiki_lang', 'simplewiki_theme',
+            'simplewiki_palette', 'simplewiki_toolbar', 'simplewiki_seiteninhalt',
+            'simplewiki_eigene_farben', 'simplewiki_datei_warnung',
+            'simplewiki_draft_time', 'simplewiki_digest', 'simplewiki_titel'];
+
+        /* Eine Kennung auf harmlose Zeichen bringen: sie wird Teil eines
+           Speicherschluessels und steht in der Datei. Leer heisst: keine
+           Kennung. Die Laenge ist gedeckelt, damit eine fremde Datei mit
+           einem riesigen Attribut keinen riesigen Schluessel erzwingt. */
+        function kennungSaeubern(text) {
+            return String(text == null ? '' : text)
+                .replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
+        }
+
+        function neueKennung() {
+            return 'd' + Date.now().toString(36) + '-' +
+                Math.random().toString(36).slice(2, 8);
+        }
+
+        /* Derselbe Fingerabdruck wie dateiFingerabdruck: die Laenge vor
+           der FNV-1a-Summe, damit zwei verschiedene Texte so gut wie
+           sicher verschieden sind. Als eigene Funktion, weil er hier
+           fuer die Kennung und dort fuer die Entscheidung gebraucht
+           wird - zweimal gerechnet waeren zwei Wahrheiten. */
+        function fnvAbdruck(text) {
+            let h = 0x811c9dc5;
+            for (let i = 0; i < text.length; i++) {
+                h = Math.imul(h ^ text.charCodeAt(i), 0x01000193) >>> 0;
+            }
+            return 'f' + text.length + '-' + h.toString(36);
+        }
+
+        /* Kennung aus dem Datenblock: nur, wenn die Datei auch Seiten
+           mitbringt. Ein leerer Datenblock ist keine Kennung, sonst
+           hiessen alle leeren Dateien gleich. */
+        function dateiDatenblockKennung() {
+            const halter = document.getElementById('simplewiki-daten');
+            if (!halter) return '';
+            const text = halter.textContent || '';
+            try {
+                const d = JSON.parse(text.replace(/\\u003c/g, '<'));
+                if (!d || !Array.isArray(d.seiten) || !d.seiten.length) return '';
+            } catch (e) {
+                return '';
+            }
+            return fnvAbdruck(text);
+        }
+
+        /* Die Kennung der geoeffneten Datei. Reihenfolge: der Kopf der
+           Datei, dann der Name des Wikis auf dem Server, dann der
+           Fingerabdruck einer alten Datei mit Inhalt. Leer heisst: diese
+           Datei sagt nichts ueber sich - dann gilt der Browserspeicher. */
+        function dateiId() {
+            const meta = document.querySelector('meta[name="' + KENNUNG_META + '"]');
+            const ausKopf = kennungSaeubern(meta ? meta.getAttribute('content') : '');
+            if (ausKopf) return ausKopf;
+            /* Der Name aus dem Pfad zaehlt nur im Serverbetrieb. Sonst
+               hiesse jede Datei in einem Ordner "wiki" nach ihrem Pfad. */
+            const slug = (typeof mwsTiddlerLesen === 'function' && mwsTiddlerLesen())
+                ? mwsSlug() : '';
+            if (slug) return 'mws-' + kennungSaeubern(slug);
+            return dateiDatenblockKennung();
+        }
+
+        /* Der Zeitpunkt der letzten Sicherung, in Millisekunden. 0 heisst:
+           die Datei nennt keinen - eine alte Datei oder der rohe Bauplan. */
+        function dateiExportZeit() {
+            const meta = document.querySelector('meta[name="' + ZEIT_META + '"]');
+            if (!meta) return 0;
+            const t = Date.parse(String(meta.getAttribute('content') || ''));
+            return isFinite(t) ? t : 0;
+        }
+
+        /* Den eigenen Wiki-Namen auf harmlose Zeichen bringen: eine Zeile,
+           ohne Steuerzeichen, gedeckelt. Er steht im Kopf der Datei und
+           wird im Titel gezeigt - ein Zeilenumbruch darin waere eine
+           zweite Zeile, die niemand will. */
+        function titelSaeubern(text) {
+            return String(text == null ? '' : text)
+                .replace(/[\u0000-\u001f\u007f]+/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .slice(0, 120);
+        }
+
+        /* Der eigene Wiki-Name der geoeffneten Datei. Leer heisst: keiner
+           gesetzt - dann gilt der feste Name. */
+        function dateiTitel() {
+            const meta = document.querySelector('meta[name="' + TITEL_META + '"]');
+            return titelSaeubern(meta ? meta.getAttribute('content') : '');
+        }
+
+        /* Die Kennung, unter der dieser Tab arbeitet. Sie ist einmal
+           festgelegt: eine Datei mit Kennung bringt sie mit, der rohe
+           Bauplan bekommt eine, die bleibt. */
+        let ARBEITS_KENNUNG = null;
+        function arbeitsId() {
+            if (ARBEITS_KENNUNG) return ARBEITS_KENNUNG;
+            let id = dateiId();
+            if (!id) {
+                id = kennungSaeubern(SimpleWikiStore.get('simplewiki_doc_id', ''));
+                if (!id) {
+                    id = neueKennung();
+                    SimpleWikiStore.set('simplewiki_doc_id', id);
+                }
+            }
+            ARBEITS_KENNUNG = id;
+            return id;
+        }
+
+        /* Den Entwurf des bisherigen Dokuments zur Seite legen. Nur, wenn
+           wirklich etwas da ist - ein leerer Eintrag waere nur Ballast. */
+        function archivSichern(id) {
+            const raus = {};
+            let etwas = false;
+            ARCHIV_SCHLUESSEL.forEach(function (k) {
+                const v = SimpleWikiStore.get(k, null);
+                if (v !== null) { raus[k] = v; etwas = true; }
+            });
+            if (!etwas) return;
+            SimpleWikiStore.set(ARCHIV_PRAEFIX + id, JSON.stringify(raus));
+        }
+
+        /* Den Entwurf eines Dokuments zurueckholen. Ohne Eintrag wird der
+           Arbeitsspeicher geleert, damit die neue Datei mit ihrem eigenen
+           Inhalt anfaengt und nicht mit dem der vorigen. */
+        function archivLaden(id) {
+            ARCHIV_SCHLUESSEL.forEach(function (k) { SimpleWikiStore.remove(k); });
+            const roh = SimpleWikiStore.get(ARCHIV_PRAEFIX + id, null);
+            if (!roh) return;
+            let daten = null;
+            try { daten = JSON.parse(roh); } catch (e) { daten = null; }
+            if (!daten || typeof daten !== 'object') return;
+            ARCHIV_SCHLUESSEL.forEach(function (k) {
+                if (Object.prototype.hasOwnProperty.call(daten, k)) {
+                    SimpleWikiStore.set(k, daten[k]);
+                }
+            });
+        }
+
+        /* Beim Wechsel von einer Datei zur anderen: den alten Entwurf
+           wegraeumen und den der neuen hervorholen. Ohne Kennung (roher
+           Bauplan, alte leere Datei) bleibt alles, wie es ist. */
+        function dokumentwechsel(neueId) {
+            if (!neueId) return;
+            const alteId = kennungSaeubern(SimpleWikiStore.get('simplewiki_doc_id', ''));
+            if (alteId === neueId) return;
+            if (!alteId) {
+                SimpleWikiStore.set('simplewiki_doc_id', neueId);
+                return;
+            }
+            archivSichern(alteId);
+            archivLaden(neueId);
+            SimpleWikiStore.set('simplewiki_doc_id', neueId);
+        }
+
+        /* Eine Angabe im Kopf der gesicherten Datei setzen oder anlegen.
+           Wird von bauExport gebraucht, das auf einem geparsten Dokument
+           arbeitet statt auf dem laufenden. */
+        function metaSetzen(doc, name, wert) {
+            let m = doc.querySelector('meta[name="' + name + '"]');
+            if (!m) {
+                m = doc.createElement('meta');
+                m.setAttribute('name', name);
+                doc.head.appendChild(m);
+            }
+            m.setAttribute('content', wert == null ? '' : String(wert));
+        }
 
         /* ---------- Wo die Seiten liegen: Browser oder MWS ----------
 
@@ -6578,6 +6871,15 @@ showSettings: false,
                    Verwaltung dem Wiki gibt. Im Browser leer; dann steht oben
                    der feste Name. */
                 wikiTitel: '',
+                /* Der eigene Wiki-Name, den die Person unter file:// oben im
+                   Kopf selbst vergibt. Er wandert in den Kopf der gesicherten
+                   Datei (meta simplewiki-title) und gehoert zu genau dieser
+                   Datei. Im Serverbetrieb leer - dort gilt $:/SiteTitle. */
+                eigenerTitel: '',
+                /* Der Kopf zeigt gerade das Eingabefeld statt des Namens. */
+                titelBearbeiten: false,
+                /* Was im Eingabefeld steht, bevor Enter es uebernimmt. */
+                titelEntwurf: '',
                 /* Der Untertitel aus $:/SiteSubtitle, eine Zeile unter dem
                    Namen. Im Browser leer; dann fehlt die Zeile. */
                 wikiUntertitel: '',
@@ -8131,9 +8433,58 @@ showSettings: false,
                     return this.langDict[key] || this.baseDict[key] || key;
                 },
 
+                /* Der Name oben im Kopf. Reihenfolge: der Servername aus
+                   $:/SiteTitle, dann der eigene Name unter file://, dann
+                   der feste Name. Der Server gewinnt immer - dort gehoert
+                   der Name zur Verwaltung, nicht zur Datei. */
+                kopfTitel() {
+                    if (this.wikiTitel) return this.wikiTitel;
+                    if (!this.mwsModus && this.eigenerTitel) return this.eigenerTitel;
+                    return this.t('appName');
+                },
+
                 applyLanguage() {
                     document.documentElement.lang = this.currentLang;
-                    document.title = 'SimpleWiki – ' + this.t('appName');
+                    document.title = this.kopfTitel();
+                },
+
+                /* Darf der Name hier geaendert werden? Nur unter file://:
+                   im Serverbetrieb gehoert er zur Verwaltung ($:/SiteTitle). */
+                titelBearbeitbar() {
+                    return !this.mwsModus;
+                },
+
+                /* Der Name wird zum Eingabefeld: den gezeigten Namen
+                   hineinschreiben, damit man ihn aendert statt neu tippt. */
+                titelStarten() {
+                    if (!this.titelBearbeitbar()) return;
+                    this.titelEntwurf = this.kopfTitel();
+                    this.titelBearbeiten = true;
+                    this.$nextTick(() => {
+                        const feld = this.$refs.titelFeld;
+                        if (feld) { feld.focus(); feld.select(); }
+                    });
+                },
+
+                /* Enter oder Weglklicken: den Namen uebernehmen. Leer heisst
+                   zurueck zum festen Namen. Geaendert heisst: die Datei auf
+                   der Platte kennt den Namen noch nicht - also warnen. */
+                titelSichern() {
+                    if (!this.titelBearbeiten) return;
+                    this.titelBearbeiten = false;
+                    const neu = titelSaeubern(this.titelEntwurf);
+                    this.titelEntwurf = '';
+                    if (neu === this.eigenerTitel) return;
+                    this.eigenerTitel = neu;
+                    try { SimpleWikiStore.set('simplewiki_titel', neu); } catch (e) { /* egal */ }
+                    this.applyLanguage();
+                    this.dateiWarnen();
+                },
+
+                /* Escape: nichts uebernehmen. Der Name bleibt, wie er war. */
+                titelAbbrechen() {
+                    this.titelBearbeiten = false;
+                    this.titelEntwurf = '';
                 },
 
                 changeLanguage() {
@@ -8310,12 +8661,7 @@ showSettings: false,
                     if (!document.getElementById('simplewiki-daten')) return '';
                     if (!this.readDatenAusDatei()) return '';
                     const halter = document.getElementById('simplewiki-daten');
-                    const text = halter.textContent || '';
-                    let h = 0x811c9dc5;
-                    for (let i = 0; i < text.length; i++) {
-                        h = Math.imul(h ^ text.charCodeAt(i), 0x01000193) >>> 0;
-                    }
-                    return 'f' + text.length + '-' + h.toString(36);
+                    return fnvAbdruck(halter.textContent || '');
                 },
 
                 /* Startseite, Sprache und Farbe aus der Datei übernehmen.
@@ -8429,8 +8775,22 @@ showSettings: false,
                    inklusive Reihenfolge in der Datei. */
                 /* Die gesicherte Datei bauen: die Vorlage von vor dem Mount,
                    nur mit frischen Daten im Datenblock. */
-                bauExport(daten) {
+                bauExport(daten, kennung, titel) {
                     const doc = new DOMParser().parseFromString(VORLAGE_HTML, 'text/html');
+                    /* Kennung, Zeitpunkt und Titel in den Kopf schreiben.
+                       Die Kennung ist die des offenen Dokuments - so
+                       erkennt die Datei beim naechsten Oeffnen ihren eigenen
+                       Entwurf wieder. Die leere Vorlage bekommt ueber den
+                       Aufrufer eine frische Kennung und einen leeren Titel,
+                       damit sie weder den Entwurf noch den Namen der Person
+                       erbt, die sie erzeugt. Der Zeitpunkt ist jetzt: er
+                       entscheidet, ob die Datei oder ein Entwurf im Browser
+                       gewinnt. Der Titel ist der eigene Name des offenen
+                       Dokuments, sofern der Aufrufer keinen anderen nennt. */
+                    metaSetzen(doc, KENNUNG_META, kennung || arbeitsId());
+                    metaSetzen(doc, ZEIT_META, new Date().toISOString());
+                    metaSetzen(doc, TITEL_META,
+                        titel === undefined ? this.eigenerTitel : titelSaeubern(titel));
                     /* Nur hier wird "<" escaped: der Block steckt in einer
                        HTML-Datei, und ein Script-Ende im Inhalt wuerde sie
                        zerreissen. Als JSON-Datei ist das unnoetig und
@@ -8479,6 +8839,10 @@ showSettings: false,
                     if (this.mwsModus || this.laedt) return;
                     this.dateiWarnung = true;
                     SimpleWikiStore.set('simplewiki_datei_warnung', '1');
+                    /* Der Entwurf ist jetzt der juengste Stand. Der
+                       Zeitpunkt entscheidet beim naechsten Oeffnen, ob er
+                       eine aeltere Datei ueberdauert (siehe loadPages). */
+                    SimpleWikiStore.set('simplewiki_draft_time', String(Date.now()));
                 },
 
                 /* Die Warnung zuruecknehmen: nach dem Sichern der Datei und
@@ -8546,7 +8910,7 @@ showSettings: false,
                             palette: this.palette,
                             eigeneFarben: this.eigeneFarben
                         };
-                        this.dateiHerunterladen(this.bauExport(leer), 'simplewiki-leer.html', 'text/html');
+                        this.dateiHerunterladen(this.bauExport(leer, neueKennung(), ''), 'simplewiki-leer.html', 'text/html');
                         this.hinweis(this.t('noticeLeerSaved'));
                     } catch (e) {
                         this.hinweis(this.t('noticeSaveError'));
@@ -8728,22 +9092,42 @@ showSettings: false,
                    sonst eine neue Wiki. Der Speicher entscheidet selbst,
                    ob er aus dem Browser oder vom Server kommt.
 
-                   Eine Ausnahme dazu: eine andere oder neuere Datei.
-                   Alle doppelgeklickten Dateien teilen sich denselben
-                   Browserspeicher; ohne Pruefung zeigte eine frisch
-                   geladene Datei also ewig den Stand der zuletzt
-                   geoffneten, bis der Speicher geleert ist. Laeuft die
-                   Datei im Browser, wird deshalb ihr Fingerabdruck mit
-                   dem des letzten Mal verglichen: ist er anders - oder dort
-                   steht noch keiner - gehoert der Datenblock einer anderen
-                   (oder noch nie gesehenen) Datei, und ihr Inhalt ersetzt
-                   den Stand im Browser. Ist er gleich, wird es dieselbe
-                   Datei sein, und was der Browser hat, bleibt stehen
-                   (auch eigene Aenderungen). */
+                   Zwei Dinge kommen hinzu. Erstens die Kennung: der
+                   Browserspeicher gehoert immer nur einer Datei. Beim
+                   Wechsel wird der alte Entwurf zur Seite gelegt und der
+                   der neuen Datei hervorgeholt (dokumentwechsel), und
+                   zwar bevor gelesen wird.
+
+                   Zweitens "was neuer ist, gewinnt". Traegt die Datei
+                   einen Zeitpunkt, wird er mit dem letzten Schreibvorgang
+                   im Browser verglichen. Ist die Datei juenger, gilt sie;
+                   bei Gleichstand ebenfalls, denn die Datei ist das, was
+                   weitergegeben wird. Eine alte Datei ohne Zeitpunkt
+                   entscheidet weiter ueber den Fingerabdruck ihres
+                   Datenblocks: derselbe heisst dieselbe Datei, und dann
+                   bleibt der Entwurf stehen. Genau das war der Fehler:
+                   eine frisch gesicherte, leere Datei hatte keinen
+                   Fingerabdruck, und der Browser gewann faelschlich. */
                 loadPages() {
                     this.laedt = true;
-                    const geladen = SPEICHER.laden();
                     this.mwsModus = SPEICHER.art === 'mws';
+
+                    /* Erst das Dokument klaeren, dann lesen: sonst laese
+                       der Speicher den Entwurf der vorigen Datei. */
+                    if (!this.mwsModus) {
+                        dokumentwechsel(dateiId());
+                        SimpleWikiStore.set('simplewiki_doc_id', arbeitsId());
+                    }
+
+                    /* Der eigene Name des offenen Dokuments. Der Wechsel
+                       oben hat ihn mit dem Entwurf hervorgeholt oder
+                       weggeraeumt. Eine Datei, die gleich die Seiten
+                       liefert, setzt ihn gleich danach aus ihrem Kopf. */
+                    this.eigenerTitel = this.mwsModus
+                        ? ''
+                        : (SimpleWikiStore.get('simplewiki_titel', '') || '');
+
+                    const geladen = SPEICHER.laden();
                     /* Die gemerkte Warnung nur im Browserbetrieb: auf dem
                        Server gibt es keine Datei zu sichern. */
                     this.dateiWarnung = !this.mwsModus
@@ -8756,30 +9140,46 @@ showSettings: false,
 
                     const ausDatei = this.readDatenAusDatei();
                     const finger = this.dateiFingerabdruck();
+                    const hatDateiSeiten = !!(ausDatei && Array.isArray(ausDatei.seiten)
+                        && ausDatei.seiten.length);
 
                     if (geladen.vorhanden) {
-                        if (!this.mwsModus && finger && ausDatei.seiten.length &&
-                                finger !== SimpleWikiStore.get('simplewiki_digest', '')) {
+                        if (!this.mwsModus && this.dateiGewinnt(ausDatei, finger)) {
                             this.fremdeAngabenMerken(ausDatei);
                             this.pages = this.normiereSeiten(ausDatei.seiten);
                             this.seitenUebernehmen();
                             this.seitenSichern();
+                            this.titelAusDatei();
                             this.uebernehmenAusDatei(ausDatei);
-                            SimpleWikiStore.set('simplewiki_digest', finger);
+                            this.dateiUebernommen(finger);
                             this.dateiWarnungLoeschen();
                         } else {
                             this.pages = this.normiereSeiten(geladen.seiten);
                             this.seitenUebernehmen();
                             this.startPageId = geladen.startseite || '';
                             this.einstellungenMerken(geladen);
+                            /* Hier gilt der Entwurf, weil er juenger ist
+                               als die Datei: was zu sehen ist, kennt die
+                               Datei noch nicht. Die Warnung sagt es, statt
+                               zu verschweigen, woher das Gezeigte kommt.
+                               Nur wenn die Datei einen Zeitpunkt traegt -
+                               sonst entschied der Fingerabdruck, und
+                               derselbe Fingerabdruck ist dieselbe Datei. */
+                            const dzeit = dateiExportZeit();
+                            if (!this.mwsModus && dzeit
+                                    && this.entwurfZeit() > dzeit) {
+                                this.dateiWarnung = true;
+                                SimpleWikiStore.set('simplewiki_datei_warnung', '1');
+                            }
                         }
-                    } else if (ausDatei && ausDatei.seiten && ausDatei.seiten.length) {
+                    } else if (hatDateiSeiten) {
                         this.fremdeAngabenMerken(ausDatei);
                         this.pages = this.normiereSeiten(ausDatei.seiten);
                         this.seitenUebernehmen();
                         this.seitenSichern();
+                        this.titelAusDatei();
                         this.uebernehmenAusDatei(ausDatei);
-                        if (finger) SimpleWikiStore.set('simplewiki_digest', finger);
+                        this.dateiUebernommen(finger);
                         this.dateiWarnungLoeschen();
                     } else {
                         this.pages = [
@@ -8795,6 +9195,7 @@ showSettings: false,
                         ];
                         this.seitenUebernehmen();
                         this.seitenSichern();
+                        this.dateiUebernommen('');
                         this.dateiWarnungLoeschen();
                     }
 
@@ -8808,6 +9209,58 @@ showSettings: false,
                     }
                     this.currentPage = this.pages.find(p => p.id === this.startPageId) || null;
                     this.laedt = false;
+                },
+
+                /* Der Zeitpunkt des letzten Schreibvorgangs im Browser,
+                   0 wenn keiner gemerkt ist. */
+                entwurfZeit() {
+                    return Number(SimpleWikiStore.get('simplewiki_draft_time', '0')) || 0;
+                },
+
+                /* Gewinnt die Datei gegen den Entwurf im Browser?
+
+                   Traegt die Datei einen Zeitpunkt, entscheidet er: ist
+                   sie juenger als der Entwurf (oder gibt es keinen),
+                   gewinnt sie; bei Gleichstand ebenfalls - die Datei ist
+                   das, was weitergegeben wird. Eine alte Datei ohne
+                   Zeitpunkt entscheidet ueber den Fingerabdruck ihres
+                   Datenblocks: derselbe Fingerabdruck heisst dieselbe
+                   Datei, und dann bleibt der Entwurf stehen. */
+                dateiGewinnt(ausDatei, finger) {
+                    if (!ausDatei || !Array.isArray(ausDatei.seiten)
+                            || !ausDatei.seiten.length) {
+                        return false;
+                    }
+                    const zeit = dateiExportZeit();
+                    if (zeit) {
+                        const entwurf = this.entwurfZeit();
+                        return !entwurf || zeit >= entwurf;
+                    }
+                    return !!finger && finger !== SimpleWikiStore.get('simplewiki_digest', '');
+                },
+
+                /* Nach dem Uebernehmen einer Datei: Fingerabdruck und
+                   Zeitpunkt des Entwurfs auf die Datei ziehen. So gilt
+                   dieselbe Datei beim naechsten Oeffnen als gleich alt
+                   (Gleichstand -> Datei) und nicht als aelter. */
+                /* Den eigenen Namen aus dem Kopf der offenen Datei
+                   uebernehmen. Nur beim Oeffnen der Datei - dort ist das
+                   laufende Dokument die Datei selbst. Der Knopf
+                   "Datenbereich laden" liest dagegen nur den Datenblock,
+                   nicht den Kopf, und laesst den Namen stehen. */
+                titelAusDatei() {
+                    if (this.mwsModus) return;
+                    this.eigenerTitel = dateiTitel();
+                    try {
+                        SimpleWikiStore.set('simplewiki_titel', this.eigenerTitel);
+                    } catch (e) { /* es gibt Speicher ohne Platz */ }
+                },
+
+                dateiUebernommen(finger) {
+                    if (this.mwsModus) return;
+                    SimpleWikiStore.set('simplewiki_digest', finger || '');
+                    SimpleWikiStore.set('simplewiki_draft_time',
+                        String(dateiExportZeit() || 0));
                 },
 
                 /* Farbe, Farbwelt und Sprache, die der Speicher mitgebracht hat. */
