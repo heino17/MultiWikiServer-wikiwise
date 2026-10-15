@@ -525,6 +525,29 @@ A small follow-up in the 0.6 line: a fresh installation now brings the
 
 ---
 
+## Release 0.7.2 — 2026-10-16
+
+2 commits since 0.7.1, 12 files, +359/−30.
+
+A feature release for the SimpleWiki shell: it now reaches an existing store by
+itself, and a new command applies it on demand.
+
+**Added**
+
+- **The bundled SimpleWiki shell reaches the store on the next server start**
+  (§137). When its `mws-shell-version` is newer than the store's newest
+  SimpleWiki release, `listen` writes a new template release; the wikis adopt it
+  through their shell policy (`notify` shows the owner the update hint, `auto`
+  follows). A start with nothing to do is a read-only no-op, and an equal or
+  newer label in the store is left alone.
+- **`update-simplewiki`** (§137) applies the bundled shell on demand, also
+  backwards, and reports the version move and the new release number.
+
+**Operating notes**
+
+- No migration, no new dependency. After installing the tarball, the next start
+  carries the bundled shell forward; `update-simplewiki` does it right away.
+
 ## Release 0.7.1 — 2026-10-15
 
 2 commits since 0.7.0, 9 files, +594/−66.
@@ -7718,6 +7741,31 @@ dass `npm update` MWS aktualisiert (§131).
   stehen.
 
 ---
+
+## Release 0.7.2 — 2026-10-16
+
+2 Commits seit 0.7.1, 12 Dateien, +359/−30.
+
+Eine Funktionsfassung für die SimpleWiki-Schale: Sie erreicht einen bestehenden
+Store jetzt von selbst, und ein neuer Befehl wendet sie auf Wunsch an.
+
+**Hinzugefügt**
+
+- **Die mitgelieferte SimpleWiki-Schale erreicht den Store beim nächsten
+  Serverstart** (§137). Ist ihre `mws-shell-version` neuer als das neueste
+  SimpleWiki-Release des Stores, schreibt `listen` ein neues Template-Release;
+  die Wikis übernehmen es über ihre Shell-Policy (`notify` zeigt der Besitzerin
+  den Update-Hinweis, `auto` zieht nach). Ein Start ohne etwas zu tun ist ein
+  reiner Lesevorgang, und ein gleiches oder neueres Label im Store bleibt
+  unangetastet.
+- **`update-simplewiki`** (§137) wendet die mitgelieferte Schale auf Wunsch an,
+  auch rückwärts, und meldet Versionssprung und die neue Release-Nummer.
+
+**Betriebshinweise**
+
+- Keine Migration, keine neue Abhängigkeit. Nach dem Einspielen des Tarballs
+  bringt der nächste Start die mitgelieferte Schale nach vorn; `update-simplewiki`
+  tut es sofort.
 
 ## Release 0.7.1 — 2026-10-15
 
