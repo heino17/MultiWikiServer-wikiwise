@@ -5247,6 +5247,20 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 136. The manual's description names SimpleWiki
+
+**Why.** The manual shows itself in the wiki list and in the admin with the
+description the loading call passes. It read "MWS-wikiwise Bedienungsanleitung",
+which names the server the manual runs on instead of what it is a manual for.
+Whoever looked for the SimpleWiki documentation saw the name of a server fork.
+
+**Changed.** `update-simplewiki-manual.sh` now passes
+`SimpleWiki-Bedienungsanleitung` as both the bag and the recipe description, so
+the manual appears under the product it documents.
+
+**Verified.** The maintainer reloaded the store with the script and saw the new
+description in the admin.
+
 ## 135. A helper script to reload the manual into the store
 
 **Why.** The manual is a shipped system wiki whose content lives in
@@ -12481,6 +12495,21 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 136. Die Beschreibung des Handbuchs nennt SimpleWiki
+
+**Warum.** Das Handbuch zeigt sich in der Wiki-Liste und der Verwaltung mit der
+Beschreibung, die der Lade-Aufruf mitgibt. Dort stand „MWS-wikiwise
+Bedienungsanleitung" — der Name des Servers, auf dem das Handbuch läuft, statt
+der Name dessen, wofür es die Anleitung ist. Wer die SimpleWiki-Dokumentation
+suchte, sah den Namen eines Server-Forks.
+
+**Geändert.** `update-simplewiki-manual.sh` übergibt jetzt
+`SimpleWiki-Bedienungsanleitung` als Beschreibung für Bag und Recipe, sodass das
+Handbuch unter dem Produkt erscheint, das es beschreibt.
+
+**Geprüft.** Der Maintainer hat den Store mit dem Skript neu geladen und die neue
+Beschreibung in der Verwaltung gesehen.
 
 ## 135. Ein Helfer-Skript lädt das Handbuch in den Store
 

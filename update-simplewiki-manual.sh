@@ -36,9 +36,9 @@ tools/node_modules/.bin/tsup
 DEVSERVER=watch ENABLE_EXTERNAL_PLUGINS=1 node mws.dev.mjs \
   load-wiki-folder "$(pwd)/editions/simplewiki-manual" \
   --bag-relative-root "$(pwd)" \
-  --bag-description "MWS-wikiwise Bedienungsanleitung" \
+  --bag-description "SimpleWiki-Bedienungsanleitung" \
   --recipe-name simplewiki-manual \
-  --recipe-description "MWS-wikiwise Bedienungsanleitung" \
+  --recipe-description "SimpleWiki-Bedienungsanleitung" \
   --recipe-users ANON \
   --template-name SimpleWiki \
   --owner-roles ADMIN \
