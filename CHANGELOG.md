@@ -525,6 +525,57 @@ A small follow-up in the 0.6 line: a fresh installation now brings the
 
 ---
 
+## Release 0.7.0 — 2026-10-15
+
+3 commits since 0.6.1, 149 files, +3103/−4195.
+
+The manual now ships: a fresh installation brings the SimpleWiki manual as a
+ready-made system wiki (§133), an existing store reloads it with a helper script
+(§135), and system wikis can no longer be deleted by accident (§134).
+
+**Added**
+
+- **The manual ships as a system wiki** (§133). `editions/simplewiki-manual`
+  is loaded by `init-store` with the `SimpleWiki` template and the `ANON` read
+  role, so a fresh data folder carries it as an ownerless system wiki at
+  `/wiki/simplewiki-manual` — bag `editions/simplewiki-manual`, `notify` shell
+  policy, only `ADMIN` may write. The templates tab links a template with its
+  own HTML shell to that wiki (`templateDocsUrl`), and the `runner` helper
+  gained a `template-name` option for the load.
+- **A helper script to reload the manual** (§135). `update-simplewiki-manual.sh`
+  in the repository root runs the same `load-wiki-folder` call `init-store`
+  makes for the manual, with `--overwrite`, resolves its own directory, and
+  calls `mws.dev.mjs` directly — so the spaces and parentheses in the manual's
+  description survive, which they do not through `npm start load-wiki-folder …`.
+
+**Changed**
+
+- **System wikis can no longer be deleted** (§134). Deleting a wiki without an
+  owner (creator "—") now answers `403 ACCESS_DENIED`, and the admin app hides
+  the delete button, because `canDeleteWiki` requires a non-empty
+  `ownerUsername` — the same spirit in which the system roles are already
+  protected.
+- **The stale German manual edition is gone.** `editions/bedienungsanleitung`
+  and its runner are removed, and the npm `files` list ships
+  `editions/simplewiki-manual` instead (§133).
+- **The bundled SimpleWiki shell is refreshed** from `v0.1.31` to `v0.1.43`. A
+  fresh `init-store` provisions the new shell; an existing template is brought
+  forward with `provision-simplewiki` (§132).
+
+**Operating notes**
+
+- No migration and no new dependency. On a store that already exists, reload
+  the manual with `update-simplewiki-manual.sh --overwrite`; a fresh
+  `init-store` carries it already.
+- Verified: `npm run tsc2`, `npm run build` and the admin-app `tsc` are clean; a
+  scratch store (`init-store`) answered `/wiki/simplewiki-manual` with `200`,
+  the SimpleWiki shell with the store injected and
+  `/recipe/simplewiki-manual/store.json` with 84 pages (46 `Deutsch`, 38
+  `American`); deleting `simplewiki-manual` or `mws-docs` with the `admin`
+  session answered `403` and left both in place.
+
+---
+
 ## 1. Missing dependency: `escape-string-regexp`
 
 **Files:** `package.json` (root)
@@ -7595,6 +7646,61 @@ dass `npm update` MWS aktualisiert (§131).
   Template `SimpleWiki`: Release 1, `v0.1.31`, `customHtmlEnabled`, 1.311,1 kB
   Inhalt, `ADMIN` `B_write` + `TEACHER` `A_read`; ein zweiter Lauf lässt es
   stehen.
+
+---
+
+## Release 0.7.0 — 2026-10-15
+
+3 Commits seit 0.6.1, 149 Dateien, +3103/−4195.
+
+Das Handbuch fährt jetzt mit: Eine frische Installation bringt die
+SimpleWiki-Bedienungsanleitung als fertige System-Wiki mit (§133), ein
+bestehender Store lädt sie mit einem Helfer-Skript neu (§135), und System-Wikis
+lassen sich nicht mehr versehentlich löschen (§134).
+
+**Hinzugefügt**
+
+- **Das Handbuch fährt als System-Wiki mit** (§133).
+  `editions/simplewiki-manual` wird von `init-store` mit dem Template
+  `SimpleWiki` und der Leserolle `ANON` geladen, sodass ein frischer Datenordner
+  es als besitzerlose System-Wiki unter `/wiki/simplewiki-manual` trägt — Bag
+  `editions/simplewiki-manual`, Shell-Policy `notify`, nur `ADMIN` darf
+  schreiben. Der Templates-Tab verlinkt ein Template mit eigener HTML-Schale auf
+  diese Wiki (`templateDocsUrl`), und der `runner`-Helfer bekam dafür eine
+  Option `template-name`.
+- **Ein Helfer-Skript lädt das Handbuch neu** (§135).
+  `update-simplewiki-manual.sh` im Repository-Wurzelverzeichnis ruft denselben
+  `load-wiki-folder`-Aufruf auf, den `init-store` für das Handbuch macht, mit
+  `--overwrite`, löst sein eigenes Verzeichnis auf und ruft `mws.dev.mjs`
+  direkt auf — so überstehen die Leerzeichen und Klammern in der Beschreibung
+  des Handbuchs den Aufruf, was über `npm start load-wiki-folder …` nicht
+  gelingt.
+
+**Geändert**
+
+- **System-Wikis lassen sich nicht mehr löschen** (§134). Das Löschen einer Wiki
+  ohne Besitzer (Ersteller „—") antwortet jetzt mit `403 ACCESS_DENIED`, und die
+  Admin-App blendet den Löschen-Knopf aus, weil `canDeleteWiki` einen nicht
+  leeren `ownerUsername` verlangt — im selben Geist, in dem die Systemrollen
+  längst geschützt sind.
+- **Die veraltete deutsche Handbuch-Edition ist weg.**
+  `editions/bedienungsanleitung` und ihr Runner sind entfernt, und die npm
+  `files`-Liste liefert stattdessen `editions/simplewiki-manual` aus (§133).
+- **Die mitgelieferte SimpleWiki-Schale ist aufgefrischt** von `v0.1.31` auf
+  `v0.1.43`. Ein frischer `init-store` legt die neue Schale an; ein bestehendes
+  Template führt man mit `provision-simplewiki` nach (§132).
+
+**Betriebshinweise**
+
+- Keine Migration und keine neue Dependency. Einen bestehenden Store lädt man
+  mit `update-simplewiki-manual.sh --overwrite` neu; ein frischer `init-store`
+  hat das Handbuch schon.
+- Geprüft: `npm run tsc2`, `npm run build` und das `tsc` der Admin-App sind
+  sauber; ein Probestore (`init-store`) antwortete auf `/wiki/simplewiki-manual`
+  mit `200`, die SimpleWiki-Schale mit injiziertem Store und
+  `/recipe/simplewiki-manual/store.json` mit 84 Seiten (46 `Deutsch`, 38
+  `American`); das Löschen von `simplewiki-manual` oder `mws-docs` mit der
+  `admin`-Sitzung antwortete `403` und ließ beide stehen.
 
 ---
 

@@ -2,7 +2,7 @@
 <html lang="de"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="mws-shell-version" content="v0.1.31">
+    <meta name="mws-shell-version" content="v0.1.43">
     <title>SimpleWiki</title>
 
     <!--
@@ -42,6 +42,11 @@
                      Farbwelt. Fehlt das Feld, gilt Pergament (die
                      Werte oben). thema sagt weiterhin Hell/Dunkel;
                      die Palette und der Modus sind getrennte Achsen.
+          toolbar    true | false. Zeigt die Werkzeugleiste unter der
+                     Kopfzeile (Wortzahl, Lesezeit, ablenkungsfreies
+                     Lesen, Druck der offenen Seite). Fehlt das Feld,
+                     ist sie aus. Ein Schalter der Oberfläche, keine
+                     Angabe zum Inhalt.
 
         Verweise im Text
           [[Ziel]]  oder  [[Beschriftung|Ziel]]  oder
@@ -142,9 +147,11 @@ MWS stellt die Tiddler nicht als Datenblock bereit, sondern als
           $:/SiteTitle         der Name des Wikis.
 
         Sprache und Farbe
-          Sie stehen als Felder (sprache, thema) an den Feldern des Tiddlers,
-          der die Startseite ist - nicht in jedem Tiddler, sonst liefen sie
-          auseinander. Wird die Startseite gewechselt, wandern sie mit.
+          Sie stehen als Felder (sprache, thema, palette, toolbar) an den
+          Feldern des Tiddlers, der die Startseite ist - nicht in jedem
+          Tiddler, sonst liefen sie auseinander. Wird die Startseite
+          gewechselt, wandern sie mit. toolbar ist "true" oder "false"
+          und zeigt die Werkzeugleiste unter der Kopfzeile.
 
         Was nicht uebernommen wird
           Systemtiddler ($:/...), $:/bag-info und $:/recipe-info sind keine
@@ -219,7 +226,7 @@ MWS stellt die Tiddler nicht als Datenblock bereit, sondern als
 
         =========================================================================
     -->
-    <script id="simplewiki-daten" type="application/json">{"version":1,"seiten":[{"id":"1","title":"Willkommen in Deinem SimpleWiki! 🎉","content":"Dein neues, einfaches Wiki.\n\n## Was du hier machen kannst\n\n* **Seiten anlegen** – über das Menü ☰ oder „+ Neue Seite“\n* **Schreiben** – Markdown wird verstanden\n* **Verlinken** – `[[Seitenname]]` im Text oder der 🔗-Knopf beim Bearbeiten\n* **Kopieren** – der ⧉-Knopf legt eine Kopie der Seite an\n* **Suchen** – oben im Kopf\n* **Sprache wählen** – oben rechts\n* **Hell / Dunkel** – die Sonne und der Mond\n\nViel Spaß! ✍️\n\n[[Seite 2]]","links":[],"tags":[],"created":"2026-10-03T23:23:01.878Z","updated":"2026-10-03T23:46:27.593Z"},{"id":"1791069818658","title":"Seite 1","content":"\\# Überschrift\n\nText...","links":["Willkommen in Deinem SimpleWiki! 🎉","Seite 2"],"tags":[],"created":"2026-10-03T23:23:38.658Z","updated":"2026-10-03T23:48:12.504Z"},{"id":"1791069858522","title":"Seite 2","content":"\\# Überschrift\n\nText...\n\n[[Seite 3]]","links":["Willkommen in Deinem SimpleWiki! 🎉","Seite 3"],"tags":[],"created":"2026-10-03T23:24:18.522Z","updated":"2026-10-03T23:48:28.594Z"},{"id":"1791069898378","title":"Seite 3","content":"\\# Überschrift\n\nText...","links":["Willkommen in Deinem SimpleWiki! 🎉","Seite 2"],"tags":[],"created":"2026-10-03T23:24:58.378Z","updated":"2026-10-03T23:48:48.796Z"},{"id":"1791071517638","title":"Seite 3-1","content":"\\# Überschrift\n\nText...","links":["Willkommen in Deinem SimpleWiki! 🎉","Seite 3"],"tags":[],"created":"2026-10-03T23:51:57.638Z","updated":"2026-10-03T23:52:25.165Z"},{"id":"1791073464328","title":"Willkommen in Deinem SimpleWiki! 🎉 (Kopie)","content":"Dein neues, einfaches Wiki.\n\n## Was du hier machen kannst\n\n* **Seiten anlegen** – über das Menü ☰ oder „+ Neue Seite“\n* **Schreiben** – Markdown wird verstanden\n* **Verlinken** – `[[Seitenname]]` im Text oder der 🔗-Knopf beim Bearbeiten\n* **Kopieren** – der ⧉-Knopf legt eine Kopie der Seite an\n* **Suchen** – oben im Kopf\n* **Sprache wählen** – oben rechts\n* **Hell / Dunkel** – die Sonne und der Mond\n\nViel Spaß! ✍️\n\n[[Seite 2]]","links":["Willkommen in Deinem SimpleWiki! 🎉"],"tags":[],"created":"2026-10-04T00:24:24.328Z","updated":"2026-10-04T00:24:43.098Z"},{"id":"1791071462035","title":"Neue Seite","content":"","links":["Willkommen in Deinem SimpleWiki! 🎉"],"tags":[],"created":"2026-10-03T23:51:02.035Z","updated":"2026-10-03T23:51:13.620Z"}],"startseite":"1","sprache":"de","thema":"light"}</script>
+    <script id="simplewiki-daten" type="application/json">{"version":1,"seiten":[],"startseite":"","sprache":"de","thema":"light"}</script>
     <!-- Vue 3 (MIT), fest eingebettet statt vom CDN geladen:
          eine strikte Content-Security-Policy erlaubt nur "self".
          Quelle: https://unpkg.com/vue@3/dist/vue.global.prod.js -->
@@ -981,6 +988,196 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
             margin-left: auto;
         }
 
+        /* Die Werkzeugleiste: eine volle Zeile unter dem Kopf, gleiche
+           Hoehe wie ein Knopf. Sie draengt den Koerper nach unten und
+           legt sich nicht darueber. */
+        .werkzeugleiste {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding: 6px 16px;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+        }
+
+        .werkzeug-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 32px;
+            height: 30px;
+            padding: 0 8px;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            background: none;
+            color: var(--text-secondary);
+            font: inherit;
+            font-size: 1rem;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .werkzeug-btn:hover {
+            color: var(--text-primary);
+            background: var(--bg-hover);
+        }
+
+        .werkzeug-zaehler {
+            margin-left: auto;
+            padding-left: 12px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+
+        /* Der ablenkungsfreie Modus: Kopf, Leiste und Verzeichnis weg.
+           Der Ausgang steht dann als schwebender Knopf im Bild. */
+        .app.zen .header,
+        .app.zen .werkzeugleiste,
+        .app.zen .toc-menu,
+        .app.zen .toc-faehnchen {
+            display: none;
+        }
+
+        .zen-ausgang {
+            position: fixed;
+            top: 12px;
+            right: 12px;
+            z-index: 60;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 999px;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            font: inherit;
+            font-size: 0.85rem;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            cursor: pointer;
+        }
+
+        .zen-ausgang:hover {
+            color: var(--text-primary);
+            background: var(--bg-hover);
+        }
+
+        /* Die Kaestchen einer Aufgabenliste sind beim Lesen anklickbar;
+           der Zeiger sagt das vorher. */
+        .aufgabe-kaestchen {
+            cursor: pointer;
+        }
+
+        /* Das Inhaltsverzeichnis der offenen Seite: ein Kasten ueber dem
+           Text mit ihren Ueberschriften, nach Ebene eingerueckt. */
+        .seiteninhalt {
+            margin: 0 0 20px;
+            padding: 12px 18px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background: var(--bg-secondary);
+            font-size: 0.9rem;
+        }
+
+        .seiteninhalt-titel {
+            margin-bottom: 6px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-size: 0.75rem;
+        }
+
+        .seiteninhalt-liste {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .seiteninhalt-liste li {
+            margin: 2px 0;
+        }
+
+        .seiteninhalt-ebene-1 { padding-left: 0; }
+        .seiteninhalt-ebene-2 { padding-left: 16px; }
+        .seiteninhalt-ebene-3 { padding-left: 32px; }
+
+        /* Hinweiskaesten im GitHub-Stil: ein Zitat mit farbigem Balken
+           links und einer Titelzeile. Fuenf Arten, jede mit eigener
+           Farbe; die Farbe traegt die Bedeutung, der Titel sagt sie im
+           Klartext. */
+        .preview .callout {
+            border-left: 4px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-secondary);
+            padding: 10px 16px;
+        }
+
+        .preview .callout-note {
+            border-left-color: #4a90d9;
+        }
+
+        .preview .callout-tip {
+            border-left-color: #2e9e6b;
+        }
+
+        .preview .callout-important {
+            border-left-color: #8b5cf6;
+        }
+
+        .preview .callout-warning {
+            border-left-color: #d98a1f;
+        }
+
+        .preview .callout-caution {
+            border-left-color: #d9534f;
+        }
+
+        .preview .callout-titel {
+            font-weight: 600;
+        }
+
+        .preview .callout-note .callout-titel {
+            color: #4a90d9;
+        }
+
+        .preview .callout-tip .callout-titel {
+            color: #2e9e6b;
+        }
+
+        .preview .callout-important .callout-titel {
+            color: #8b5cf6;
+        }
+
+        .preview .callout-warning .callout-titel {
+            color: #d98a1f;
+        }
+
+        .preview .callout-caution .callout-titel {
+            color: #d9534f;
+        }
+
+        .seiteninhalt-liste a {
+            color: var(--text-secondary);
+            text-decoration: none;
+        }
+
+        .seiteninhalt-liste a:hover {
+            color: var(--text-primary);
+            text-decoration: underline;
+        }
+
+        .settings-schalter {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
         .theme-toggle {
             padding: 8px 12px;
             background: var(--bg-hover);
@@ -1028,6 +1225,28 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
             background: var(--accent-color);
             box-shadow: 0 0 0 2px var(--bg-hover);
             pointer-events: none;
+        }
+
+        /* Der Warnpunkt am Zahnrad: im Browser liegen Aenderungen nur im
+           Browserspeicher, die Datei auf der Platte bleibt zurueck, bis
+           sie gesichert wird. Er sieht aus wie der Update-Punkt, ist
+           aber rot und pulsiert leicht - eine Warnung, kein Angebot. */
+        .datei-warn-punkt {
+            position: absolute;
+            top: 5px;
+            right: 6px;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--danger-color);
+            box-shadow: 0 0 0 2px var(--bg-hover);
+            pointer-events: none;
+            animation: datei-warn-puls 1.6s ease-in-out infinite;
+        }
+
+        @keyframes datei-warn-puls {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50%      { opacity: 0.45; transform: scale(1.3); }
         }
 
         /* Einstellungen: Abschnitte für spätere Optionen */
@@ -1147,6 +1366,61 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
         .settings-btn:hover {
             border-color: var(--accent-color);
             color: var(--accent-color);
+        }
+
+        /* Der Knopf "Als Datei sichern", solange es ungesicherte
+           Aenderungen gibt: ein leicht rot pulsierender Rand. Der Puls
+           ist ein ins Innere wachsender Schatten, damit keine eigene
+           Farbe noetig ist und jede Farbwelt ihren eigenen Rotton
+           behaelt. */
+        .settings-btn.datei-warn-rand {
+            border-color: var(--danger-color);
+            animation: datei-warn-rand 1.6s ease-in-out infinite;
+        }
+
+        @keyframes datei-warn-rand {
+            0%, 100% { box-shadow: inset 0 0 0 0 var(--danger-color); }
+            50%      { box-shadow: inset 0 0 0 2px var(--danger-color); }
+        }
+
+        /* Die eine Zeile ueber dem Sicherungs-Knopf, solange es etwas
+           zu sichern gibt. */
+        .datei-warn-hinweis {
+            color: var(--danger-color);
+        }
+
+        /* Der Kopf des Farb-Editors: Beschriftung links, der Schalter
+           rechts. Der Schalter klappt die lange Farbenliste auf und zu. */
+        .farb-editor-kopf {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .farb-editor-kopf .settings-label {
+            margin-bottom: 0;
+        }
+
+        .farb-editor-schalter {
+            padding: 4px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-primary);
+            color: var(--text-muted);
+            font: inherit;
+            font-size: 0.8rem;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .farb-editor-schalter:hover {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .farb-editor-inhalt {
+            margin-top: 10px;
         }
 
         /* Der Farb-Editor der eigenen Welt */
@@ -2526,7 +2800,12 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
 
 /* ---------- WYSIWYG-Editor an das Wiki-Thema anpassen ---------- */
         .md-host {
-            min-height: 200px;
+            /* Kein festes Mindestmass mehr. Die Hoehe kommt aus dem
+               gemessenen Platz (siehe editorHeight in der App). Eine
+               Untergrenze hier liess den Editor unter die Fusszeile und
+               ueber die Umschaltreiter Markdown/WYSIWYG laufen, sobald
+               die Werkzeugleiste eingeblendet war. */
+            min-height: 0;
         }
 
         .toastui-editor-defaultUI {
@@ -2782,6 +3061,9 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
             .such-treffer,
             .toc-menu,
             .toc-faehnchen,
+            .werkzeugleiste,
+            .seiteninhalt,
+            .zen-ausgang,
             .hinweis,
             .fluss-kopf,
             .fluss-verweise {
@@ -2931,7 +3213,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
 </head>
 <body>
     <div id="app">
-        <div class="app">
+        <div class="app" :class="{ zen: zenModus }">
             <header class="header">
                 <div class="kopf-titel">
                     <h1>📚 {{ wikiTitel || t('appName') }}</h1>
@@ -3026,12 +3308,38 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     <button class="abmelden-btn" @click="abmelden" :disabled="meldeAb"
                             :title="t('abmeldenTitel')" :aria-label="t('abmeldenTitel')">⎋</button>
                 </template>
-                <button class="settings-toggle" @click="openSettings" :title="t('settings')" :aria-label="shellUpdate ? t('menuSettingsUpdate') : t('settings')"><span v-if="shellUpdate" class="shell-update-punkt" aria-hidden="true"></span>⚙️</button>
+                <button class="settings-toggle" @click="openSettings" :title="t('settings')" :aria-label="dateiWarnung ? t('menuSettingsFileWarn') : (shellUpdate ? t('menuSettingsUpdate') : t('settings'))"><span v-if="shellUpdate" class="shell-update-punkt" aria-hidden="true"></span><span v-if="dateiWarnung" class="datei-warn-punkt" aria-hidden="true"></span>⚙️</button>
                 <button class="theme-toggle" @click="toggleTheme" :title="t('theme')" :aria-label="t('theme')">
                     {{ isDarkMode ? '☀️' : '🌙' }}
                 </button>
                 </div>
             </header>
+
+            <!-- Die Werkzeugleiste: eine eigene Zeile unter dem Kopf,
+                 standardmaessig aus und im Einstellungen-Dialog
+                 einschaltbar. Hier stehen die Werkzeuge, die nicht in
+                 jeden Kopf gehoeren: Wortzahl und Lesezeit der offenen
+                 Seite, der ablenkungsfreie Modus und der Druck genau
+                 dieser Seite. -->
+            <div v-if="toolbarSichtbar" class="werkzeugleiste" role="toolbar" :aria-label="t('toolbarAria')">
+                <button type="button" class="werkzeug-btn" :disabled="!kannRueckgaengig" @click="rueckgaengig"
+                        :title="t('undoHint')" :aria-label="t('undoHint')">↶</button>
+                <button type="button" class="werkzeug-btn" @click="zenUmschalten"
+                        :title="zenModus ? t('zenClose') : t('zenOpen')"
+                        :aria-label="zenModus ? t('zenClose') : t('zenOpen')">⛶</button>
+                <button v-if="currentPage &amp;&amp; !zeigeFluss" type="button" class="werkzeug-btn" @click="seiteDrucken"
+                        :title="t('printPage')" :aria-label="t('printPage')">🖨</button>
+                <button v-if="currentPage &amp;&amp; !zeigeFluss" type="button" class="werkzeug-btn" @click="seiteAlsMarkdown"
+                        :title="t('mdSave')" :aria-label="t('mdSave')">📝</button>
+                <span v-if="currentPage &amp;&amp; !zeigeFluss" class="werkzeug-zaehler">
+                    {{ t('wordsCount').replace('{n}', wortZahl) }} · {{ t('readingTime').replace('{n}', lesezeit) }}
+                </span>
+            </div>
+
+            <!-- Im ablenkungsfreien Modus ist die Leiste weg - der Ausgang
+                 muss also woanders stehen. -->
+            <button v-if="zenModus" type="button" class="zen-ausgang" @click="zenUmschalten"
+                    :title="t('zenClose')" :aria-label="t('zenClose')">⛶ {{ t('zenClose') }}</button>
 
             <!-- Der Körper ist eine Zeile: links das Verzeichnis, rechts
                  der Inhalt. Das Menü ist eine Spalte im Aufbau und legt
@@ -3205,6 +3513,20 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     </div>
 
                     <div v-if="currentPage" class="content-body">
+                        <!-- Das Inhaltsverzeichnis der offenen Seite:
+                             ihre Ueberschriften, zum Anspringen. Steht
+                             ueber dem Text und nur, wenn es eingeschaltet
+                             ist und wirklich Ueberschriften gibt. -->
+                        <nav v-if="seiteninhaltAn && !isEditing && seitenUeberschriften.length"
+                             class="seiteninhalt" :aria-label="t('pageTocTitle')">
+                            <div class="seiteninhalt-titel">{{ t('pageTocTitle') }}</div>
+                            <ul class="seiteninhalt-liste">
+                                <li v-for="u in seitenUeberschriften" :key="u.id"
+                                    :class="'seiteninhalt-ebene-' + u.ebene">
+                                    <a :href="'#' + u.id" @click.prevent="springeZuUeberschrift(u.id)">{{ u.text }}</a>
+                                </li>
+                            </ul>
+                        </nav>
                         <!-- Ansicht -->
                         <div v-if="!isEditing" class="preview" @click="onPreviewClick" v-html="renderedContent"></div>
 
@@ -3356,6 +3678,22 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     </select>
                 </div>
                 <div class="settings-section">
+                    <label class="settings-label">{{ t('toolbarSection') }}</label>
+                    <label class="settings-schalter">
+                        <input id="settings-toolbar" type="checkbox" :checked="toolbarSichtbar" @change="toolbarUmschalten" />
+                        <span>{{ t('toolbarLabel') }}</span>
+                    </label>
+                    <p class="settings-hint">{{ t('toolbarHint') }}</p>
+                </div>
+                <div class="settings-section">
+                    <label class="settings-label">{{ t('pageTocSection') }}</label>
+                    <label class="settings-schalter">
+                        <input id="settings-seiteninhalt" type="checkbox" :checked="seiteninhaltAn" @change="seiteninhaltUmschalten" />
+                        <span>{{ t('pageTocLabel') }}</span>
+                    </label>
+                    <p class="settings-hint">{{ t('pageTocHint') }}</p>
+                </div>
+                <div class="settings-section">
                     <label class="settings-label" for="settings-palette">{{ t('palette') }}</label>
                     <select id="settings-palette" class="select-input" v-model="palette" @change="changePalette">
                         <option v-for="p in paletten" :key="p.id" :value="p.id">
@@ -3365,31 +3703,38 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     <p class="settings-hint">{{ t('paletteHint') }}</p>
                 </div>
                 <div v-if="palette === 'eigene'" class="settings-section farb-editor">
-                    <label class="settings-label">{{ t('farbenBearbeiten') }}</label>
-                    <p class="settings-hint">{{ t('farbenHinweis') }}</p>
-                    <div class="farb-klon">
-                        <select class="select-input" v-model="farbQuelle" :aria-label="t('farbenQuelle')">
-                            <option v-for="q in farbQuellen" :key="q.id" :value="q.id">{{ q.name }}</option>
-                        </select>
-                        <button type="button" class="settings-btn" @click="farbeKlonen">{{ t('farbenUebernehmen') }}</button>
+                    <div class="farb-editor-kopf">
+                        <label class="settings-label">{{ t('farbenBearbeiten') }}</label>
+                        <button type="button" class="farb-editor-schalter" :aria-expanded="farbEditorOffen" @click="farbEditorOffen = !farbEditorOffen">
+                            {{ (farbEditorOffen ? '▾ ' : '▸ ') + t(farbEditorOffen ? 'farbenVerbergen' : 'farbenAnzeigen') }}
+                        </button>
                     </div>
-                    <div class="farb-modi">
-                        <button type="button" class="farb-modus" :class="{ aktiv: farbModus === 'hell' }" @click="farbModusSetzen('hell')">{{ t('farbenHell') }}</button>
-                        <button type="button" class="farb-modus" :class="{ aktiv: farbModus === 'dunkel' }" @click="farbModusSetzen('dunkel')">{{ t('farbenDunkel') }}</button>
+                    <div v-show="farbEditorOffen" class="farb-editor-inhalt">
+                        <p class="settings-hint">{{ t('farbenHinweis') }}</p>
+                        <div class="farb-klon">
+                            <select class="select-input" v-model="farbQuelle" :aria-label="t('farbenQuelle')">
+                                <option v-for="q in farbQuellen" :key="q.id" :value="q.id">{{ q.name }}</option>
+                            </select>
+                            <button type="button" class="settings-btn" @click="farbeKlonen">{{ t('farbenUebernehmen') }}</button>
+                        </div>
+                        <div class="farb-modi">
+                            <button type="button" class="farb-modus" :class="{ aktiv: farbModus === 'hell' }" @click="farbModusSetzen('hell')">{{ t('farbenHell') }}</button>
+                            <button type="button" class="farb-modus" :class="{ aktiv: farbModus === 'dunkel' }" @click="farbModusSetzen('dunkel')">{{ t('farbenDunkel') }}</button>
+                        </div>
+                        <div v-for="g in farbgruppen" :key="g.titel" class="farb-gruppe">
+                            <p class="farb-gruppe-titel">{{ g.titel }}</p>
+                            <label v-for="f in g.farben" :key="f.name" class="farb-zeile">
+                                <span class="farb-name">{{ f.label }}</span>
+                                <input v-if="istAlphaFarbe(f.name)" type="text" class="farb-text" :value="farbWert(f.name)" @change="farbeAendern(f.name, $event.target.value)" spellcheck="false" />
+                                <input v-else type="color" class="farb-feld" :value="farbWertHex(f.name)" @input="farbeAendern(f.name, $event.target.value)" />
+                            </label>
+                        </div>
+                        <button type="button" class="settings-btn" @click="eigeneZuruecksetzen">{{ t('farbenZuruecksetzen') }}</button>
                     </div>
-                    <div v-for="g in farbgruppen" :key="g.titel" class="farb-gruppe">
-                        <p class="farb-gruppe-titel">{{ g.titel }}</p>
-                        <label v-for="f in g.farben" :key="f.name" class="farb-zeile">
-                            <span class="farb-name">{{ f.label }}</span>
-                            <input v-if="istAlphaFarbe(f.name)" type="text" class="farb-text" :value="farbWert(f.name)" @change="farbeAendern(f.name, $event.target.value)" spellcheck="false" />
-                            <input v-else type="color" class="farb-feld" :value="farbWertHex(f.name)" @input="farbeAendern(f.name, $event.target.value)" />
-                        </label>
-                    </div>
-                    <button type="button" class="settings-btn" @click="eigeneZuruecksetzen">{{ t('farbenZuruecksetzen') }}</button>
                 </div>
                 <div class="settings-section">
                     <label class="settings-label" for="settings-startpage">{{ t('startPage') }}</label>
-                    <select id="settings-startpage" class="select-input" v-model="startPageId" @change="changeStartPage">
+                    <select id="settings-startpage" class="select-input" :value="startPageId" @change="startseiteWaehlen($event)">
                         <option v-for="p in pages" :key="p.id" :value="p.id">
                             {{ p.title || t('untitled') }}
                         </option>
@@ -3399,10 +3744,11 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                 <div class="settings-section">
                     <label class="settings-label">{{ t('dataSection') }}</label>
                     <p class="settings-hint data-hinweis">{{ t('dataSectionHint') }}</p>
-                    <button class="settings-btn" @click="sichernAlsDatei">
+                    <button class="settings-btn" :class="{ 'datei-warn-rand': dateiWarnung }" @click="sichernAlsDatei">
                         💾 {{ t('fileSave') }}
                     </button>
-                    <p class="settings-hint">{{ t('fileSaveHint') }}</p>
+                    <p v-if="dateiWarnung" class="settings-hint datei-warn-hinweis">{{ t('fileWarnHint') }}</p>
+                    <p class="settings-hint">{{ t('fileSaveHint').replace('{name}', sicherungsName()) }}</p>
                     <button class="settings-btn" @click="jsonExportieren">
                         📄 {{ t('fileSaveJson') }}
                     </button>
@@ -3416,6 +3762,11 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     </button>
                     <p class="settings-hint">{{ t('fileSaveLeerHint') }}</p>
                     <input ref="dateiFeld" type="file" accept=".html,.json,text/html,application/json" class="datei-feld" @change="dateiLaden">
+                    <button class="settings-btn" @click="$refs.mdFeld.click()">
+                        📝 {{ t('mdLoad') }}
+                    </button>
+                    <p class="settings-hint">{{ t('mdLoadHint') }}</p>
+                    <input ref="mdFeld" type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" class="datei-feld" multiple @change="markdownLaden">
                 </div>
             </div>
             <!-- Der Fuss des Einstellungen-Panels: der Name des Wikis wie
@@ -3536,16 +3887,17 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "fileSave": "Als Datei sichern",
                                         "fileSaveJson": "JSON exportieren",
                     "fileSaveJsonHint": "Schreibt nur die Daten als JSON – gleicher Aufbau wie beim Laden, ohne HTML-Hülle. Gedacht für Werkzeuge, die keine HTML-Datei bauen können.",
-                    "noticeJsonSaved": "JSON gesichert: simplewiki.json",
+                    "noticeJsonSaved": "JSON gesichert: {name}",
                     "noticeNoPages": "Die Datei enthält keine Seiten – es wurde nichts ersetzt.",
                     "noticeVersionFehlt": "Die Datei nennt keine Formatversion und wurde nicht gelesen – so geht keine Information verloren.",
                     "noticeVersionUngueltig": "Die Datei nennt die Version „{version}“. Erlaubt ist eine Zahl ab 1.",
                     "noticeVersionZuNeu": "Die Datei hat Version {version}, diese Wiki kommt bis Version {eigen}. Es wurde nichts übernommen.",
                     "noticeTitleFrei": "Den Namen „{title}“ gibt es schon. Bitte einen anderen wählen.",
-"fileSaveHint": "Legt eine HTML-Datei mit allen Seiten in dieser Reihenfolge an – du kannst sie unter dem Namen simplewiki.html speichern und damit diese Datei ersetzen.",
+                    "fileWarnHint": "Achtung: Diese Änderungen stehen nur im Browserspeicher. Sichere die Datei, sonst sind sie beim nächsten Öffnen weg.",
+"fileSaveHint": "Legt eine HTML-Datei mit allen Seiten in dieser Reihenfolge an. Speichere sie als {name} — damit kannst du diese Datei ersetzen.",
                     "fileLoad": "Datei laden",
                     "fileLoadHint": "Übernimmt die Seiten aus einer gesicherten HTML- oder JSON-Datei und ersetzt das aktuelle Wiki.",
-                    "noticeSaved": "Gesichert. Die Datei liegt jetzt im Download-Ordner.",
+                    "noticeSaved": "Bitte Speicherort bestimmen. Erscheint der Speichern-Dialog nicht, liegt die Datei jetzt wahrscheinlich in Deinem Download-Ordner.",
                     "noticeLoaded": "Wiki übernommen: {zahl} in dieser Reihenfolge.",
                     "seite1": "1 Seite",
                     "seitenN": "{n} Seiten",
@@ -3611,6 +3963,32 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "language": "Sprache",
                     "palette": "Farbwelt",
                     "paletteHint": "Wählt die Farbstimmung des Wikis. Der 🌙/☀️-Knopf oben schaltet darin Hell und Dunkel.",
+                    "toolbarAria": "Werkzeugleiste",
+                    "toolbarLabel": "Werkzeugleiste anzeigen",
+                    "toolbarHint": "Eine Zeile unter dem Kopf mit Wortzahl, Lesezeit, ablenkungsfreiem Modus und Druck der offenen Seite.",
+                    "pageTocTitle": "Inhalt dieser Seite",
+                    "pageTocSection": "Inhaltsverzeichnis der Seite",
+                    "pageTocLabel": "Inhaltsverzeichnis der Seite anzeigen",
+                    "pageTocHint": "Ein Verzeichnis der Überschriften über dem Text, zum Anspringen.",
+                    "callout_note": "Hinweis",
+                    "callout_tip": "Tipp",
+                    "callout_important": "Wichtig",
+                    "callout_warning": "Warnung",
+                    "callout_caution": "Achtung",
+                    "zenOpen": "Ablenkungsfrei lesen",
+                    "zenClose": "Ablenkungsfreien Modus verlassen",
+                    "printPage": "Diese Seite drucken",
+                    "wordsCount": "{n} Wörter",
+                    "readingTime": "{n} Min. Lesezeit",
+                    "mdSave": "Diese Seite als Markdown-Datei sichern",
+                    "undoHint": "Die letzte Änderung zurücknehmen",
+                    "undoDone": "Rückgängig gemacht.",
+                    "editorIndent": "Einrücken",
+                    "editorOutdent": "Ausrücken",
+                    "mdLoad": "Markdown-Dateien laden",
+                    "mdLoadHint": "Jede gewählte .md-Datei wird eine neue Seite. Der Dateiname ohne Endung wird der Titel.",
+                    "noticeMdLoaded": "Markdown geladen: {n} Seite(n)",
+                    "taskToggle": "Kästchen umschalten",
                     "palettePergament": "Pergament",
                     "paletteNord": "Nord",
                     "paletteWacholder": "Wacholder",
@@ -3627,6 +4005,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "farbenHell": "Hell",
                     "farbenDunkel": "Dunkel",
                     "farbenZuruecksetzen": "Zurücksetzen",
+                    "farbenAnzeigen": "Anzeigen",
+                    "farbenVerbergen": "Verbergen",
                     "farbgruppeFlaechen": "Flächen",
                     "farbgruppeUeberschriften": "Überschriften",
                     "farbgruppeText": "Text",
@@ -3674,7 +4054,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "updateMonat": "In einem Monat erinnern",
                     "updateFehler": "Das hat nicht geklappt. Bitte noch einmal versuchen.",
                     "updateTooltip": "Die Inhalte Deines Wikis werden bei diesem Update nicht verändert!",
-                    "menuSettingsUpdate": "Einstellungen, neue Oberflächen-Version verfügbar"
+                    "menuSettingsUpdate": "Einstellungen, neue Oberflächen-Version verfügbar",
+                    "menuSettingsFileWarn": "Einstellungen, es gibt ungesicherte Änderungen"
                 }
             },
             "en": {
@@ -3704,16 +4085,17 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "fileSave": "Save as file",
                                         "fileSaveJson": "Export JSON",
                     "fileSaveJsonHint": "Writes only the data as JSON – same structure as on import, without an HTML wrapper. Meant for tools that cannot build an HTML file.",
-                    "noticeJsonSaved": "JSON saved: simplewiki.json",
+                    "noticeJsonSaved": "JSON saved: {name}",
                     "noticeNoPages": "The file contains no pages – nothing was replaced.",
                     "noticeVersionFehlt": "The file names no format version and was not read – so no information is lost.",
                     "noticeVersionUngueltig": "The file names version \u201e{version}\u201c. A number from 1 upwards is allowed.",
                     "noticeVersionZuNeu": "The file has version {version}, this wiki goes up to version {eigen}. Nothing was taken over.",
                     "noticeTitleFrei": "There is already a page named \u201e{title}\u201c. Please choose another one.",
-"fileSaveHint": "Creates an HTML file with all pages in this order – save it as simplewiki.html to replace this file.",
+                    "fileWarnHint": "Careful: these changes live only in the browser. Save the file, or they will be gone the next time you open it.",
+"fileSaveHint": "Creates an HTML file with all pages in this order. Save it as {name} — that replaces this file.",
                     "fileLoad": "Load file",
                     "fileLoadHint": "Takes over the pages from a saved HTML or JSON file and replaces the current wiki.",
-                    "noticeSaved": "Saved. The file is now in your download folder.",
+                    "noticeSaved": "Please choose where to save. If no save dialog appears, the file is now probably in your Downloads folder.",
                     "noticeLoaded": "Wiki taken over: {zahl} in this order.",
                     "seite1": "1 page",
                     "seitenN": "{n} pages",
@@ -3758,6 +4140,32 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "language": "Language",
                     "palette": "Colour palette",
                     "paletteHint": "Sets the wiki's colour mood. The 🌙/☀️ button above switches light and dark within it.",
+                    "toolbarAria": "Toolbar",
+                    "toolbarLabel": "Show toolbar",
+                    "toolbarHint": "A row below the header with word count, reading time, distraction-free mode and printing the open page.",
+                    "pageTocTitle": "On this page",
+                    "pageTocSection": "Page contents",
+                    "pageTocLabel": "Show page contents",
+                    "pageTocHint": "A list of the headings above the text, to jump to them.",
+                    "callout_note": "Note",
+                    "callout_tip": "Tip",
+                    "callout_important": "Important",
+                    "callout_warning": "Warning",
+                    "callout_caution": "Caution",
+                    "zenOpen": "Distraction-free reading",
+                    "zenClose": "Leave distraction-free mode",
+                    "printPage": "Print this page",
+                    "wordsCount": "{n} words",
+                    "readingTime": "{n} min read",
+                    "mdSave": "Save this page as a Markdown file",
+                    "undoHint": "Undo the last change",
+                    "undoDone": "Undone.",
+                    "editorIndent": "Indent",
+                    "editorOutdent": "Outdent",
+                    "mdLoad": "Load Markdown files",
+                    "mdLoadHint": "Each chosen .md file becomes a new page. The file name without its extension becomes the title.",
+                    "noticeMdLoaded": "Markdown loaded: {n} page(s)",
+                    "taskToggle": "Toggle checkbox",
                     "palettePergament": "Parchment",
                     "paletteNord": "Nord",
                     "paletteWacholder": "Juniper",
@@ -3774,6 +4182,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "farbenHell": "Light",
                     "farbenDunkel": "Dark",
                     "farbenZuruecksetzen": "Reset",
+                    "farbenAnzeigen": "Show",
+                    "farbenVerbergen": "Hide",
                     "farbgruppeFlaechen": "Surfaces",
                     "farbgruppeUeberschriften": "Headings",
                     "farbgruppeText": "Text",
@@ -3842,7 +4252,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "updateMonat": "Remind me in a month",
                     "updateFehler": "That did not work. Please try again.",
                     "updateTooltip": "The contents of your wiki are untouched by this update!",
-                    "menuSettingsUpdate": "Settings, new interface version available"
+                    "menuSettingsUpdate": "Settings, new interface version available",
+                    "menuSettingsFileWarn": "Settings, there are unsaved changes"
                 }
             },
             "ru": {
@@ -3872,16 +4283,17 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "fileSave": "Сохранить как файл",
                     "fileSaveJson": "Экспортировать JSON",
                     "fileSaveJsonHint": "Записывает только данные в формате JSON — та же структура, что и при импорте, без HTML-обёртки. Для инструментов, которые не могут собрать HTML-файл.",
-                    "noticeJsonSaved": "JSON сохранён: simplewiki.json",
+                    "noticeJsonSaved": "JSON сохранён: {name}",
                     "noticeNoPages": "Файл не содержит страниц — ничего не заменено.",
                     "noticeVersionFehlt": "В файле не указана версия формата, и он не был прочитан — так не теряется информация.",
                     "noticeVersionUngueltig": "В файле указана версия «{version}». Допустимо число от 1 и выше.",
                     "noticeVersionZuNeu": "В файле версия {version}, эта вики поддерживает до версии {eigen}. Ничего не перенесено.",
                     "noticeTitleFrei": "Страница с именем «{title}» уже существует. Выберите другое.",
-                    "fileSaveHint": "Создаёт HTML-файл со всеми страницами в этом порядке — сохраните его как simplewiki.html, чтобы заменить этот файл.",
+                    "fileWarnHint": "Внимание: эти изменения хранятся только в браузере. Сохраните файл, иначе они пропадут при следующем открытии.",
+                    "fileSaveHint": "Создаёт HTML-файл со всеми страницами в этом порядке. Сохраните его как {name} — так вы замените этот файл.",
                     "fileLoad": "Загрузить файл",
                     "fileLoadHint": "Переносит страницы из сохранённого HTML- или JSON-файла и заменяет текущую вики.",
-                    "noticeSaved": "Сохранено. Файл теперь в папке загрузок.",
+                    "noticeSaved": "Укажите место сохранения. Если диалог сохранения не появился, файл, вероятно, сейчас в папке загрузок.",
                     "noticeLoaded": "Вики перенесена: {zahl} в этом порядке.",
                     "seite1": "1 страница",
                     "seitenN": "{n} страниц",
@@ -3947,6 +4359,32 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "language": "Язык",
                     "palette": "Палитра цветов",
                     "paletteHint": "Задаёт цветовое настроение вики. Кнопка 🌙/☀️ выше переключает в ней светлую и тёмную тему.",
+                    "toolbarAria": "Панель инструментов",
+                    "toolbarLabel": "Показывать панель инструментов",
+                    "toolbarHint": "Строка под заголовком: число слов, время чтения, режим без отвлечений и печать открытой страницы.",
+                    "pageTocTitle": "На этой странице",
+                    "pageTocSection": "Оглавление страницы",
+                    "pageTocLabel": "Показывать оглавление страницы",
+                    "pageTocHint": "Список заголовков над текстом, чтобы переходить к ним.",
+                    "callout_note": "Примечание",
+                    "callout_tip": "Совет",
+                    "callout_important": "Важно",
+                    "callout_warning": "Предупреждение",
+                    "callout_caution": "Внимание",
+                    "zenOpen": "Чтение без отвлечений",
+                    "zenClose": "Выйти из режима без отвлечений",
+                    "printPage": "Печать этой страницы",
+                    "wordsCount": "{n} слов",
+                    "readingTime": "{n} мин чтения",
+                    "mdSave": "Сохранить эту страницу как файл Markdown",
+                    "undoHint": "Отменить последнее изменение",
+                    "undoDone": "Отменено.",
+                    "editorIndent": "Увеличить отступ",
+                    "editorOutdent": "Уменьшить отступ",
+                    "mdLoad": "Загрузить файлы Markdown",
+                    "mdLoadHint": "Каждый выбранный файл .md становится новой страницей. Имя файла без расширения становится заголовком.",
+                    "noticeMdLoaded": "Markdown загружен: страниц — {n}",
+                    "taskToggle": "Переключить флажок",
                     "palettePergament": "Пергамент",
                     "paletteNord": "Nord",
                     "paletteWacholder": "Можжевельник",
@@ -3963,6 +4401,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "farbenHell": "Светлая",
                     "farbenDunkel": "Тёмная",
                     "farbenZuruecksetzen": "Сбросить",
+                    "farbenAnzeigen": "Показать",
+                    "farbenVerbergen": "Скрыть",
                     "farbgruppeFlaechen": "Фоны",
                     "farbgruppeUeberschriften": "Заголовки",
                     "farbgruppeText": "Текст",
@@ -4009,7 +4449,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "updateMonat": "Напомнить через месяц",
                     "updateFehler": "Не получилось. Попробуйте ещё раз.",
                     "updateTooltip": "Содержимое вашей вики этим обновлением не затрагивается!",
-                    "menuSettingsUpdate": "Настройки, доступна новая версия интерфейса"
+                    "menuSettingsUpdate": "Настройки, доступна новая версия интерфейса",
+                    "menuSettingsFileWarn": "Настройки, есть несохранённые изменения"
                 }
             },
             "es": {
@@ -4039,16 +4480,17 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "fileSave": "Guardar como archivo",
                     "fileSaveJson": "Exportar JSON",
                     "fileSaveJsonHint": "Escribe solo los datos como JSON: la misma estructura que al importar, sin envoltorio HTML. Pensado para herramientas que no pueden crear un archivo HTML.",
-                    "noticeJsonSaved": "JSON guardado: simplewiki.json",
+                    "noticeJsonSaved": "JSON guardado: {name}",
                     "noticeNoPages": "El archivo no contiene páginas; no se reemplazó nada.",
                     "noticeVersionFehlt": "El archivo no indica ninguna versión de formato y no se leyó, para no perder información.",
                     "noticeVersionUngueltig": "El archivo indica la versión «{version}». Se permite un número a partir de 1.",
                     "noticeVersionZuNeu": "El archivo tiene la versión {version}; este wiki llega hasta la versión {eigen}. No se adoptó nada.",
                     "noticeTitleFrei": "Ya existe una página llamada «{title}». Elige otro nombre.",
-                    "fileSaveHint": "Crea un archivo HTML con todas las páginas en este orden; guárdalo como simplewiki.html para reemplazar este archivo.",
+                    "fileWarnHint": "Atención: estos cambios solo están en el navegador. Guarda el archivo o se perderán la próxima vez que lo abras.",
+                    "fileSaveHint": "Crea un archivo HTML con todas las páginas en este orden. Guárdalo como {name} — así reemplazas este archivo.",
                     "fileLoad": "Cargar archivo",
                     "fileLoadHint": "Toma las páginas de un archivo HTML o JSON guardado y reemplaza el wiki actual.",
-                    "noticeSaved": "Guardado. El archivo está ahora en tu carpeta de descargas.",
+                    "noticeSaved": "Elige dónde guardarlo. Si no aparece el diálogo de guardado, el archivo está ahora probablemente en tu carpeta de descargas.",
                     "noticeLoaded": "Wiki adoptado: {zahl} en este orden.",
                     "seite1": "1 página",
                     "seitenN": "{n} páginas",
@@ -4114,6 +4556,32 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "language": "Idioma",
                     "palette": "Paleta de colores",
                     "paletteHint": "Define el ánimo de color del wiki. El botón 🌙/☀️ de arriba cambia entre claro y oscuro dentro de él.",
+                    "toolbarAria": "Barra de herramientas",
+                    "toolbarLabel": "Mostrar la barra de herramientas",
+                    "toolbarHint": "Una fila bajo la cabecera con el recuento de palabras, el tiempo de lectura, el modo sin distracciones y la impresión de la página abierta.",
+                    "pageTocTitle": "En esta página",
+                    "pageTocSection": "Contenido de la página",
+                    "pageTocLabel": "Mostrar el contenido de la página",
+                    "pageTocHint": "Una lista de los encabezados sobre el texto, para saltar a ellos.",
+                    "callout_note": "Nota",
+                    "callout_tip": "Consejo",
+                    "callout_important": "Importante",
+                    "callout_warning": "Advertencia",
+                    "callout_caution": "Precaución",
+                    "zenOpen": "Lectura sin distracciones",
+                    "zenClose": "Salir del modo sin distracciones",
+                    "printPage": "Imprimir esta página",
+                    "wordsCount": "{n} palabras",
+                    "readingTime": "{n} min de lectura",
+                    "mdSave": "Guardar esta página como archivo Markdown",
+                    "undoHint": "Deshacer el último cambio",
+                    "undoDone": "Deshecho.",
+                    "editorIndent": "Aumentar sangría",
+                    "editorOutdent": "Reducir sangría",
+                    "mdLoad": "Cargar archivos Markdown",
+                    "mdLoadHint": "Cada archivo .md elegido se convierte en una página nueva. El nombre del archivo sin la extensión pasa a ser el título.",
+                    "noticeMdLoaded": "Markdown cargado: {n} página(s)",
+                    "taskToggle": "Cambiar la casilla",
                     "palettePergament": "Pergamino",
                     "paletteNord": "Nord",
                     "paletteWacholder": "Enebro",
@@ -4130,6 +4598,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "farbenHell": "Clara",
                     "farbenDunkel": "Oscura",
                     "farbenZuruecksetzen": "Restablecer",
+                    "farbenAnzeigen": "Mostrar",
+                    "farbenVerbergen": "Ocultar",
                     "farbgruppeFlaechen": "Superficies",
                     "farbgruppeUeberschriften": "Encabezados",
                     "farbgruppeText": "Texto",
@@ -4176,7 +4646,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "updateMonat": "Recordármelo en un mes",
                     "updateFehler": "No ha funcionado. Inténtalo de nuevo.",
                     "updateTooltip": "¡El contenido de tu wiki no se toca con esta actualización!",
-                    "menuSettingsUpdate": "Ajustes, nueva versión de la interfaz disponible"
+                    "menuSettingsUpdate": "Ajustes, nueva versión de la interfaz disponible",
+                    "menuSettingsFileWarn": "Ajustes, hay cambios sin guardar"
                 }
             },
             "fr": {
@@ -4206,16 +4677,17 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "fileSave": "Enregistrer comme fichier",
                     "fileSaveJson": "Exporter en JSON",
                     "fileSaveJsonHint": "N'écrit que les données au format JSON — même structure qu'à l'import, sans enveloppe HTML. Prévu pour les outils qui ne peuvent pas créer de fichier HTML.",
-                    "noticeJsonSaved": "JSON enregistré : simplewiki.json",
+                    "noticeJsonSaved": "JSON enregistré : {name}",
                     "noticeNoPages": "Le fichier ne contient aucune page — rien n'a été remplacé.",
                     "noticeVersionFehlt": "Le fichier n'indique aucune version de format et n'a pas été lu — ainsi aucune information n'est perdue.",
                     "noticeVersionUngueltig": "Le fichier indique la version « {version} ». Un nombre à partir de 1 est autorisé.",
                     "noticeVersionZuNeu": "Le fichier a la version {version}, ce wiki va jusqu'à la version {eigen}. Rien n'a été repris.",
                     "noticeTitleFrei": "Une page nommée « {title} » existe déjà. Veuillez en choisir un autre.",
-                    "fileSaveHint": "Crée un fichier HTML avec toutes les pages dans cet ordre — enregistrez-le sous simplewiki.html pour remplacer ce fichier.",
+                    "fileWarnHint": "Attention : ces modifications ne sont que dans le navigateur. Enregistrez le fichier, sinon elles disparaîtront à la prochaine ouverture.",
+                    "fileSaveHint": "Crée un fichier HTML avec toutes les pages dans cet ordre. Enregistrez-le sous {name} — cela remplace ce fichier.",
                     "fileLoad": "Charger un fichier",
                     "fileLoadHint": "Reprend les pages d'un fichier HTML ou JSON enregistré et remplace le wiki actuel.",
-                    "noticeSaved": "Enregistré. Le fichier est maintenant dans votre dossier de téléchargements.",
+                    "noticeSaved": "Choisissez où enregistrer. Si la boîte de dialogue n'apparaît pas, le fichier se trouve probablement maintenant dans votre dossier de téléchargements.",
                     "noticeLoaded": "Wiki repris : {zahl} dans cet ordre.",
                     "seite1": "1 page",
                     "seitenN": "{n} pages",
@@ -4281,6 +4753,32 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "language": "Langue",
                     "palette": "Palette de couleurs",
                     "paletteHint": "Définit l'ambiance colorée du wiki. Le bouton 🌙/☀️ ci-dessus bascule clair et sombre à l'intérieur.",
+                    "toolbarAria": "Barre d'outils",
+                    "toolbarLabel": "Afficher la barre d'outils",
+                    "toolbarHint": "Une ligne sous l'en-tête avec le nombre de mots, le temps de lecture, le mode sans distraction et l'impression de la page ouverte.",
+                    "pageTocTitle": "Sur cette page",
+                    "pageTocSection": "Sommaire de la page",
+                    "pageTocLabel": "Afficher le sommaire de la page",
+                    "pageTocHint": "Une liste des titres au-dessus du texte, pour y sauter.",
+                    "callout_note": "Remarque",
+                    "callout_tip": "Conseil",
+                    "callout_important": "Important",
+                    "callout_warning": "Avertissement",
+                    "callout_caution": "Attention",
+                    "zenOpen": "Lecture sans distraction",
+                    "zenClose": "Quitter le mode sans distraction",
+                    "printPage": "Imprimer cette page",
+                    "wordsCount": "{n} mots",
+                    "readingTime": "{n} min de lecture",
+                    "mdSave": "Enregistrer cette page comme fichier Markdown",
+                    "undoHint": "Annuler la dernière modification",
+                    "undoDone": "Annulé.",
+                    "editorIndent": "Augmenter le retrait",
+                    "editorOutdent": "Réduire le retrait",
+                    "mdLoad": "Charger des fichiers Markdown",
+                    "mdLoadHint": "Chaque fichier .md choisi devient une nouvelle page. Le nom du fichier sans son extension devient le titre.",
+                    "noticeMdLoaded": "Markdown chargé : {n} page(s)",
+                    "taskToggle": "Basculer la case",
                     "palettePergament": "Parchemin",
                     "paletteNord": "Nord",
                     "paletteWacholder": "Genévrier",
@@ -4297,6 +4795,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "farbenHell": "Claire",
                     "farbenDunkel": "Sombre",
                     "farbenZuruecksetzen": "Réinitialiser",
+                    "farbenAnzeigen": "Afficher",
+                    "farbenVerbergen": "Masquer",
                     "farbgruppeFlaechen": "Fonds",
                     "farbgruppeUeberschriften": "Titres",
                     "farbgruppeText": "Texte",
@@ -4343,7 +4843,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "updateMonat": "Me rappeler dans un mois",
                     "updateFehler": "Cela n'a pas fonctionné. Veuillez réessayer.",
                     "updateTooltip": "Le contenu de votre wiki n'est pas modifié par cette mise à jour !",
-                    "menuSettingsUpdate": "Réglages, nouvelle version de l'interface disponible"
+                    "menuSettingsUpdate": "Réglages, nouvelle version de l'interface disponible",
+                    "menuSettingsFileWarn": "Réglages, des modifications non enregistrées"
                 }
             },
             "ja": {
@@ -4373,16 +4874,17 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "fileSave": "ファイルとして保存",
                     "fileSaveJson": "JSON を書き出す",
                     "fileSaveJsonHint": "データだけを JSON で書き出します。読み込み時と同じ構造で、HTML の外枠はありません。HTML ファイルを作れないツール向けです。",
-                    "noticeJsonSaved": "JSON を保存しました: simplewiki.json",
+                    "noticeJsonSaved": "JSON を保存しました: {name}",
                     "noticeNoPages": "ファイルにページが含まれていないため、何も置き換えませんでした。",
                     "noticeVersionFehlt": "ファイルに形式のバージョンが指定されていないため読み込みませんでした。こうして情報が失われません。",
                     "noticeVersionUngueltig": "ファイルはバージョン「{version}」を指定しています。1 以上の数値が使用できます。",
                     "noticeVersionZuNeu": "ファイルのバージョンは {version}、この Wiki はバージョン {eigen} まで対応します。何も取り込みませんでした。",
                     "noticeTitleFrei": "「{title}」という名前のページはすでにあります。別の名前を選んでください。",
-                    "fileSaveHint": "すべてのページをこの順序で含む HTML ファイルを作成します。simplewiki.html として保存すると、このファイルを置き換えられます。",
+                    "fileWarnHint": "注意:この変更はブラウザーにのみ保存されています。ファイルを保存しないと、次に開いたときに失われます。",
+                    "fileSaveHint": "すべてのページをこの順序で含む HTML ファイルを作成します。{name} として保存すると、このファイルを置き換えられます。",
                     "fileLoad": "ファイルを読み込む",
                     "fileLoadHint": "保存した HTML または JSON ファイルからページを取り込み、現在の Wiki を置き換えます。",
-                    "noticeSaved": "保存しました。ファイルはダウンロードフォルダーにあります。",
+                    "noticeSaved": "保存先を指定してください。保存ダイアログが表示されない場合、ファイルは現在、おそらくダウンロードフォルダーにあります。",
                     "noticeLoaded": "Wiki を取り込みました: {zahl}、この順序。",
                     "seite1": "1 ページ",
                     "seitenN": "{n} ページ",
@@ -4448,6 +4950,32 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "language": "言語",
                     "palette": "カラーパレット",
                     "paletteHint": "Wiki の色の雰囲気を決めます。上の 🌙/☀️ ボタンで、その中でライトとダークを切り替えます。",
+                    "toolbarAria": "ツールバー",
+                    "toolbarLabel": "ツールバーを表示",
+                    "toolbarHint": "見出しの下の行に、語数、読了時間、集中モード、開いているページの印刷を表示します。",
+                    "pageTocTitle": "このページの内容",
+                    "pageTocSection": "ページの目次",
+                    "pageTocLabel": "ページの目次を表示",
+                    "pageTocHint": "本文の上に見出しの一覧を表示し、そこへ移動できます。",
+                    "callout_note": "注記",
+                    "callout_tip": "ヒント",
+                    "callout_important": "重要",
+                    "callout_warning": "警告",
+                    "callout_caution": "注意",
+                    "zenOpen": "集中して読む",
+                    "zenClose": "集中モードを終了",
+                    "printPage": "このページを印刷",
+                    "wordsCount": "{n} 語",
+                    "readingTime": "読了時間 {n} 分",
+                    "mdSave": "このページを Markdown ファイルとして保存",
+                    "undoHint": "最後の変更を元に戻す",
+                    "undoDone": "元に戻しました。",
+                    "editorIndent": "インデントを増やす",
+                    "editorOutdent": "インデントを減らす",
+                    "mdLoad": "Markdown ファイルを読み込む",
+                    "mdLoadHint": "選んだ .md ファイルはそれぞれ新しいページになります。拡張子を除いたファイル名がタイトルになります。",
+                    "noticeMdLoaded": "Markdown を読み込みました: {n} ページ",
+                    "taskToggle": "チェックボックスを切り替える",
                     "palettePergament": "パーチメント",
                     "paletteNord": "Nord",
                     "paletteWacholder": "ジュニパー",
@@ -4464,6 +4992,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "farbenHell": "ライト",
                     "farbenDunkel": "ダーク",
                     "farbenZuruecksetzen": "リセット",
+                    "farbenAnzeigen": "表示",
+                    "farbenVerbergen": "非表示",
                     "farbgruppeFlaechen": "背景",
                     "farbgruppeUeberschriften": "見出し",
                     "farbgruppeText": "テキスト",
@@ -4510,7 +5040,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "updateMonat": "1 か月後に通知する",
                     "updateFehler": "うまくいきませんでした。もう一度お試しください。",
                     "updateTooltip": "この更新で Wiki の内容は変更されません！",
-                    "menuSettingsUpdate": "設定、新しいインターフェース版が利用可能です"
+                    "menuSettingsUpdate": "設定、新しいインターフェース版が利用可能です",
+                    "menuSettingsFileWarn": "設定、保存されていない変更があります"
                 }
             },
             "ko": {
@@ -4540,16 +5071,17 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "fileSave": "파일로 저장",
                     "fileSaveJson": "JSON 내보내기",
                     "fileSaveJsonHint": "데이터만 JSON으로 씁니다. 가져올 때와 같은 구조이며 HTML 껍데기는 없습니다. HTML 파일을 만들 수 없는 도구를 위한 것입니다.",
-                    "noticeJsonSaved": "JSON 저장됨: simplewiki.json",
+                    "noticeJsonSaved": "JSON 저장됨: {name}",
                     "noticeNoPages": "파일에 페이지가 없어 아무것도 바뀌지 않았습니다.",
                     "noticeVersionFehlt": "파일에 형식 버전이 없어 읽지 않았습니다. 그래야 정보가 사라지지 않습니다.",
                     "noticeVersionUngueltig": "파일에 버전 「{version}」이(가) 지정되어 있습니다. 1 이상의 숫자를 사용할 수 있습니다.",
                     "noticeVersionZuNeu": "파일 버전은 {version}, 이 위키는 버전 {eigen}까지 지원합니다. 아무것도 가져오지 않았습니다.",
                     "noticeTitleFrei": "「{title}」이라는 이름의 페이지가 이미 있습니다. 다른 이름을 선택하세요.",
-                    "fileSaveHint": "모든 페이지를 이 순서로 담은 HTML 파일을 만듭니다. simplewiki.html로 저장하면 이 파일을 대체할 수 있습니다.",
+                    "fileWarnHint": "주의: 이 변경 사항은 브라우저에만 있습니다. 파일로 저장하지 않으면 다음에 열 때 사라집니다.",
+                    "fileSaveHint": "모든 페이지를 이 순서로 담은 HTML 파일을 만듭니다. {name}로 저장하면 이 파일을 대체할 수 있습니다.",
                     "fileLoad": "파일 불러오기",
                     "fileLoadHint": "저장된 HTML 또는 JSON 파일에서 페이지를 가져와 현재 위키를 대체합니다.",
-                    "noticeSaved": "저장되었습니다. 파일은 다운로드 폴더에 있습니다.",
+                    "noticeSaved": "저장 위치를 정하세요. 저장 대화 상자가 나타나지 않으면 파일은 지금쯤 다운로드 폴더에 있을 것입니다.",
                     "noticeLoaded": "위키를 가져왔습니다: {zahl}, 이 순서대로.",
                     "seite1": "1페이지",
                     "seitenN": "{n}페이지",
@@ -4615,6 +5147,32 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "language": "언어",
                     "palette": "색상 팔레트",
                     "paletteHint": "위키의 색 분위기를 정합니다. 위쪽 🌙/☀️ 버튼으로 그 안에서 라이트와 다크를 전환합니다.",
+                    "toolbarAria": "도구 모음",
+                    "toolbarLabel": "도구 모음 표시",
+                    "toolbarHint": "머리글 아래 줄에 단어 수, 읽는 시간, 집중 모드, 열린 페이지 인쇄를 표시합니다.",
+                    "pageTocTitle": "이 페이지 목차",
+                    "pageTocSection": "페이지 목차",
+                    "pageTocLabel": "페이지 목차 표시",
+                    "pageTocHint": "본문 위에 제목 목록을 표시하여 그리로 이동할 수 있습니다.",
+                    "callout_note": "참고",
+                    "callout_tip": "팁",
+                    "callout_important": "중요",
+                    "callout_warning": "경고",
+                    "callout_caution": "주의",
+                    "zenOpen": "집중해서 읽기",
+                    "zenClose": "집중 모드 나가기",
+                    "printPage": "이 페이지 인쇄",
+                    "wordsCount": "단어 {n}개",
+                    "readingTime": "읽는 시간 {n}분",
+                    "mdSave": "이 페이지를 Markdown 파일로 저장",
+                    "undoHint": "마지막 변경을 취소",
+                    "undoDone": "취소했습니다.",
+                    "editorIndent": "들여쓰기",
+                    "editorOutdent": "내어쓰기",
+                    "mdLoad": "Markdown 파일 불러오기",
+                    "mdLoadHint": "선택한 .md 파일마다 새 페이지가 됩니다. 확장자를 뺀 파일 이름이 제목이 됩니다.",
+                    "noticeMdLoaded": "Markdown 불러옴: {n}개 페이지",
+                    "taskToggle": "확인란 전환",
                     "palettePergament": "퍼거먼트",
                     "paletteNord": "Nord",
                     "paletteWacholder": "주니퍼",
@@ -4631,6 +5189,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "farbenHell": "밝게",
                     "farbenDunkel": "어둡게",
                     "farbenZuruecksetzen": "초기화",
+                    "farbenAnzeigen": "표시",
+                    "farbenVerbergen": "숨기기",
                     "farbgruppeFlaechen": "배경",
                     "farbgruppeUeberschriften": "제목",
                     "farbgruppeText": "텍스트",
@@ -4677,7 +5237,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "updateMonat": "한 달 후에 알림",
                     "updateFehler": "잘 되지 않았습니다. 다시 시도하세요.",
                     "updateTooltip": "이 업데이트로 위키 내용은 변경되지 않습니다!",
-                    "menuSettingsUpdate": "설정, 새 인터페이스 버전 사용 가능"
+                    "menuSettingsUpdate": "설정, 새 인터페이스 버전 사용 가능",
+                    "menuSettingsFileWarn": "설정, 저장되지 않은 변경 사항이 있습니다"
                 }
             },
             "zh-cn": {
@@ -4707,16 +5268,17 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "fileSave": "另存为文件",
                     "fileSaveJson": "导出 JSON",
                     "fileSaveJsonHint": "仅将数据以 JSON 写出——与导入时结构相同，没有 HTML 外壳。供无法构建 HTML 文件的工具使用。",
-                    "noticeJsonSaved": "JSON 已保存：simplewiki.json",
+                    "noticeJsonSaved": "JSON 已保存：{name}",
                     "noticeNoPages": "该文件不包含页面——未替换任何内容。",
                     "noticeVersionFehlt": "该文件未注明格式版本，因此未被读取——这样不会丢失任何信息。",
                     "noticeVersionUngueltig": "该文件注明版本「{version}」。允许使用 1 及以上的数字。",
                     "noticeVersionZuNeu": "该文件的版本为 {version}，此 Wiki 最高支持版本 {eigen}。未采用任何内容。",
                     "noticeTitleFrei": "名为「{title}」的页面已存在。请另选一个。",
-                    "fileSaveHint": "按此顺序创建一个包含所有页面的 HTML 文件——将其保存为 simplewiki.html 即可替换此文件。",
+                    "fileWarnHint": "注意：这些更改只保存在浏览器中。请保存文件，否则下次打开时它们会丢失。",
+                    "fileSaveHint": "按此顺序创建一个包含所有页面的 HTML 文件。将其保存为 {name} 即可替换此文件。",
                     "fileLoad": "加载文件",
                     "fileLoadHint": "从已保存的 HTML 或 JSON 文件中接管页面，并替换当前 Wiki。",
-                    "noticeSaved": "已保存。文件现在位于你的下载文件夹中。",
+                    "noticeSaved": "请确定保存位置。如果没有出现保存对话框，文件现在可能已在你的下载文件夹中。",
                     "noticeLoaded": "已接管 Wiki：{zahl}，按此顺序。",
                     "seite1": "1 个页面",
                     "seitenN": "{n} 个页面",
@@ -4782,6 +5344,32 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "language": "语言",
                     "palette": "配色方案",
                     "paletteHint": "设定 Wiki 的色彩氛围。上方的 🌙/☀️ 按钮在其中切换浅色与深色。",
+                    "toolbarAria": "工具栏",
+                    "toolbarLabel": "显示工具栏",
+                    "toolbarHint": "在标题下方的一行显示字数、阅读时间、专注模式和打印当前页面。",
+                    "pageTocTitle": "本页内容",
+                    "pageTocSection": "页面目录",
+                    "pageTocLabel": "显示页面目录",
+                    "pageTocHint": "在正文上方列出标题，点击即可跳转。",
+                    "callout_note": "说明",
+                    "callout_tip": "提示",
+                    "callout_important": "重要",
+                    "callout_warning": "警告",
+                    "callout_caution": "注意",
+                    "zenOpen": "专注阅读",
+                    "zenClose": "退出专注模式",
+                    "printPage": "打印此页面",
+                    "wordsCount": "{n} 个词",
+                    "readingTime": "阅读时间 {n} 分钟",
+                    "mdSave": "将此页面保存为 Markdown 文件",
+                    "undoHint": "撤销上一步修改",
+                    "undoDone": "已撤销。",
+                    "editorIndent": "增加缩进",
+                    "editorOutdent": "减少缩进",
+                    "mdLoad": "载入 Markdown 文件",
+                    "mdLoadHint": "每个选中的 .md 文件都会成为一个新页面。去掉扩展名的文件名就是标题。",
+                    "noticeMdLoaded": "已载入 Markdown:{n} 个页面",
+                    "taskToggle": "切换复选框",
                     "palettePergament": "羊皮纸",
                     "paletteNord": "Nord",
                     "paletteWacholder": "杜松",
@@ -4798,6 +5386,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "farbenHell": "浅色",
                     "farbenDunkel": "深色",
                     "farbenZuruecksetzen": "重置",
+                    "farbenAnzeigen": "显示",
+                    "farbenVerbergen": "隐藏",
                     "farbgruppeFlaechen": "表面",
                     "farbgruppeUeberschriften": "标题",
                     "farbgruppeText": "文本",
@@ -4844,7 +5434,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "updateMonat": "一个月后提醒我",
                     "updateFehler": "未能成功。请重试。",
                     "updateTooltip": "此更新不会改动你的 Wiki 内容！",
-                    "menuSettingsUpdate": "设置，有新的界面版本可用"
+                    "menuSettingsUpdate": "设置，有新的界面版本可用",
+                    "menuSettingsFileWarn": "设置，有未保存的更改"
                 }
             }
         };
@@ -5086,6 +5677,15 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
             return String(m ? m[1] : s).trim();
         }
 
+        /* Einen Schalterwert lesen, egal ob er als echtes Bool, als
+           "true"/"false" oder als "1"/"0" daherkommt. Alles andere
+           zaehlt als aus - so bleibt ein fehlendes Feld ein Aus. */
+        function wahlWahr(wert) {
+            if (wert === true) return true;
+            const s = String(wert == null ? '' : wert).trim().toLowerCase();
+            return s === 'true' || s === '1' || s === 'ja' || s === 'yes';
+        }
+
         /* ---------- Seite und Tiddler ----------
 
            Lesen (das, was der Server schickt):
@@ -5177,10 +5777,10 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
            Start laut, statt dass später irgendwo still nichts
            gespeichert wird.
 
-             laden()
-               -> { seiten, vorhanden, verweise, startseite, sprache,
-                    thema, palette, eigeneFarben, nurLesen, wikiTitel,
-                    wikiUntertitel, art }
+              laden()
+                -> { seiten, vorhanden, verweise, startseite, sprache,
+                     thema, palette, toolbar, seiteninhalt, eigeneFarben,
+                     nurLesen, wikiTitel, wikiUntertitel, art }
                   seiten      die Seitenliste, die der Speicher verwaltet
                   vorhanden   true, wenn es etwas zu laden gab. Wichtig
                               für den Unterschied zwischen einem leeren
@@ -5213,6 +5813,9 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
              paletteSetzen(palette) eine Palette aus SIMPLEWIKI_PALETTEN
              eigeneFarbenSetzen(werte)  die eigenen Farben (Objekt, s. u.)
              spracheSetzen(sprache) ein Code aus SIMPLEWIKI_LANGS
+             toolbarSetzen(an)      Werkzeugleiste ein- oder ausschalten
+             seiteninhaltSetzen(an) Inhaltsverzeichnis der Seite ein- oder
+                                    ausschalten
 
            Dazu zwei Aufrufe, die nur der Serverspeicher hat: list holt
            alle Tiddler, read einen bestimmten. Im Browser gibt es nichts
@@ -5223,7 +5826,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
 
         const SPEICHER_METHODEN = ['laden', 'uebernehmen', 'seiteSichern',
             'seiteLoeschen', 'startseiteSetzen', 'themaSetzen', 'paletteSetzen',
-            'eigeneFarbenSetzen', 'spracheSetzen'];
+            'eigeneFarbenSetzen', 'spracheSetzen', 'toolbarSetzen',
+            'seiteninhaltSetzen'];
 
         function pruefeSpeicher(speicher, name) {
             const fehlt = SPEICHER_METHODEN.filter(m => typeof speicher[m] !== 'function');
@@ -5271,10 +5875,16 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     sprache: SimpleWikiStore.get('simplewiki_lang') || '',
                     thema: SimpleWikiStore.get('simplewiki_theme') || '',
                     palette: SimpleWikiStore.get('simplewiki_palette') || '',
+                    toolbar: SimpleWikiStore.get('simplewiki_toolbar') === '1',
+                    seiteninhalt: SimpleWikiStore.get('simplewiki_seiteninhalt') === '1',
                     eigeneFarben: eigeneFarbenLesen(SimpleWikiStore.get('simplewiki_eigene_farben')),
                     nurLesen: false,
                     wikiTitel: '',
-                    wikiUntertitel: ''
+                    wikiUntertitel: '',
+                    /* Im Browser gibt es keinen Servernamen. Das Feld
+                       steht trotzdem hier, damit beide Speicher dieselben
+                       Felder liefern. */
+                    slug: ''
                 };
             },
 
@@ -5331,6 +5941,18 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
             spracheSetzen: function (sprache) {
                 this.einstellungen.sprache = sprache;
                 SimpleWikiStore.set('simplewiki_lang', sprache == null ? '' : String(sprache));
+                return true;
+            },
+
+            toolbarSetzen: function (an) {
+                this.einstellungen.toolbar = !!an;
+                SimpleWikiStore.set('simplewiki_toolbar', an ? '1' : '');
+                return true;
+            },
+
+            seiteninhaltSetzen: function (an) {
+                this.einstellungen.seiteninhalt = !!an;
+                SimpleWikiStore.set('simplewiki_seiteninhalt', an ? '1' : '');
                 return true;
             },
 
@@ -5554,6 +6176,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                 delete felder.eigeneFarben;
             }
             if (this.einstellungen.sprache) felder.sprache = this.einstellungen.sprache;
+            felder.toolbar = this.einstellungen.toolbar ? 'true' : 'false';
+            felder.seiteninhalt = this.einstellungen.seiteninhalt ? 'true' : 'false';
             return this.ruf('save', { tiddlers: [felder] });
         };
 
@@ -5613,7 +6237,9 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                 thema: traeger.thema === 'dark' ? 'dark' : (traeger.thema === 'light' ? 'light' : ''),
                 palette: traeger.palette ? String(traeger.palette) : '',
                 eigeneFarben: eigeneFarbenLesen(traeger.eigeneFarben),
-                sprache: traeger.sprache ? String(traeger.sprache) : ''
+                sprache: traeger.sprache ? String(traeger.sprache) : '',
+                toolbar: wahlWahr(traeger.toolbar),
+                seiteninhalt: wahlWahr(traeger.seiteninhalt)
             };
 
             return {
@@ -5631,10 +6257,16 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                 sprache: this.einstellungen.sprache,
                 thema: this.einstellungen.thema,
                 palette: this.einstellungen.palette,
+                toolbar: this.einstellungen.toolbar,
+                seiteninhalt: this.einstellungen.seiteninhalt,
                 eigeneFarben: this.einstellungen.eigeneFarben,
                 nurLesen: this.nurLesen,
                 wikiTitel: this.wikiTitel,
-                wikiUntertitel: this.wikiUntertitel
+                wikiUntertitel: this.wikiUntertitel,
+                /* Der Name des Wikis aus dem Pfad (/wiki/<name>). Die App
+                   nimmt ihn fuer den Namen der gesicherten Datei; im
+                   Browser ist er leer. */
+                slug: this.slug
             };
         };
 
@@ -5659,6 +6291,10 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     t.eigeneFarben = JSON.stringify(this.einstellungen.eigeneFarben);
                 }
                 if (this.einstellungen.sprache) t.sprache = this.einstellungen.sprache;
+                /* Der Schalter der Werkzeugleiste ist ein echtes Ja/Nein:
+                   er wird immer mitgeschrieben, nicht nur wenn an. */
+                t.toolbar = this.einstellungen.toolbar ? 'true' : 'false';
+                t.seiteninhalt = this.einstellungen.seiteninhalt ? 'true' : 'false';
             }
             /* Die Stelle im Inhaltsverzeichnis mitgeben. */
             const pos = this.seiten.indexOf(seite);
@@ -5717,6 +6353,16 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
 
         MwsStore.prototype.spracheSetzen = function (sprache) {
             this.einstellungen.sprache = sprache == null ? '' : String(sprache);
+            return this.einstellungenSchreiben();
+        };
+
+        MwsStore.prototype.toolbarSetzen = function (an) {
+            this.einstellungen.toolbar = !!an;
+            return this.einstellungenSchreiben();
+        };
+
+        MwsStore.prototype.seiteninhaltSetzen = function (an) {
+            this.einstellungen.seiteninhalt = !!an;
             return this.einstellungenSchreiben();
         };
 
@@ -5879,6 +6525,12 @@ showSettings: false,
                 shellUpdate: null,
                 shellTaetig: false,
                 shellFehler: false,
+                /* Gibt es Aenderungen, die nur im Browserspeicher stehen
+                   und noch nicht in der Datei auf der Platte? Dann steht
+                   der rote Punkt am Zahnrad und der Knopf "Als Datei
+                   sichern" pulsiert. Im Serverbetrieb immer false - dort
+                   schreibt der Server. */
+                dateiWarnung: false,
 /* Das Inhaltsverzeichnis links steht beim Oeffnen da, ausser das
                    Fenster ist zu schmal dafuer (TOC_MENUE_OFFEN_BIS). Nur
                    fuer dieses eine Fenster - wer es zuklappt, will es auch
@@ -5892,6 +6544,32 @@ showSettings: false,
                    ueber den Fluss-Knopf wieder zur ganzen Wiki. */
                 flussTag: '',
                 druckModus: false,
+                /* Die Werkzeugleiste unter der Kopfzeile: standardmaessig
+                   aus. Ob sie an ist, ist eine Einstellung wie die Farbe
+                   und wandert deshalb in die Datei bzw. an den Tiddler der
+                   Startseite. */
+                toolbarSichtbar: false,
+                /* Das Inhaltsverzeichnis der offenen Seite ueber dem Text:
+                   ebenfalls eine Einstellung wie die Farbe, standardmaessig
+                   aus. Die Ueberschriften selbst kommen aus der fertigen
+                   Vorschau (seitenUeberschriften) - so stimmen Verzeichnis
+                   und Text immer ueberein, auch bei Codebloecken. */
+                seiteninhaltAn: false,
+                seitenUeberschriften: [],
+                /* Die eine Stufe Ruecknahme: der Stand vor der letzten
+                   Aenderung. Es ist genau ein Platz, kein Stapel - die
+                   naechste Aenderung ueberschreibt ihn. Er wird vor jeder
+                   Aenderung neu gefuellt (merkeZustand) und beim
+                   Zuruecknehmen wiederhergestellt. */
+                undoZustand: null,
+                kannRueckgaengig: false,
+                /* Der ablenkungsfreie Modus: Kopfzeile, Werkzeugleiste und
+                   Verzeichnis weg, nur der Text. Nichts wird gespeichert -
+                   er ist ein Zustand des Augenblicks. */
+                zenModus: false,
+                /* Druckt gerade die offene Seite statt des ganzen Flusses?
+                   Der beforeprint-Zuhoerer fragt das, bevor er umschaltet. */
+                seiteDruckAn: false,
                 /* Unbekannte Angaben oben aus einer eingelesenen Datei. */
                 fremdeDaten: {},
                 /* Der Server hat kein Schreiben erlaubt. */
@@ -5903,6 +6581,10 @@ showSettings: false,
                 /* Der Untertitel aus $:/SiteSubtitle, eine Zeile unter dem
                    Namen. Im Browser leer; dann fehlt die Zeile. */
                 wikiUntertitel: '',
+                /* Der Name des Wikis aus dem Serverpfad (/wiki/<name>).
+                   Er benennt die gesicherte Datei. Im Browser leer, dann
+                   heisst die Sicherung weiterhin simplewiki.html. */
+                wikiSlug: '',
                 /* Wer hier gerade arbeitet. Der Name ist das einzige,
                    was der Server freiwillig nennt, und er steht nur da,
                    wenn der Server ihn genannt hat. */
@@ -5925,6 +6607,11 @@ showSettings: false,
                 rechteWeg: false,
                 /* Kommt der Inhalt vom Server statt aus dem Browser? */
                 mwsModus: false,
+                /* Laeuft gerade der erste Aufbau (loadPages)? Dann sind
+                   die Schreibvorgaenge in den Browserspeicher kein Werk
+                   der Benutzerin, sondern nur das Einlesen - sie duerfen
+                   die Warnung nicht anschalten. */
+                laedt: false,
                 /* Der Hinweis auf den Server ist weggeklickt worden.
                    Solange die Session lebt, bleibt er weg - gespeichert
                    wird das in sessionStorage, nicht localStorage, damit
@@ -5975,6 +6662,10 @@ showSettings: false,
                        und aus welcher Welt geklont wird. */
                     farbModus: 'hell',
                     farbQuelle: 'pergament',
+                    /* Der Farb-Editor der eigenen Welt ist zugeklappt, bis
+                       jemand ihn aufschlaegt - die lange Farbenliste soll
+                       nicht dauerhaft im Panel stehen. */
+                    farbEditorOffen: false,
                     startPageId: '',
                     mdEditor: null,
                     editorReady: false,
@@ -6185,6 +6876,26 @@ showSettings: false,
                     return this.backlinks.length + this.outgoingLinks.length;
                 },
 
+                /* Wortzahl der offenen Seite - die Grundlage der Lesezeit.
+                   Gezaehlt wird der Fliesstext: erst Codebloecke ausblenden,
+                   dann Verweisziele in runden Klammern weg, dann die
+                   Markdown-Zeichen weg. Uebrig bleiben Woerter. */
+                wortZahl() {
+                    if (!this.currentPage) return 0;
+                    let s = this.quelltextAusblenden(this.currentPage.content || '').text;
+                    s = s.replace(/\]\([^)]*\)/g, ' ');
+                    s = s.replace(/^[ \t]*[-*+] \[[ xX]\]/gm, ' ');
+                    s = s.replace(/[#>*_~`|=-]+/g, ' ');
+                    return s.split(/\s+/).filter(w => /[\p{L}\p{N}]/u.test(w)).length;
+                },
+
+                /* Lesezeit in Minuten. 200 Woerter je Minute ist die
+                   uebliche Schaetzung; angefangene Minuten zaehlen ganz,
+                   mindestens aber eine. */
+                lesezeit() {
+                    return this.wortZahl ? Math.max(1, Math.ceil(this.wortZahl / 200)) : 0;
+                },
+
                 /* Die Schlagworte der offenen Seite - als Pillen unter dem
                    Titel. Anders als die Verweise werden sie nicht aus dem
                    Text gewonnen, sondern liegen an der Seite selbst. */
@@ -6287,6 +6998,21 @@ showSettings: false,
                 window.addEventListener('afterprint', this.nachDemDruck);
                 window.addEventListener('keydown', this.onKeydown);
                 window.addEventListener('resize', this.onResize);
+                /* Der erste Aufbau laeuft nicht durch updated() - die
+                   Kaestchen brauchen also hier einen Anstoss. */
+                this.$nextTick(() => {
+                    this.kaestchenVorbereiten();
+                    this.seitenInhaltAufbauen();
+                });
+            },
+
+            /* Nach jedem Neuaufbau der Ansicht: die Kaestchen der
+               Aufgabenlisten wieder anklickbar machen. Vue ersetzt die
+               Vorschau als Ganzes, deshalb sind sie jedes Mal neu
+               abgeschaltet. */
+            updated() {
+                this.kaestchenVorbereiten();
+                this.seitenInhaltAufbauen();
             },
 
             methods: {
@@ -6332,6 +7058,7 @@ showSettings: false,
                    sonst verlinken. */
                 toggleLink(titel) {
                     if (!titel) return;
+                    this.merkeZustand();
                     if (!Array.isArray(this.currentPage.links)) {
                         this.currentPage.links = [];
                     }
@@ -6352,6 +7079,7 @@ showSettings: false,
                 /* Verlinken und – falls nötig – die Seite gleich anlegen. */
                 linkAndCreate(titel) {
                     if (!titel) return;
+                    this.merkeZustand();
                     let neu = null;
                     if (!this.pages.some(p => p.title === titel)) {
                         neu = {
@@ -6669,13 +7397,87 @@ showSettings: false,
                     });
                 },
 
-                /* Auch Strg+P soll den Fluss bringen. */
+                /* Auch Strg+P soll den Fluss bringen - aber nicht, wenn
+                   gerade die offene Seite gedruckt wird. */
                 vorDemDruck() {
+                    if (this.seiteDruckAn) return;
                     this.druckModus = true;
                 },
 
                 nachDemDruck() {
                     this.druckModus = false;
+                    this.seiteDruckAn = false;
+                },
+
+                /* Nur die offene Seite drucken. Sie steht schon da - der
+                   beforeprint-Zuhoerer darf den Fluss also nicht
+                   aufblenden. Das Kennzeichen bleibt gesetzt, bis
+                   afterprint es wieder loescht. */
+                seiteDrucken() {
+                    this.seiteDruckAn = true;
+                    window.print();
+                },
+
+                /* Die Werkzeugleiste ein- und ausschalten. Der Zustand ist
+                   eine Einstellung wie die Farbe, kein Inhalt - er wandert
+                   in den Speicher, nicht in die Seiten. */
+                toolbarUmschalten() {
+                    this.toolbarSichtbar = !this.toolbarSichtbar;
+                    SPEICHER.toolbarSetzen(this.toolbarSichtbar);
+                },
+
+                /* Das Inhaltsverzeichnis der offenen Seite ein- und
+                   ausschalten. Wie die Werkzeugleiste eine Einstellung,
+                   kein Inhalt. */
+                seiteninhaltUmschalten() {
+                    this.seiteninhaltAn = !this.seiteninhaltAn;
+                    SPEICHER.seiteninhaltSetzen(this.seiteninhaltAn);
+                    this.$nextTick(() => this.seitenInhaltAufbauen());
+                },
+
+                /* Die Ueberschriften aus der fertigen Vorschau holen und
+                   mit einer Kennung versehen, damit das Verzeichnis sie
+                   anspringen kann. Aus der Vorschau, nicht aus dem
+                   Quelltext: so faellt ein Codeblock von allein heraus,
+                   und Verzeichnis und Text koennen nicht auseinander
+                   laufen. Sind die Ueberschriften dieselben wie zuvor,
+                   bleibt die Liste stehen - sonst baute sich die Ansicht
+                   ueber updated() immer wieder selbst auf. */
+                seitenInhaltAufbauen() {
+                    const anzeige = document.querySelector('.content-body .preview');
+                    const kopfe = anzeige ? anzeige.querySelectorAll('h1, h2, h3') : [];
+                    const liste = [];
+                    for (let i = 0; i < kopfe.length; i++) {
+                        const k = kopfe[i];
+                        if (!k.id) k.id = 'simplewiki-ueberschrift-' + i;
+                        liste.push({
+                            id: k.id,
+                            text: (k.textContent || '').trim(),
+                            ebene: Number(k.tagName.charAt(1))
+                        });
+                    }
+                    const gleich = liste.length === this.seitenUeberschriften.length
+                        && liste.every((u, i) => {
+                            const a = this.seitenUeberschriften[i];
+                            return u.id === a.id && u.text === a.text && u.ebene === a.ebene;
+                        });
+                    if (!gleich) this.seitenUeberschriften = liste;
+                },
+
+                /* Im Text an die Ueberschrift springen. Nur springen,
+                   nichts oeffnen - die Ueberschrift liegt schon da. */
+                springeZuUeberschrift(id) {
+                    const ziel = document.getElementById(id);
+                    if (ziel && ziel.scrollIntoView) {
+                        ziel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                },
+
+                /* Ablenkungsfrei lesen: Kopfzeile, Leiste und Verzeichnis
+                   weg. Nur eine Sicht auf dieselben Seiten - nichts davon
+                   wird gespeichert. */
+                zenUmschalten() {
+                    this.zenModus = !this.zenModus;
                 },
 
                 /* Eine Seite im Fluss nicht bearbeiten, sondern öffnen. */
@@ -6699,7 +7501,46 @@ showSettings: false,
                    unberuehrt. */
                 alsHtml(text) {
                     const roh = this.ersetzeWikiSyntax(text || '');
-                    return this.decorateWikiLinks(marked.parse(roh, { breaks: true }));
+                    return this.gestalteCallouts(
+                        this.decorateWikiLinks(marked.parse(roh, { breaks: true })));
+                },
+
+                /* Hinweiskaesten im GitHub-Stil: ein Zitat, dessen erster
+                   Absatz mit [!NOTE] beginnt (auch [!HINWEIS] und die
+                   uebrigen Marken), wird zum farbigen Kasten mit einer
+                   Titelzeile. Alles andere Zitat bleibt ein Zitat. Die
+                   Arbeit am DOM: so ist die Marke genau das, was dasteht,
+                   und nicht eine Zeichenkette, die zufaellig so aussieht. */
+                gestalteCallouts(html) {
+                    const halter = document.createElement('div');
+                    halter.innerHTML = html;
+                    const arten = {
+                        note: 'note', tip: 'tip', important: 'important',
+                        warning: 'warning', caution: 'caution',
+                        hinweis: 'note', tipp: 'tip', wichtig: 'important',
+                        warnung: 'warning', achtung: 'caution'
+                    };
+                    const zitate = halter.querySelectorAll('blockquote');
+                    for (let i = 0; i < zitate.length; i++) {
+                        const zitat = zitate[i];
+                        const erster = zitat.querySelector('p');
+                        if (!erster) continue;
+                        const m = /^\s*\[!([A-Za-z]+)\]\s*/.exec(erster.textContent || '');
+                        if (!m) continue;
+                        const art = arten[m[1].toLowerCase()];
+                        if (!art) continue;
+                        zitat.classList.add('callout', 'callout-' + art);
+                        const titel = document.createElement('p');
+                        titel.className = 'callout-titel';
+                        titel.textContent = this.t('callout_' + art);
+                        zitat.insertBefore(titel, erster);
+                        erster.innerHTML = erster.innerHTML
+                            .replace(/^\s*\[![A-Za-z]+\]\s*(<br\s*\/?>)?/, '');
+                        if (!erster.textContent.trim() && !erster.querySelector('img, input')) {
+                            erster.parentNode.removeChild(erster);
+                        }
+                    }
+                    return halter.innerHTML;
                 },
 
                 /* Verweise einer beliebigen Seite: einmal fuer den Fluss,
@@ -6728,12 +7569,90 @@ showSettings: false,
                 },
 
                 onPreviewClick(event) {
+                    const kaestchen = event.target.closest('input[type="checkbox"][data-zeile]');
+                    if (kaestchen) {
+                        event.preventDefault();
+                        this.aufgabeUmschalten(Number(kaestchen.getAttribute('data-zeile')));
+                        return;
+                    }
                     const link = event.target.closest('a[data-wiki-link]');
                     if (!link) return;
                     event.preventDefault();
                     const titel = link.getAttribute('data-wiki-link');
                     if (!titel) return;
                     this.openLinkTarget(titel);
+                },
+
+                /* Aufgabenlisten im Text klickbar machen.
+
+                   Marked gibt "[ ]" und "[x]" als Kaestchen aus, aber
+                   immer abgeschaltet - eine Anzeige, keine Liste. Hier
+                   werden sie wieder angeklickt, solange geschrieben
+                   werden darf. Das Kaestchen gehoert zu einer Zeile im
+                   Quelltext; nur wenn die Zahl der Zeilenmarken und der
+                   Kaestchen uebereinstimmt, wird zugeordnet - sonst
+                   bliebe ein Kaestchen aus rohem HTML in der Rechnung. */
+                kaestchenVorbereiten() {
+                    const anzeige = document.querySelector('.content-body .preview');
+                    if (!anzeige) return;
+
+                    /* Lesen statt schreiben: schon angeklickte Kaestchen
+                       wieder abschalten. Die Vorschau selbst wird dabei
+                       nicht neu gebaut - die Abschaltung faellt sonst
+                       durchs Raster, wenn der Server erst nach dem
+                       Aufbau "nur lesen" meldet. */
+                    if (this.nurLesen || this.isEditing) {
+                        const alt = anzeige.querySelectorAll('.aufgabe-kaestchen');
+                        for (let i = 0; i < alt.length; i++) {
+                            alt[i].disabled = true;
+                            alt[i].removeAttribute('data-zeile');
+                            alt[i].classList.remove('aufgabe-kaestchen');
+                        }
+                        return;
+                    }
+                    if (!this.currentPage) return;
+                    const kaestchen = anzeige.querySelectorAll('input[type="checkbox"]');
+                    if (!kaestchen.length) return;
+
+                    const zeilen = (this.currentPage.content || '').split('\n');
+                    const marken = [];
+                    let imCode = false;
+                    for (let i = 0; i < zeilen.length; i++) {
+                        if (/^\s*(```|~~~)/.test(zeilen[i])) { imCode = !imCode; continue; }
+                        if (imCode) continue;
+                        if (/^\s*(?:[-*+]|\d+\.)\s+\[[ xX]\]/.test(zeilen[i])) marken.push(i);
+                    }
+                    if (marken.length !== kaestchen.length) return;
+
+                    for (let i = 0; i < kaestchen.length; i++) {
+                        const k = kaestchen[i];
+                        k.disabled = false;
+                        k.removeAttribute('disabled');
+                        k.setAttribute('data-zeile', String(marken[i]));
+                        k.setAttribute('title', this.t('taskToggle'));
+                        k.classList.add('aufgabe-kaestchen');
+                    }
+                },
+
+                /* Eine Aufgabe umschalten: [ ] wird [x] und zurueck.
+
+                   Geschrieben wird in der Zeile, die das Kaestchen
+                   angezeigt hat - nur der Haken aendert sich, sonst
+                   nichts. Gespeichert wird wie nach jeder Aenderung. */
+                aufgabeUmschalten(zeile) {
+                    if (!this.currentPage || this.nurLesen) return;
+                    const zeilen = (this.currentPage.content || '').split('\n');
+                    const vorher = zeilen[zeile];
+                    if (vorher === undefined) return;
+                    zeilen[zeile] = vorher.replace(
+                        /^(\s*(?:[-*+]|\d+\.)\s+)\[([ xX])\]/,
+                        (m, rumpf, haken) => rumpf + '[' + (haken === ' ' ? 'x' : ' ') + ']'
+                    );
+                    if (zeilen[zeile] === vorher) return;
+                    this.merkeZustand();
+                    this.currentPage.content = zeilen.join('\n');
+                    this.currentPage.updated = new Date().toISOString();
+                    this.seiteSichern(this.currentPage);
                 },
 
                 /* Ist der Name schon vergeben? Seiten werden über den
@@ -6774,6 +7693,7 @@ showSettings: false,
                         updated: new Date().toISOString()
                     };
                     this.fluechtigeSeiteId = neu.id;
+                    this.merkeZustand();
                     this.pages.push(neu);
                     this.currentPage = neu;
                     this.seiteSichern(neu);
@@ -7188,6 +8108,13 @@ showSettings: false,
 
                 onKeydown(event) {
                     if (event.key === 'Escape') {
+                        /* Im ablenkungsfreien Modus ist der Ausgang das
+                           Erste: Kopfzeile und Panels sind dort ohnehin
+                           nicht zu sehen. */
+                        if (this.zenModus) {
+                            this.zenModus = false;
+                            return;
+                        }
                         /* Erst die Suche, dann die Panels. Die Trefferliste
                            liegt ueber allem und geht sonst nicht weg, und
                            wer sie wegklickt, hat die Suchabsicht beendet -
@@ -7349,6 +8276,13 @@ showSettings: false,
                     if (!halter) return null;
                     const daten = this.datenAusText(halter.textContent || '');
                     if (!daten) return null;
+                    /* Ein leerer Datenblock ist kein Fehler. Die Vorlage
+                       bringt einen mit, und im Serverbetrieb stehen die
+                       Seiten nicht in der Datei, sondern kommen vom
+                       Server. Es gibt nichts zu uebernehmen - also still
+                       bleiben. Der Hinweis "keine Seiten" gehoert nur zum
+                       ausdruecklichen Oeffnen einer Datei (dateiLaden). */
+                    if (!Array.isArray(daten.seiten) || !daten.seiten.length) return null;
                     /* Auch hier gilt: passt die Version nicht, wird nichts
                        übernommen - auch nicht halb. */
                     const grund = this.pruefeFormat(daten);
@@ -7416,6 +8350,17 @@ showSettings: false,
                         this.applyPalette();
                         SPEICHER.paletteSetzen(this.palette);
                     }
+                    /* Die Werkzeugleiste nur anfassen, wenn die Datei sie
+                       ausdruecklich nennt - sonst fiele eine Einstellung,
+                       die nur im Browser steht, beim Einlesen um. */
+                    if (Object.prototype.hasOwnProperty.call(daten, 'toolbar')) {
+                        this.toolbarSichtbar = wahlWahr(daten.toolbar);
+                        SPEICHER.toolbarSetzen(this.toolbarSichtbar);
+                    }
+                    if (Object.prototype.hasOwnProperty.call(daten, 'seiteninhalt')) {
+                        this.seiteninhaltAn = wahlWahr(daten.seiteninhalt);
+                        SPEICHER.seiteninhaltSetzen(this.seiteninhaltAn);
+                    }
                 },
 
                 /* "1 Seite" oder "3 Seiten" – für Hinweise und den Fluss. */
@@ -7439,6 +8384,8 @@ showSettings: false,
                     daten.sprache = this.currentLang;
                     daten.thema = this.isDarkMode ? 'dark' : 'light';
                     daten.palette = this.palette;
+                    daten.toolbar = !!this.toolbarSichtbar;
+                    daten.seiteninhalt = !!this.seiteninhaltAn;
                     daten.eigeneFarben = this.eigeneFarben;
                     return daten;
                 },
@@ -7451,7 +8398,7 @@ showSettings: false,
                         this.fremdeDaten = {};
                         return;
                     }
-                    const bekannt = ['version', 'seiten', 'startseite', 'sprache', 'thema', 'palette', 'eigeneFarben'];
+                    const bekannt = ['version', 'seiten', 'startseite', 'sprache', 'thema', 'palette', 'toolbar', 'seiteninhalt', 'eigeneFarben'];
                     const raus = {};
                     Object.keys(daten).forEach(k => {
                         if (bekannt.indexOf(k) < 0) raus[k] = daten[k];
@@ -7514,13 +8461,66 @@ showSettings: false,
                     return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
                 },
 
+                /* ---------- Die Warnung vor ungesicherten Aenderungen ----------
+
+                   Im Browser ist der Browserspeicher die einzige Ablage:
+                   die Datei auf der Platte kennt die Aenderung nicht. Wer
+                   die Datei weitergibt oder neu oeffnet, verliert sie.
+                   Zwei Zeichen erinnern daran (der rote Punkt am Zahnrad
+                   und der pulsierende Rand am Sicherungs-Knopf); beide
+                   haengen an dateiWarnung.
+
+                   Angeschaltet wird die Warnung bei jedem Schreiben an den
+                   Browserspeicher, das von einer Handlung kommt - nicht
+                   beim Einlesen (laedt). Gemerkt wird sie in localStorage,
+                   damit sie ein Neuladen uebersteht: der Browserspeicher
+                   haelt die Aenderung ja auch. */
+                dateiWarnen() {
+                    if (this.mwsModus || this.laedt) return;
+                    this.dateiWarnung = true;
+                    SimpleWikiStore.set('simplewiki_datei_warnung', '1');
+                },
+
+                /* Die Warnung zuruecknehmen: nach dem Sichern der Datei und
+                   immer dann, wenn ein anderer Dateiinhalt den Stand des
+                   Browsers ersetzt - dann stimmt die Datei wieder. */
+                dateiWarnungLoeschen() {
+                    this.dateiWarnung = false;
+                    SimpleWikiStore.set('simplewiki_datei_warnung', '');
+                },
+
                 sichernAlsDatei() {
                     try {
-                        this.dateiHerunterladen(this.bauExport(), 'simplewiki.html', 'text/html');
+                        this.dateiHerunterladen(this.bauExport(), this.sicherungsName('.html'), 'text/html');
                         this.hinweis(this.t('noticeSaved'));
+                        /* Mit dieser Datei ist gesichert, was im Browser
+                           stand - die Warnung hat ihre Aufgabe getan. */
+                        this.dateiWarnungLoeschen();
                     } catch (e) {
                         this.hinweis(this.t('noticeSaveError'));
                     }
+                },
+
+                /* Der Name der gesicherten Datei. Im Serverbetrieb ist das
+                   der Name des Wikis aus dem Pfad (/wiki/<name>) - so heisst
+                   die Sicherung des Handbuchs simplewiki-manual.html und
+                   nicht fuer jedes Wiki gleich. Ohne Servernamen (Browser)
+                   bleibt es beim festen simplewiki. Die Endung sagt, was
+                   gesichert wird: ".html" die ganze Wiki, ".json" nur die
+                   Daten - so heisst auch die JSON-Datei nach ihrem Wiki.
+
+                   Zeichen, die in keinem Dateinamen stehen duerfen, werden
+                   zu "-", damit ein Name nie einen Pfad aufreisst. */
+                sicherungsName(erweiterung) {
+                    const endung = erweiterung === undefined ? '.html' : erweiterung;
+                    const roh = String(this.wikiSlug || '').trim();
+                    if (!roh) return 'simplewiki' + endung;
+                    const sauber = roh
+                        .replace(/[\\/:*?"<>|\u0000-\u001f]/g, '-')
+                        .replace(/^\.+/, '')
+                        .replace(/[. ]+$/, '')
+                        .trim();
+                    return (sauber || 'simplewiki') + endung;
                 },
 
                 /* Eine leere Wiki-Datei als Vorlage.
@@ -7559,11 +8559,90 @@ showSettings: false,
                 jsonExportieren() {
                     try {
                         const text = JSON.stringify(this.bauDaten(), null, 2);
-                        this.dateiHerunterladen(text, 'simplewiki.json', 'application/json');
-                        this.hinweis(this.t('noticeJsonSaved'));
+                        const name = this.sicherungsName('.json');
+                        this.dateiHerunterladen(text, name, 'application/json');
+                        this.hinweis(this.t('noticeJsonSaved').replace('{name}', name));
                     } catch (e) {
                         this.hinweis(this.t('noticeSaveError'));
                     }
+                },
+
+                /* Die offene Seite als Markdown-Datei sichern.
+
+                   Der Inhalt der Seite ist bereits Markdown - hier wird
+                   nichts umgewandelt. Der Titel steckt im Dateinamen,
+                   damit beim Wiedereinlesen derselbe Name herauskommt. */
+                markdownDateiname(titel) {
+                    const sauber = String(titel || '')
+                        .replace(/[\\/:*?"<>|]+/g, '-')
+                        .replace(/[\u0000-\u001f]+/g, '')
+                        .replace(/\s+/g, ' ')
+                        .trim()
+                        .replace(/^\.+|\.+$/g, '')
+                        .trim();
+                    return (sauber || this.t('untitled')) + '.md';
+                },
+
+                seiteAlsMarkdown() {
+                    const seite = this.currentPage;
+                    if (!seite) return;
+                    try {
+                        this.dateiHerunterladen(seite.content || '', this.markdownDateiname(seite.title), 'text/markdown');
+                        this.hinweis(this.t('noticeSaved'));
+                    } catch (e) {
+                        this.hinweis(this.t('noticeSaveError'));
+                    }
+                },
+
+                /* Markdown-Dateien als Seiten einlesen.
+
+                   Jede Datei wird eine neue Seite, ihr Dateiname ohne
+                   Endung der Titel. Der Text bleibt, wie er ist: Markdown
+                   ist schon das Format der Seite. Anders als beim Laden
+                   einer Wiki-Datei wird hier nichts ersetzt, sondern nur
+                   ergaenzt. */
+                markdownLaden(event) {
+                    const feld = event.target;
+                    const dateien = Array.prototype.slice.call(feld.files || []);
+                    feld.value = '';
+                    if (!dateien.length) return;
+                    if (this.nurLesen) {
+                        this.hinweis(this.t('nurLesen'));
+                        return;
+                    }
+                    Promise.all(dateien.map((datei) =>
+                        datei.text().then((text) => ({ titel: datei.name, text: text }))
+                    )).then((gelesen) => {
+                        this.merkeZustand();
+                        const neue = [];
+                        for (const eintrag of gelesen) {
+                            const seite = {
+                                id: Date.now().toString() + '-' + neue.length,
+                                title: this.eindeutigerTitel(String(eintrag.titel || '').replace(/\.[^.]+$/, '')),
+                                content: eintrag.text || '',
+                                links: [],
+                                tags: [],
+                                created: new Date().toISOString(),
+                                updated: new Date().toISOString()
+                            };
+                            seite.links = this.extractWikiLinks(seite.content);
+                            this.pages.push(seite);
+                            neue.push(seite);
+                        }
+                        this.seitenUebernehmen();
+                        this.seitenSichern();
+
+                        /* Ohne Startseite wird die erste neue zur
+                           Startseite - eine leere Wiki haette sonst
+                           keine. */
+                        if (!this.startPageId && neue.length) {
+                            this.startPageId = neue[0].id;
+                            SPEICHER.startseiteSetzen(neue[0].id);
+                        }
+                        this.selectPage(neue[0]);
+                        this.panelSetzen(null, false);
+                        this.hinweis(this.t('noticeMdLoaded').replace('{n}', neue.length));
+                    }).catch(() => this.hinweis(this.t('noticeError')));
                 },
 
                 /* Eine gesicherte Datei einlesen und übernehmen.
@@ -7590,6 +8669,7 @@ showSettings: false,
                             return;
                         }
                         this.fremdeAngabenMerken(daten);
+                        this.merkeZustand();
                         this.pages = this.normiereSeiten(daten.seiten);
                         this.seitenUebernehmen();
                         this.seitenSichern();
@@ -7661,11 +8741,17 @@ showSettings: false,
                    Datei sein, und was der Browser hat, bleibt stehen
                    (auch eigene Aenderungen). */
                 loadPages() {
+                    this.laedt = true;
                     const geladen = SPEICHER.laden();
                     this.mwsModus = SPEICHER.art === 'mws';
+                    /* Die gemerkte Warnung nur im Browserbetrieb: auf dem
+                       Server gibt es keine Datei zu sichern. */
+                    this.dateiWarnung = !this.mwsModus
+                        && SimpleWikiStore.get('simplewiki_datei_warnung') === '1';
                     this.nurLesen = !!geladen.nurLesen;
                     this.wikiTitel = geladen.wikiTitel || '';
                     this.wikiUntertitel = geladen.wikiUntertitel || '';
+                    this.wikiSlug = geladen.slug || '';
                     this.showRefs = !!geladen.verweise;
 
                     const ausDatei = this.readDatenAusDatei();
@@ -7680,6 +8766,7 @@ showSettings: false,
                             this.seitenSichern();
                             this.uebernehmenAusDatei(ausDatei);
                             SimpleWikiStore.set('simplewiki_digest', finger);
+                            this.dateiWarnungLoeschen();
                         } else {
                             this.pages = this.normiereSeiten(geladen.seiten);
                             this.seitenUebernehmen();
@@ -7693,6 +8780,7 @@ showSettings: false,
                         this.seitenSichern();
                         this.uebernehmenAusDatei(ausDatei);
                         if (finger) SimpleWikiStore.set('simplewiki_digest', finger);
+                        this.dateiWarnungLoeschen();
                     } else {
                         this.pages = [
                             {
@@ -7707,6 +8795,7 @@ showSettings: false,
                         ];
                         this.seitenUebernehmen();
                         this.seitenSichern();
+                        this.dateiWarnungLoeschen();
                     }
 
                     /* Beim Start die Startseite öffnen. */
@@ -7718,6 +8807,7 @@ showSettings: false,
                         SPEICHER.startseiteSetzen(this.startPageId);
                     }
                     this.currentPage = this.pages.find(p => p.id === this.startPageId) || null;
+                    this.laedt = false;
                 },
 
                 /* Farbe, Farbwelt und Sprache, die der Speicher mitgebracht hat. */
@@ -7732,10 +8822,17 @@ showSettings: false,
                     if (geladen.sprache && SIMPLEWIKI_LANGS[geladen.sprache]) {
                         this.currentLang = geladen.sprache;
                     }
+                    this.toolbarSichtbar = !!geladen.toolbar;
+                    this.seiteninhaltAn = !!geladen.seiteninhalt;
                 },
 
-                changeStartPage() {
+                startseiteWaehlen(event) {
+                    const neu = event && event.target ? event.target.value : '';
+                    if (String(neu) === String(this.startPageId)) return;
+                    this.merkeZustand();
+                    this.startPageId = neu;
                     SPEICHER.startseiteSetzen(this.startPageId);
+                    this.dateiWarnen();
                 },
 
                 /* Der Speicher und die App arbeiten auf derselben
@@ -7750,6 +8847,7 @@ showSettings: false,
                    einer Datei gebraucht, wo mehrere Seiten auf einmal
                    entstehen. */
                 seitenSichern() {
+                    this.dateiWarnen();
                     for (let i = 0; i < this.pages.length; i++) {
                         SPEICHER.seiteSichern(this.pages[i]);
                     }
@@ -7765,6 +8863,7 @@ showSettings: false,
                    Im Browser wird es ignoriert - dort kennt die
                    localStorage keinen Tiddler. */
                 seiteSichern(seite, alterTitel) {
+                    this.dateiWarnen();
                     SPEICHER.seiteSichern(seite, alterTitel);
                 },
 
@@ -8098,6 +9197,7 @@ createNewPage() {
                         updated: jetzt
                     };
                     this.fluechtigeSeiteId = seite.id;
+                    this.merkeZustand();
                     this.pages.push(seite);
                     this.seitenUebernehmen();
 
@@ -8193,7 +9293,7 @@ createNewPage() {
                         return;
                     }
 
-                    this.mdEditor = new window.toastui.Editor({
+                    const editor = new window.toastui.Editor({
                         el: host,
                         height: this.editorHeight(),
                         initialEditType: 'wysiwyg',
@@ -8204,7 +9304,109 @@ createNewPage() {
                         placeholder: this.t('contentPlaceholder'),
                         usageStatistics: false
                     });
+                    this.mdEditor = editor;
+                    /* Die eigenen Einrück-Befehle am rohen Editor
+                       anmelden, solange er kein Vue-Proxy ist. */
+                    this.einrueckungEinrichten(editor);
                     this.applyEditorTheme();
+                },
+
+                /* Einrücken und Ausrücken auch für normale Absätze. Toast
+                   UI blendet die beiden Schaltflächen nur in Listen ein,
+                   außerhalb sind sie grau. Für einen Absatz ist
+                   "eingerückt" ein Zitat (siehe CHANGELOG): Einrücken
+                   macht aus dem Absatz ein Zitat, Ausrücken nimmt die
+                   Zitat-Ebene wieder weg. In Listen bleibt das eingebaute
+                   Verhalten - die Verschachtelung - erhalten. Die Knöpfe
+                   der Werkzeugleiste werden darum durch eigene ersetzt,
+                   die immer wählbar sind.
+
+                   Die Befehle werden am rohen Editor angemeldet, nicht an
+                   this.mdEditor: dieser ist ein Vue-Proxy. Über den Proxy
+                   griffe der Befehl auf einen gebundenen Zustand zu, und
+                   ProseMirror lehnt die Ausgabe dann als "mismatched"
+                   ab. */
+                einrueckungEinrichten(editor) {
+                    const cm = editor.commandManager;
+                    const inListe = (state) => {
+                        const $f = state.selection.$from;
+                        for (let i = $f.depth; i > 0; i--) {
+                            const name = $f.node(i).type.name;
+                            if (name === 'listItem' || name === 'bulletList'
+                                || name === 'orderedList' || name === 'taskList') {
+                                return true;
+                            }
+                        }
+                        return false;
+                    };
+                    const inZitat = (state) => {
+                        const $f = state.selection.$from;
+                        for (let i = $f.depth; i > 0; i--) {
+                            if ($f.node(i).type.name === 'blockQuote') {
+                                return true;
+                            }
+                        }
+                        return false;
+                    };
+                    const zitieren = cm.wwCommands.blockQuote;
+                    const listeEin = cm.wwCommands.indent;
+                    const listeAus = cm.wwCommands.outdent;
+
+                    editor.addCommand('wysiwyg', 'eingerueckt', (payload, state) => {
+                        if (inListe(state)) {
+                            listeEin(payload);
+                            return;
+                        }
+                        zitieren(payload);
+                    });
+                    editor.addCommand('wysiwyg', 'ausgerueckt', (payload, state, dispatch) => {
+                        if (inListe(state)) {
+                            listeAus(payload);
+                            return;
+                        }
+                        if (!inZitat(state)) {
+                            return;
+                        }
+                        const $f = state.selection.$from;
+                        let tiefe = 0;
+                        for (let i = $f.depth; i > 0; i--) {
+                            if ($f.node(i).type.name === 'blockQuote') {
+                                tiefe = i;
+                                break;
+                            }
+                        }
+                        if (tiefe) {
+                            dispatch(state.tr.replaceWith(
+                                $f.before(tiefe), $f.after(tiefe),
+                                $f.node(tiefe).content));
+                        }
+                    });
+                    /* Markdown-Modus: das eingebaute Verhalten behalten.
+                       Die Befehle werden direkt in der Befehlsliste
+                       angemeldet - so wie Toast UI es selbst tut -, denn
+                       die gespeicherten Markdown-Befehle erwarten nur die
+                       Nutzlast. */
+                    if (cm.mdCommands.indent) {
+                        cm.addCommand('markdown', 'eingerueckt', cm.mdCommands.indent);
+                    }
+                    if (cm.mdCommands.outdent) {
+                        cm.addCommand('markdown', 'ausgerueckt', cm.mdCommands.outdent);
+                    }
+
+                    editor.removeToolbarItem('indent');
+                    editor.removeToolbarItem('outdent');
+                    editor.insertToolbarItem({ groupIndex: 2, itemIndex: 3 }, {
+                        name: 'eingerueckt',
+                        tooltip: this.t('editorIndent'),
+                        command: 'eingerueckt',
+                        className: 'toastui-editor-toolbar-icons indent'
+                    });
+                    editor.insertToolbarItem({ groupIndex: 2, itemIndex: 4 }, {
+                        name: 'ausgerueckt',
+                        tooltip: this.t('editorOutdent'),
+                        command: 'ausgerueckt',
+                        className: 'toastui-editor-toolbar-icons outdent'
+                    });
                 },
 
                 /* Die offizielle Dunkel-Klasse von Toast UI setzen, damit auch
@@ -8225,7 +9427,25 @@ createNewPage() {
                     this.editorReady = false;
                 },
 
+                /* Die Hoehe des Editors aus dem wirklich freien Platz
+                   ableiten statt aus einer festen Zahl. Vorher rechnete
+                   "window.innerHeight - 260" die eigene Werkzeugleiste
+                   nicht heraus: sobald sie eingeblendet war, wuchs der
+                   Editor ueber die Fusszeile hinaus und legte sich ueber
+                   die Umschaltreiter Markdown/WYSIWYG. Gemessen wird
+                   deshalb der Inhaltsbereich - der Elternknoten des
+                   Editorplatzes - ohne seine Polsterung. Bleibt zu
+                   wenig Platz, greift die alte Notreserve, damit der
+                   Editor nie ganz verschwindet. */
                 editorHeight() {
+                    const host = this.$refs.mdHost;
+                    const koerper = host && host.parentElement;
+                    if (koerper) {
+                        const platz = koerper.clientHeight - 40;   /* 20 oben, 20 unten */
+                        if (platz > 120) {
+                            return platz + 'px';
+                        }
+                    }
                     return Math.max(260, window.innerHeight - 260) + 'px';
                 },
 
@@ -8261,6 +9481,7 @@ createNewPage() {
                            aus dem Feld aufnehmen, sonst ginge es mit dem
                            Schliessen des Editors verloren. */
                         this.tagAusEingabe();
+                        this.merkeZustand();
                         const alterTitel = this.currentPage.title;
                         const umbenannt = !!alterTitel && alterTitel !== titel;
 
@@ -8386,6 +9607,7 @@ createNewPage() {
                        heil bleibt. */
                     const quellIndex = this.pages.findIndex(p => p.id === quelle.id);
                     const stelle = quellIndex >= 0 ? this.unterbaumEnde(quellIndex) : 0;
+                    this.merkeZustand();
                     this.pages.splice(stelle, 0, kopie);
                     this.currentPage = kopie;
                     /* Wer eine eben angelegte Huellseite dupliziert, will
@@ -8412,6 +9634,7 @@ createNewPage() {
                 confirmDelete() {
                     const deleted = this.pageToDelete;
                     if (!deleted) return;
+                    this.merkeZustand();
                     this.seiteEntfernen(deleted);
                     /* Auf eine gültige Seite wechseln, sonst zeigt das
                        Wiki auf eine, die es nicht mehr gibt. */
@@ -8465,6 +9688,7 @@ createNewPage() {
                     /* Die Kinder gehoeren auf dem Server mitgespeichert,
                        sonst stehen dort die alten eltern-Werte. */
                     kinder.forEach((kind) => this.seiteSichern(kind));
+                    this.dateiWarnen();
                     SPEICHER.seiteLoeschen(deleted.id);
                 },
 
@@ -8493,6 +9717,60 @@ createNewPage() {
                         || this.pages.find(p => p.id === this.startPageId)
                         || null;
                     this.seiteEntfernen(seite);
+                },
+
+                /* ---------- Einen Schritt zurueck ---------- */
+
+                /* Den Stand vor einer Aenderung merken. Ein Schritt,
+                   kein Stapel: jeder neue Aufruf ersetzt den alten. Ge-
+                   merkt wird der Inhalt - die Seiten, die Startseite und
+                   der Blick darauf. Eine Einstellung wie Farbe oder
+                   Sprache gehoert nicht dazu: sie ist keine Aenderung am
+                   Wiki, und ihr Zuruecknehmen waere eine eigene Handlung. */
+                merkeZustand() {
+                    this.undoZustand = {
+                        seiten: JSON.parse(JSON.stringify(this.pages)),
+                        startPageId: this.startPageId,
+                        currentPageId: this.currentPage ? this.currentPage.id : ''
+                    };
+                    this.kannRueckgaengig = true;
+                },
+
+                /* Den gemerkten Stand wiederherstellen - und ihn auch
+                   dem Speicher geben, sonst zeigte die Ansicht den alten
+                   Stand und der Speicher den neuen. Seiten, die es vorher
+                   nicht gab, werden entfernt; alle uebrigen neu geschrie-
+                   ben, damit Inhalt und Reihenfolge stimmen. */
+                rueckgaengig() {
+                    const z = this.undoZustand;
+                    if (!z) return;
+                    this.undoZustand = null;
+                    this.kannRueckgaengig = false;
+                    this.dateiWarnen();
+                    const alt = {};
+                    z.seiten.forEach(function (p) { alt[String(p.id)] = true; });
+                    this.pages.slice().forEach((p) => {
+                        if (!alt[String(p.id)]) SPEICHER.seiteLoeschen(p.id);
+                    });
+                    /* An Ort und Stelle, damit der Speicher dieselbe
+                       Liste behaelt. */
+                    this.pages.length = 0;
+                    z.seiten.forEach(function (p) {
+                        this.pages.push(JSON.parse(JSON.stringify(p)));
+                    }, this);
+                    for (let i = 0; i < this.pages.length; i++) {
+                        SPEICHER.seiteSichern(this.pages[i]);
+                    }
+                    this.startPageId = z.startPageId;
+                    SPEICHER.startseiteSetzen(this.startPageId);
+                    this.isEditing = false;
+                    this.destroyEditor();
+                    this.currentPage =
+                        this.pages.find(p => String(p.id) === String(z.currentPageId))
+                        || this.pages.find(p => String(p.id) === String(this.startPageId))
+                        || this.pages[0] || null;
+                    this.$nextTick(() => this.seitenInhaltAufbauen());
+                    this.hinweis(this.t('undoDone'));
                 },
 
                 toggleTheme() {
