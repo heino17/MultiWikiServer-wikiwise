@@ -24,6 +24,12 @@ The `$:/language/MWS/` titles are excluded from `$:/config/SyncFilter`, so the
 written overrides are never persisted to the server. Real `$:/language/MWS/...`
 tiddlers already present at startup are treated as per-wiki overrides and left
 untouched.
+
+The wiki also starts in the UI language plugin that best fits the visitor's
+browser (`navigator.languages`), unless the wiki already carries a real
+`$:/language` tiddler. That choice is a per-visitor preference: `$:/language` is
+excluded from `$:/config/SyncFilter` and remembered in `localStorage`, so one
+visitor's language never becomes the wiki's.
 \*/
 "use strict";
 
@@ -36,7 +42,9 @@ var LANGUAGE_TIDDLER = "$:/language",
 	I18N_PREFIX = "$:/plugins/mws/client/i18n/",
 	MWS_PREFIX = "$:/language/MWS/",
 	OWNER_TIDDLER = "$:/config/multiwikiclient/owner",
-	OWNER_PLACEHOLDER = /<<owner>>/g;
+	OWNER_PLACEHOLDER = /<<owner>>/g,
+	// localStorage key for the visitor's own language choice
+	LANGUAGE_CHOICE_KEY = "mws/language";
 
 var translations = null,
 	possibleValues = null,
@@ -134,13 +142,107 @@ function applyLanguage() {
 	});
 }
 
+/*
+Every UI language plugin the wiki actually has installed, keyed by the
+lowercased `name` field of the plugin tiddler (`ko-KR`, `zh-Hans`). Empty for a
+wiki that carries none, which is the common case for wikis created before the
+default template shipped a set of languages.
+*/
+function installedLanguages() {
+	var byCode = {};
+	$tw.wiki.filterTiddlers("[all[tiddlers+shadows]plugin-type[language]]").forEach(function(title) {
+		var tiddler = $tw.wiki.getTiddler(title),
+			name = tiddler ? (tiddler.fields.name || "") : "";
+		if(name) {
+			byCode[name.toLowerCase()] = title;
+		}
+	});
+	return byCode;
+}
+
+/*
+The installed language plugin matching one browser code: an exact match first,
+otherwise the same primary subtag (`de-AT` -> `de-DE`, `zh-CN` -> `zh-Hans`).
+*/
+function matchLanguage(code, byCode) {
+	code = code.toLowerCase();
+	if(byCode[code]) {
+		return byCode[code];
+	}
+	var primary = code.split("-")[0];
+	for(var key in byCode) {
+		if(key.split("-")[0] === primary) {
+			return byCode[key];
+		}
+	}
+	return null;
+}
+
+/*
+Start the wiki in the visitor's language unless the wiki already has a real
+`$:/language` tiddler (set by the owner as a wiki-wide default, or by an earlier
+visit). A missing plugin means English, which needs no tiddler at all.
+*/
+function applyBrowserLanguage() {
+	if($tw.wiki.tiddlerExists(LANGUAGE_TIDDLER)) {
+		return;
+	}
+	var byCode = installedLanguages(),
+		installedTitles = {},
+		stored = null;
+	for(var code in byCode) {
+		installedTitles[byCode[code]] = true;
+	}
+	try {
+		stored = localStorage.getItem(LANGUAGE_CHOICE_KEY);
+	} catch (e) {
+		stored = null;
+	}
+	// A remembered choice wins, as long as its plugin is still installed; the
+	// English default has no plugin but is always available.
+	var match = stored && (installedTitles[stored] || stored === $tw.wiki.getTiddlerText(LANGUAGE_TIDDLER,""))
+		? stored
+		: null;
+	if(!match && typeof navigator !== "undefined") {
+		var wanted = navigator.languages && navigator.languages.length
+			? navigator.languages
+			: (navigator.language ? [navigator.language] : []);
+		for(var i = 0; i < wanted.length && !match; i++) {
+			match = matchLanguage(wanted[i], byCode);
+		}
+	}
+	if(match) {
+		$tw.wiki.addTiddler({ title: LANGUAGE_TIDDLER, text: match });
+	}
+}
+
+/*
+Remember a language the visitor picked, so the next visit starts there. The
+value is a plugin title; a stale entry (plugin no longer installed) is ignored
+by applyBrowserLanguage.
+*/
+function rememberLanguage() {
+	try {
+		var title = $tw.wiki.getTiddlerText(LANGUAGE_TIDDLER,"");
+		if(title) {
+			localStorage.setItem(LANGUAGE_CHOICE_KEY, title);
+		}
+	} catch (e) {
+		// private mode: the choice simply does not survive the session
+	}
+}
+
 exports.startup = function() {
 	if(!$tw.wiki) {
 		return;
 	}
+	applyBrowserLanguage();
 	applyLanguage();
 	$tw.wiki.addEventListener("change",function(changes) {
 		if($tw.utils.hop(changes,LANGUAGE_TIDDLER) || $tw.utils.hop(changes,OWNER_TIDDLER)) {
+			if($tw.utils.hop(changes,LANGUAGE_TIDDLER)) {
+				rememberLanguage();
+			}
 			applyLanguage();
 		}
 	});

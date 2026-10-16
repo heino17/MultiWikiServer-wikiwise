@@ -13,6 +13,24 @@ const info: CommandInfo = {
 	arguments: [],
 };
 
+/**
+ * The TiddlyWiki UI languages the default template carries (§138). TiddlyWiki
+ * ships every one of them with each install; the MWS plugin cache scans the
+ * `languages/` folder, so the titles resolve without a download. A new wiki
+ * gets them so it can follow the visitor's browser language out of the box.
+ * `zh-Hans` is the full Simplified Chinese plugin; `zh-CN` is only an alias
+ * whose content lives in `zh-Hans`, so listing the latter is enough.
+ */
+const DEFAULT_TEMPLATE_LANGUAGES = [
+	"$:/languages/de-DE",
+	"$:/languages/es-ES",
+	"$:/languages/fr-FR",
+	"$:/languages/ja-JP",
+	"$:/languages/ko-KR",
+	"$:/languages/ru-RU",
+	"$:/languages/zh-Hans",
+];
+
 
 export class InitStoreCommand extends BaseCommand {
 	static info = info;
@@ -44,7 +62,7 @@ export class InitStoreCommand extends BaseCommand {
 					description: "The default template, blank and uneditable.",
 					readonlyBags: [],
 					writablePrefixBags: [],
-					plugins: [],
+					plugins: DEFAULT_TEMPLATE_LANGUAGES,
 					requiredPluginsEnabled: true,
 					customHtmlEnabled: false,
 					externalPlugins: true,

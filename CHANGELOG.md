@@ -5292,6 +5292,45 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 138. A new wiki opens in the visitor's language
+
+**Why.** A freshly created wiki spoke English, whoever opened it. TiddlyWiki
+ships its interface as language plugins (one per language), but the default
+`Tiddlywiki` template installed none, and the MWS client texts already follow
+`$:/language` (§46). So a German or Korean visitor saw an English wiki until
+someone installed the plugins and picked a language by hand — and a single
+choice then set the language for everyone, because `$:/language` was synced to
+the server like any other tiddler.
+
+**What.** Three pieces, all in the bundled plugin set:
+
+- The default `Tiddlywiki` template now installs the seven UI languages
+  TiddlyWiki ships: `de-DE`, `es-ES`, `fr-FR`, `ja-JP`, `ko-KR`, `ru-RU` and
+  `zh-Hans` (the full Simplified Chinese plugin; `zh-CN` only aliases it). The
+  plugin cache already scans the bundled `languages/` folder, so nothing is
+  fetched from the network. The list is part of the template definition, so
+  `init-store` refreshes it; wikis already created keep the plugin set they
+  were built with.
+- The MWS client starts the wiki in the language that best fits the visitor's
+  browser (`navigator.languages`): an exact match first, then the same primary
+  subtag (`de-AT` → `de-DE`, `zh-CN` → `zh-Hans`); English stays the default.
+  A wiki whose owner set a real `$:/language` is left untouched.
+- The choice is per visitor, not per wiki: `$:/language` is excluded from
+  `$:/config/SyncFilter` (as the MWS texts are, §46), and the chosen plugin is
+  remembered in `localStorage`, so it survives a reload without ever reaching
+  the server. A remembered choice wins over the browser until the visitor picks
+  another language.
+
+**Verified.** `npm run tsc2`, the admin typecheck, `npm run build` and
+`npm run build:client` are clean. On a fresh throwaway store built by
+`init-store`: the `Tiddlywiki` template carries the seven titles, and a wiki
+from it opened in `$:/languages/ko-KR` under a `ko-KR` browser (MWS "로그인",
+core "더 보기"). `de-AT` resolved to `de-DE`, `zh-CN` to `zh-Hans`, English
+stayed English; a remembered `fr-FR` (and a remembered English) won over a
+Korean browser, a stale entry was ignored. The compiled sync filter yields
+nothing for `$:/language` and `$:/language/MWS/...`, and the server bag held no
+`$:/language` tiddler after the visits.
+
 ## 137. A server start carries the SimpleWiki shell forward
 
 **Why.** MWS ships a `simplewiki.html`, and a fresh store gets the SimpleWiki
@@ -12623,6 +12662,47 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 138. Eine neue Wiki öffnet in der Sprache der Besucherin
+
+**Warum.** Eine frisch angelegte Wiki sprach Englisch, wer sie auch öffnete.
+TiddlyWiki liefert seine Oberfläche als Sprach-Plugins (eines je Sprache) mit,
+aber das Standard-Template `Tiddlywiki` installierte keines, und die
+MWS-Client-Texte folgen ohnehin `$:/language` (§46). Eine deutsche oder
+koreanische Besucherin sah also eine englische Wiki, bis jemand die Plugins
+installierte und die Sprache von Hand wählte — und diese eine Wahl setzte die
+Sprache dann für alle, weil `$:/language` wie jeder andere Tiddler zum Server
+synchronisiert wurde.
+
+**Was.** Drei Bausteine, alle im mitgelieferten Plugin-Satz:
+
+- Das Standard-Template `Tiddlywiki` installiert jetzt die sieben
+  Oberflächensprachen, die TiddlyWiki mitliefert: `de-DE`, `es-ES`, `fr-FR`,
+  `ja-JP`, `ko-KR`, `ru-RU` und `zh-Hans` (das vollständige vereinfachte
+  Chinesisch; `zh-CN` ist nur ein Alias darauf). Der Plugin-Cache durchsucht
+  das mitgelieferte `languages/`-Verzeichnis bereits, es wird also nichts aus
+  dem Netz geholt. Die Liste ist Teil der Template-Definition, `init-store`
+  frischt sie auf; bereits angelegte Wikis behalten ihren Plugin-Satz.
+- Der MWS-Client startet die Wiki in der Sprache, die am besten zum Browser der
+  Besucherin passt (`navigator.languages`): erst ein exakter Treffer, dann
+  dieselbe Primärsprache (`de-AT` → `de-DE`, `zh-CN` → `zh-Hans`); Englisch
+  bleibt die Vorgabe. Eine Wiki, deren Besitzerin ein echtes `$:/language`
+  gesetzt hat, bleibt unangetastet.
+- Die Wahl gilt pro Besucherin, nicht pro Wiki: `$:/language` ist aus
+  `$:/config/SyncFilter` ausgenommen (wie die MWS-Texte, §46), und das gewählte
+  Plugin wird in `localStorage` gemerkt, übersteht also ein Neuladen, ohne je
+  den Server zu erreichen. Eine gemerkte Wahl schlägt den Browser, bis die
+  Besucherin eine andere Sprache wählt.
+
+**Geprüft.** `npm run tsc2`, der Admin-Typecheck, `npm run build` und
+`npm run build:client` sind sauber. Auf einem frischen Wegwerf-Store aus
+`init-store`: Das Template `Tiddlywiki` trägt die sieben Titel, und eine daraus
+gebaute Wiki öffnete mit `ko-KR`-Browser in `$:/languages/ko-KR` (MWS „로그인",
+Kern „더 보기"). `de-AT` löste zu `de-DE` auf, `zh-CN` zu `zh-Hans`, Englisch
+blieb Englisch; ein gemerktes `fr-FR` (und ein gemerktes Englisch) schlug einen
+koreanischen Browser, ein veralteter Eintrag wurde ignoriert. Der kompilierte
+Sync-Filter liefert nichts für `$:/language` und `$:/language/MWS/...`, und der
+Server-Bag hielt nach den Besuchen keinen `$:/language`-Tiddler.
 
 ## 137. Ein Serverstart trägt die SimpleWiki-Schale nach vorn
 
