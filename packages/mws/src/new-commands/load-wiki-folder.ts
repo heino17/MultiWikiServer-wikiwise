@@ -90,7 +90,7 @@ export class LoadWikiFolderCommand extends BaseCommand<[string], {
 		});
 
 
-		this.config.engine.$transaction(async prisma => {
+		await this.config.engine.$transaction(async prisma => {
 
 			const existingRecipe = await prisma.recipe.findUnique({
 				where: { slug: recipeName },

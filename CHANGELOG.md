@@ -5328,6 +5328,63 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 139. The shipped system wikis reach an existing store
+
+**Why.** An update swaps the server code under `node_modules/@mws/wikiwise` and
+nothing else. The system wikis — the documentation and the manual — are loaded
+by `init-store`, and `init-store` only builds a *fresh* store. A data folder
+installed under 0.6.1 and updated to 0.7.3 therefore still carried the manual
+of its first start: the old TiddlyWiki `bedienungsanleitung`, while the manual
+the fork actually maintains is the SimpleWiki one. §135 added a helper script
+for reloading it, but that script runs against the repo's dev store and ships
+in no installation, so a user had to retype the whole `load-wiki-folder` call
+by hand to get the manual.
+
+**What.** The shipped editions became one shared definition
+(`packages/mws/src/new-managers/system-wikis.ts`): slug, description, template
+and read roles, in load order. `init-store` loads from it, so a fresh store and
+a synced store are built the same way. Each edition is identified by a content
+hash over its files *plus* its load definition, recorded per slug in
+`settings` as `systemwiki.<slug>.hash` — a hash rather than a hand-maintained
+label, because an edition is a folder of tiddlers and a forgotten label bump
+would stop the update silently.
+
+Two ways to bring what the build ships to the store, mirroring the shell
+update (§137):
+
+- On server start, after the SimpleWiki template sync, the server loads a
+  system wiki whose recorded hash differs from the shipped one, and creates it
+  when the store has no recipe for that slug. A start with nothing to do only
+  reads, and a hand-edited system wiki survives until the build really moves.
+  A bad edition is a logged note, not a reason to refuse to start.
+- `update-system-wikis` is the explicit command. It applies whatever the build
+  ships, so an operator can repair a damaged system wiki or force the current
+  edition, and reports what it did.
+
+Two things had to change under it. `load-wiki-folder` now **awaits** its
+transaction: it used to return while the write was still in flight, so the
+command reported `complete` before the tiddlers had landed — the sync records
+the hash right after the load and needs that ordering. And the manual's
+description is now `SimpleWiki-Bedienungsanleitung` everywhere: it already was
+in `update-simplewiki-manual.sh` (§136) but still `MWS Bedienungsanleitung
+(SimpleWiki)` in `init-store` (§133), so the two paths disagreed and the two
+names would have flipped back and forth between a fresh store and a synced
+one. The shared definition resolves that, and an existing store picks the name
+up on its next sync.
+
+**Verified.** `npm run tsc2` and `npm run build` are clean. Against a scratch
+install of a locally packed tarball (a data folder with `node_modules`, `store`
+and `tw5`, exactly like an installed one): `init-store` created both system
+wikis, recorded both hashes and left the manual carrying
+`SimpleWiki-Bedienungsanleitung` with 86 tiddlers. Deleting the manual's recipe
+and bag and starting the server logged `System wiki "simplewiki-manual" created
+from the shipped edition.` and restored it with 86 tiddlers; a second start
+logged nothing. A hand edit inside the manual survived a start while the
+shipped edition was unchanged, and was replaced once the recorded hash was
+moved off the shipped one (`System wiki "simplewiki-manual" updated from the
+shipped edition.`). `npx mws update-system-wikis` reloaded both wikis and
+reported them, and recreated a deleted manual.
+
 ## 138. A new wiki opens in the visitor's language
 
 **Why.** A freshly created wiki spoke English, whoever opened it. TiddlyWiki
@@ -12735,6 +12792,69 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 139. Die mitgelieferten System-Wikis erreichen einen bestehenden Store
+
+**Warum.** Ein Update tauscht den Servercode unter `node_modules/@mws/wikiwise`
+und sonst nichts. Die System-Wikis — die Dokumentation und das Handbuch —
+lädt `init-store`, und `init-store` baut nur einen *frischen* Store. Ein
+Datenordner, der unter 0.6.1 installiert und auf 0.7.3 geupdatet wurde, trug
+deshalb noch das Handbuch seines ersten Starts: die alte TiddlyWiki
+`bedienungsanleitung`, obwohl das Handbuch, das der Fork pflegt, das
+SimpleWiki-Handbuch ist. §135 hatte ein Helfer-Skript zum Neuladen ergänzt,
+doch das skript arbeitet gegen den Dev-Store des Repos und reist in keiner
+Installation mit — ein Anwender musste also den ganzen `load-wiki-folder`-Aufruf
+von Hand nachbilden, um das Handbuch zu bekommen.
+
+**Was.** Aus den mitgelieferten Editionen wurde eine gemeinsame Definition
+(`packages/mws/src/new-managers/system-wikis.ts`): Slug, Beschreibung, Template
+und Leserechte, in Lade-Reihenfolge. `init-store` lädt daraus, also entstehen
+ein frischer Store und ein synchronisierter auf dieselbe Weise. Jede Edition
+wird über einen Inhalts-Hash aus ihren Dateien *plus* ihrer Ladedefinition
+identifiziert, gespeichert je Slug in `settings` als
+`systemwiki.<slug>.hash` — ein Hash statt eines gepflegten Labels, weil eine
+Edition ein Ordner voller Tiddler ist und ein vergessenes Label-Bumping die
+Aktualisierung still stoppen würde.
+
+Zwei Wege, das Mitgelieferte in den Store zu bringen, analog zur Schale
+(§137):
+
+- Beim Serverstart lädt der Server — nach der Template-Synchronisierung der
+  SimpleWiki-Schale — ein System-Wiki, dessen gespeicherter Hash von dem des
+  Builds abweicht, und legt es an, wenn der Store zu diesem Slug keine Recipe
+  hat. Ein Start ohne zu tun liest nur, und ein von Hand geändertes
+  System-Wiki überlebt, bis der Build sich wirklich bewegt. Eine kaputte
+  Edition ist eine Notiz im Log, kein Grund abzulehnen zu starten.
+- `update-system-wikis` ist der explizite Befehl. Er wendet an, was der Build
+  mitliefert, repariert also ein beschädigtes System-Wiki oder erzwingt die
+  aktuelle Edition, und sagt, was er tat.
+
+Zwei Dinge mussten sich darunter ändern. `load-wiki-folder` wartet jetzt auf
+seine **Transaktion**: er kehrte zurück, während der Schreibvorgang noch
+lief, und meldete damit `complete`, bevor die Tiddler gelandet waren — die
+Synchronisierung speichert den Hash direkt nach dem Laden und braucht genau
+diese Reihenfolge. Und die Beschreibung des Handbuchs heißt jetzt überall
+`SimpleWiki-Bedienungsanleitung`: so schon in
+`update-simplewiki-manual.sh` (§136), aber noch `MWS Bedienungsanleitung
+(SimpleWiki)` in `init-store` (§133) — die beiden Wege widersprachen sich
+also, und die beiden Namen hätten zwischen frischem und synchronisiertem
+Store hin- und hergeschwankt. Die gemeinsame Definition löst das auf, und ein
+bestehender Store bekommt den Namen beim nächsten Lauf.
+
+**Geprüft.** `npm run tsc2` und `npm run build` sind sauber. Gegen eine
+Wegwerf-Installation eines lokal gepackten Tarballs (Datenordner mit
+`node_modules`, `store` und `tw5`, also genau wie eine installierte):
+`init-store` legte beide System-Wikis an, protokollierte beide Hashes und
+ließ das Handbuch mit `SimpleWiki-Bedienungsanleitung` und 86 Tiddlern stehen.
+Recipe und Bag des Handbuchs gelöscht und der Server gestartet protokollierte
+`System wiki "simplewiki-manual" created from the shipped edition.` und
+stellte es mit 86 Tiddlern wieder her; ein zweiter Start protokolierte nichts.
+Eine von Hand im Handbuch gesetzte Änderung überlebte einen Start, solange
+die mitgelieferte Edition unverändert war, und wurde ersetzt, sobald der
+gespeicherte Hash von der mitgelieferten abwich (`System wiki
+"simplewiki-manual" updated from the shipped edition.`).
+`npx mws update-system-wikis` lud beide Wikis neu, meldete sie und stellte ein
+gelöschtes Handbuch wieder her.
 
 ## 138. Eine neue Wiki öffnet in der Sprache der Besucherin
 

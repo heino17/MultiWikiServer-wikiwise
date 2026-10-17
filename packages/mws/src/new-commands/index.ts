@@ -12,6 +12,7 @@ import { RestoreWikiSnapshotCommand } from "./restore-wiki-snapshot";
 import { TestArgsCommand } from "./test-args";
 import { TestsCompleteCommand } from "./tests-complete";
 import { UpdateSimpleWikiCommand } from "./update-simplewiki";
+import { UpdateSystemWikisCommand } from "./update-system-wikis";
 import { UpdateTiddlyWikiCommand } from "./update-tiddlywiki";
 
 /**
@@ -44,6 +45,7 @@ export const COMMANDS = {
   "test-args": TestArgsCommand,
   done: TestsCompleteCommand,
   "update-simplewiki": UpdateSimpleWikiCommand,
+  "update-system-wikis": UpdateSystemWikisCommand,
   "update-tiddlywiki": UpdateTiddlyWikiCommand,
 } satisfies Record<string, CommandClass>;
 
@@ -65,4 +67,5 @@ export * from "./restore-wiki-snapshot";
 export * from "./test-args";
 export * from "./tests-complete";
 export * from "./update-simplewiki";
+export * from "./update-system-wikis";
 export * from "./update-tiddlywiki";

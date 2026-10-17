@@ -3,7 +3,7 @@ import { BaseCommand, CommandInfo } from "@tiddlywiki/commander";
 import { existsSync } from "fs";
 import { resolve } from "path";
 import { readSimpleWikiShell, upsertSimpleWikiTemplate } from "../new-managers/simplewiki-template";
-import { LoadWikiFolderCommand } from "./load-wiki-folder";
+import { bundledSystemWikiPath, loadSystemWiki, SYSTEM_WIKIS } from "../new-managers/system-wikis";
 import { RoleImportWriter, TemplateImportWriter, UserImportWriter, DEFAULT_TEMPLATE } from "../new-managers";
 import { IdString } from "@mws/admin-vanilla/src/definition/tabs";
 
@@ -111,47 +111,22 @@ export class InitStoreCommand extends BaseCommand {
 			console.log("No templates/simplewiki.html in this build; skipping the SimpleWiki template.");
 		}
 
-		// System wikis are the ownerless wikis: their bag falls back to
-		// `editions/<slug>` instead of `editions/<owner-id>/<slug>` and they are
-		// loaded from a folder that ships with the installation. `templateName`
-		// chooses the shell the wiki serves; the manual uses the SimpleWiki
-		// template, the documentation the default TiddlyWiki one.
-		const runner = async (path: string, bagName: string, bagDesc: string, recName: string, recDesc: string, recUsers: string[] = [], templateName = DEFAULT_TEMPLATE) => {
-			if (!existsSync(path)) {
-				console.log(`Skipping ${recName}: the wiki folder ${path} is not part of this installation.`);
-				return;
+		// System wikis are the ownerless wikis: their bag is the shipped
+		// `editions/<slug>`, and the shared definition also names the shell the
+		// wiki serves — the manual the SimpleWiki one, the documentation the
+		// default TiddlyWiki one. The definitions live in one place, so the
+		// start-time sync and `update-system-wikis` load exactly what a fresh
+		// store is built with.
+		for (const def of SYSTEM_WIKIS) {
+			if (!bundledSystemWikiPath(def.slug)) {
+				console.log(`Skipping ${def.slug}: the wiki folder editions/${def.slug} is not part of this installation.`);
+				continue;
 			}
-			const command = new LoadWikiFolderCommand([path!], {
-				"bag-relative-root": [dist_resolve("..")],
-				"bag-description": [bagDesc],
-				"recipe-name": [recName],
-				"recipe-description": [recDesc],
-				"recipe-users": recUsers,
-				"template-name": [templateName],
-				"overwrite": false,
-				"owner-roles": ["ADMIN"]
-			});
-			command.config = this.config;
-			await command.execute();
-		};
-
-		await runner(
-			dist_resolve("../editions/mws-docs"),
-			"mws-docs", "MWS Documentation from https://mws.tiddlywiki.com",
-			"mws-docs", "MWS Documentation from https://mws.tiddlywiki.com",
-		);
-
-		// The manual is a system wiki too, but it serves the SimpleWiki shell
-		// rather than a TiddlyWiki page. Its content lives in `editions/simplewiki-manual`
-		// and is loaded with the SimpleWiki template, so a fresh installation has
-		// the manual at `/wiki/simplewiki-manual` without anyone clicking it
-		// together first.
-		await runner(
-			dist_resolve("../editions/simplewiki-manual"),
-			"simplewiki-manual", "MWS Bedienungsanleitung (SimpleWiki)",
-			"simplewiki-manual", "MWS Bedienungsanleitung (SimpleWiki)",
-			["ANON"], "SimpleWiki"
-		);
+			// A fresh store has nothing to overwrite, so this is a plain load.
+			// It also records the edition hash — the value the start-time sync
+			// compares against — so a store built here is already up to date.
+			await loadSystemWiki(this.config, def, false);
+		}
 
 		this.config.setupRequired = false;
 	}
