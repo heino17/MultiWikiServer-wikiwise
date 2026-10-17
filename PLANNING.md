@@ -11,6 +11,16 @@ Markers used below:
 
 - ✗ Migration path might be only for development
 - ✗ Add other database types
+- ✗ `npm install` prints a deprecation warning for `prebuild-install@7.1.3`
+  (`No longer maintained. …alternatives are available.`), pulled in by
+  `better-sqlite3@12.6.2` through `@prisma/adapter-better-sqlite3@7.8.0`. Every
+  Prisma adapter still requires `better-sqlite3@^12.6.0`, and the whole 12.x
+  line (up to `12.11.1`) depends on `prebuild-install`; only
+  `better-sqlite3@13` dropped it, and that wants Node >=22 while MWS declares
+  `>=18`, so forcing it through npm `overrides` is out of the adapter's
+  supported range (native ABI, Android/NDK). Cosmetic and install-time only,
+  no vulnerability and no runtime effect — clear when the adapter allows
+  `better-sqlite3` 13.x (Prisma 8 is still an RC).
 
 ## Web
 
