@@ -525,6 +525,42 @@ A small follow-up in the 0.6 line: a fresh installation now brings the
 
 ---
 
+## Release 0.7.3 — 2026-10-17
+
+2 commits since 0.7.2, 11 files, +1943/−28.
+
+Two things move: a new wiki opens in the visitor's language, and the bundled
+SimpleWiki shell jumps to `v0.1.47` with coloured code and formulas.
+
+**Added**
+
+- **A new wiki opens in the visitor's language** (§138). The default
+  `Tiddlywiki` template now ships the seven TiddlyWiki UI languages
+  (`de-DE`, `es-ES`, `fr-FR`, `ja-JP`, `ko-KR`, `ru-RU`, `zh-Hans`), and the
+  wiki client starts in the language that best fits the visitor's browser
+  (`de-AT` → `de-DE`, `zh-CN` → `zh-Hans`). The choice is per visitor:
+  `$:/language` is never synced to the server and is remembered in
+  `localStorage`.
+
+**Changed**
+
+- **The bundled SimpleWiki shell is refreshed** from `v0.1.46` to `v0.1.47`.
+  Reading view and editor preview now colour fenced code blocks
+  (highlight.js) and set `$$ … $$` / `$ … $` as math (KaTeX). A formula
+  survives the round trip through the WYSIWYG editor, and in the Markdown
+  editor you see and edit the formula itself. A fresh `init-store` provisions
+  the new shell; an existing template is brought forward with
+  `provision-simplewiki` (§132).
+
+**Operating notes**
+
+- No migration and no new dependency of the server itself: highlight.js and
+  KaTeX are embedded in the shell file. After installing the tarball, the next
+  start carries the bundled shell forward (§137); `update-simplewiki` does it
+  right away.
+
+---
+
 ## Release 0.7.2 — 2026-10-16
 
 2 commits since 0.7.1, 12 files, +359/−30.
@@ -7778,6 +7814,43 @@ dass `npm update` MWS aktualisiert (§131).
   Template `SimpleWiki`: Release 1, `v0.1.31`, `customHtmlEnabled`, 1.311,1 kB
   Inhalt, `ADMIN` `B_write` + `TEACHER` `A_read`; ein zweiter Lauf lässt es
   stehen.
+
+---
+
+## Release 0.7.3 — 2026-10-17
+
+2 Commits seit 0.7.2, 11 Dateien, +1943/−28.
+
+Zwei Dinge bewegen sich: Eine neue Wiki öffnet in der Sprache der Besucherin,
+und die mitgelieferte SimpleWiki-Schale springt auf `v0.1.47` mit gefärbtem
+Code und Formeln.
+
+**Hinzugefügt**
+
+- **Eine neue Wiki öffnet in der Sprache der Besucherin** (§138). Das
+  Standard-Template `Tiddlywiki` bringt jetzt die sieben
+  TiddlyWiki-Oberflächensprachen mit (`de-DE`, `es-ES`, `fr-FR`, `ja-JP`,
+  `ko-KR`, `ru-RU`, `zh-Hans`), und der Wiki-Client startet in der Sprache,
+  die am besten zum Browser der Besucherin passt (`de-AT` → `de-DE`,
+  `zh-CN` → `zh-Hans`). Die Wahl gilt pro Besucherin: `$:/language` wird nie
+  zum Server synchronisiert und in `localStorage` gemerkt.
+
+**Geändert**
+
+- **Die mitgelieferte SimpleWiki-Schale ist erneuert** von `v0.1.46` auf
+  `v0.1.47`. Leseansicht und Editor-Vorschau färben jetzt eingezäunte
+  Codeblöcke (highlight.js) und setzen `$$ … $$` / `$ … $` als Formeln
+  (KaTeX). Eine Formel übersteht den Rundlauf durch den WYSIWYG-Editor, und
+  im Markdown-Editor sieht und ändert man die Formel selbst. Ein frisches
+  `init-store` liefert die neue Schale; ein bestehendes Template wird mit
+  `provision-simplewiki` nachgezogen (§132).
+
+**Betriebshinweise**
+
+- Keine Migration und keine neue Abhängigkeit des Servers selbst: highlight.js
+  und KaTeX stecken in der Schalendatei. Nach dem Installieren des Tarballs
+  zieht der nächste Start die mitgelieferte Schale nach (§137);
+  `update-simplewiki` erledigt es sofort.
 
 ---
 
