@@ -525,6 +525,60 @@ A small follow-up in the 0.6 line: a fresh installation now brings the
 
 ---
 
+## Release 0.7.4 — 2026-10-17
+
+4 commits since 0.7.3, 15 files, +756/−94.
+
+The shipped system wikis now reach a store that already exists, and the
+manual the fork replaced in §133 finally leaves it.
+
+**Added**
+
+- **The shipped system wikis reach an existing store** (§139). On every
+  server start, after the SimpleWiki shell sync (§137), MWS loads a system
+  wiki whose shipped edition differs from the one it recorded — and creates
+  it when the store never had one. A data folder installed under 0.6.1 and
+  updated to 0.7.3 therefore still carried the TiddlyWiki manual of its
+  first start; it now gets the SimpleWiki manual without anyone retyping the
+  whole `load-wiki-folder` call. An edition is identified by a content hash
+  over its files *plus* its load definition, recorded per slug in `settings`
+  as `systemwiki.<slug>.hash` — a hash rather than a hand-maintained label,
+  because a forgotten label bump would stop the update silently.
+  `npx mws update-system-wikis` applies whatever the build ships by hand,
+  for repairing a system wiki or forcing the current edition.
+
+- **The old TiddlyWiki manual leaves the store** (§140). A store upgraded
+  from before §133 still carried the ownerless `bedienungsanleitung` beside
+  `simplewiki-manual`, both answering under `/wiki/…`. The same pass removes
+  it now — but only when the slug sits on the fixed list of retired system
+  wikis, the recipe is ownerless, its bag is exactly `editions/<slug>` and no
+  other recipe reads that bag. A wiki somebody built by hand under the same
+  name stays untouched, and a skipped removal is reported with its reason.
+
+**Changed**
+
+- **`load-wiki-folder` waits for its transaction** (§139). It used to
+  report `complete` while the write was still in flight. The sync records
+  the edition hash right after the load and needs that ordering.
+- **The manual has one description everywhere** (§139): it was
+  `SimpleWiki-Bedienungsanleitung` in `update-simplewiki-manual.sh` (§136)
+  but `MWS Bedienungsanleitung (SimpleWiki)` in `init-store` (§133), so the
+  two names would have flipped back and forth between a fresh and a synced
+  store. The shared definition settles it, and an existing store picks the
+  name up on its next sync.
+- **`update-simplewiki-manual.sh` is a shortcut now**, running
+  `npm start update-system-wikis` instead of carrying its own loader.
+
+**Operating notes**
+
+- No migration and no new dependency. An existing store picks the manual up
+  on its next start and loses the old one at the same moment — unless that
+  wiki has an owner or another wiki reads its bag, in which case it stays
+  and the server says why. `templates/simplewiki.html` is unchanged: the
+  SimpleWiki shell stays at `v0.1.47`.
+
+---
+
 ## Release 0.7.3 — 2026-10-17
 
 2 commits since 0.7.2, 11 files, +1943/−28.
@@ -7915,6 +7969,65 @@ dass `npm update` MWS aktualisiert (§131).
   Template `SimpleWiki`: Release 1, `v0.1.31`, `customHtmlEnabled`, 1.311,1 kB
   Inhalt, `ADMIN` `B_write` + `TEACHER` `A_read`; ein zweiter Lauf lässt es
   stehen.
+
+---
+
+## Release 0.7.4 — 2026-10-17
+
+4 Commits seit 0.7.3, 15 Dateien, +756/−94.
+
+Die mitgelieferten System-Wikis erreichen jetzt einen bestehenden Store, und
+das Handbuch, das der Fork in §133 ersetzt hat, verlässt ihn endlich.
+
+**Hinzugefügt**
+
+- **Die mitgelieferten System-Wikis erreichen einen bestehenden Store**
+  (§139). Bei jedem Serverstart lädt MWS nach dem SimpleWiki-Schalen-Sync
+  (§137) ein System-Wiki, dessen mitgelieferte Edition von der gespeicherten
+  abweicht — und legt es an, wenn der Store noch nie eines hatte. Ein
+  Datenordner, der unter 0.6.1 installiert und auf 0.7.3 geupdatet wurde,
+  trug deshalb noch das TiddlyWiki-Handbuch seines ersten Starts; jetzt
+  bekommt er die SimpleWiki-Bedienungsanleitung, ohne dass jemand den
+  ganzen `load-wiki-folder`-Aufruf neu tippt. Eine Edition wird über einen
+  Inhalts-Hash über ihre Dateien *und* ihre Ladedefinition identifiziert, je
+  Slug in `settings` als `systemwiki.<slug>.hash` gespeichert — ein Hash
+  statt eines gepflegten Labels, denn ein vergessenes Label-Bumping würde die
+  Aktualisierung still stoppen. `npx mws update-system-wikis` wendet an, was
+  der Build mitliefert, zum Reparieren eines System-Wikis oder zum Erzwingen
+  der aktuellen Edition.
+
+- **Die alte TiddlyWiki-Bedienungsanleitung verlässt den Store** (§140). Ein
+  Store, der vor §133 aktualisiert wurde, trug die eigentümerlose
+  `bedienungsanleitung` noch neben `simplewiki-manual`, und beide antworteten
+  unter `/wiki/…`. Derselbe Lauf entfernt sie jetzt — aber nur, wenn der Slug
+  auf der festen Liste zurückgezogener System-Wikis steht, die Recipe
+  eigentümerlos ist, ihre Bag genau `editions/<slug>` heißt und keine andere
+  Recipe sie liest. Eine von Hand unter demselben Namen gebaute Wiki bleibt
+  unangetastet, und ein übersprungenes Entfernen wird mit seinem Grund
+  gemeldet.
+
+**Geändert**
+
+- **`load-wiki-folder` wartet auf seine Transaktion** (§139). Er meldete
+  `complete`, während der Schreibvorgang noch lief. Der Sync speichert den
+  Editions-Hash direkt nach dem Laden und braucht genau diese Reihenfolge.
+- **Das Handbuch hat überall dieselbe Beschreibung** (§139): in
+  `update-simplewiki-manual.sh` war es `SimpleWiki-Bedienungsanleitung`
+  (§136), in `init-store` aber noch `MWS Bedienungsanleitung (SimpleWiki)`
+  (§133), sodass die beiden Namen zwischen frischem und synchronisiertem
+  Store hin- und hergeschwankt wären. Die gemeinsame Definition entscheidet,
+  und ein bestehender Store holt den Namen beim nächsten Sync.
+- **`update-simplewiki-manual.sh` ist jetzt nur noch ein Kürzel** und läuft
+  `npm start update-system-wikis`, statt seinen eigenen Loader mitzuführen.
+
+**Betriebshinweise**
+
+- Keine Migration und keine neue Abhängigkeit. Ein bestehender Store holt
+  das Handbuch beim nächsten Start und verliert das alte im selben Moment —
+  es sei denn, diese Wiki hat einen Owner oder eine andere Wiki liest ihre
+  Bag, dann bleibt sie stehen und der Server nennt den Grund.
+  `templates/simplewiki.html` bleibt unverändert: die SimpleWiki-Schale
+  bleibt bei `v0.1.47`.
 
 ---
 
