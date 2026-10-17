@@ -173,16 +173,21 @@ serverEvents.on("listen.router.init", async (listen, router) => {
   // the documentation and the manual, and nothing else would carry them to an
   // existing store. Only load a wiki whose recorded edition differs from the
   // shipped one, so a start with nothing to do only reads and a hand-edited
-  // system wiki survives until the build really moves. A bad edition must not
-  // keep the server from starting, so a failure is a note, not a crash.
+  // system wiki survives until the build really moves. The same pass takes the
+  // system wikis out that the build no longer ships (§140), because loading
+  // alone cannot do that. A bad edition must not keep the server from starting,
+  // so a failure is a note, not a crash.
   try {
-    const syncs = await syncBundledSystemWikis(router.config, "forward");
-    for (const sync of syncs) {
+    const outcome = await syncBundledSystemWikis(router.config, "forward");
+    for (const sync of outcome.loaded) {
       if (sync.action === "created" || sync.action === "updated") {
         console.log(`System wiki "${sync.slug}" ${sync.action} from the shipped edition.`);
       } else if (sync.action === "skipped") {
         console.log(`System wiki "${sync.slug}" not synced: ${sync.reason}`);
       }
+    }
+    for (const slug of outcome.retired) {
+      console.log(`Retired system wiki "${slug}" removed: this build no longer ships it.`);
     }
   } catch (err) {
     console.log("System wiki sync skipped:", err instanceof Error ? err.message : err);

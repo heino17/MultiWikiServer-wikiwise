@@ -17,6 +17,11 @@
 //   - the explicit `update-system-wikis` command — applies whatever the build
 //     ships, so an operator can also repair or force a store.
 //
+// The same two entry points also take retired system wikis out again: a build
+// that no longer ships an edition does not reach a store that still carries the
+// old wiki by loading alone (§133 replaced the TiddlyWiki-hosted manual and
+// left it behind).
+//
 // The "edition version" is a content hash rather than a hand-maintained label:
 // an edition is a folder of tiddlers, so a hash cannot be forgotten to bump.
 // The definition (description, template, read roles) is part of the hash too,
@@ -29,6 +34,8 @@ import { dist_resolve } from "@tiddlywiki/server";
 import { LoadWikiFolderCommand } from "../new-commands/load-wiki-folder";
 import type { ServerState } from "../ServerState";
 import { DEFAULT_TEMPLATE } from "./TabUpserts";
+import { deleteThumbnail } from "./WikiThumbnailRoutes";
+import { pruneSnapshotBags } from "./WikiSnapshotBag";
 
 /** One shipped system wiki. The slug is both the recipe slug and the folder
  *  name under `editions/`; the bag is `editions/<slug>`, exactly the shape
@@ -58,6 +65,20 @@ export const SYSTEM_WIKIS: SystemWikiDefinition[] = [
 		templateName: "SimpleWiki",
 		recipeUsers: ["ANON"],
 	},
+];
+
+/**
+ * System wikis this build no longer ships and a store may still carry.
+ *
+ * §133 replaced the TiddlyWiki-hosted manual with the SimpleWiki one, but
+ * nothing took the old wiki out, so every store upgraded from before that has
+ * two manuals, the older one unmaintained. The list is fixed on purpose: a
+ * packaging mistake must delete nothing, so the sync never retires a slug just
+ * because this build happens to lack its edition folder.
+ */
+export const RETIRED_SYSTEM_WIKIS: string[] = [
+	// §133: replaced by `simplewiki-manual`.
+	"bedienungsanleitung",
 ];
 
 /** Settings key under which the edition hash last loaded into the store is
@@ -151,8 +172,76 @@ export type SystemWikiSyncResult = {
 	reason?: string;
 };
 
+export type SystemWikiSyncOutcome = {
+	/** one entry per system wiki this build ships */
+	loaded: SystemWikiSyncResult[];
+	/** retired system wikis that were dropped from the store */
+	retired: string[];
+};
+
 /**
- * Brings the system wikis this build ships to the store.
+ * Drops retired system wikis from the store, if it still carries them.
+ *
+ * The gates are deliberately narrow, because losing content is worse than
+ * keeping an obsolete manual: the slug has to be on `RETIRED_SYSTEM_WIKIS`, the
+ * wiki has to still look like a system wiki (an ownerless recipe whose bag is
+ * `editions/<slug>`), and no other recipe may read that bag. A wiki somebody
+ * built by hand under the same name, or one another wiki reads from, is left
+ * alone and reported in `skipped`, never guessed at.
+ *
+ * Snapshots of a retired wiki go with it, the same as in the delete route, and
+ * the landing-page preview with them.
+ */
+export async function removeRetiredSystemWikis(config: ServerState): Promise<{ retired: string[]; skipped: { slug: string; reason: string }[] }> {
+	const retired: string[] = [];
+	const skipped: { slug: string; reason: string }[] = [];
+
+	for (const slug of RETIRED_SYSTEM_WIKIS) {
+		const bagName = `editions/${slug}`;
+		const dropped = await config.engine.$transaction(async (prisma) => {
+			const recipe = await prisma.recipe.findUnique({
+				where: { slug },
+				include: { recipe_bags: { select: { bag_id: true, bag: { select: { name: true } } } } },
+			});
+			if (!recipe) return { dropped: false, reason: "not present in this store" };
+			if (recipe.owner_user_id != null)
+				return { dropped: false, reason: "it has an owner and is therefore not a system wiki" };
+			if (!recipe.recipe_bags.some(rb => rb.bag.name === bagName))
+				return { dropped: false, reason: `its bag is not ${bagName}` };
+			for (const { bag_id } of recipe.recipe_bags) {
+				const others = await prisma.recipeBag.count({ where: { bag_id, recipe_id: { not: recipe.id } } });
+				if (others > 0)
+					return { dropped: false, reason: "another recipe reads one of its bags" };
+			}
+
+			await prisma.recipe.delete({ where: { id: recipe.id } });
+			for (const { bag_id } of recipe.recipe_bags) {
+				if ((await prisma.recipeBag.count({ where: { bag_id } })) === 0)
+					await prisma.bag.delete({ where: { id: bag_id } });
+			}
+			await prisma.settings.deleteMany({ where: { key: systemWikiHashKey(slug) } });
+			await pruneSnapshotBags(prisma, slug, 0, "all");
+			return { dropped: true, reason: "" };
+		});
+
+		if (dropped.dropped) {
+			retired.push(slug);
+			// Dropping the cached preview belongs to the removal, but a missing
+			// or unwritable file must not undo the deletion.
+			await deleteThumbnail(config.storePath, slug).catch((error: unknown) => {
+				console.error(`[thumbnail] failed to delete "${slug}":`, error);
+			});
+		} else if (dropped.reason !== "not present in this store") {
+			skipped.push({ slug, reason: dropped.reason });
+		}
+	}
+
+	return { retired, skipped };
+}
+
+/**
+ * Brings the system wikis this build ships to the store, and takes the retired
+ * ones out of it.
  *
  * `forward` (the start-time default) loads a wiki only when it is missing or
  * its recorded hash differs from the shipped one — a genuine move forward, and
@@ -167,13 +256,13 @@ export type SystemWikiSyncResult = {
 export async function syncBundledSystemWikis(
 	config: ServerState,
 	mode: "forward" | "force" = "forward",
-): Promise<SystemWikiSyncResult[]> {
-	const results: SystemWikiSyncResult[] = [];
+): Promise<SystemWikiSyncOutcome> {
+	const loaded: SystemWikiSyncResult[] = [];
 
 	for (const def of SYSTEM_WIKIS) {
 		const folder = bundledSystemWikiPath(def.slug);
 		if (!folder) {
-			results.push({
+			loaded.push({
 				slug: def.slug, action: "skipped", fromHash: null, toHash: null,
 				reason: `this build ships no editions/${def.slug}`,
 			});
@@ -193,20 +282,28 @@ export async function syncBundledSystemWikis(
 
 		const needed = mode === "force" || fromHash !== toHash || !existing;
 		if (!needed) {
-			results.push({ slug: def.slug, action: "current", fromHash, toHash });
+			loaded.push({ slug: def.slug, action: "current", fromHash, toHash });
 			continue;
 		}
 
 		try {
 			const applied = await loadSystemWiki(config, def, true);
-			results.push({ slug: def.slug, action: applied.action, fromHash, toHash });
+			loaded.push({ slug: def.slug, action: applied.action, fromHash, toHash });
 		} catch (err) {
-			results.push({
+			loaded.push({
 				slug: def.slug, action: "skipped", fromHash, toHash,
 				reason: err instanceof Error ? err.message : String(err),
 			});
 		}
 	}
 
-	return results;
+	const { retired, skipped } = await removeRetiredSystemWikis(config);
+	for (const entry of skipped) {
+		loaded.push({
+			slug: entry.slug, action: "skipped", fromHash: null, toHash: null,
+			reason: entry.reason,
+		});
+	}
+
+	return { loaded, retired };
 }

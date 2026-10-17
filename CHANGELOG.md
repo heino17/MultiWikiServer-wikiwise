@@ -5328,6 +5328,50 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 140. The old TiddlyWiki manual leaves the store
+
+**Why.** §133 replaced the TiddlyWiki-hosted manual with the SimpleWiki one,
+and §139 taught the store to load what a build ships. Loading alone cannot take
+a wiki *out*, though: a store upgraded from before §133 still carries the
+ownerless `bedienungsanleitung` recipe beside `simplewiki-manual`, and both
+answer under `/wiki/…`. The start page and the search show two manuals, one of
+them out of date and unmaintained, and nothing explains the difference.
+
+**What.** The system-wiki sync got a second half,
+`removeRetiredSystemWikis` in `packages/mws/src/new-managers/system-wikis.ts`,
+which runs on every start and as part of `update-system-wikis`. It knows a
+fixed list of retired slugs — currently only `bedienungsanleitung` — and asks
+several questions before it deletes anything, because losing content would be
+worse than an obsolete manual:
+
+- the slug has to be on the list. The sync never retires a slug just because
+  the build lacks its `editions/` folder, so a packaging mistake deletes
+  nothing;
+- the recipe must be ownerless and its bag exactly `editions/<slug>`, the shape
+  of a shipped system wiki. A wiki somebody built by hand under the same name
+  is not touched;
+- no other recipe may read one of its bags, or another wiki would lose its
+  content source.
+
+A skipped removal is reported with the reason, so an operator can see why the
+old wiki is still there. A removal logs
+`Retired system wiki "bedienungsanleitung" removed: this build no longer ships it.`
+and drops the recipe, its unreferenced bag and that bag's tiddlers, its
+snapshot bags (the same as the delete route) and the cached landing-page
+preview.
+
+**Verified.** `npm run tsc2` and `npm run build` are clean, and both the start
+and the CLI path were exercised against a scratch install. A hand-built
+ownerless `bedienungsanleitung` (recipe, bag `editions/bedienungsanleitung`,
+one tiddler) was gone after a start: the log line above appeared and neither
+recipe, bag nor tiddlers remained. The same wiki with an owner survived and
+logged
+`it has an owner and is therefore not a system wiki`;
+when a second recipe read its bag it survived too and logged
+`another recipe reads one of its bags`.
+`npx mws update-system-wikis` reloaded both shipped wikis and removed the
+retired one in the same run.
+
 ## 139. The shipped system wikis reach an existing store
 
 **Why.** An update swaps the server code under `node_modules/@mws/wikiwise` and
@@ -12792,6 +12836,51 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 140. Die alte TiddlyWiki-Bedienungsanleitung verlässt den Store
+
+**Warum.** §133 hat die TiddlyWiki-gestützte Bedienungsanleitung durch die
+SimpleWiki-Fassung ersetzt, §139 hat dem Store beigebracht, zu laden, was ein
+Build mitliefert. Nur laden kann eine Wiki aber nicht wieder *entfernen*: Ein
+Store, der vor §133 aktualisiert wurde, trägt die eigentümerlose Recipe
+`bedienungsanleitung` neben `simplewiki-manual`, und beide antworten unter
+`/wiki/…`. Startseite und Suche zeigen zwei Handbücher, eines davon veraltet
+und ungepflegt, und nichts erklärt den Unterschied.
+
+**Was.** Der System-Wiki-Sync hat eine zweite Hälfte bekommen:
+`removeRetiredSystemWikis` in `packages/mws/src/new-managers/system-wikis.ts`
+läuft bei jedem Start und als Teil von `update-system-wikis`. Es kennt eine
+feste Liste zurückgezogener Slugs — derzeit nur `bedienungsanleitung` — und
+stellt mehrere Fragen, bevor es löscht, denn Inhalt zu verlieren wäre schlimmer
+als ein veraltetes Handbuch:
+
+- Der Slug muss auf der Liste stehen. Der Sync zieht einen Slug nie zurück, nur
+  weil dem Build sein `editions/`-Ordner fehlt, damit ein Paketierfehler nichts
+  löscht;
+- die Recipe muss eigentümerlos sein und ihre Bag genau `editions/<slug>`, die
+  Gestalt eines mitgelieferten System-Wikis. Eine von Hand unter demselben
+  Namen gebaute Wiki bleibt unangetastet;
+- keine andere Recipe darf eine ihrer Bags lesen, sonst verlöre eine andere
+  Wiki ihre Inhaltsquelle.
+
+Ein übersprungenes Entfernen wird mit Grund gemeldet, damit man sieht, warum
+die alte Wiki noch da ist. Ein Entfernen protokolliert
+`Retired system wiki "bedienungsanleitung" removed: this build no longer ships it.`
+und löscht die Recipe, ihre unreferenzierte Bag samt deren Tiddlern, ihre
+Snapshot-Bags (wie die Lösch-Route) und die zwischengespeicherte Vorschau der
+Startseite.
+
+**Geprüft.** `npm run tsc2` und `npm run build` sind sauber; Start- und
+CLI-Pfad wurden gegen eine Scratch-Installation durchgespielt. Eine von Hand
+gebaute eigentümerlose `bedienungsanleitung` (Recipe, Bag
+`editions/bedienungsanleitung`, ein Tiddler) war nach einem Start weg: obige
+Logzeile erschien, weder Recipe noch Bag noch Tiddler blieben übrig. Dieselbe
+Wiki mit Owner überlebte und meldete
+`it has an owner and is therefore not a system wiki`;
+las eine zweite Recipe ihre Bag, überlebte sie ebenfalls und meldete
+`another recipe reads one of its bags`.
+`npx mws update-system-wikis` lud beide mitgelieferten Wikis neu und entfernte
+die zurückgezogene im selben Lauf.
 
 ## 139. Die mitgelieferten System-Wikis erreichen einen bestehenden Store
 
