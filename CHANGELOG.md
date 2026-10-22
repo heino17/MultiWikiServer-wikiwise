@@ -525,6 +525,79 @@ A small follow-up in the 0.6 line: a fresh installation now brings the
 
 ---
 
+## Release 0.7.5 — 2026-10-22
+
+2 commits since 0.7.4, 10 files, +794/−64.
+
+The SimpleWiki shell that ships with the package is refreshed from `v0.1.47`
+to `v0.1.52`; a fresh store starts with the current interface.
+
+**Changed**
+
+- **The bundled SimpleWiki shell jumps from `v0.1.47` to `v0.1.52`** (§141).
+  Five versions of the shell arrived since the last refresh: SimpleWiki can be
+  hosted by Tiddlyhost-wikiwise through the data island of the page, a title
+  and subtitle travel with the saved file, the subtitle is editable under
+  `file://` like the name, a save made in server mode is a standalone file
+  wiki (the server meta lines stay behind), and a newer draft in the browser
+  store no longer replaces the title from the file's head. A fresh
+  `init-store` provisions the new shell; an existing template is brought
+  forward with `provision-simplewiki` (§132).
+
+**Operating notes**
+
+- No migration and no new dependency. The shell lives in the template, not in
+  the wiki, so existing wikis keep serving their current release until the
+  shell policy moves them (`notify` waits for the owner).
+  `templates/simplewiki.html` is a build artifact of SimpleWiki; it was copied
+  from the `v0.1.52` build.
+
+- Verified: `npm run tsc2` and `npm run build` are clean, the package contains
+  `templates/simplewiki.html` with `v0.1.52`, and a scratch store
+  (`init-store`) gets the `SimpleWiki` template: release 1, `v0.1.52`,
+  `customHtmlEnabled`, 2,205.3 kB of content, `ADMIN` `B_write` + `TEACHER`
+  `A_read`; a second run leaves it in place. Tarball `mws-wikiwise-0.7.5.tgz`
+  (sha256 fccf0c7c8c38ae33b9900f8f95c15990bcd78b84bebac434b222a3fe4f160ec1, 4,639,639 bytes).
+
+---
+
+## Release 0.7.5 — 2026-10-22
+
+2 Commits seit 0.7.4, 10 Dateien, +794/−64.
+
+Die SimpleWiki-Schale, die das Paket mitliefert, ist von `v0.1.47` auf
+`v0.1.52` erneuert; ein frischer Store startet mit der aktuellen Oberfläche.
+
+**Geändert**
+
+- **Die mitgelieferte SimpleWiki-Schale springt von `v0.1.47` auf
+  `v0.1.52`** (§141). Seit der letzten Auffrischung sind fünf Fassungen der
+  Schale dazugekommen: SimpleWiki lässt sich von Tiddlyhost-wikiwise über
+  die Dateninsel der Seite hosten, Titel und Untertitel wandern mit der
+  gesicherten Datei, der Untertitel ist unter `file://` wie der Name
+  anklickbar und änderbar, eine Sicherung aus dem Server ist eine
+  eigenständige Datei-Wiki (die Server-Metas bleiben zurück), und ein
+  jüngerer Entwurf im Browserspeicher verdrängt den Titel aus dem Kopf der
+  Datei nicht mehr. Ein frisches `init-store` liefert die neue Schale; ein
+  bestehendes Template wird mit `provision-simplewiki` nachgezogen (§132).
+
+**Betriebshinweise**
+
+- Keine Migration und keine neue Abhängigkeit. Die Schale liegt im Template,
+  nicht in der Wiki; bestehende Wikis bedienen also weiter ihre aktuelle
+  Fassung, bis die Shell-Policy sie weiterzieht (`notify` wartet auf die
+  Besitzerin). `templates/simplewiki.html` ist ein Build-Artefakt von
+  SimpleWiki; es wurde aus dem `v0.1.52`-Build übernommen.
+
+- Geprüft: `npm run tsc2` und `npm run build` sind sauber, das Paket enthält
+  `templates/simplewiki.html` mit `v0.1.52`, und ein Probestore
+  (`init-store`) bekommt das Template `SimpleWiki`: Release 1, `v0.1.52`,
+  `customHtmlEnabled`, 2.205,3 kB Inhalt, `ADMIN` `B_write` + `TEACHER`
+  `A_read`; ein zweiter Lauf lässt es stehen. Tarball
+  `mws-wikiwise-0.7.5.tgz` (sha256 fccf0c7c8c38ae33b9900f8f95c15990bcd78b84bebac434b222a3fe4f160ec1, 4.639.639 Bytes).
+
+---
+
 ## Release 0.7.4 — 2026-10-17
 
 4 commits since 0.7.3, 15 files, +756/−94.

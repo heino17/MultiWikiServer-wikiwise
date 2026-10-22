@@ -2,10 +2,11 @@
 <html lang="de"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="mws-shell-version" content="v0.1.47">
+    <meta name="mws-shell-version" content="v0.1.52">
     <meta name="simplewiki-doc-id" content="">
     <meta name="simplewiki-exported" content="">
     <meta name="simplewiki-title" content="">
+    <meta name="simplewiki-subtitle" content="">
     <title>SimpleWiki</title>
 
     <!--
@@ -74,9 +75,9 @@
           vorhandene Wiki ersetzen. Die leere Vorlage ist zum Füllen da, nicht
           zum Laden.
 
-        Kennung, Zeitpunkt und Titel (nicht Teil dieses Blocks, sondern des
-        Kopfes)
-          Beim Sichern schreibt "Als Datei sichern" drei <meta>-Angaben in
+        Kennung, Zeitpunkt, Titel und Untertitel (nicht Teil dieses Blocks,
+        sondern des Kopfes)
+          Beim Sichern schreibt "Als Datei sichern" vier <meta>-Angaben in
           den Kopf der Datei, neben mws-shell-version:
 
             simplewiki-doc-id     die Kennung des Dokuments. Sie bleibt
@@ -87,21 +88,36 @@
                                   "Was neuer ist, gewinnt": Ist die Datei
                                   juenger als der Entwurf im Browser, gilt
                                   die Datei; bei Gleichstand ebenfalls.
-            simplewiki-title      der eigene Wiki-Name, den die Person oben
-                                  im Kopf vergibt. Leer heisst: es bleibt
-                                  beim festen Namen. Er steht im Kopf, weil
-                                  er zur Datei gehoert und nicht zu den
-                                  Seiten - dieselbe Datei soll ueberall
-                                  denselben Namen tragen.
+            simplewiki-title      der Wiki-Name, den die Person oben im
+                                  Kopf vergibt oder den der Server setzt.
+                                  Leer heisst: es bleibt beim festen Namen.
+                                  Er steht im Kopf, weil er zur Datei
+                                  gehoert und nicht zu den Seiten -
+                                  dieselbe Datei soll ueberall denselben
+                                  Namen tragen.
+            simplewiki-subtitle   der Wiki-Untertitel, eine Zeile unter dem
+                                  Namen. Leer heisst: keine Zeile. Im
+                                  Serverbetrieb kommt er aus der Verwaltung
+                                  und wird beim Sichern mitgenommen; unter
+                                  file:// ist es der eigene Untertitel der
+                                  Person: er steht unter dem Namen, ist dort
+                                  anklickbar und wandert beim Sichern in
+                                  den Kopf der Datei.
 
-          Alle drei stehen bewusst hier und nicht im Datenblock: der
+          Die drei Meta-Angaben des Servers (simplewiki-server,
+          simplewiki-status-url, simplewiki-data-url) gehoeren dagegen zur
+          Auslieferung, nicht zur Datei. "Als Datei sichern" entfernt sie:
+          eine gesicherte Datei ist unter file:// ein eigenes Wiki, auch
+          wenn sie von einem Server stammt.
+
+          Alle vier stehen bewusst hier und nicht im Datenblock: der
           Vertrag unten bleibt damit unveraendert, und eine fremde
           Anwendung darf die Angaben setzen oder weglassen. Fehlen sie,
           verhaelt sich die Datei wie vorher, und der Fingerabdruck ihres
           Datenblocks entscheidet. Der rohe Bauplan traegt sie leer;
           "Leeres Wiki exportieren" vergibt eine frische Kennung und laesst
-          den Titel leer, damit die leere Vorlage weder den Entwurf noch
-          den Namen der erzeugenden Person erbt.
+          Titel und Untertitel leer, damit die leere Vorlage weder den
+          Entwurf noch die Angaben der erzeugenden Person erbt.
 
         =========================================================================
     -->
@@ -2431,6 +2447,41 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            max-width: 60vw;
+        }
+
+        /* Der Untertitel ist unter file:// anklickbar: derselbe Cursor und
+           derselbe leise Strich wie beim Namen. Im Serverbetrieb fehlt die
+           Klasse - dort gehoert der Untertitel der Verwaltung. */
+        .header .kopf-untertitel-editierbar {
+            cursor: text;
+        }
+
+        .header .kopf-untertitel-editierbar:hover {
+            text-decoration: underline dotted;
+            text-underline-offset: 3px;
+        }
+
+        /* Der Platzhalter, wenn noch kein Untertitel da ist: leise, damit
+           er ein Angebot bleibt und nicht wie ein Text aussieht. */
+        .header .kopf-untertitel-leer {
+            opacity: 0.55;
+        }
+
+        /* Das Eingabefeld anstelle des Untertitels sieht aus wie die
+           Zeile, damit an derselben Stelle nichts springt. Der Einzug
+           entspricht dem des Untertitels (30px) minus dem Rahmen. */
+        .header .kopf-untertitel-feld {
+            font-family: inherit;
+            font-size: 0.78rem;
+            line-height: 1.15;
+            color: var(--text-secondary);
+            background: var(--bg-hover);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 1px 6px;
+            margin-left: 24px;
+            min-width: 14ch;
             max-width: 60vw;
         }
 
@@ -4835,7 +4886,24 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     <h1 v-else :class="{ 'kopf-titel-editierbar': !mwsModus }"
                         :title="!mwsModus ? t('titelHint') : ''"
                         @click="titelStarten">📚 {{ kopfTitel() }}</h1>
-                    <p v-if="wikiUntertitel" class="kopf-untertitel">{{ wikiUntertitel }}</p>
+                    <!-- Der Untertitel ist unter file:// genauso anklickbar
+                         wie der Name: er wird zum Eingabefeld, Enter
+                         uebernimmt, Escape verwirft. Im Serverbetrieb kommt
+                         er aus der Verwaltung ($:/SiteSubtitle) und ist kein
+                         Gegenstand dieser Oberflaeche. Leer ist er eine
+                         stille Zeile mit einem Platzhalter - so kann ihn
+                         jemand anlegen, ohne den Weg ueber die Datei zu
+                         kennen. -->
+                    <input v-if="untertitelBearbeiten" ref="untertitelFeld" class="kopf-untertitel-feld"
+                           v-model="untertitelEntwurf" :aria-label="t('untertitelHint')"
+                           @keydown.enter.prevent="untertitelSichern"
+                           @keydown.esc.prevent="untertitelAbbrechen"
+                           @blur="untertitelSichern">
+                    <p v-else class="kopf-untertitel"
+                       :class="{ 'kopf-untertitel-editierbar': !mwsModus,
+                                'kopf-untertitel-leer': !kopfUntertitel() }"
+                       :title="!mwsModus ? t('untertitelHint') : ''"
+                       @click="untertitelStarten">{{ kopfUntertitel() || (!mwsModus ? t('untertitelLeer') : '') }}</p>
                 </div>
                 <!-- Suche. Das Feld steht im Kopf, und die Treffer kommen
                      direkt darunter.
@@ -5393,7 +5461,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
             <div class="settings-fuss">
                 <div class="kopf-titel">
                     <span class="fuss-titel">📚 {{ kopfTitel() }}</span>
-                    <span v-if="wikiUntertitel" class="fuss-untertitel">{{ wikiUntertitel }}</span>
+                    <span v-if="kopfUntertitel()" class="fuss-untertitel">{{ kopfUntertitel() }}</span>
                 </div>
                 <a class="fuss-version" :href="autorUrl" target="_blank" rel="noopener">{{ shellVersion }}</a>
             </div>
@@ -5578,6 +5646,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "titlePlaceholder": "Seitentitel...",
                     "contentPlaceholder": "Schreibe hier... (Markdown wird unterstützt)",
                     "titelHint": "Titel ändern – klicken und tippen",
+                    "untertitelHint": "Untertitel ändern – klicken und tippen",
+                    "untertitelLeer": "Untertitel hinzufügen",
                     "untitled": "Neue Seite",
                     "language": "Sprache",
                     "palette": "Farbwelt",
@@ -5664,6 +5734,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "emptyCreate": "Erste Seite anlegen",
                     "speicherFehler": "Nicht auf dem Server gespeichert: {grund}. " +
                         "Die Änderung steht in dieser Seite, aber nicht beim Server.",
+                    "konflikt": "Jemand anderes hat dieses Wiki seither geändert. " +
+                        "Der neue Stand wurde geladen - bitte prüfe Deine Änderung noch einmal.",
                     "mwsHinweis": "Die Seiten liegen auf dem Server. Jede Änderung geht sofort dorthin.",
                     "updateUeberschrift": "Neue Oberflächen-Version bereit",
                     "updateText": "Diese Wiki läuft auf {alt}. Zum Übernehmen bereit steht {neu}.",
@@ -5852,6 +5924,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "titlePlaceholder": "Page title...",
                     "contentPlaceholder": "Write here... (Markdown is supported)",
                     "titelHint": "Change title – click and type",
+                    "untertitelHint": "Change subtitle – click and type",
+                    "untertitelLeer": "Add a subtitle",
                     "untitled": "New Page",
                     "nurLesen": "This wiki cannot be written to. You can read everything, but not create, change or delete anything.",
                     "nurLesenKurz": "Read only",
@@ -5863,6 +5937,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "emptyCreate": "Create the first page",
                     "speicherFehler": "Not saved on the server: {grund}. " +
                         "The change is in this page, but not on the server.",
+                    "konflikt": "Someone else has changed this wiki since. " +
+                        "The new version was loaded - please check your change again.",
                     "mwsHinweis": "The pages live on the server. Every change goes there right away.",
                     "updateUeberschrift": "New interface version available",
                     "updateText": "This wiki is running {alt}. {neu} is ready for you to take over.",
@@ -5976,6 +6052,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "titlePlaceholder": "Заголовок страницы...",
                     "contentPlaceholder": "Пишите здесь... (поддерживается Markdown)",
                     "titelHint": "Изменить заголовок – нажмите и введите",
+                    "untertitelHint": "Изменить подзаголовок – нажмите и введите",
+                    "untertitelLeer": "Добавить подзаголовок",
                     "untitled": "Новая страница",
                     "language": "Язык",
                     "palette": "Палитра цветов",
@@ -6061,6 +6139,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "abmeldenFehler": "Не удалось выйти. Попробуйте ещё раз.",
                     "emptyCreate": "Создать первую страницу",
                     "speicherFehler": "Не сохранено на сервере: {grund}. Изменение есть на этой странице, но не на сервере.",
+                    "konflikt": "Кто-то другой с тех пор изменил эту вики. Загружена новая версия — проверьте своё изменение.",
                     "mwsHinweis": "Страницы хранятся на сервере. Каждое изменение сразу отправляется туда.",
                     "updateUeberschrift": "Доступна новая версия интерфейса",
                     "updateText": "Эта вики работает на {alt}. {neu} готова к переносу.",
@@ -6174,6 +6253,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "titlePlaceholder": "Título de la página...",
                     "contentPlaceholder": "Escribe aquí... (se admite Markdown)",
                     "titelHint": "Cambiar el título – haga clic y escriba",
+                    "untertitelHint": "Cambiar el subtítulo – haga clic y escriba",
+                    "untertitelLeer": "Añadir un subtítulo",
                     "untitled": "Nueva página",
                     "language": "Idioma",
                     "palette": "Paleta de colores",
@@ -6259,6 +6340,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "abmeldenFehler": "No se pudo cerrar sesión. Inténtalo de nuevo.",
                     "emptyCreate": "Crear la primera página",
                     "speicherFehler": "No guardado en el servidor: {grund}. El cambio está en esta página, pero no en el servidor.",
+                    "konflikt": "Alguien más ha cambiado esta wiki desde entonces. Se cargó la nueva versión: revisa tu cambio.",
                     "mwsHinweis": "Las páginas viven en el servidor. Cada cambio va allí de inmediato.",
                     "updateUeberschrift": "Nueva versión de la interfaz disponible",
                     "updateText": "Este wiki usa {alt}. {neu} está listo para adoptarlo.",
@@ -6372,6 +6454,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "titlePlaceholder": "Titre de la page...",
                     "contentPlaceholder": "Écrivez ici... (Markdown est pris en charge)",
                     "titelHint": "Modifier le titre – cliquez et saisissez",
+                    "untertitelHint": "Modifier le sous-titre – cliquez et saisissez",
+                    "untertitelLeer": "Ajouter un sous-titre",
                     "untitled": "Nouvelle page",
                     "language": "Langue",
                     "palette": "Palette de couleurs",
@@ -6457,6 +6541,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "abmeldenFehler": "La déconnexion n'a pas fonctionné. Veuillez réessayer.",
                     "emptyCreate": "Créer la première page",
                     "speicherFehler": "Non enregistré sur le serveur : {grund}. La modification est dans cette page, mais pas sur le serveur.",
+                    "konflikt": "Quelqu'un d'autre a modifié ce wiki depuis. La nouvelle version a été chargée : vérifiez votre modification.",
                     "mwsHinweis": "Les pages résident sur le serveur. Chaque modification y va immédiatement.",
                     "updateUeberschrift": "Nouvelle version de l'interface disponible",
                     "updateText": "Ce wiki utilise {alt}. {neu} est prêt à être repris.",
@@ -6570,6 +6655,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "titlePlaceholder": "ページタイトル...",
                     "contentPlaceholder": "ここに入力...（Markdown に対応）",
                     "titelHint": "タイトルを変更 – クリックして入力",
+                    "untertitelHint": "サブタイトルを変更 – クリックして入力",
+                    "untertitelLeer": "サブタイトルを追加",
                     "untitled": "新しいページ",
                     "language": "言語",
                     "palette": "カラーパレット",
@@ -6655,6 +6742,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "abmeldenFehler": "サインアウトできませんでした。もう一度お試しください。",
                     "emptyCreate": "最初のページを作成",
                     "speicherFehler": "サーバーに保存されませんでした: {grund}。変更はこのページにありますが、サーバーにはありません。",
+                    "konflikt": "他の誰かがこのウィキを変更しました。新しい版を読み込みました。変更内容を確認してください。",
                     "mwsHinweis": "ページはサーバーにあります。変更はすぐにそこへ送られます。",
                     "updateUeberschrift": "新しいインターフェース版が利用可能です",
                     "updateText": "この Wiki は {alt} で動作しています。{neu} を引き継げます。",
@@ -6768,6 +6856,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "titlePlaceholder": "페이지 제목...",
                     "contentPlaceholder": "여기에 작성하세요... (Markdown 지원)",
                     "titelHint": "제목 변경 – 클릭하고 입력",
+                    "untertitelHint": "부제 변경 – 클릭하고 입력",
+                    "untertitelLeer": "부제 추가",
                     "untitled": "새 페이지",
                     "language": "언어",
                     "palette": "색상 팔레트",
@@ -6853,6 +6943,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "abmeldenFehler": "로그아웃하지 못했습니다. 다시 시도하세요.",
                     "emptyCreate": "첫 페이지 만들기",
                     "speicherFehler": "서버에 저장되지 않았습니다: {grund}. 변경 사항은 이 페이지에 있지만 서버에는 없습니다.",
+                    "konflikt": "다른 사람이 그 사이에 이 위키를 변경했습니다. 새 버전을 불러왔으니 변경 내용을 다시 확인하세요.",
                     "mwsHinweis": "페이지는 서버에 있습니다. 모든 변경은 즉시 서버로 전송됩니다.",
                     "updateUeberschrift": "새 인터페이스 버전을 사용할 수 있습니다",
                     "updateText": "이 위키는 {alt}에서 실행 중입니다. {neu}를 넘겨받을 수 있습니다.",
@@ -6966,6 +7057,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "titlePlaceholder": "页面标题...",
                     "contentPlaceholder": "在此书写……（支持 Markdown）",
                     "titelHint": "更改标题 – 点击并输入",
+                    "untertitelHint": "更改副标题 – 点击并输入",
+                    "untertitelLeer": "添加副标题",
                     "untitled": "新页面",
                     "language": "语言",
                     "palette": "配色方案",
@@ -7051,6 +7144,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "abmeldenFehler": "退出登录未成功。请重试。",
                     "emptyCreate": "创建第一个页面",
                     "speicherFehler": "未保存到服务器：{grund}。更改在此页面中，但不在服务器上。",
+                    "konflikt": "其他人此后修改了此 Wiki。已加载新版本，请再次检查你的更改。",
                     "mwsHinweis": "页面存放在服务器上。每次更改都会立即发送到那里。",
                     "updateUeberschrift": "有新的界面版本可用",
                     "updateText": "此 Wiki 正在运行 {alt}。{neu} 已可供接管。",
@@ -7259,6 +7353,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
         const KENNUNG_META = 'simplewiki-doc-id';
         const ZEIT_META = 'simplewiki-exported';
         const TITEL_META = 'simplewiki-title';
+        const UNTERTITEL_META = 'simplewiki-subtitle';
         const ARCHIV_PRAEFIX = 'simplewiki_archiv__';
 
         /* Schluessel, die zum Entwurf eines Dokuments gehoeren. Beim
@@ -7268,7 +7363,8 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
             'simplewiki_refs', 'simplewiki_lang', 'simplewiki_theme',
             'simplewiki_palette', 'simplewiki_toolbar', 'simplewiki_seiteninhalt',
             'simplewiki_eigene_farben', 'simplewiki_datei_warnung',
-            'simplewiki_draft_time', 'simplewiki_digest', 'simplewiki_titel'];
+            'simplewiki_draft_time', 'simplewiki_digest', 'simplewiki_titel',
+            'simplewiki_untertitel'];
 
         /* Eine Kennung auf harmlose Zeichen bringen: sie wird Teil eines
            Speicherschluessels und steht in der Datei. Leer heisst: keine
@@ -7355,6 +7451,24 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
         function dateiTitel() {
             const meta = document.querySelector('meta[name="' + TITEL_META + '"]');
             return titelSaeubern(meta ? meta.getAttribute('content') : '');
+        }
+
+        /* Den Untertitel auf eine Zeile bringen - dieselbe Grenze wie
+           im MWS (200 Zeichen). Er steht im Kopf der Datei, weil er zur
+           Datei gehoert und nicht zu den Seiten. */
+        function untertitelSaeubern(text) {
+            return String(text == null ? '' : text)
+                .replace(/[\u0000-\u001f\u007f]+/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .slice(0, 200);
+        }
+
+        /* Der Untertitel der geoeffneten Datei. Leer heisst: keiner
+           gesetzt - dann fehlt die Zeile unter dem Namen. */
+        function dateiUntertitel() {
+            const meta = document.querySelector('meta[name="' + UNTERTITEL_META + '"]');
+            return untertitelSaeubern(meta ? meta.getAttribute('content') : '');
         }
 
         /* Die Kennung, unter der dieser Tab arbeitet. Sie ist einmal
@@ -7811,6 +7925,10 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
 
         function MwsStore(tiddler) {
             this.art = 'mws';
+            /* Wie beim Tiddlyhost-Speicher: hinter diesem Speicher steht ein
+               Server. Die App fragt danach ueber serverseitig, statt jede
+               Auspraegung einzeln zu kennen. */
+            this.serverseitig = true;
             this.tiddler = Array.isArray(tiddler) ? tiddler : [];
             this.slug = mwsSlug();
             /* Die Felder, wie sie kamen. Beim Schreiben werden sie
@@ -8210,6 +8328,383 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
            und nicht direkt nach dem Konstruktor. */
         pruefeSpeicher(MwsStore.prototype, 'der Serverspeicher');
 
+        /* ---------- Ausprägung 3: Tiddlyhost ----------
+
+           Tiddlyhost liefert dieselbe Art Shell aus wie MWS, aber einen
+           anderen Weg zum Inhalt: nicht Tiddler, sondern eine einzelne
+           Dateninsel. Beim Ausliefern haengt der Server drei Meta-Zeilen
+           in den Kopf (erkennt man am ersten unten), die sagen, dass hier
+           dieser Speicher zustaendig ist und wohin geschrieben wird.
+
+           Gehalten wird der Inhalt in der Dateninsel selbst - derselben
+           <script id="simplewiki-daten">, die eine gesicherte Datei traegt.
+           Geschrieben wird sie als Ganzes: jede Aenderung geht als
+           gebuendelter PUT an /simplewiki/data, das Wiki liest sie beim
+           naechsten Neuladen wieder ein.
+
+           Der Server fuehrt zu jeder Fassung eine eigene Version (ETag).
+           Ein PUT mit If-Match traegt die zuletzt gelesene mit; hat ein
+           anderer seither geschrieben, antwortet er mit 409, und diese
+           Wiki liest den neuen Stand und meldet den Konflikt, statt ihn
+           zu ueberschreiben. */
+
+        function tiddlyhostServer() {
+            const m = document.querySelector('meta[name="simplewiki-server"]');
+            return m ? String(m.getAttribute('content') || '') : '';
+        }
+
+        function tiddlyhostMeta(name) {
+            const m = document.querySelector('meta[name="' + name + '"]');
+            return m ? String(m.getAttribute('content') || '') : '';
+        }
+
+        /* Ist der Tiddlyhost-Server, dessen Meta-Zeilen im Kopf stehen,
+           auch jetzt erreichbar? Eine gesicherte Datei bringt die Zeilen
+           mit, weil die Vorlage beim Ausliefern kopiert wurde - unter
+           file:// und auf einem fremden Origin gibt es diesen Server aber
+           nicht mehr. Dann entscheidet die Datei, nicht der Kopf: sonst
+           hielte sich ein Export fuer ein Server-Wiki und seine
+           Schreibversuche liefen ins Leere. */
+        function tiddlyhostServerAktiv() {
+            if (tiddlyhostServer() !== 'tiddlyhost') return false;
+            if (location.protocol === 'file:') return false;
+            const datenUrl = tiddlyhostMeta('simplewiki-data-url');
+            if (!datenUrl) return false;
+            try {
+                return new URL(datenUrl, location.href).origin === location.origin;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        /* Die Dateninsel aus dem Dokument lesen. Ein leerer oder
+           fehlender Block ist ein leeres Wiki, kein Fehler. */
+        function tiddlyhostInsel() {
+            const el = document.getElementById('simplewiki-daten');
+            if (!el) return null;
+            try {
+                const daten = JSON.parse(el.textContent || '');
+                if (daten && typeof daten === 'object' && !Array.isArray(daten)) {
+                    return daten;
+                }
+            } catch (e) { /* eine kaputte Insel wird wie eine leere behandelt */ }
+            return null;
+        }
+
+        function TiddlyhostStore() {
+            this.art = 'tiddlyhost';
+            /* Damit die App weiss, dass hier ein Server hinter steht - ohne
+               dass sie zwei Auspraegungen kennen muss. */
+            this.serverseitig = true;
+            this.datenUrl = tiddlyhostMeta('simplewiki-data-url');
+            this.statusUrl = tiddlyhostMeta('simplewiki-status-url');
+            this.seiten = [];
+            this.startId = '';
+            this.einstellungen = {};
+            this.fremdeDaten = {};
+            /* Tiddlyhost setzt Name und Untertitel als Meta-Zeilen in den
+               Kopf - dieselben Angaben, die MWS als $:/SiteTitle und
+               $:/SiteSubtitle schickt. */
+            this.wikiTitel = dateiTitel();
+            this.wikiUntertitel = dateiUntertitel();
+            this.nurLesen = false;
+            /* Die zuletzt gelesene Fassung des Servers. Sie geht als
+               If-Match mit und wird nach jedem Schreiben ersetzt. */
+            this.etag = '';
+            this.schreibZeit = null;
+            this.buchenLaeuft = false;
+        }
+
+        /* Wer hier arbeitet und ob dieser Tab schreiben darf.
+
+           Der Server antwortet mit {logged_in, logged_in_as}. Die App
+           erwartet die MWS-Form; die wird hier gebaut - so braucht die
+           Oberflaeche den Unterschied nicht zu kennen. */
+        TiddlyhostStore.prototype.status = function () {
+            if (!this.statusUrl) return Promise.resolve(null);
+            return fetch(this.statusUrl, {
+                headers: { 'X-Requested-With': 'fetch' },
+                credentials: 'same-origin'
+            }).then(function (antwort) {
+                if (!antwort.ok) return null;
+                return antwort.json();
+            }).then(function (daten) {
+                if (!daten) return null;
+                const angemeldet = !!daten.logged_in;
+                return {
+                    isLoggedIn: angemeldet,
+                    username: angemeldet ? String(daten.logged_in_as || '') : '',
+                    /* Schreiben darf, wer angemeldet ist; ob er es auf
+                       diesem Wiki darf, sagt erst der PUT (403). */
+                    bags: [{ canUserWrite: angemeldet }]
+                };
+            }).catch(function () {
+                return null;
+            });
+        };
+
+        /* Abmelden: Tiddlyhost die Sitzung loeschen lassen. Das Cookie
+           gilt domainweit, also meldet das auch aus dieser Wiki ab. */
+        TiddlyhostStore.prototype.abmelden = function () {
+            return fetch('/users/sign_out', {
+                method: 'DELETE',
+                headers: { 'X-Requested-With': 'fetch' },
+                credentials: 'same-origin'
+            }).then(function (antwort) {
+                return antwort.ok || antwort.status === 302 || antwort.status === 204;
+            }).catch(function () {
+                return false;
+            });
+        };
+
+        /* Der Weg zu einer Fehlermeldung in der Oberflaeche - wie beim
+           MWS-Speicher. */
+        TiddlyhostStore.prototype.fehlerMelden = function (grund) {
+            try {
+                document.dispatchEvent(new CustomEvent('simplewiki:fehler', {
+                    detail: String(grund == null ? '' : grund)
+                }));
+            } catch (e) { /* älterer Browser: dann eben ohne Hinweis */ }
+        };
+
+        TiddlyhostStore.prototype.nurLesenMelden = function () {
+            this.nurLesen = true;
+            try {
+                document.dispatchEvent(new CustomEvent('simplewiki:nurlesen'));
+            } catch (e) { /* älterer Browser: nur die Merkvariable zählt */ }
+        };
+
+        /* Die Dateninsel bauen - genau in der Austauschform, die auch der
+           Export schreibt. Unbekannte Felder aus dem eingelesenen
+           Ursprueng bleiben erhalten. */
+        TiddlyhostStore.prototype.bauInsel = function () {
+            const daten = Object.assign({}, this.fremdeDaten || {});
+            daten.version = SIMPLEWIKI_FORMAT_VERSION;
+            daten.seiten = this.seiten;
+            daten.startseite = this.startId;
+            daten.sprache = this.einstellungen.sprache || '';
+            daten.thema = this.einstellungen.thema === 'dark' ? 'dark' : 'light';
+            daten.palette = this.einstellungen.palette || '';
+            daten.toolbar = !!this.einstellungen.toolbar;
+            daten.seiteninhalt = !!this.einstellungen.seiteninhalt;
+            daten.eigeneFarben = this.einstellungen.eigeneFarben || null;
+            return daten;
+        };
+
+        /* Die Insel im Dokument mit dem aktuellen Stand ersetzen, damit
+           ein "Sichern" ohne Neuladen denselben Inhalt traegt. */
+        TiddlyhostStore.prototype.inselAktualisieren = function (text) {
+            const el = document.getElementById('simplewiki-daten');
+            if (el) el.textContent = text;
+        };
+
+        /* Die Insel sammeln und - gebuendelt - zum Server schicken.
+
+           Gebuendelt, weil eine Umbenennung viele Seiten beruehrt und
+           jede einzelne ein Schreiben waere. Ein kurzer Aufschub fasst
+           sie zu einem PUT zusammen. */
+        TiddlyhostStore.prototype.buchen = function () {
+            if (this.schreibZeit) clearTimeout(this.schreibZeit);
+            this.schreibZeit = setTimeout(() => {
+                this.schreibZeit = null;
+                this.jetztSchreiben();
+            }, 400);
+            return true;
+        };
+
+        /* Sofort schreiben - ohne Aufschub. Der letzte Schreibvorgang
+           beim Verlassen der Seite geht hier durch. */
+        TiddlyhostStore.prototype.flush = function () {
+            if (this.schreibZeit) {
+                clearTimeout(this.schreibZeit);
+                this.schreibZeit = null;
+            }
+            return this.jetztSchreiben();
+        };
+
+        TiddlyhostStore.prototype.jetztSchreiben = function () {
+            if (!this.datenUrl) return Promise.resolve(null);
+            if (this.nurLesen) return Promise.resolve(null);
+            const text = JSON.stringify(this.bauInsel());
+            const kopf = {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'fetch'
+            };
+            /* Die zuletzt gelesene Fassung mitgeben. Ein anderer Schreiber
+               seither faellt so als 409 auf, statt still zu verschwinden. */
+            if (this.etag) kopf['If-Match'] = this.etag;
+            const selbst = this;
+            return fetch(this.datenUrl, {
+                method: 'PUT',
+                headers: kopf,
+                credentials: 'same-origin',
+                body: text
+            }).then(function (antwort) {
+                if (antwort.status === 409) {
+                    /* Jemand anderes hat seither geschrieben. Den neuen
+                       Stand lesen und den Konflikt melden - nicht
+                       darueberbuegeln. */
+                    selbst.konfliktMelden();
+                    return null;
+                }
+                if (antwort.status === 403) {
+                    selbst.nurLesenMelden();
+                    return null;
+                }
+                if (!antwort.ok) {
+                    throw new Error('HTTP ' + antwort.status);
+                }
+                const neu = antwort.headers.get('ETag');
+                if (neu) selbst.etag = neu;
+                /* Die Insel im Dokument auf denselben Stand bringen. */
+                selbst.inselAktualisieren(text);
+                return true;
+            }).catch(function (e) {
+                selbst.fehlerMelden(e && e.message ? e.message : 'unbekannter Fehler');
+                return null;
+            });
+        };
+
+        TiddlyhostStore.prototype.konfliktMelden = function () {
+            const selbst = this;
+            /* Den neuen Stand holen und zu eigen machen, damit die naechste
+               Eingabe wieder passt. */
+            this.vomServerLesen().then(function (daten) {
+                if (!daten) return;
+                selbst.seiten = Array.isArray(daten.seiten) ? daten.seiten : [];
+                selbst.startId = daten.startseite == null ? '' : String(daten.startseite);
+                selbst.einstellungen = {
+                    thema: daten.thema === 'dark' ? 'dark' : (daten.thema === 'light' ? 'light' : ''),
+                    palette: daten.palette == null ? '' : String(daten.palette),
+                    eigeneFarben: eigeneFarbenLesen(daten.eigeneFarben),
+                    sprache: daten.sprache == null ? '' : String(daten.sprache),
+                    toolbar: wahlWahr(daten.toolbar),
+                    seiteninhalt: wahlWahr(daten.seiteninhalt)
+                };
+            });
+            try {
+                document.dispatchEvent(new CustomEvent('simplewiki:konflikt'));
+            } catch (e) { /* älterer Browser: dann eben ohne Hinweis */ }
+        };
+
+        /* Den aktuellen Stand vom Server holen. */
+        TiddlyhostStore.prototype.vomServerLesen = function () {
+            if (!this.datenUrl) return Promise.resolve(null);
+            const selbst = this;
+            return fetch(this.datenUrl, {
+                headers: { 'X-Requested-With': 'fetch', 'Accept': 'application/json' },
+                credentials: 'same-origin'
+            }).then(function (antwort) {
+                const etag = antwort.headers.get('ETag');
+                if (etag) selbst.etag = etag;
+                if (!antwort.ok) return null;
+                return antwort.json();
+            }).catch(function () {
+                return null;
+            });
+        };
+
+        TiddlyhostStore.prototype.laden = function () {
+            const insel = tiddlyhostInsel() || {};
+            const seiten = Array.isArray(insel.seiten) ? insel.seiten : [];
+            this.seiten = seiten;
+            this.startId = insel.startseite == null ? '' : String(insel.startseite);
+
+            const bekannt = ['version', 'seiten', 'startseite', 'sprache', 'thema',
+                'palette', 'toolbar', 'seiteninhalt', 'eigeneFarben'];
+            const fremd = {};
+            Object.keys(insel).forEach(k => {
+                if (bekannt.indexOf(k) < 0) fremd[k] = insel[k];
+            });
+            this.fremdeDaten = fremd;
+
+            this.einstellungen = {
+                thema: insel.thema === 'dark' ? 'dark' : (insel.thema === 'light' ? 'light' : ''),
+                palette: insel.palette == null ? '' : String(insel.palette),
+                eigeneFarben: eigeneFarbenLesen(insel.eigeneFarben),
+                sprache: insel.sprache == null ? '' : String(insel.sprache),
+                toolbar: wahlWahr(insel.toolbar),
+                seiteninhalt: wahlWahr(insel.seiteninhalt)
+            };
+
+            return {
+                seiten: seiten,
+                /* Wie beim MWS-Speicher: der Server hat das Wiki geliefert.
+                   Ein leeres Server-Wiki bleibt leer - hier wird keine
+                   Willkommensseite erfunden. */
+                vorhanden: true,
+                verweise: SimpleWikiStore.get('simplewiki_refs') === '1',
+                startseite: this.startId,
+                sprache: this.einstellungen.sprache,
+                thema: this.einstellungen.thema,
+                palette: this.einstellungen.palette,
+                toolbar: this.einstellungen.toolbar,
+                seiteninhalt: this.einstellungen.seiteninhalt,
+                eigeneFarben: this.einstellungen.eigeneFarben,
+                nurLesen: this.nurLesen,
+                wikiTitel: this.wikiTitel,
+                wikiUntertitel: this.wikiUntertitel,
+                slug: ''
+            };
+        };
+
+        TiddlyhostStore.prototype.uebernehmen = function (seiten) {
+            this.seiten = seiten;
+            return this;
+        };
+
+        /* Jede Aenderung an einer Seite ist eine Aenderung an der Insel:
+           die ganze Insel wird neu geschrieben. */
+        TiddlyhostStore.prototype.seiteSichern = function (seite) {
+            const i = this.seiten.findIndex(p => String(p.id) === String(seite.id));
+            if (i >= 0) this.seiten[i] = seite;
+            else this.seiten.push(seite);
+            return this.buchen();
+        };
+
+        TiddlyhostStore.prototype.seiteLoeschen = function (id) {
+            const i = this.seiten.findIndex(p => String(p.id) === String(id));
+            if (i >= 0) this.seiten.splice(i, 1);
+            return this.buchen();
+        };
+
+        TiddlyhostStore.prototype.startseiteSetzen = function (id) {
+            this.startId = id == null ? '' : String(id);
+            return this.buchen();
+        };
+
+        TiddlyhostStore.prototype.themaSetzen = function (thema) {
+            this.einstellungen.thema = thema === 'dark' ? 'dark' : 'light';
+            return this.buchen();
+        };
+
+        TiddlyhostStore.prototype.paletteSetzen = function (palette) {
+            this.einstellungen.palette = palette == null ? '' : String(palette);
+            return this.buchen();
+        };
+
+        TiddlyhostStore.prototype.eigeneFarbenSetzen = function (werte) {
+            this.einstellungen.eigeneFarben = werte || null;
+            return this.buchen();
+        };
+
+        TiddlyhostStore.prototype.spracheSetzen = function (sprache) {
+            this.einstellungen.sprache = sprache == null ? '' : String(sprache);
+            return this.buchen();
+        };
+
+        TiddlyhostStore.prototype.toolbarSetzen = function (an) {
+            this.einstellungen.toolbar = !!an;
+            return this.buchen();
+        };
+
+        TiddlyhostStore.prototype.seiteninhaltSetzen = function (an) {
+            this.einstellungen.seiteninhalt = !!an;
+            return this.buchen();
+        };
+
+        pruefeSpeicher(TiddlyhostStore.prototype, 'der Tiddlyhost-Speicher');
+
         /* ---------- Und hier wird entschieden ----------
 
            Tiddler im Aufbau: der Server liefert die Seiten mit, das Wiki
@@ -8222,9 +8717,11 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
            $:/state/...). Die gehoeren zu keiner Seite und werden beim
            Laden aussortiert. */
         const MWS_TIDDLER = mwsTiddlerLesen();
-        const SPEICHER = (MWS_TIDDLER && MWS_TIDDLER.length)
-            ? new MwsStore(MWS_TIDDLER)
-            : LocalStore;
+        const SPEICHER = tiddlyhostServerAktiv()
+            ? new TiddlyhostStore()
+            : ((MWS_TIDDLER && MWS_TIDDLER.length)
+                ? new MwsStore(MWS_TIDDLER)
+                : LocalStore);
 
         /* Oberflächentexte des Markdown-Editors.
            Die i18n-Datei von Toast UI ist mit dem All-Bundle inkompatibel,
@@ -8428,8 +8925,20 @@ showSettings: false,
                 /* Was im Eingabefeld steht, bevor Enter es uebernimmt. */
                 titelEntwurf: '',
                 /* Der Untertitel aus $:/SiteSubtitle, eine Zeile unter dem
-                   Namen. Im Browser leer; dann fehlt die Zeile. */
+                   Namen. Im Browser leer; dort gilt der eigene
+                   Untertitel. */
                 wikiUntertitel: '',
+                /* Der eigene Untertitel, den die Person unter file:// unter
+                   dem Namen vergibt. Er wandert in den Kopf der gesicherten
+                   Datei (meta simplewiki-subtitle) und gehoert zu genau
+                   dieser Datei. Im Serverbetrieb leer - dort gilt der
+                   Untertitel der Verwaltung. */
+                eigenerUntertitel: '',
+                /* Der Kopf zeigt gerade das Eingabefeld statt des
+                   Untertitels. */
+                untertitelBearbeiten: false,
+                /* Was im Eingabefeld steht, bevor Enter es uebernimmt. */
+                untertitelEntwurf: '',
                 /* Der Name des Wikis aus dem Serverpfad (/wiki/<name>).
                    Er benennt die gesicherte Datei. Im Browser leer, dann
                    heisst die Sicherung weiterhin simplewiki.html. */
@@ -8822,12 +9331,14 @@ showSettings: false,
                    Schreibweg. Sie weiss es nicht besser, und einen Knopf
                    kurz zu zeigen und dann wieder wegzunehmen ist schlechter
                    als gar keinen. */
-                if (SPEICHER.art === 'mws') {
+                if (SPEICHER.serverseitig) {
                     this.kannSchreiben = false;
                     this.statusHolen();
                     /* Liegt eine neuere Oberfläche bereit, entscheidet das
-                       hier - der Status wird dafür noch einmal gefragt. */
-                    this.pruefeShellUpdate();
+                       hier - der Status wird dafür noch einmal gefragt.
+                       Nur MWS kennt diesen Weg (die Tiddler tragen die
+                       Fassung); Tiddlyhost braucht ihn nicht. */
+                    if (SPEICHER.art === 'mws') this.pruefeShellUpdate();
                 }
                 this.updateTheme();
                 this.applyPalette();
@@ -8843,6 +9354,13 @@ showSettings: false,
                 /* Hat der Server etwas abgelehnt, das nichts mit den
                    Rechten zu tun hat, steht der Grund unten im Bild. */
                 document.addEventListener('simplewiki:fehler', this.speicherFehlerMerken);
+                /* Jemand anderes hat seither geschrieben. */
+                document.addEventListener('simplewiki:konflikt', this.konfliktMerken);
+                /* Beim Verlassen der Seite den aufgeschobenen Schreibvorgang
+                   noch abschicken. pagehide ist der verlaessliche Weg -
+                   beforeunload laesst keinen fetch mehr zu. */
+                window.addEventListener('pagehide', this.seiteVerlassen);
+                document.addEventListener('visibilitychange', this.sichtbarkeitWechsel);
                 window.addEventListener('beforeprint', this.vorDemDruck);
                 window.addEventListener('afterprint', this.nachDemDruck);
                 window.addEventListener('keydown', this.onKeydown);
@@ -10067,6 +10585,15 @@ showSettings: false,
                     return this.t('appName');
                 },
 
+                /* Der Untertitel unter dem Namen. Reihenfolge: der
+                   Untertitel der Verwaltung ($:/SiteSubtitle), dann unter
+                   file:// der eigene, dann nichts - dann fehlt die Zeile. */
+                kopfUntertitel() {
+                    if (this.wikiUntertitel) return this.wikiUntertitel;
+                    if (!this.mwsModus && this.eigenerUntertitel) return this.eigenerUntertitel;
+                    return '';
+                },
+
                 applyLanguage() {
                     document.documentElement.lang = this.currentLang;
                     document.title = this.kopfTitel();
@@ -10109,6 +10636,46 @@ showSettings: false,
                 titelAbbrechen() {
                     this.titelBearbeiten = false;
                     this.titelEntwurf = '';
+                },
+
+                /* Darf der Untertitel hier geaendert werden? Nur unter
+                   file://: im Serverbetrieb gehoert er zur Verwaltung
+                   ($:/SiteSubtitle). */
+                untertitelBearbeitbar() {
+                    return !this.mwsModus;
+                },
+
+                /* Der Untertitel wird zum Eingabefeld: den gezeigten
+                   hineinschreiben, damit man ihn aendert statt neu tippt. */
+                untertitelStarten() {
+                    if (!this.untertitelBearbeitbar()) return;
+                    this.untertitelEntwurf = this.kopfUntertitel();
+                    this.untertitelBearbeiten = true;
+                    this.$nextTick(() => {
+                        const feld = this.$refs.untertitelFeld;
+                        if (feld) { feld.focus(); feld.select(); }
+                    });
+                },
+
+                /* Enter oder Wegklicken: den Untertitel uebernehmen. Leer
+                   heisst: keine Zeile. Geaendert heisst: die Datei auf der
+                   Platte kennt den Untertitel noch nicht - also warnen. */
+                untertitelSichern() {
+                    if (!this.untertitelBearbeiten) return;
+                    this.untertitelBearbeiten = false;
+                    const neu = untertitelSaeubern(this.untertitelEntwurf);
+                    this.untertitelEntwurf = '';
+                    if (neu === this.eigenerUntertitel) return;
+                    this.eigenerUntertitel = neu;
+                    try { SimpleWikiStore.set('simplewiki_untertitel', neu); } catch (e) { /* egal */ }
+                    this.dateiWarnen();
+                },
+
+                /* Escape: nichts uebernehmen. Der Untertitel bleibt, wie er
+                   war. */
+                untertitelAbbrechen() {
+                    this.untertitelBearbeiten = false;
+                    this.untertitelEntwurf = '';
                 },
 
                 changeLanguage() {
@@ -10399,22 +10966,42 @@ showSettings: false,
                    inklusive Reihenfolge in der Datei. */
                 /* Die gesicherte Datei bauen: die Vorlage von vor dem Mount,
                    nur mit frischen Daten im Datenblock. */
-                bauExport(daten, kennung, titel) {
+                bauExport(daten, kennung, titel, untertitel) {
                     const doc = new DOMParser().parseFromString(VORLAGE_HTML, 'text/html');
-                    /* Kennung, Zeitpunkt und Titel in den Kopf schreiben.
-                       Die Kennung ist die des offenen Dokuments - so
-                       erkennt die Datei beim naechsten Oeffnen ihren eigenen
-                       Entwurf wieder. Die leere Vorlage bekommt ueber den
-                       Aufrufer eine frische Kennung und einen leeren Titel,
-                       damit sie weder den Entwurf noch den Namen der Person
-                       erbt, die sie erzeugt. Der Zeitpunkt ist jetzt: er
-                       entscheidet, ob die Datei oder ein Entwurf im Browser
-                       gewinnt. Der Titel ist der eigene Name des offenen
-                       Dokuments, sofern der Aufrufer keinen anderen nennt. */
+                    /* Die Meta-Zeilen des Servers gehoeren zur Auslieferung,
+                       nicht zur Datei. Die Vorlage stammt aus dem Kopf der
+                       ausgelieferten Seite - blieben die Zeilen stehen,
+                       hielte sich die gesicherte Datei fuer ein Server-Wiki
+                       und ihre Schreibversuche liefen ins Leere. */
+                    for (const name of ['simplewiki-server', 'simplewiki-status-url', 'simplewiki-data-url']) {
+                        for (const meta of Array.from(doc.querySelectorAll('meta[name="' + name + '"]'))) {
+                            meta.parentNode.removeChild(meta);
+                        }
+                    }
+                    /* Kennung, Zeitpunkt, Titel und Untertitel in den Kopf
+                       schreiben. Die Kennung ist die des offenen Dokuments -
+                       so erkennt die Datei beim naechsten Oeffnen ihren
+                       eigenen Entwurf wieder. Die leere Vorlage bekommt
+                       ueber den Aufrufer eine frische Kennung sowie leeren
+                       Titel und Untertitel, damit sie weder den Entwurf noch
+                       die Angaben der Person erbt, die sie erzeugt. Der
+                       Zeitpunkt ist jetzt: er entscheidet, ob die Datei oder
+                       ein Entwurf im Browser gewinnt. Titel und Untertitel
+                       sind die des offenen Dokuments, sofern der Aufrufer
+                       keine anderen nennt. Im Serverbetrieb kommen sie vom
+                       Server (MWS oder Tiddlyhost), unter file:// aus dem
+                       Kopf der Datei - oder, beim Untertitel, aus dem, was
+                       die Person oben selbst eingetragen hat. */
                     metaSetzen(doc, KENNUNG_META, kennung || arbeitsId());
                     metaSetzen(doc, ZEIT_META, new Date().toISOString());
                     metaSetzen(doc, TITEL_META,
-                        titel === undefined ? this.eigenerTitel : titelSaeubern(titel));
+                        titel === undefined
+                            ? (this.wikiTitel || this.eigenerTitel)
+                            : titelSaeubern(titel));
+                    metaSetzen(doc, UNTERTITEL_META,
+                        untertitel === undefined
+                            ? (this.wikiUntertitel || this.eigenerUntertitel)
+                            : untertitelSaeubern(untertitel));
                     /* Nur hier wird "<" escaped: der Block steckt in einer
                        HTML-Datei, und ein Script-Ende im Inhalt wuerde sie
                        zerreissen. Als JSON-Datei ist das unnoetig und
@@ -10534,7 +11121,7 @@ showSettings: false,
                             palette: this.palette,
                             eigeneFarben: this.eigeneFarben
                         };
-                        this.dateiHerunterladen(this.bauExport(leer, neueKennung(), ''), 'simplewiki-leer.html', 'text/html');
+                        this.dateiHerunterladen(this.bauExport(leer, neueKennung(), '', ''), 'simplewiki-leer.html', 'text/html');
                         this.hinweis(this.t('noticeLeerSaved'));
                     } catch (e) {
                         this.hinweis(this.t('noticeSaveError'));
@@ -10669,7 +11256,7 @@ showSettings: false,
                            gleich wieder ersetzen. (Nur im Browser zaehlt
                            er - auf dem Server schreibt das Einlesen
                            ohnehin gegen die Tiddler.) */
-                        if (SPEICHER.art === 'browser') {
+                        if (!SPEICHER.serverseitig) {
                             SimpleWikiStore.set('simplewiki_digest', this.dateiFingerabdruck() || '');
                         }
                         /* Die bisher offene Seite existiert vielleicht
@@ -10734,7 +11321,7 @@ showSettings: false,
                    Fingerabdruck, und der Browser gewann faelschlich. */
                 loadPages() {
                     this.laedt = true;
-                    this.mwsModus = SPEICHER.art === 'mws';
+                    this.mwsModus = !!SPEICHER.serverseitig;
 
                     /* Erst das Dokument klaeren, dann lesen: sonst laese
                        der Speicher den Entwurf der vorigen Datei. */
@@ -10743,13 +11330,31 @@ showSettings: false,
                         SimpleWikiStore.set('simplewiki_doc_id', arbeitsId());
                     }
 
-                    /* Der eigene Name des offenen Dokuments. Der Wechsel
-                       oben hat ihn mit dem Entwurf hervorgeholt oder
-                       weggeraeumt. Eine Datei, die gleich die Seiten
-                       liefert, setzt ihn gleich danach aus ihrem Kopf. */
+                    /* Der eigene Name des offenen Dokuments: aus dem
+                       Browserspeicher, sonst aus dem Kopf der geoeffneten
+                       Datei. Ein fehlender Eintrag heisst nicht "kein
+                       Name", sondern "noch nicht geaendert" - der Name
+                       steht dann in der Datei. Ein leerer Eintrag ist
+                       dagegen eine bewusste Entscheidung ("fester Name")
+                       und wird nicht von der Datei ueberschrieben. Ohne
+                       diese Unterscheidung zeigte eine Datei nach einer
+                       Aenderung an den Seiten den festen Namen, obwohl
+                       ihr Kopf einen eigenen traegt: der Entwurf gewinnt
+                       dann, und einen Titel hatte er nie geschrieben. */
+                    const gemerkterTitel = SimpleWikiStore.get('simplewiki_titel', null);
                     this.eigenerTitel = this.mwsModus
                         ? ''
-                        : (SimpleWikiStore.get('simplewiki_titel', '') || '');
+                        : (gemerkterTitel === null ? dateiTitel() : titelSaeubern(gemerkterTitel));
+                    /* Der eigene Untertitel: aus dem Browserspeicher, sonst
+                       aus dem Kopf der geoeffneten Datei. Steht dort noch
+                       keiner, weiss nur die Datei, was unter dem Namen
+                       steht - dann gehoert es ihr. Ein leerer Eintrag im
+                       Speicher ist eine bewusste Entscheidung ("keine
+                       Zeile") und wird nicht von der Datei ueberschrieben. */
+                    const gemerkt = SimpleWikiStore.get('simplewiki_untertitel', null);
+                    this.eigenerUntertitel = this.mwsModus
+                        ? ''
+                        : (gemerkt === null ? dateiUntertitel() : untertitelSaeubern(gemerkt));
 
                     const geladen = SPEICHER.laden();
                     /* Die gemerkte Warnung nur im Browserbetrieb: auf dem
@@ -10758,6 +11363,9 @@ showSettings: false,
                         && SimpleWikiStore.get('simplewiki_datei_warnung') === '1';
                     this.nurLesen = !!geladen.nurLesen;
                     this.wikiTitel = geladen.wikiTitel || '';
+                    /* Der Untertitel der Verwaltung. Im Browser gibt es
+                       keinen - dort steht der eigene Untertitel der Person
+                       (siehe oben). */
                     this.wikiUntertitel = geladen.wikiUntertitel || '';
                     this.wikiSlug = geladen.slug || '';
                     this.showRefs = !!geladen.verweise;
@@ -10774,6 +11382,7 @@ showSettings: false,
                             this.seitenUebernehmen();
                             this.seitenSichern();
                             this.titelAusDatei();
+                            this.untertitelAusDatei();
                             this.uebernehmenAusDatei(ausDatei);
                             this.dateiUebernommen(finger);
                             this.dateiWarnungLoeschen();
@@ -10802,6 +11411,7 @@ showSettings: false,
                         this.seitenUebernehmen();
                         this.seitenSichern();
                         this.titelAusDatei();
+                        this.untertitelAusDatei();
                         this.uebernehmenAusDatei(ausDatei);
                         this.dateiUebernommen(finger);
                         this.dateiWarnungLoeschen();
@@ -10877,6 +11487,19 @@ showSettings: false,
                     this.eigenerTitel = dateiTitel();
                     try {
                         SimpleWikiStore.set('simplewiki_titel', this.eigenerTitel);
+                    } catch (e) { /* es gibt Speicher ohne Platz */ }
+                },
+
+                /* Den eigenen Untertitel aus dem Kopf der offenen Datei
+                   uebernehmen. Nur beim Oeffnen der Datei - dort ist das
+                   laufende Dokument die Datei selbst. Der Knopf
+                   "Datenbereich laden" liest dagegen nur den Datenblock,
+                   nicht den Kopf, und laesst den Untertitel stehen. */
+                untertitelAusDatei() {
+                    if (this.mwsModus) return;
+                    this.eigenerUntertitel = dateiUntertitel();
+                    try {
+                        SimpleWikiStore.set('simplewiki_untertitel', this.eigenerUntertitel);
                     } catch (e) { /* es gibt Speicher ohne Platz */ }
                 },
 
@@ -11007,7 +11630,7 @@ showSettings: false,
                     /* Der Grund kann sich dabei geaendert haben: die
                        Sitzung ist abgelaufen, der Name war weg. Nur der
                        Server weiss das - also nachfragen. */
-                    if (SPEICHER.art === 'mws') this.statusHolen();
+                    if (SPEICHER.serverseitig) this.statusHolen();
                 },
 
                 /* Die Antwort des Servers auswerten. Drei Dinge kommen
@@ -11214,6 +11837,30 @@ showSettings: false,
                 speicherFehlerMerken(e) {
                     this.hinweis(this.t('speicherFehler')
                         .replace('{grund}', (e && e.detail) || '?'));
+                },
+
+                /* Ein anderer Schreiber war schneller. Der neue Stand ist
+                   bereits vom Server geholt; hier wird nur gesagt, dass
+                   das passiert ist. */
+                konfliktMerken() {
+                    this.hinweis(this.t('konflikt'));
+                },
+
+                /* Beim Verlassen der Seite einen aufgeschobenen Schreibvorgang
+                   noch losschicken. Nur der Tiddlyhost-Speicher schiebt
+                   Schreibvorgaenge auf; die anderen kennen flush() nicht. */
+                seiteVerlassen() {
+                    if (SPEICHER && typeof SPEICHER.flush === 'function') {
+                        SPEICHER.flush();
+                    }
+                },
+
+                /* Wandert die Seite in den Hintergrund (Tab-Wechsel,
+                   Minimieren), wird ebenfalls geschrieben - so geht auch
+                   dann nichts verloren, wenn die Seite nicht sauber
+                   zugemacht wird. */
+                sichtbarkeitWechsel() {
+                    if (document.visibilityState === 'hidden') this.seiteVerlassen();
                 },
 
 createNewPage() {
