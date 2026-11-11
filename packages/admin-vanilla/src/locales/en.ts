@@ -132,6 +132,7 @@ export const enStrings: Record<string, string> = {
   "My Wiki": "My Wiki",
   "{username}'s {kind}": "{username}'s {kind}",
   "Name of the wiki": "Name of the wiki",
+  "Wiki template": "Wiki template",
   "Create a wiki with a single click": "Create a wiki with a single click",
   "Create a SimpleWiki wiki with a single click": "Create a SimpleWiki wiki with a single click",
   "The wiki gets the SimpleWiki surface: pages instead of tiddlers, no wiki markup. Slug, bag and default permissions are assigned automatically.": "The wiki gets the SimpleWiki surface: pages instead of tiddlers, no wiki markup. Slug, bag and default permissions are assigned automatically.",

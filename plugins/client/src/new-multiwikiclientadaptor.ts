@@ -562,9 +562,12 @@ class MultiWikiClientAdaptor implements SyncAdaptor<MWSAdaptorInfo> {
 		const { titles, onNext, onDone, onError } = options;
 		try {
 			const results = await this.batchOp<BatchMutationResult[]>("delete", { titles });
-			for (const item of results) {
-				this.clearTiddlerInfo(item.title);
-				onNext(item.title);
+			for (let i = 0; i < results.length; i++) {
+				const item = results[i];
+				const title = item?.title ?? titles[i];
+				if (!title) continue;
+				this.clearTiddlerInfo(title);
+				onNext(title);
 			}
 			onDone();
 		} catch (e: any) { onError(e); }

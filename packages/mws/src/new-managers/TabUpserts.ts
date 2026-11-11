@@ -16,6 +16,7 @@ import { Debug } from "@prisma/client/runtime/client";
 
 export const DEFAULT_TEMPLATE = "Tiddlywiki";
 export const SIMPLEWIKI_TEMPLATE = "SimpleWiki";
+export const ENGLISH_TEMPLATE = "Tiddlywiki (English)";
 
 export type ImportedRoleRows = Awaited<ReturnType<PrismaTxnClient["roles"]["findMany"]>>;
 export type ImportedUserRows = Awaited<ReturnType<PrismaTxnClient["users"]["findMany"]>>;

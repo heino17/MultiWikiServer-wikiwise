@@ -5455,6 +5455,77 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 143. Feature: choose the TiddlyWiki template when creating a wiki
+
+**Files:**
+- `packages/admin-vanilla/src/app.tsx`
+- `packages/admin-vanilla/src/locales/en.ts`
+- `packages/admin-vanilla/src/locales/de.ts`
+
+**What.** The "create wiki" modal for a TiddlyWiki now shows a dropdown
+("Wiki template") listing every template with `customHtmlEnabled === false`
+(i.e. the TiddlyWiki templates, including the new `Tiddlywiki (English)`).
+The selected template is sent as `templateName` with the creation request, so
+an operator can pick the full or the English-only template without leaving
+the dialog. SimpleWiki creation keeps its fixed template and shows no
+dropdown.
+
+**Why.** With two TiddlyWiki templates the one-click path needed a way to
+choose between them; otherwise the English-only template would have been
+reachable only through the templates tab.
+
+**Verified.** `npm run tsc` (admin-vanilla) and `npm run build` clean.
+
+## 142. Feature: a second TiddlyWiki template, English only
+
+**Files:**
+- `packages/mws/src/new-commands/init-store.ts`
+- `packages/mws/src/new-managers/TabUpserts.ts`
+
+**What.** The default `Tiddlywiki` template ships seven extra language
+packs (`DEFAULT_TEMPLATE_LANGUAGES`), so every wiki created from it offers
+eight languages in the picker. Wikis that only need English (or where the
+operator wants a leaner store) now have a second template, `Tiddlywiki (English)`,
+with `plugins: []` — same `$:/core`, themes and MWS client from the cache,
+but only `en-GB` in the language chooser. The two differ only in the
+language packs; everything else (empty wiki, external plugins from the
+cache, uneditable system template) is identical.
+
+**Why.** Removing language packs per wiki did not work, because they are
+provided by the template and reappear after a reload. Moving the choice to
+the template level is the clean lever: a wiki inherits its languages from
+the template it was created from.
+
+**Seeding.** The new template is created by `init-store` alongside the
+default one (same `TemplateImportWriter.upsert`, so a missing template is
+added and an existing one refreshed). Existing stores gain it on the next
+`init-store`. The SimpleWiki template and the system wikis are untouched.
+
+**Verified.** `npm run tsc2` clean.
+
+## 141. Fix: removing a language plugin no longer raises a sync error
+
+**Files:**
+- `plugins/client/src/new-multiwikiclientadaptor.ts`
+- `plugins/client/tiddlers/syncer/new-multiwikiclientadaptor.js`
+
+**Problem.** When a user trimmed a wiki's language plugins (e.g. kept only one
+or two languages), the browser showed
+`Sync error while processing delete task: TypeError: can't access property "title", item is null`.
+Cause: removing a language plugin makes some tiddlers that the syncer had
+previously received from the server disappear locally, so they are queued for
+deletion on the server. Those tiddlers are not present in any writable bag
+(read-only/shadow, or already gone), so `RecipeResolver.deleteTiddlers`
+returns `null` for them — by design. The client's `deleteTiddlers` then did
+`this.clearTiddlerInfo(item.title)` without checking for `null`, which threw
+and left the syncer retrying the same delete.
+
+**Fix.** Treat a `null` result as "already gone": resolve the title from the
+item when present, otherwise from the input list, clear the tiddler info and
+notify success. No retry, no alert.
+
+**Verified.** `npm run tsc` (plugins/client) clean.
+
 ## 140. The old TiddlyWiki manual leaves the store
 
 **Why.** §133 replaced the TiddlyWiki-hosted manual with the SimpleWiki one,
@@ -13022,6 +13093,81 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 143. Feature: TiddlyWiki-Vorlage beim Anlegen eines Wikis wählen
+
+**Dateien:**
+- `packages/admin-vanilla/src/app.tsx`
+- `packages/admin-vanilla/src/locales/en.ts`
+- `packages/admin-vanilla/src/locales/de.ts`
+
+**Was.** Das „Wiki anlegen"-Fenster für ein TiddlyWiki zeigt jetzt einen
+Auswahlschalter („Wiki-Vorlage"), der alle Vorlagen mit
+`customHtmlEnabled === false` listet (also die TiddlyWiki-Vorlagen, inklusive
+der neuen `Tiddlywiki (English)`). Die gewählte Vorlage wird als
+`templateName` mit der Anlage-Anfrage geschickt, so dass ein Betreiber die
+volle oder die englisch-only-Vorlage direkt im Dialog wählen kann, ohne den
+Vorlagen-Tab zu verlassen. Die SimpleWiki-Anlage behält ihre feste Vorlage
+und zeigt keinen Auswahlschalter.
+
+**Warum.** Mit zwei TiddlyWiki-Vorlagen brauchte der Ein-Klick-Pfad eine
+Möglichkeit, zwischen ihnen zu wählen; sonst wäre die englisch-only-Vorlage
+nur über den Vorlagen-Tab erreichbar gewesen.
+
+**Verifiziert.** `npm run tsc` (admin-vanilla) und `npm run build` fehlerfrei.
+
+## 142. Feature: eine zweite TiddlyWiki-Vorlage, nur Englisch
+
+**Dateien:**
+- `packages/mws/src/new-commands/init-store.ts`
+- `packages/mws/src/new-managers/TabUpserts.ts`
+
+**Was.** Die Standard-Vorlage `Tiddlywiki` liefert sieben zusätzliche
+Sprachpakete (`DEFAULT_TEMPLATE_LANGUAGES`) aus, daher bietet jedes daraus
+erstellte Wiki acht Sprachen im Wahlschalter. Wikis, die nur Englisch brauchen
+(oder bei denen der Betreiber einen schlankeren Store will), bekommen jetzt
+eine zweite Vorlage `Tiddlywiki (English)` mit `plugins: []` — gleicher
+`$:/core`, gleiche Themes und MWS-Client aus dem Cache, aber im
+Sprachwahlschalter nur `en-GB`. Die beiden Vorlagen unterscheiden sich nur
+in den Sprachpaketen; alles andere (leeres Wiki, externe Plugins aus dem
+Cache, nicht editierbare Systemvorlage) ist identisch.
+
+**Warum.** Sprachpakete pro Wiki zu entfernen funktionierte nicht, weil sie
+von der Vorlage bereitgestellt werden und nach einem Reload wieder da sind.
+Die Wahl auf Vorlagenebene zu verlagern ist der saubere Hebel: ein Wiki
+erbt seine Sprachen von der Vorlage, aus der es erstellt wurde.
+
+**Seeding.** Die neue Vorlage wird von `init-store` neben der
+Standard-Vorlage angelegt (gleicher `TemplateImportWriter.upsert`, also wird
+eine fehlende Vorlage hinzugefügt und eine vorhandene aufgefrischt).
+Bestehende Stores erhalten sie beim nächsten `init-store`. Die SimpleWiki-
+Vorlage und die System-Wikis bleiben unberührt.
+
+**Verifiziert.** `npm run tsc2` fehlerfrei.
+
+## 141. Fix: das Entfernen eines Sprach-Plugins löst keinen Sync-Fehler mehr aus
+
+**Dateien:**
+- `plugins/client/src/new-multiwikiclientadaptor.ts`
+- `plugins/client/tiddlers/syncer/new-multiwikiclientadaptor.js`
+
+**Problem.** Wenn ein Anwender die Sprach-Plugins eines Wikis reduzierte (etwa
+nur eine oder zwei Sprachen behielt), zeigte der Browser
+`Sync error while processing delete task: TypeError: can't access property "title", item is null`.
+Ursache: durch das Entfernen eines Sprach-Plugins verschwinden lokal einige
+Tiddler, die der Syncer zuvor vom Server erhalten hatte, und werden zum Löschen
+auf dem Server vorgemerkt. Diese Tiddler liegen in keiner beschreibbaren Bag
+(nur lesbar/Schatten oder schon weg), daher liefert
+`RecipeResolver.deleteTiddlers` für sie `null` — beabsichtigt. Die
+Client-Seite `deleteTiddlers` machte dann `this.clearTiddlerInfo(item.title)`
+ohne Prüfung auf `null`, was warf und den Syncer zum Wiederholen desselben
+Löschvorgangs veranlasste.
+
+**Lösung.** Ein `null`-Ergebnis als „schon weg" behandeln: den Titel aus dem
+Eintrag nehmen, wenn vorhanden, sonst aus der Eingabeliste, Tiddler-Info
+löschen und als Erfolg melden. Kein Wiederholen, kein Alarm.
+
+**Verifiziert.** `npm run tsc` (plugins/client) fehlerfrei.
 
 ## 140. Die alte TiddlyWiki-Bedienungsanleitung verlässt den Store
 

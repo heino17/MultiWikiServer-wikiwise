@@ -576,6 +576,7 @@ class PerTabStoreImpl implements PerTabStore {
 // only when the template really is there and really carries its own HTML,
 // so a store without it gets no entry that fails on the server (§103).
 const SIMPLEWIKI_TEMPLATE = "SimpleWiki";
+const DEFAULT_TEMPLATE = "Tiddlywiki";
 
 // Storage overview is a diagnostic tab rather than a CRUD tab: it has no
 // list of records, columns or editable fields, so it is rendered as a custom
@@ -1603,7 +1604,9 @@ export class App extends JSXElement {
     // name names the kind; otherwise both would open as "…'s Wiki".
     const kind = templateName === SIMPLEWIKI_TEMPLATE ? "SimpleWiki" : "Tiddlywiki";
     this.newWikiName = username ? t("{username}'s {kind}", { username, kind }) : t("My Wiki");
-    this.newWikiTemplate = templateName;
+    // A TiddlyWiki one-click creation (no explicit template) defaults to the
+    // full template; the modal lets the user switch to the English-only one.
+    this.newWikiTemplate = templateName || DEFAULT_TEMPLATE;
     this.newWikiError = "";
     this.newWikiOpen = true;
   };
@@ -2698,6 +2701,24 @@ export class App extends JSXElement {
                       {this.newWikiError ? renderErrorBanner(formatStorageErrorForDisplay(this.newWikiError, t)) : null}
                     </div>
                   </div>
+                  {this.newWikiTemplate !== SIMPLEWIKI_TEMPLATE ? (
+                    <div class="field-block">
+                      <div class="field-editor">
+                        <label class="field-label" for="new-wiki-template">{t("Wiki template")}</label>
+                        <select
+                          id="new-wiki-template"
+                          class="field-select"
+                          onchange={(event) => { this.newWikiTemplate = (event.target as HTMLSelectElement).value; }}
+                        >
+                          {(this.store.state.itemsByTab.templates ?? [])
+                            .filter((tmpl) => !tmpl.customHtmlEnabled)
+                            .map((tmpl) => (
+                              <option value={tmpl.name} selected={this.newWikiTemplate === tmpl.name}>{tmpl.name}</option>
+                            ))}
+                        </select>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
               <footer class="modal-actions">

@@ -4,7 +4,7 @@ import { existsSync } from "fs";
 import { resolve } from "path";
 import { readSimpleWikiShell, upsertSimpleWikiTemplate } from "../new-managers/simplewiki-template";
 import { bundledSystemWikiPath, loadSystemWiki, SYSTEM_WIKIS } from "../new-managers/system-wikis";
-import { RoleImportWriter, TemplateImportWriter, UserImportWriter, DEFAULT_TEMPLATE } from "../new-managers";
+import { RoleImportWriter, TemplateImportWriter, UserImportWriter, DEFAULT_TEMPLATE, ENGLISH_TEMPLATE } from "../new-managers";
 import { IdString } from "@mws/admin-vanilla/src/definition/tabs";
 
 const info: CommandInfo = {
@@ -59,10 +59,28 @@ export class InitStoreCommand extends BaseCommand {
 				name: DEFAULT_TEMPLATE,
 				definition: {
 					type: "simpleV1",
-					description: "The default template, blank and uneditable.",
+					description: "The default template, blank and uneditable. Ships with the core language packs (English plus seven more).",
 					readonlyBags: [],
 					writablePrefixBags: [],
 					plugins: DEFAULT_TEMPLATE_LANGUAGES,
+					requiredPluginsEnabled: true,
+					customHtmlEnabled: false,
+					externalPlugins: true,
+					externalStore: false,
+					twVersion: null,
+					htmlContent: "",
+					injectionFunction: "",
+					injectionLocation: "",
+				},
+				permissions: [{ level: "B_write", role_id: new IdString(adminRole.role_id) }]
+			}, {
+				name: ENGLISH_TEMPLATE,
+				definition: {
+					type: "simpleV1",
+					description: "Like the default template, but English only: no extra language packs, so the language picker shows just English.",
+					readonlyBags: [],
+					writablePrefixBags: [],
+					plugins: [],
 					requiredPluginsEnabled: true,
 					customHtmlEnabled: false,
 					externalPlugins: true,

@@ -131,6 +131,7 @@ export const deStrings: Record<string, string> = {
   "My Wiki": "Mein Wiki",
   "{username}'s {kind}": "{username}s {kind}",
   "Name of the wiki": "Name des Wikis",
+  "Wiki template": "Wiki-Vorlage",
   "Create a wiki with a single click": "Wiki auf einen Klick anlegen",
   "Create a SimpleWiki wiki with a single click": "SimpleWiki-Wiki auf einen Klick anlegen",
   "The wiki gets the SimpleWiki surface: pages instead of tiddlers, no wiki markup. Slug, bag and default permissions are assigned automatically.": "Die Wiki bekommt die SimpleWiki-Oberfläche: Seiten statt Tiddler, kein Wiki-Markup. Slug, Bag und Standardberechtigungen werden automatisch vergeben.",
