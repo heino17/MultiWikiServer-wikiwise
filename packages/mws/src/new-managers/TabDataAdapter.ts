@@ -20,6 +20,7 @@ import {
 import {
   BagImportWriter,
   DEFAULT_TEMPLATE,
+  ENGLISH_TEMPLATE,
   SIMPLEWIKI_TEMPLATE,
   RecipeImportWriter,
   RoleImportWriter,
@@ -898,6 +899,17 @@ export class RecipeDataAdapter extends TabDataAdapter<"wikis"> {
 }
 
 // #region Template
+/** The bundled templates a wiki can be created from: the two shell-less
+ *  TiddlyWiki templates and the SimpleWiki shell. Every account that may
+ *  create own wikis needs them in the list, because the "Create a wiki"
+ *  dialog offers the TiddlyWiki ones as "Wiki template" and the one-click
+ *  SimpleWiki entry depends on the SimpleWiki row (§109, §145). */
+const CREATION_TEMPLATES = [
+  DEFAULT_TEMPLATE,
+  ENGLISH_TEMPLATE,
+  SIMPLEWIKI_TEMPLATE,
+] as const;
+
 export class TemplateDataAdapter extends TabDataAdapter<"templates"> {
 
   /**
@@ -1146,17 +1158,17 @@ export class TemplateDataAdapter extends TabDataAdapter<"templates"> {
 
   async getList(prisma: PrismaTxnClient, roles: (key: IdString) => string) {
     // Templates a non-admin may see: the ones a role they hold is granted on,
-    // plus the creation templates that must stay available to everyone who may
-    // create own wikis — the default TiddlyWiki template (the one-click
-    // TiddlyWiki entry builds from it and its dialog offers it as "Wiki
-    // template", §145) and the SimpleWiki shell, whose "1-click wiki creation
-    // as SimpleWiki" entry depends on this list (see §109).
+    // plus the bundled creation templates that must stay available to everyone
+    // who may create own wikis (CREATION_TEMPLATES, §145). The "Create a wiki"
+    // dialog offers both TiddlyWiki templates as "Wiki template" — the
+    // one-click TiddlyWiki entry builds from the default one — and the
+    // "1-click wiki creation as SimpleWiki" entry needs the SimpleWiki row
+    // (see §109). Admins see everything, teachers and students the same list.
     const where = this.user.isAdmin
       ? undefined
       : { OR: [
           { permissions: { some: { role_id: { in: this.user.roles.map(e => e.role_id) } } } },
-          { name: DEFAULT_TEMPLATE },
-          { name: SIMPLEWIKI_TEMPLATE },
+          ...CREATION_TEMPLATES.map(name => ({ name })),
         ] };
     const templates = await prisma.template.findMany({
       where,

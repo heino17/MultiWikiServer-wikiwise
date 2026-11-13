@@ -5465,22 +5465,25 @@ instead of `1`.
 stayed empty. The template list the dialog offers comes from the same
 `/admin/load` response as the templates tab; it is not filtered in the browser.
 `TemplateDataAdapter.getList` limited non-admins to the templates a role of
-theirs is explicitly granted on, plus the SimpleWiki shell. The default
-`Tiddlywiki` template was only part of the list for teachers, so the one-click
-entry that builds exactly that template had nothing to offer.
+theirs is explicitly granted on, plus the SimpleWiki shell. The two bundled
+TiddlyWiki templates were only part of the list for teachers, so the one-click
+entry that builds exactly those templates had nothing to offer.
 
-**Fix.** The two non-admin branches became one: every non-admin now also sees
-the default template `Tiddlywiki` in addition to the role-granted templates and
-the SimpleWiki shell. Teachers and students therefore take the same path. This
-is the template the one-click TiddlyWiki entry builds anyway, so no additional
-right is granted. The second TiddlyWiki template (`Tiddlywiki (English)`) stays
-admin-only, as it was for teachers before.
+**Fix.** The two non-admin branches became one. A new constant
+`CREATION_TEMPLATES` in `TabDataAdapter.ts` names the bundled templates a wiki
+can be created from — `Tiddlywiki`, `Tiddlywiki (English)` and `SimpleWiki` —
+and every non-admin sees that list in addition to the role-granted templates.
+Teachers and students therefore take the same path. Only bundled templates are
+added; templates that belong to someone and are shared through roles keep their
+existing rules. Nothing is granted beyond the choice of template.
 
 **Verified.** Against an isolated copy of the dev store (fresh server on port
 5055, so the running dev instance stayed untouched): logged in as `User1`, the
-dialog now offers `Tiddlywiki` and preselects it; the select is 863 × 44 px and
-visible. Logged in as `admin`, the list is unchanged and shows `Tiddlywiki` and
-`Tiddlywiki (English)`. `npm run tsc2` and `npm run build` are clean.
+dialog now offers `Tiddlywiki` and `Tiddlywiki (English)` and preselects
+`Tiddlywiki`; the select is 863 × 44 px and visible. Creating a wiki with
+`Tiddlywiki (English)` as `User1` succeeded — `wiki-user1-2` appeared in the
+list and served its start page. Logged in as `admin`, the list is unchanged.
+`npm run tsc2` and `npm run build` are clean.
 
 ## 144. Fix: the "Create a wiki" dropdown no longer leaves the window
 
@@ -13161,24 +13164,26 @@ erstellen" → „1-Klick Tiddlywiki" wie bisher öffnen, doch der Auswahlschalt
 kommt aus derselben `/admin/load`-Antwort wie der Templates-Tab; im Browser wird
 sie nicht gefiltert. `TemplateDataAdapter.getList` beschränkte Nicht-Admins auf
 die Vorlagen, auf denen eine ihrer Rollen ausdrücklich freigegeben ist, plus die
-SimpleWiki-Hülle. Die Standard-Vorlage `Tiddlywiki` stand nur bei Lehrern in der
-Liste — der Ein-Klick-Eintrag, der genau diese Vorlage baut, hatte also nichts
-anzubieten.
+SimpleWiki-Hülle. Die beiden gebündelten TiddlyWiki-Vorlagen standen nur bei
+Lehrern in der Liste — der Ein-Klick-Eintrag, der genau diese Vorlagen baut,
+hatte also nichts anzubieten.
 
-**Lösung.** Aus den beiden Nicht-Admin-Zweigen wurde einer: Jeder Nicht-Admin
-sieht jetzt zusätzlich zu den rollen-freigegebenen Vorlagen und der
-SimpleWiki-Hülle auch die Standard-Vorlage `Tiddlywiki`. Lehrer und Schüler
-laufen damit über denselben Pfad. Es ist die Vorlage, die der Ein-Klick-Eintrag
-„1-Klick Tiddlywiki" ohnehin baut, es wird also kein zusätzliches Recht
-eingeräumt. Die zweite TiddlyWiki-Vorlage (`Tiddlywiki (English)`) bleibt wie
-zuvor bei Lehrern Admin-only.
+**Lösung.** Aus den beiden Nicht-Admin-Zweigen wurde einer. Eine neue Konstante
+`CREATION_TEMPLATES` in `TabDataAdapter.ts` nennt die gebündelten Vorlagen, aus
+denen ein Wiki entstehen kann — `Tiddlywiki`, `Tiddlywiki (English)` und
+`SimpleWiki` —, und jeder Nicht-Admin sieht diese Liste zusätzlich zu den
+rollen-freigegebenen Vorlagen. Lehrer und Schüler laufen damit über denselben
+Pfad. Hinzugefügt werden nur gebündelte Vorlagen; Vorlagen, die jemandem
+gehören und über Rollen geteilt werden, behalten ihre bisherigen Regeln.
+Eingeräumt wird nichts über die Wahl der Vorlage hinaus.
 
 **Geprüft.** Gegen eine isolierte Kopie des Dev-Stores (eigener Server auf Port
 5055, die laufende Dev-Instanz blieb unberührt): Als `User1` angemeldet bietet
-der Dialog jetzt `Tiddlywiki` an und wählt es vor; der Auswahlschalter ist
-863 × 44 px groß und sichtbar. Als `admin` angemeldet ist die Liste unverändert
-und zeigt `Tiddlywiki` und `Tiddlywiki (English)`. `npm run tsc2` und
-`npm run build` sind sauber.
+der Dialog jetzt `Tiddlywiki` und `Tiddlywiki (English)` an und wählt
+`Tiddlywiki` vor; der Auswahlschalter ist 863 × 44 px groß und sichtbar. Ein
+Wiki mit `Tiddlywiki (English)` als `User1` anzulegen gelang — `wiki-user1-2`
+erschien in der Liste und lieferte seine Startseite aus. Als `admin` angemeldet
+ist die Liste unverändert. `npm run tsc2` und `npm run build` sind sauber.
 
 ## 144. Fix: Das Dropdown „Ein Wiki erstellen" verlässt das Fenster nicht mehr
 
