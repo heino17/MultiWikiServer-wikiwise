@@ -1146,22 +1146,18 @@ export class TemplateDataAdapter extends TabDataAdapter<"templates"> {
 
   async getList(prisma: PrismaTxnClient, roles: (key: IdString) => string) {
     // Templates a non-admin may see: the ones a role they hold is granted on,
-    // plus the creation templates that must stay available to everyone — the
-    // default TiddlyWiki template (teachers), and the SimpleWiki shell for
-    // every account that may create own wikis, whose "1-click wiki creation
+    // plus the creation templates that must stay available to everyone who may
+    // create own wikis — the default TiddlyWiki template (the one-click
+    // TiddlyWiki entry builds from it and its dialog offers it as "Wiki
+    // template", §145) and the SimpleWiki shell, whose "1-click wiki creation
     // as SimpleWiki" entry depends on this list (see §109).
     const where = this.user.isAdmin
       ? undefined
-      : this.user.isTeacher
-        ? { OR: [
-            { permissions: { some: { role_id: { in: this.user.roles.map(e => e.role_id) } } } },
-            { name: DEFAULT_TEMPLATE },
-            { name: SIMPLEWIKI_TEMPLATE },
-          ] }
-        : { OR: [
-            { permissions: { some: { role_id: { in: this.user.roles.map(e => e.role_id) } } } },
-            { name: SIMPLEWIKI_TEMPLATE },
-          ] };
+      : { OR: [
+          { permissions: { some: { role_id: { in: this.user.roles.map(e => e.role_id) } } } },
+          { name: DEFAULT_TEMPLATE },
+          { name: SIMPLEWIKI_TEMPLATE },
+        ] };
     const templates = await prisma.template.findMany({
       where,
       select: {

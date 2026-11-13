@@ -5455,6 +5455,33 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 145. Fix: the template picker in the create-wiki dialog works for normal users
+
+**Files:**
+- `packages/mws/src/new-managers/TabDataAdapter.ts`
+
+**Problem.** A user without admin or teacher rights could open "Create a wiki" →
+"1-click TiddlyWiki" as before, but the "Wiki template" select in the dialog
+stayed empty. The template list the dialog offers comes from the same
+`/admin/load` response as the templates tab; it is not filtered in the browser.
+`TemplateDataAdapter.getList` limited non-admins to the templates a role of
+theirs is explicitly granted on, plus the SimpleWiki shell. The default
+`Tiddlywiki` template was only part of the list for teachers, so the one-click
+entry that builds exactly that template had nothing to offer.
+
+**Fix.** The two non-admin branches became one: every non-admin now also sees
+the default template `Tiddlywiki` in addition to the role-granted templates and
+the SimpleWiki shell. Teachers and students therefore take the same path. This
+is the template the one-click TiddlyWiki entry builds anyway, so no additional
+right is granted. The second TiddlyWiki template (`Tiddlywiki (English)`) stays
+admin-only, as it was for teachers before.
+
+**Verified.** Against an isolated copy of the dev store (fresh server on port
+5055, so the running dev instance stayed untouched): logged in as `User1`, the
+dialog now offers `Tiddlywiki` and preselects it; the select is 863 × 44 px and
+visible. Logged in as `admin`, the list is unchanged and shows `Tiddlywiki` and
+`Tiddlywiki (English)`. `npm run tsc2` and `npm run build` are clean.
+
 ## 144. Fix: the "Create a wiki" dropdown no longer leaves the window
 
 **Files:**
@@ -13122,6 +13149,36 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 145. Fix: Die Vorlagen-Auswahl im Anlegen-Dialog funktioniert für normale Anwender
+
+**Dateien:**
+- `packages/mws/src/new-managers/TabDataAdapter.ts`
+
+**Problem.** Ein Anwender ohne Admin- oder Lehrer-Rechte konnte „Ein Wiki
+erstellen" → „1-Klick Tiddlywiki" wie bisher öffnen, doch der Auswahlschalter
+„Wiki-Vorlage" im Dialog blieb leer. Die Vorlagenliste, die der Dialog anbietet,
+kommt aus derselben `/admin/load`-Antwort wie der Templates-Tab; im Browser wird
+sie nicht gefiltert. `TemplateDataAdapter.getList` beschränkte Nicht-Admins auf
+die Vorlagen, auf denen eine ihrer Rollen ausdrücklich freigegeben ist, plus die
+SimpleWiki-Hülle. Die Standard-Vorlage `Tiddlywiki` stand nur bei Lehrern in der
+Liste — der Ein-Klick-Eintrag, der genau diese Vorlage baut, hatte also nichts
+anzubieten.
+
+**Lösung.** Aus den beiden Nicht-Admin-Zweigen wurde einer: Jeder Nicht-Admin
+sieht jetzt zusätzlich zu den rollen-freigegebenen Vorlagen und der
+SimpleWiki-Hülle auch die Standard-Vorlage `Tiddlywiki`. Lehrer und Schüler
+laufen damit über denselben Pfad. Es ist die Vorlage, die der Ein-Klick-Eintrag
+„1-Klick Tiddlywiki" ohnehin baut, es wird also kein zusätzliches Recht
+eingeräumt. Die zweite TiddlyWiki-Vorlage (`Tiddlywiki (English)`) bleibt wie
+zuvor bei Lehrern Admin-only.
+
+**Geprüft.** Gegen eine isolierte Kopie des Dev-Stores (eigener Server auf Port
+5055, die laufende Dev-Instanz blieb unberührt): Als `User1` angemeldet bietet
+der Dialog jetzt `Tiddlywiki` an und wählt es vor; der Auswahlschalter ist
+863 × 44 px groß und sichtbar. Als `admin` angemeldet ist die Liste unverändert
+und zeigt `Tiddlywiki` und `Tiddlywiki (English)`. `npm run tsc2` und
+`npm run build` sind sauber.
 
 ## 144. Fix: Das Dropdown „Ein Wiki erstellen" verlässt das Fenster nicht mehr
 
