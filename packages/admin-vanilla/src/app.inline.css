@@ -2816,6 +2816,27 @@ table.value-table td {
 		grid-template-columns: 1fr;
 	}
 
+	/* Below 1080px the section header is a single column and its action row
+	   starts at the left edge of the content, while the dropdown is still
+	   anchored to its rather small trigger. A right-aligned 240px dropdown
+	   then grows out of the viewport on the left (§144). So the dropdown is
+	   anchored to the action row instead: at its left edge and never wider
+	   than the row. */
+	.section-actions {
+		position: relative;
+	}
+
+	.create-wiki-menu {
+		position: static;
+	}
+
+	.create-wiki-dropdown {
+		left: 0;
+		right: auto;
+		min-width: min(240px, 100%);
+		max-width: 100%;
+	}
+
 	.modal-layout {
 		flex-direction: column;
 		align-items: stretch;

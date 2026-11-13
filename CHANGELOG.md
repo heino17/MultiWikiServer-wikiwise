@@ -5455,6 +5455,35 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 144. Fix: the "Create a wiki" dropdown no longer leaves the window
+
+**Files:**
+- `packages/admin-vanilla/src/app.inline.css`
+- `packages/admin-vanilla/src/app.tsx`
+
+**Problem.** In a narrow window the section header drops to a single column
+(below 1080px), so the action row with "Backups" and "Create a wiki" starts at
+the left edge of the content. The dropdown, however, was still anchored to its
+small trigger with `right: 0` and grew to the left out of the viewport. At a
+702px wide window the measured left edge of the open dropdown was `-40px`: the
+beginnings of all entries were cut off and unreadable.
+
+**Fix.** Below 1080px the `<details>` no longer takes part in the positioning
+(`position: static`); the dropdown anchors to the action row instead, which
+now carries the class `section-actions` and `position: relative`. It opens at
+the left edge of that row and can never be wider than it
+(`min-width: min(240px, 100%)`, `max-width: 100%`). Above 1080px the row sits
+in the right-hand grid column, so the dropdown keeps its familiar right-aligned
+position under its trigger.
+
+**Verified.** Measured in the dev instance (viewport 620px): with a second menu
+("Backups") put in front, as an admin sees it, both dropdowns sit at
+`left: 18px` / `right: 258px` and stay inside the viewport; before the change
+the same measurement gave `left: -40px` at 702px. With the action row
+artificially narrowed to 400, 300, 200 and 150px the dropdown took 240, 240,
+200 and 150px and never left the row. `npm run tsc2`, the admin typecheck and
+`npm run build` are clean.
+
 ## 143. Feature: choose the TiddlyWiki template when creating a wiki
 
 **Files:**
@@ -13093,6 +13122,37 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 144. Fix: Das Dropdown „Ein Wiki erstellen" verlässt das Fenster nicht mehr
+
+**Dateien:**
+- `packages/admin-vanilla/src/app.inline.css`
+- `packages/admin-vanilla/src/app.tsx`
+
+**Problem.** Im schmalen Fenster fällt der Abschnittskopf unter 1080px auf eine
+Spalte zusammen, die Aktions-Zeile mit „Backups" und „Ein Wiki erstellen"
+beginnt also am linken Rand des Inhalts. Das Dropdown blieb aber weiterhin mit
+`right: 0` am kleinen Trigger verankert und wuchs nach links aus dem
+Sichtbereich heraus. Bei 702px Fensterbreite lag die gemessene linke Kante des
+offenen Dropdowns bei `-40px`: die Anfänge aller Einträge waren abgeschnitten
+und nicht lesbar.
+
+**Lösung.** Unter 1080px nimmt das `<details>` nicht mehr an der Positionierung
+teil (`position: static`); das Dropdown verankert stattdessen an der
+Aktions-Zeile, die dafür die Klasse `section-actions` und
+`position: relative` bekommt. Es öffnet an deren linkem Rand und kann nie
+breiter als die Zeile werden (`min-width: min(240px, 100%)`,
+`max-width: 100%`). Über 1080px liegt die Zeile in der rechten Spalte des
+Rasters, dort behält das Dropdown seine gewohnte rechtsbündige Lage unter
+seinem Trigger.
+
+**Geprüft.** In der Dev-Instanz gemessen (Viewport 620px): mit einem zweiten
+Menü („Backups") davor, wie es ein Admin sieht, liegen beide Dropdowns bei
+`left: 18px` / `right: 258px` und bleiben im Sichtbereich; vor der Änderung
+ergab dieselbe Messung bei 702px `left: -40px`. Mit künstlich auf 400, 300, 200
+und 150px verengter Aktions-Zeile nahm das Dropdown 240, 240, 200 und 150px ein
+und verließ die Zeile nie. `npm run tsc2`, der Admin-Typecheck und
+`npm run build` sind sauber.
 
 ## 143. Feature: TiddlyWiki-Vorlage beim Anlegen eines Wikis wählen
 

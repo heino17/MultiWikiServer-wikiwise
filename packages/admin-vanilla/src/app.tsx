@@ -2074,7 +2074,7 @@ export class App extends JSXElement {
             <h2>{t(currentTab.label)}</h2>
           </div>
           <p class="section-copy">{t(currentTab.description)}</p>
-          <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+          <div class="section-actions" style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
             {isAdmin ? (
               <details class="create-wiki-menu" ontoggle={(event: Event) => {
                 if ((event.currentTarget as HTMLDetailsElement).open) void this.loadBackups();
