@@ -64,6 +64,8 @@ export interface PinboardTargetUser {
 
 export interface PinboardTargets {
   canPostGlobal: boolean;
+  /** The target a new note starts on; null when the composer starts globally. */
+  defaultScope: { scopeType: Exclude<PinboardScope, "GLOBAL">; scopeId: string } | null;
   roles: PinboardTargetRole[];
   users: PinboardTargetUser[];
 }
@@ -258,8 +260,17 @@ export class PinboardPanel extends JSXElement {
   private readonly openComposerFor = (note: PinboardNote | null) => {
     const targets = this.info?.targets;
     let scopeType: PinboardScope = "GLOBAL";
+    let scopeId = "";
     if (!targets?.canPostGlobal) {
-      scopeType = targets?.roles?.length ? "ROLE" : "USER";
+      // The server names the target a new note starts on (the administration
+      // for a standalone user, §148); fall back to the first available one.
+      const start = targets?.defaultScope ?? (targets?.roles?.length
+        ? { scopeType: "ROLE" as const, scopeId: targets.roles[0].id }
+        : targets?.users?.length
+          ? { scopeType: "USER" as const, scopeId: targets.users[0].id }
+          : null);
+      scopeType = start?.scopeType ?? "USER";
+      scopeId = start?.scopeId ?? "";
     }
     this.editingId = note?.id ?? null;
     this.composerOpen = true;
@@ -269,7 +280,7 @@ export class PinboardPanel extends JSXElement {
       : "yellow";
     this.composerImportant = note?.important ?? false;
     this.composerScopeType = note ? note.scopeType : scopeType;
-    this.composerScopeId = note?.scopeType === "GLOBAL" ? "" : (note?.scopeId ?? "");
+    this.composerScopeId = note?.scopeType === "GLOBAL" ? "" : (note?.scopeId ?? scopeId);
     this.composerExpiresAt = toDateTimeLocal(note?.expiresAt);
     this.error = "";
   };

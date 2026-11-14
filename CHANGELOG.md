@@ -5455,6 +5455,42 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 148. Feature: standalone users can address the administration
+
+**Files:**
+- `packages/mws/src/new-managers/PinboardRoutes.ts`
+- `packages/admin-vanilla/src/pinboard.tsx`
+
+**Problem.** A standalone user — an account the admin created directly, with no
+class/group — could only address their own personal role in the pinboard
+composer. The dropdown offered "Classes → User1" and nothing else, so the note
+looked like a note to themselves even though every admin can already read every
+note. Delivery worked, addressing did not.
+
+**Fix.** `resolveTargets` now recognises a standalone user: every role they
+could address is a personal role they own (non-teachers cannot own group
+roles). Such a user additionally gets the admin account(s) as individual
+recipients under "People", which `assertScopeAllowed` accepts because it
+validates against the same list. The new `defaultScope` in the targets makes a
+new note start on the administration for a standalone user and on the first
+role/person otherwise; previously a new note for a non-global user started with
+no target at all until the select was touched. The class/teacher/student rules
+stay untouched: a student in a class still sees only their class and
+classmates, and the server rejects a forced admin target with 403.
+
+**Verified.** Against an isolated copy of the dev store (fresh server on port
+5055), as `User1` and `User2` (both standalone), then `admin`:
+
+- the composer as `User1` shows "People → admin" and preselects it; a note
+  written without touching the dropdown is stored as `USER:<admin>`;
+- the same for `User2`; the note from `User1` is not visible to `User2`;
+- as `admin` the note appears as "For you" with the unread badge;
+- after adding a class role owned by `admin` to `User2` (throwaway copy), the
+  admin entry disappears, the default becomes the class role, and a forced
+  `USER:<admin>` request is rejected with 403.
+
+`npm run tsc2`, the admin typecheck and `npm run build` are clean.
+
 ## 147. Feature: the welcome tiddler speaks all eight languages
 
 **Files:**
@@ -13240,6 +13276,45 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 148. Feature: Eigenständige Nutzer adressieren die Administration
+
+**Dateien:**
+- `packages/mws/src/new-managers/PinboardRoutes.ts`
+- `packages/admin-vanilla/src/pinboard.tsx`
+
+**Problem.** Ein eigenständiger Nutzer — ein Konto, das der Admin direkt
+angelegt hat, ohne Klasse/Gruppe — konnte im Pinnwand-Composer nur die eigene
+persönliche Rolle adressieren. Das Dropdown bot „Klassen → User1" und sonst
+nichts, der Zettel wirkte wie eine Notiz an sich selbst, obwohl jeder Admin
+ohnehin alle Zettel lesen kann. Die Zustellung funktionierte, die Adressierung
+nicht.
+
+**Lösung.** `resolveTargets` erkennt jetzt einen eigenständigen Nutzer daran,
+dass jede adressierbare Rolle eine persönliche, von ihm selbst besessene Rolle
+ist (Nicht-Lehrer können keine Gruppenrollen besitzen). Ein solcher Nutzer
+bekommt zusätzlich das bzw. die Admin-Konten als Einzelpersonen unter
+„Personen"; `assertScopeAllowed` akzeptiert das, weil es gegen dieselbe Liste
+prüft. Das neue `defaultScope` in den Zielen lässt einen neuen Zettel bei einem
+eigenständigen Nutzer mit der Administration beginnen und sonst mit der ersten
+Rolle/Person; vorher startete ein neuer Zettel bei einem Nicht-Global-Nutzer
+ganz ohne Ziel, bis man das Auswahlfeld berührte. Die Regeln für
+Klassen/Lehrer/Schüler bleiben unverändert: Ein Schüler in einer Klasse sieht
+weiterhin nur seine Klasse und Mitschüler, und der Server weist ein erzwungenes
+Admin-Ziel mit 403 ab.
+
+**Geprüft.** Gegen eine isolierte Kopie des Dev-Stores (eigener Server auf Port
+5055), als `User1` und `User2` (beide eigenständig), dann `admin`:
+
+- der Composer zeigt bei `User1` „Personen → admin" und wählt es vor; ein
+  Zettel ohne Berühren des Dropdowns wird als `USER:<admin>` gespeichert;
+- dasselbe bei `User2`; der Zettel von `User1` ist für `User2` nicht sichtbar;
+- als `admin` erscheint der Zettel „Für dich" mit Ungelesen-Badge;
+- nachdem `User2` in der Wegwerf-Kopie eine von `admin` besessene Klassenrolle
+  bekam, verschwindet der Admin-Eintrag, der Standard wird die Klassenrolle,
+  und eine erzwungene `USER:<admin>`-Anfrage wird mit 403 abgewiesen.
+
+`npm run tsc2`, der Admin-Typecheck und `npm run build` sind sauber.
 
 ## 147. Feature: Der Willkommens-Tiddler spricht alle acht Sprachen
 

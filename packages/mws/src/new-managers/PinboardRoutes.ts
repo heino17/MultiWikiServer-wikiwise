@@ -55,11 +55,18 @@ interface PinboardTargetUser {
   username: string;
 }
 
+/** The target a new note starts on; never the global wall. */
+interface PinboardDefaultTarget {
+  scopeType: Exclude<PinboardScope, "GLOBAL">;
+  scopeId: string;
+}
+
 export interface PinboardInfo {
   notes: PinboardNote[];
   unreadCount: number;
   targets: {
     canPostGlobal: boolean;
+    defaultScope: PinboardDefaultTarget | null;
     roles: PinboardTargetRole[];
     users: PinboardTargetUser[];
   };
@@ -125,6 +132,12 @@ async function ownedRoleIdSet(prisma: PrismaTxnClient, user: AuthUser) {
  * to the global wall. Students are limited to their own roles and to people
  * who share one of their (non-system) roles; admins and teachers may address
  * any role they own/belong to and any other account.
+ *
+ * A standalone user — one without a class/group, i.e. with nothing but the
+ * personal role owned by themselves — may additionally address the site
+ * administration (§148). Admins already see every note, so this does not
+ * change who can read it; it makes the note *addressed* to admin instead of
+ * to the author's own personal role.
  */
 async function resolveTargets(prisma: PrismaTxnClient, user: AuthUser): Promise<PinboardInfo["targets"]> {
   const statusView = user.isAdmin || user.isTeacher;
@@ -133,7 +146,7 @@ async function resolveTargets(prisma: PrismaTxnClient, user: AuthUser): Promise<
   const roleRows = user.isAdmin
     ? await prisma.roles.findMany({
       where: { role_name: { notIn: SYSTEM_ROLES } },
-      select: { role_id: true, role_name: true },
+      select: { role_id: true, role_name: true, owner_user_id: true },
       orderBy: { role_name: "asc" },
     })
     : await prisma.roles.findMany({
@@ -144,9 +157,24 @@ async function resolveTargets(prisma: PrismaTxnClient, user: AuthUser): Promise<
           { owner_user_id: user.user_id },
         ],
       },
-      select: { role_id: true, role_name: true },
+      select: { role_id: true, role_name: true, owner_user_id: true },
       orderBy: { role_name: "asc" },
     });
+
+  // Every role they could address is their own personal role: no class, no
+  // group. Non-teachers cannot own group roles, so this cannot hide one.
+  const standalone = !statusView && roleRows.every(role => role.owner_user_id === user.user_id);
+
+  const adminRows = standalone
+    ? await prisma.users.findMany({
+      where: {
+        user_id: { not: user.user_id },
+        roles: { some: { role_name: "ADMIN" } },
+      },
+      select: { user_id: true, username: true },
+      orderBy: { username: "asc" },
+    })
+    : [];
 
   let userRows: { user_id: string; username: string }[] = [];
   if (statusView) {
@@ -166,8 +194,27 @@ async function resolveTargets(prisma: PrismaTxnClient, user: AuthUser): Promise<
     });
   }
 
+  if (adminRows.length) {
+    const merged = new Map(userRows.map(row => [row.user_id, row]));
+    for (const row of adminRows) merged.set(row.user_id, row);
+    userRows = [...merged.values()].sort((a, b) => a.username.localeCompare(b.username));
+  }
+
+  // A new note starts on a target that exists: the administration for a
+  // standalone user, otherwise the first role/person of the list.
+  const defaultScope: PinboardDefaultTarget | null = statusView
+    ? null
+    : standalone && adminRows.length
+      ? { scopeType: "USER", scopeId: adminRows[0].user_id }
+      : roleRows.length
+        ? { scopeType: "ROLE", scopeId: roleRows[0].role_id }
+        : userRows.length
+          ? { scopeType: "USER", scopeId: userRows[0].user_id }
+          : null;
+
   return {
     canPostGlobal: statusView,
+    defaultScope,
     roles: roleRows.map(role => ({ id: role.role_id, name: role.role_name })),
     users: userRows.map(user => ({ id: user.user_id, username: user.username })),
   };
