@@ -5455,6 +5455,47 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 147. Feature: the welcome tiddler speaks all eight languages
+
+**Files:**
+- `packages/mws/src/new-managers/welcome-tiddler.ts`
+- `packages/mws/src/new-managers/TabDataAdapter.ts`
+
+**Problem.** §146 introduced the language-aware welcome tiddler with texts for
+German and English only. The other six languages the admin app and the default
+template offer — Spanish, French, Japanese, Korean, Russian, Simplified Chinese
+— fell back to English, so a Spanish or Japanese creator still got an English
+start page.
+
+**Fix.** All six texts are now in the table, each with its own title, heading
+and onboarding sentence, so the rename detection works for every language and
+not just for German. The terminology follows the TiddlyWiki language plugins of
+the same language (`tiddler` in es/fr, `Tiddler` in ja, `티들러` in ko,
+`заметка` in ru, `条目` in zh). The Russian title "Добро пожаловать" contains a
+space: `$:/DefaultTiddlers` is now written with the title in double brackets —
+the form the SimpleWiki start page already used. Without the brackets
+TiddlyWiki split the title into two tiddlers and showed "missing tiddler"
+instead of the welcome page.
+
+**Verified.** Against an isolated copy of the dev store (fresh server on port
+5055, the running dev instance stayed untouched), as `User1`:
+
+- admin app Spanish + `Tiddlywiki` → `wiki-user1-4` opens with `Bienvenido` and
+  "Bienvenido a «Prueba Español»";
+- French, Japanese, Korean, Russian and Simplified Chinese through the same
+  request → each wiki opens with its own title and text;
+- the Russian wiki exposed the space problem first (“Fehlender Tiddler
+  `Добро`”); after the bracket fix it opens with `[[Добро пожаловать]]`;
+- a German wiki created afterwards still opens with `[[Willkommen]]`, so the
+  brackets change nothing for the previous languages;
+- renaming the Russian and the Japanese wiki rewrote the heading in their
+  language;
+- `Tiddlywiki (English)` with a Japanese creator still gets English.
+
+The module was checked with 80 assertions (8 languages × 2 templates, missing
+language plugin, rename guard for all eight titles, legacy `#` heading).
+`npm run tsc2`, the admin typecheck and `npm run build` are clean.
+
 ## 146. Feature: the welcome tiddler speaks the creator's language
 
 **Files:**
@@ -13199,6 +13240,50 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 147. Feature: Der Willkommens-Tiddler spricht alle acht Sprachen
+
+**Dateien:**
+- `packages/mws/src/new-managers/welcome-tiddler.ts`
+- `packages/mws/src/new-managers/TabDataAdapter.ts`
+
+**Problem.** §146 hat den sprachabhängigen Willkommens-Tiddler mit Texten für
+Deutsch und Englisch eingeführt. Die übrigen sechs Sprachen, die die Admin-App
+und die Standard-Vorlage anbieten — Spanisch, Französisch, Japanisch,
+Koreanisch, Russisch, vereinfachtes Chinesisch — fielen auf Englisch zurück;
+ein spanischer oder japanischer Anleger bekam also weiterhin eine englische
+Startseite.
+
+**Lösung.** Alle sechs Texte stehen jetzt in der Tabelle, jeder mit eigenem
+Titel, eigener Überschrift und eigenem Willkommenssatz, damit die
+Umbenenn-Erkennung für jede Sprache greift und nicht nur für Deutsch. Die
+Begriffe folgen den TiddlyWiki-Sprach-Plugins derselben Sprache (`tiddler` in
+es/fr, `Tiddler` in ja, `티들러` in ko, `заметка` in ru, `条目` in zh). Der
+russische Titel „Добро пожаловать" enthält ein Leerzeichen: `$:/DefaultTiddlers`
+wird jetzt mit doppelten eckigen Klammern um den Titel geschrieben — die Form,
+die die SimpleWiki-Startseite ohnehin nutzt. Ohne die Klammern zerlegte
+TiddlyWiki den Titel in zwei Tiddler und zeigte „Fehlender Tiddler" statt der
+Willkommensseite.
+
+**Geprüft.** Gegen eine isolierte Kopie des Dev-Stores (eigener Server auf Port
+5055, die laufende Dev-Instanz blieb unberührt), als `User1`:
+
+- Admin-App Spanisch + `Tiddlywiki` → `wiki-user1-4` öffnet mit `Bienvenido` und
+  „Bienvenido a «Prueba Español»";
+- Französisch, Japanisch, Koreanisch, Russisch und vereinfachtes Chinesisch über
+  dieselbe Anfrage → jedes Wiki öffnet mit eigenem Titel und Text;
+- beim russischen Wiki zeigte sich zuerst das Leerzeichen-Problem („Fehlender
+  Tiddler `Добро`"); nach der Klammer-Korrektur öffnet es mit
+  `[[Добро пожаловать]]`;
+- ein danach angelegtes deutsches Wiki öffnet weiterhin mit `[[Willkommen]]`,
+  die Klammern ändern für die bisherigen Sprachen also nichts;
+- das Umbenennen des russischen und des japanischen Wikis schrieb die
+  Überschrift in ihrer Sprache neu;
+- `Tiddlywiki (English)` mit japanischem Anleger bekommt weiterhin Englisch.
+
+Das Modul wurde mit 80 Zusicherungen geprüft (8 Sprachen × 2 Vorlagen,
+fehlendes Sprach-Plugin, Umbenenn-Schutz für alle acht Titel, Alt-Überschrift).
+`npm run tsc2`, der Admin-Typecheck und `npm run build` sind sauber.
 
 ## 146. Feature: Der Willkommens-Tiddler spricht die Sprache des Anlegers
 

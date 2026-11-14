@@ -10,9 +10,9 @@
  *   template without language plugins (the English-only one, §142) is always
  *   English, no matter what the creator reads.
  *
- * Texts exist for the two languages MWS itself speaks. The other six languages
- * of the default template fall back to English until their texts are supplied;
- * adding one is a single entry in `WELCOME_TEXTS` (the text is data, not code).
+ * Texts exist for all eight languages the admin app offers (§147) — the same
+ * eight the default template ships. Which of them a wiki can actually show is
+ * decided by the template's plugins; English is the core and always there.
  *
  * The language of an existing wiki cannot change later: its welcome tiddler is
  * written once at creation and only re-written when the wiki is renamed, which
@@ -66,29 +66,31 @@ export interface WelcomeTranslation {
 
 /**
  * The translated texts. Adding a language is one entry here — the `satisfies`
- * keeps every entry honest and needs no change to a type union.
+ * keeps every entry honest and needs no change to a type union. Terminology
+ * follows the TiddlyWiki language plugins of the same language: `tiddler` in
+ * es/fr, `Tiddler` in ja, `티들러` in ko, `заметка` in ru, `条目` in zh.
  */
 const WELCOME_TEXTS = {
   de: {
     title: "Willkommen",
     // `#` is what wikis created before the heading fix carry (§70); accepting
     // it lets those wikis still be recognised on rename.
-    headingPrefixes: ["! Willkommen in \u201e", "# Willkommen in \u201e"],
-    onboarding: "per Knopfdruck f\u00fcr dich angelegt",
-    text: `! Willkommen in \u201e{{name}}" \ud83c\udf89
+    headingPrefixes: ["! Willkommen in „", "# Willkommen in „"],
+    onboarding: "per Knopfdruck für dich angelegt",
+    text: `! Willkommen in „{{name}}" 🎉
 
-Dieses Wiki wurde gerade per Knopfdruck f\u00fcr dich angelegt.
+Dieses Wiki wurde gerade per Knopfdruck für dich angelegt.
 
 * Neue Tiddler schreibst du einfach, indem du einen neuen Tiddler anlegst.
-* Alles wird automatisch gespeichert und ist sofort f\u00fcr andere sichtbar.
+* Alles wird automatisch gespeichert und ist sofort für andere sichtbar.
 
-Viel Spa\u00df beim Loslegen!`,
+Viel Spaß beim Loslegen!`,
   },
   en: {
     title: "Welcome",
-    headingPrefixes: ["! Welcome to \u201c"],
+    headingPrefixes: ["! Welcome to “"],
     onboarding: "was just created for you with one click",
-    text: `! Welcome to \u201c{{name}}\u201d \ud83c\udf89
+    text: `! Welcome to “{{name}}” 🎉
 
 This wiki was just created for you with one click.
 
@@ -96,6 +98,84 @@ This wiki was just created for you with one click.
 * Everything is saved automatically and is visible to others right away.
 
 Have fun getting started!`,
+  },
+  es: {
+    title: "Bienvenido",
+    headingPrefixes: ["! Bienvenido a «"],
+    onboarding: "se acaba de crear para ti con un clic",
+    text: `! Bienvenido a «{{name}}» 🎉
+
+Este wiki se acaba de crear para ti con un clic.
+
+* Para escribir algo nuevo, crea un tiddler.
+* Todo se guarda automáticamente y es visible para los demás al instante.
+
+¡Que lo disfrutes!`,
+  },
+  fr: {
+    title: "Bienvenue",
+    headingPrefixes: ["! Bienvenue sur « "],
+    onboarding: "vient d’être créé pour vous en un clic",
+    text: `! Bienvenue sur « {{name}} » 🎉
+
+Ce wiki vient d’être créé pour vous en un clic.
+
+* Pour écrire quelque chose de nouveau, créez un tiddler.
+* Tout est enregistré automatiquement et visible aussitôt par les autres.
+
+Bonne découverte !`,
+  },
+  ja: {
+    title: "ようこそ",
+    headingPrefixes: ["! 「"],
+    onboarding: "ワンクリックで作成されたばかりです",
+    text: `! 「{{name}}」へようこそ 🎉
+
+この Wiki は、ワンクリックで作成されたばかりです。
+
+* 新しく書きたいときは、Tiddler を新規作成してください。
+* すべて自動的に保存され、すぐにほかの人にも表示されます。
+
+それでは、はじめてみましょう！`,
+  },
+  ko: {
+    title: "환영합니다",
+    headingPrefixes: ["! ‘"],
+    onboarding: "클릭 한 번으로 방금 만들어졌습니다",
+    text: `! ‘{{name}}’에 오신 것을 환영합니다 🎉
+
+이 위키는 클릭 한 번으로 방금 만들어졌습니다.
+
+* 새로 쓰고 싶을 때는 티들러를 새로 만드세요.
+* 모든 내용은 자동으로 저장되고 곧바로 다른 사람에게도 보입니다.
+
+그럼, 즐겁게 시작해 보세요!`,
+  },
+  ru: {
+    title: "Добро пожаловать",
+    headingPrefixes: ["! Добро пожаловать в «"],
+    onboarding: "только что создан для вас одним нажатием",
+    text: `! Добро пожаловать в «{{name}}» 🎉
+
+Этот вики только что создан для вас одним нажатием.
+
+* Чтобы что-то написать, создайте новую заметку.
+* Всё сохраняется автоматически и сразу становится видно другим.
+
+Удачи в начале!`,
+  },
+  "zh-cn": {
+    title: "欢迎",
+    headingPrefixes: ["! 欢迎来到“"],
+    onboarding: "刚刚通过一键创建完成",
+    text: `! 欢迎来到“{{name}}” 🎉
+
+这个维基刚刚通过一键创建完成。
+
+* 想写点新内容，新建一个条目即可。
+* 所有内容都会自动保存，并立即对其他人可见。
+
+祝你使用愉快！`,
   },
 } satisfies Partial<Record<CreateLocale, WelcomeTranslation>>;
 
@@ -148,8 +228,8 @@ function templateShips(locale: CreateLocale, templatePlugins: readonly string[])
 
 /**
  * The welcome page for a new wiki. Falls back to English when the template
- * cannot show the creator's language or when its text is not translated yet —
- * English is the TiddlyWiki core and therefore always available.
+ * cannot show the creator's language — English is the TiddlyWiki core and
+ * therefore always available.
  */
 export function welcomeTiddler(
   displayName: string,
@@ -161,7 +241,7 @@ export function welcomeTiddler(
   const requested = locale ?? "de";
   const translation = translationFor(requested);
   // English is the TiddlyWiki core and always available, so it is the fallback
-  // both for an untranslated language and for one the template cannot show.
+  // both for an unknown language and for one the template cannot show.
   const chosen = translation && templateShips(requested, templatePlugins)
     ? translation
     : WELCOME_TEXTS.en;

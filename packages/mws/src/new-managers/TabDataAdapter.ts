@@ -2248,7 +2248,9 @@ export const AdminCreateWiki = zodRoute({
         : [
           { title: "$:/SiteTitle", text: displayName },
           ...subtitleTiddler,
-          { title: "$:/DefaultTiddlers", text: welcome.title },
+          // Bracketed so a title containing a space stays one tiddler — the
+          // Russian welcome is "Добро пожаловать" (§147).
+          { title: "$:/DefaultTiddlers", text: `[[${welcome.title}]]` },
           { title: welcome.title, text: welcome.text },
         ];
       for (const { title, text } of startingTiddlers) {
