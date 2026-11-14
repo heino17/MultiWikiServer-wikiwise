@@ -5455,6 +5455,53 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 146. Feature: the welcome tiddler speaks the creator's language
+
+**Files:**
+- `packages/mws/src/new-managers/welcome-tiddler.ts` (new)
+- `packages/mws/src/new-managers/TabDataAdapter.ts`
+- `packages/admin-vanilla/src/app.tsx`
+
+**Problem.** Every freshly created TiddlyWiki wiki got a welcome tiddler titled
+`Willkommen` with a German text — no matter which language the wiki shows. The
+template `Tiddlywiki (English)` serves an English interface (that is its point,
+§142), yet its start page read "Willkommen in …". The text is written by the
+server at creation time, and the server knew only the installation-wide default
+language, not the language the creator reads.
+
+**Fix.** A new module `welcome-tiddler.ts` holds the title, the text and the
+recognition markers for each language. The create request carries the locale the
+admin app currently uses (`locale` on `PUT /admin/wiki`, one of the eight
+languages the app offers). The tiddler is written in it — but only when the
+template actually ships that language as a plugin (`$:/languages/…`); the
+English-only template has no language plugins, so it always gets English.
+Without a locale — older clients — the result stays German as before. Texts
+exist for German and English; the other six languages fall back to English, and
+supplying one later is a single data entry in the module, not new code. The
+rename path follows along: it finds the welcome tiddler by its known titles,
+keeps the language it was written in, and still only rewrites the text when it
+is recognisably the generated one (heading plus onboarding sentence), so an
+edited text and the German legacy heading `# Willkommen in „` keep working.
+
+**Verified.** Against an isolated copy of the dev store (fresh server on port
+5055, the running dev instance stayed untouched), all as `User1`:
+
+- admin app German + `Tiddlywiki` → `wiki-user1-6` opens with `Willkommen` and
+  the German text;
+- admin app English + `Tiddlywiki` → `wiki-user1-7` opens with `Welcome` and the
+  English text;
+- admin app German + `Tiddlywiki (English)` → `wiki-user1-8` opens with
+  `Welcome`, although the creator reads German;
+- renaming `wiki-user1-6` to "Sprachtest Deutsch neu" rewrote the German
+  heading, renaming `wiki-user1-7` to "Language Test English renamed" rewrote
+  the English one — each stayed in its language;
+- `PUT /admin/wiki` without `locale` (old client) gave `wiki-user1-9` the German
+  tiddler, with `locale: "es"` `wiki-user1-10` got English.
+
+The module itself was checked with 65 assertions (locale × template matrix,
+missing language plugin, rename guard, legacy heading). `npm run tsc2`, the
+admin typecheck and `npm run build` are clean.
+
 ## 145. Fix: the template picker in the create-wiki dialog works for normal users
 
 **Files:**
@@ -13152,6 +13199,56 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 146. Feature: Der Willkommens-Tiddler spricht die Sprache des Anlegers
+
+**Dateien:**
+- `packages/mws/src/new-managers/welcome-tiddler.ts` (neu)
+- `packages/mws/src/new-managers/TabDataAdapter.ts`
+- `packages/admin-vanilla/src/app.tsx`
+
+**Problem.** Jedes frisch angelegte TiddlyWiki-Wiki bekam einen
+Willkommens-Tiddler mit dem Titel `Willkommen` und deutschem Text — unabhängig
+davon, welche Sprache das Wiki anzeigt. Die Vorlage `Tiddlywiki (English)`
+liefert eine englische Oberfläche (das ist ihr Zweck, §142), die Startseite las
+aber „Willkommen in …". Der Text entsteht beim Anlegen im Server, und der Server
+kannte nur die installationsweite Standardsprache, nicht die Sprache, die der
+Anleger liest.
+
+**Lösung.** Ein neues Modul `welcome-tiddler.ts` hält Titel, Text und
+Erkennungsmerkmale je Sprache. Die Anfrage zum Anlegen trägt die Sprache mit,
+die die Admin-App gerade verwendet (`locale` auf `PUT /admin/wiki`, eine der
+acht Sprachen, die die App anbietet). Darin wird der Tiddler geschrieben — aber
+nur, wenn die Vorlage diese Sprache auch als Plugin mitbringt
+(`$:/languages/…`); die englischsprachige Vorlage hat keine Sprach-Plugins,
+bekommt also immer Englisch. Ohne `locale` — ältere Clients — bleibt es wie
+bisher bei Deutsch. Texte gibt es für Deutsch und Englisch; die übrigen sechs
+Sprachen fallen auf Englisch zurück, und eine davon nachzuliefern ist ein
+einziger Dateneintrag im Modul, kein neuer Code. Der Umbenenn-Pfad zieht mit:
+Er findet den Willkommens-Tiddler über seine bekannten Titel, behält die
+Sprache, in der er geschrieben wurde, und schreibt den Text weiterhin nur dann
+neu, wenn er erkennbar der erzeugte ist (Überschrift plus Willkommenssatz) —
+ein bearbeiteter Text und die deutsche Alt-Überschrift `# Willkommen in „`
+funktionieren also weiter.
+
+**Geprüft.** Gegen eine isolierte Kopie des Dev-Stores (eigener Server auf Port
+5055, die laufende Dev-Instanz blieb unberührt), alles als `User1`:
+
+- Admin-App Deutsch + `Tiddlywiki` → `wiki-user1-6` öffnet mit `Willkommen` und
+  deutschem Text;
+- Admin-App Englisch + `Tiddlywiki` → `wiki-user1-7` öffnet mit `Welcome` und
+  englischem Text;
+- Admin-App Deutsch + `Tiddlywiki (English)` → `wiki-user1-8` öffnet mit
+  `Welcome`, obwohl der Anleger Deutsch liest;
+- das Umbenennen von `wiki-user1-6` auf „Sprachtest Deutsch neu" schrieb die
+  deutsche Überschrift neu, das von `wiki-user1-7` auf
+  „Language Test English renamed" die englische — jede blieb in ihrer Sprache;
+- `PUT /admin/wiki` ohne `locale` (alter Client) gab `wiki-user1-9` den
+  deutschen Tiddler, mit `locale: "es"` bekam `wiki-user1-10` Englisch.
+
+Das Modul selbst wurde mit 65 Zusicherungen geprüft (Sprache × Vorlage,
+fehlendes Sprach-Plugin, Umbenenn-Schutz, Alt-Überschrift). `npm run tsc2`, der
+Admin-Typecheck und `npm run build` sind sauber.
 
 ## 145. Fix: Die Vorlagen-Auswahl im Anlegen-Dialog funktioniert für normale Anwender
 

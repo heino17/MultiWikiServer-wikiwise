@@ -32,6 +32,14 @@ import {
   RecipePermissionLevel
 } from "@tiddlywiki/mws-prisma";
 import {
+  CREATE_LOCALES,
+  isGeneratedWelcome,
+  welcomeTiddler,
+  welcomeText,
+  welcomeTranslationForTitle,
+  WELCOME_TITLES,
+} from "./welcome-tiddler";
+import {
   CompiledRecipeBagInput,
   UpsertBagInput,
   UpsertRecipeInput,
@@ -266,26 +274,31 @@ async function mirrorSiteFieldsIntoTiddlers(
     await store.deleteTiddler({ recipe_id: recipeId, bag_id: bagId, title: "$:/SiteSubtitle" });
   }
 
-  const welcome = await prisma.tiddler.findUnique({
-    where: { bag_id_title: { bag_id: bag.id, title: "Willkommen" } },
-    select: { fields: true },
+  const welcome = await prisma.tiddler.findFirst({
+    where: { bag_id: bag.id, title: { in: [...WELCOME_TITLES] } },
+    select: { title: true, fields: true },
   });
   const welcomeTextValue = (welcome?.fields as { text?: unknown } | null)?.text;
+  const translation = welcomeTranslationForTitle(welcome?.title);
   // Heal stale starter teasers (left behind by older edits) but never clobber
   // a genuinely customized one: only rewrite if it still looks like the
   // auto-generated starter (heading + onboarding sentence) and does not yet
-  // carry the new display name. Both heading markers are accepted, so wikis
-  // created before the `#` → `!` fix are recognised and migrated on rename.
+  // carry the new display name. Both German heading markers are accepted, so
+  // wikis created before the `#` → `!` fix are recognised and migrated. The
+  // tiddler stays in the language it was written in (§146).
   if (
-    typeof welcomeTextValue === "string"
-    && (welcomeTextValue.startsWith("# Willkommen in \u201e") || welcomeTextValue.startsWith("! Willkommen in \u201e"))
-    && welcomeTextValue.includes("per Knopfdruck für dich angelegt")
-    && welcomeTextValue !== welcomeText(newDisplayName)
+    translation
+    && typeof welcomeTextValue === "string"
+    && isGeneratedWelcome(welcomeTextValue, translation)
+    && welcomeTextValue !== welcomeText(translation, newDisplayName)
   ) {
     await store.saveTiddler({
       recipe_id: recipeId,
       bag_id: bagId,
-      fields: { ...(welcome?.fields as object), text: welcomeText(newDisplayName) },
+      fields: {
+        ...(welcome?.fields as object),
+        text: welcomeText(translation, newDisplayName),
+      },
     });
   }
 }
@@ -1969,19 +1982,6 @@ function wikiTiddlerMeta(modifier: string) {
   return { created: timestamp, modified: timestamp, creator: modifier, modifier };
 }
 
-function welcomeText(displayName: string): string {
-  // TiddlyWiki wiki syntax, not Markdown: `!` is a heading (`#` would start an
-  // ordered list and render the line as "1. Willkommen in …").
-  return `! Willkommen in „${displayName}" 🎉
-
-Dieses Wiki wurde gerade per Knopfdruck für dich angelegt.
-
-* Neue Tiddler schreibst du einfach, indem du einen neuen Tiddler anlegst.
-* Alles wird automatisch gespeichert und ist sofort für andere sichtbar.
-
-Viel Spaß beim Loslegen!`;
-}
-
 /**
  * One-click "new wiki": creates the bag, the recipe (Blank Template),
  * the default permissions and some starting tiddlers in a single
@@ -2136,12 +2136,16 @@ export const AdminCreateWiki = zodRoute({
         update banner when a newer release appears), "pin" (freeze, never ask)
         or "auto" (always the newest release). */
     shellPolicy: z.enum(["auto", "pin", "notify"]).optional(),
+    /** The language the creator reads the admin app in. The starting page of a
+        TiddlyWiki wiki is written in it, as far as the template ships that
+        language; English otherwise. See §146. */
+    locale: z.enum(CREATE_LOCALES).optional(),
   }),
   inner: async (state) => {
     state.assertReferer(["/"]);
     state.asserted = state.user.isLoggedIn;
 
-    const { displayName, subtitle, description, templateName, shellPolicy } = state.data;
+    const { displayName, subtitle, description, templateName, shellPolicy, locale } = state.data;
 
     return await state.$transaction(async (prisma) => {
       await assertWikiCreationAllowed(prisma, state.user);
@@ -2221,7 +2225,15 @@ export const AdminCreateWiki = zodRoute({
       const store = new WikiStore(prisma);
       const recipeIdString = new IdString(recipeId);
       const bagId = new IdString(bag.id);
-      const welcomeTitle = "Willkommen";
+      // The starting page speaks the creator's language, unless the template
+      // cannot show it — the English-only template always gets English (§146).
+      // The frozen release, when there is one, is what the wiki actually
+      // serves, so it decides which language plugins are available.
+      const welcome = welcomeTiddler(
+        displayName,
+        locale,
+        (anchor?.definition ?? template.definition).plugins,
+      );
       // A shell reads $:/SiteSubtitle for a line under the heading; written
       // only when the author gave a subtitle.
       const subtitleText = (subtitle ?? "").trim();
@@ -2236,8 +2248,8 @@ export const AdminCreateWiki = zodRoute({
         : [
           { title: "$:/SiteTitle", text: displayName },
           ...subtitleTiddler,
-          { title: "$:/DefaultTiddlers", text: welcomeTitle },
-          { title: welcomeTitle, text: welcomeText(displayName) },
+          { title: "$:/DefaultTiddlers", text: welcome.title },
+          { title: welcome.title, text: welcome.text },
         ];
       for (const { title, text } of startingTiddlers) {
         await store.saveTiddler({

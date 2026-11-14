@@ -53,7 +53,7 @@ import {
   type ListSortDirection,
   type ListViewState,
 } from "./list-view";
-import { t } from "./i18n";
+import { getCurrentLocale, t } from "./i18n";
 import { formatStorageErrorForDisplay, getErrorMessage, prettifyBytes, renderErrorBanner, renderNoticeBanner, shortDate } from "./helpers";
 import { getEffectiveTheme, toggleTheme, type ThemeMode } from "./theme";
 import "./pinboard";
@@ -1652,9 +1652,14 @@ export class App extends JSXElement {
     this.newWikiBusy = true;
     this.newWikiError = "";
     try {
-      // Only the SimpleWiki entry names a template. Leaving it out keeps the
-      // request for the TiddlyWiki path byte for byte the one it always was.
-      const koerper: { displayName: string; templateName?: string } = { displayName };
+      // Only the SimpleWiki entry names a template. The language goes with
+      // every creation: it decides the language of the start page the server
+      // writes (and only there; the wiki itself follows its visitor's browser
+      // later). See §146.
+      const koerper: { displayName: string; templateName?: string; locale?: string } = {
+        displayName,
+        locale: getCurrentLocale(),
+      };
       if (this.newWikiTemplate) koerper.templateName = this.newWikiTemplate;
       const response = await fetch(pathPrefix + "/admin/wiki", {
         method: "PUT",
