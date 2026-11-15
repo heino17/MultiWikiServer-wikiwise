@@ -130,14 +130,16 @@ async function ownedRoleIdSet(prisma: PrismaTxnClient, user: AuthUser) {
 /**
  * The roles and users the current user may address, plus whether they may pin
  * to the global wall. Students are limited to their own roles and to people
- * who share one of their (non-system) roles; admins and teachers may address
- * any role they own/belong to and any other account.
+ * who share one of their (non-system) roles; admins may address any role and
+ * any account; teachers may address the students they created or teach and
+ * the site administration.
  *
- * A standalone user — one without a class/group, i.e. with nothing but the
- * personal role owned by themselves — may additionally address the site
- * administration (§148). Admins already see every note, so this does not
- * change who can read it; it makes the note *addressed* to admin instead of
- * to the author's own personal role.
+ * The account's owner (`owner_user_id`, set when the account was created)
+ * decides who a non-teacher may reach (§149): a student created by a teacher
+ * may address that teacher; a standalone account created by an admin — or
+ * with no teacher owner and no group role — may address the administration
+ * (§148). Admins already see every note, so this does not change who can read
+ * them; it changes who a note is addressed to.
  */
 async function resolveTargets(prisma: PrismaTxnClient, user: AuthUser): Promise<PinboardInfo["targets"]> {
   const statusView = user.isAdmin || user.isTeacher;
@@ -161,11 +163,41 @@ async function resolveTargets(prisma: PrismaTxnClient, user: AuthUser): Promise<
       orderBy: { role_name: "asc" },
     });
 
-  // Every role they could address is their own personal role: no class, no
-  // group. Non-teachers cannot own group roles, so this cannot hide one.
-  const standalone = !statusView && roleRows.every(role => role.owner_user_id === user.user_id);
+  // The account's owner is the teacher of a student, or the admin of a
+  // standalone account. Non-teachers are the only ones who need it here.
+  let ownerRow: { user_id: string; username: string; isTeacher: boolean } | null = null;
+  if (!statusView) {
+    const me = await prisma.users.findUnique({
+      where: { user_id: user.user_id },
+      select: { owner_user_id: true },
+    });
+    if (me?.owner_user_id) {
+      const owner = await prisma.users.findUnique({
+        where: { user_id: me.owner_user_id },
+        select: {
+          user_id: true,
+          username: true,
+          roles: { where: { is_teacher: true }, select: { role_id: true } },
+        },
+      });
+      if (owner) {
+        ownerRow = {
+          user_id: owner.user_id,
+          username: owner.username,
+          isTeacher: owner.roles.length > 0,
+        };
+      }
+    }
+  }
+  const ownerIsTeacher = Boolean(ownerRow?.isTeacher);
+  // A role they do not own themselves is a class/group role (non-teachers
+  // cannot own group roles). Without one they have no classmates.
+  const hasGroupRole = roleRows.some(role => role.owner_user_id !== user.user_id);
+  const standalone = !statusView && !hasGroupRole && !ownerIsTeacher;
 
-  const adminRows = standalone
+  // Teachers and standalone users may address the administration; students
+  // address their teacher instead (§149).
+  const adminRows = !user.isAdmin && (user.isTeacher || standalone)
     ? await prisma.users.findMany({
       where: {
         user_id: { not: user.user_id },
@@ -177,9 +209,32 @@ async function resolveTargets(prisma: PrismaTxnClient, user: AuthUser): Promise<
     : [];
 
   let userRows: { user_id: string; username: string }[] = [];
-  if (statusView) {
+  if (user.isAdmin) {
     userRows = await prisma.users.findMany({
       where: { user_id: { not: user.user_id } },
+      select: { user_id: true, username: true },
+      orderBy: { username: "asc" },
+    });
+  } else if (user.isTeacher) {
+    // The students they created or teach — not every account on the
+    // instance (§149). Admins are added below.
+    userRows = await prisma.users.findMany({
+      where: {
+        user_id: { not: user.user_id },
+        OR: [
+          { owner_user_id: user.user_id },
+          {
+            roles: {
+              some: {
+                OR: [
+                  { role_id: { in: memberRoleIds } },
+                  { owner_user_id: user.user_id },
+                ],
+              },
+            },
+          },
+        ],
+      },
       select: { user_id: true, username: true },
       orderBy: { username: "asc" },
     });
@@ -194,23 +249,32 @@ async function resolveTargets(prisma: PrismaTxnClient, user: AuthUser): Promise<
     });
   }
 
-  if (adminRows.length) {
+  const extraTargets = [
+    ...(ownerIsTeacher && ownerRow
+      ? [{ user_id: ownerRow.user_id, username: ownerRow.username }]
+      : []),
+    ...adminRows,
+  ];
+  if (extraTargets.length) {
     const merged = new Map(userRows.map(row => [row.user_id, row]));
-    for (const row of adminRows) merged.set(row.user_id, row);
+    for (const row of extraTargets) merged.set(row.user_id, row);
     userRows = [...merged.values()].sort((a, b) => a.username.localeCompare(b.username));
   }
 
   // A new note starts on a target that exists: the administration for a
-  // standalone user, otherwise the first role/person of the list.
+  // standalone user, the owning teacher for a student without a group, and
+  // otherwise the first role/person of the list.
   const defaultScope: PinboardDefaultTarget | null = statusView
     ? null
     : standalone && adminRows.length
       ? { scopeType: "USER", scopeId: adminRows[0].user_id }
-      : roleRows.length
-        ? { scopeType: "ROLE", scopeId: roleRows[0].role_id }
-        : userRows.length
-          ? { scopeType: "USER", scopeId: userRows[0].user_id }
-          : null;
+      : ownerIsTeacher && !hasGroupRole && ownerRow
+        ? { scopeType: "USER", scopeId: ownerRow.user_id }
+        : roleRows.length
+          ? { scopeType: "ROLE", scopeId: roleRows[0].role_id }
+          : userRows.length
+            ? { scopeType: "USER", scopeId: userRows[0].user_id }
+            : null;
 
   return {
     canPostGlobal: statusView,

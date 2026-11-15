@@ -5455,6 +5455,58 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 149. Fix: pinboard recipients follow the account owner and the class
+
+**Files:**
+- `packages/mws/src/new-managers/PinboardRoutes.ts`
+
+**Problem.** §148 classified a user as "standalone" when all roles they could
+address were their own, and gave every teacher the full account list. On a real
+store that produced three wrong dropdowns: a teacher saw every unrelated
+account (`User1`, `User2`) although her users tab shows only the accounts she
+created; a student created by that teacher still saw `admin` in the recipient
+list; and the student could not address her own teacher at all, because teacher
+and student shared no role.
+
+**Cause.** The class/teacher/student model is carried by `owner_user_id` — the
+account that created a user — not only by role membership. The pinboard looked
+at roles alone, so a student without a class role had no target besides their
+personal role, while any teacher looked like a site-wide moderator.
+
+**Fix.** `resolveTargets` now reads the account's owner and the owner's teacher
+flag for non-teachers:
+
+- a teacher may address the accounts they created, the members of the roles
+  they own or belong to, and the admin account(s) — not every account on the
+  instance;
+- a student (non-teacher whose owner is a teacher) may address that teacher and
+  everybody sharing a role with them; the administration is not offered;
+- a standalone user stays as in §148 and only gets the admin account(s);
+- the class membership check keeps a student with a group from counting as
+  standalone even when the group's owner is not their account owner.
+
+The new-note default follows the same rules: admin for a standalone user, the
+owning teacher for a student without a group, otherwise the first role/person.
+`assertScopeAllowed` still validates against the very same list, so a forced
+target is rejected with 403; `canSee` and the moderation rules are untouched.
+
+**Verified.** Against a fresh copy of the dev store (own server on port 5055)
+with the real accounts:
+
+- `Frau Meyer` (teacher, no class role): "People" offers `Schüler 1` and
+  `admin`, no longer `User1`/`User2`; a note to `Schüler 1` arrives there;
+- `Schüler 1` (owner `Frau Meyer`, only a personal role): the dropdown offers
+  `Frau Meyer` only, no `admin`, and preselects her; a note written without
+  touching the selector is stored as `USER:<Frau Meyer>` and `Frau Meyer` sees
+  it as "For you" with the unread badge;
+- a forced `USER:<admin>` request as `Schüler 1` and a forced `USER:<User1>`
+  request as `Frau Meyer` are rejected with 403;
+- `User1` keeps the §148 behaviour (only `admin`, preselected) and does not see
+  the note addressed to `Frau Meyer`, even when that note is present in the
+  database.
+
+`npm run tsc2`, the admin typecheck and `npm run build` are clean.
+
 ## 148. Feature: standalone users can address the administration
 
 **Files:**
@@ -13276,6 +13328,64 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 149. Fix: Pinnwand-Empfänger folgen Kontoeigentümer und Klasse
+
+**Dateien:**
+- `packages/mws/src/new-managers/PinboardRoutes.ts`
+
+**Problem.** §148 stufte einen Nutzer als „eigenständig" ein, wenn alle
+adressierbaren Rollen seine eigenen waren, und gab jedem Lehrer die komplette
+Kontoliste. In einem echten Store ergab das drei falsche Dropdowns: Eine
+Lehrerin sah jedes fremde Konto (`User1`, `User2`), obwohl ihr Benutzer-Tab nur
+die von ihr angelegten Konten zeigt; ein von ihr angelegter Schüler sah
+weiterhin `admin` in der Empfängerliste; und der Schüler konnte seine eigene
+Lehrerin gar nicht adressieren, weil Lehrer und Schüler keine gemeinsame Rolle
+hatten.
+
+**Ursache.** Das Klassen-/Lehrer-/Schüler-Modell hängt an `owner_user_id` — dem
+Konto, das einen Nutzer angelegt hat —, nicht allein an der
+Rollenmitgliedschaft. Die Pinnwand schaute nur auf Rollen, deshalb hatte ein
+Schüler ohne Klassenrolle kein Ziel außer seiner persönlichen Rolle, während
+jeder Lehrer wie ein instanzweiter Moderator aussah.
+
+**Lösung.** `resolveTargets` liest für Nicht-Lehrer jetzt den Kontoeigentümer
+und dessen Lehrer-Kennzeichen:
+
+- eine Lehrkraft adressiert die von ihr angelegten Konten, die Mitglieder der
+  von ihr besessenen oder mit ihr geteilten Rollen und das bzw. die
+  Admin-Konten — nicht jedes Konto der Instanz;
+- ein Schüler (Nicht-Lehrer, dessen Eigentümer eine Lehrkraft ist) adressiert
+  diese Lehrkraft und alle, die eine Rolle mit ihm teilen; die Administration
+  wird nicht angeboten;
+- ein eigenständiger Nutzer bleibt wie in §148 und bekommt nur das bzw. die
+  Admin-Konten;
+- die Klassen-Prüfung verhindert weiterhin, dass ein Schüler mit Gruppe als
+  eigenständig gilt, auch wenn der Gruppeneigentümer nicht sein Kontoeigentümer
+  ist.
+
+Der Standard-Empfänger folgt denselben Regeln: admin für einen eigenständigen
+Nutzer, die eigene Lehrkraft für einen Schüler ohne Gruppe, sonst die erste
+Rolle/Person. `assertScopeAllowed` prüft weiter gegen dieselbe Liste, ein
+erzwungenes Ziel wird also mit 403 abgewiesen; `canSee` und die
+Moderationsregeln bleiben unverändert.
+
+**Geprüft.** Gegen eine frische Kopie des Dev-Stores (eigener Server auf Port
+5055) mit den echten Konten:
+
+- `Frau Meyer` (Lehrerin, keine Klassenrolle): „Personen" bietet `Schüler 1`
+  und `admin`, nicht mehr `User1`/`User2`; ein Zettel an `Schüler 1` kommt dort
+  an;
+- `Schüler 1` (Eigentümer `Frau Meyer`, nur persönliche Rolle): das Dropdown
+  bietet nur `Frau Meyer`, kein `admin`, und wählt sie vor; ein Zettel ohne
+  Berühren des Auswahlfelds wird als `USER:<Frau Meyer>` gespeichert und
+  `Frau Meyer` sieht ihn als „Für dich" mit Ungelesen-Badge;
+- eine erzwungene `USER:<admin>`-Anfrage als `Schüler 1` und eine erzwungene
+  `USER:<User1>`-Anfrage als `Frau Meyer` werden mit 403 abgewiesen;
+- `User1` behält das §148-Verhalten (nur `admin`, vorausgewählt) und sieht den
+  Zettel an `Frau Meyer` nicht, auch wenn dieser in der Datenbank liegt.
+
+`npm run tsc2`, der Admin-Typecheck und `npm run build` sind sauber.
 
 ## 148. Feature: Eigenständige Nutzer adressieren die Administration
 
