@@ -131,6 +131,7 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
 - **Zielgruppen:** global (alle) · eine Rolle/Klasse · einzelne Person; wichtige Zettel heften oben (rote Reißzwecke)
 - **Eigenständige Nutzer** ohne Klasse adressieren ihre Zettel direkt an die Administration; der Composer startet für sie mit diesem Empfänger statt mit der eigenen Rolle (§148)
 - **Lehrer und Schüler** sehen nur ihre eigenen Leute: eine Lehrkraft adressiert die von ihr angelegten Konten und die Administration, ein Schüler seine Lehrkraft und alle, die eine Rolle mit ihm teilen (§149)
+- **Klassen-Liste:** nur echte Gruppen; die persönliche Rolle eines Kontos erscheint ausschließlich unter „Personen", nicht zusätzlich als Klasse (§150)
 - **1700 Zeichen** mit Zeichenzähler, optionalem Ablaufdatum, Vorschau ab 130 Zeichen (breite Zettel ab 200 Zeichen)
 - **Ungelesen-Badge** (Polling alle 30 s), „Für mich abheften", Volltext-Viewer-Modal, „In Zwischenablage kopieren"
 - **Moderation:** Autor löscht eigene Zettel, Admins alles, Lehrer auf ihren Klassenwänden; global schreiben nur Admin/Lehrer
@@ -333,6 +334,7 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
 - **Audiences:** global (everyone) · a role/class · a single person; important notes pin to the top (red thumbtack)
 - **Standalone users** without a class address their notes directly to the administration; the composer starts with that recipient instead of their own role (§148)
 - **Teachers and students** only see their own people: a teacher addresses the accounts they created and the administration, a student their teacher and everybody sharing a role (§149)
+- **Class list:** real groups only; an account's personal role appears under "People" only, not additionally as a class (§150)
 - **1700 characters** with a character counter, optional expiry date, preview from 130 characters (wide notes from 200)
 - **Unread badge** (polling every 30 s), "file away for me", full-text viewer modal, "copy to clipboard"
 - **Moderation:** the author deletes own notes, admins everything, teachers on their class walls; only admins/teachers write globally

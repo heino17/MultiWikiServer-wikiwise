@@ -11,6 +11,7 @@
 // shoved aside ("abgeheftet"), which drives the unread badge on the tab.
 
 import { SendError, ServerRequest, zodRoute } from "@tiddlywiki/server";
+import { personalRoleNameCandidates } from "./TabDataAdapter";
 
 const COLORS = ["yellow", "pink", "blue", "green", "orange", "purple"] as const;
 type PinboardColor = typeof COLORS[number];
@@ -130,8 +131,8 @@ async function ownedRoleIdSet(prisma: PrismaTxnClient, user: AuthUser) {
 /**
  * The roles and users the current user may address, plus whether they may pin
  * to the global wall. Students are limited to their own roles and to people
- * who share one of their (non-system) roles; admins may address any role and
- * any account; teachers may address the students they created or teach and
+ * who share one of their (non-system) roles; admins may address any group role
+ * and any account; teachers may address the students they created or teach and
  * the site administration.
  *
  * The account's owner (`owner_user_id`, set when the account was created)
@@ -163,6 +164,24 @@ async function resolveTargets(prisma: PrismaTxnClient, user: AuthUser): Promise<
       orderBy: { role_name: "asc" },
     });
 
+  // "Classes" means real groups. A user's personal role is named after its
+  // owner; listing it beside the same person under "People" is redundant and
+  // misleading (§150). The person entry addresses the same account, so no
+  // recipient is lost.
+  const roleOwnerIds = [...new Set(roleRows.map(role => role.owner_user_id).filter((id): id is string => !!id))];
+  const roleOwners = roleOwnerIds.length
+    ? await prisma.users.findMany({
+      where: { user_id: { in: roleOwnerIds } },
+      select: { user_id: true, username: true },
+    })
+    : [];
+  const personalRoleNames = new Map(
+    roleOwners.map(owner => [owner.user_id, new Set(personalRoleNameCandidates(owner.username))]),
+  );
+  const classRows = roleRows.filter(role =>
+    !(role.owner_user_id && personalRoleNames.get(role.owner_user_id)?.has(role.role_name)),
+  );
+
   // The account's owner is the teacher of a student, or the admin of a
   // standalone account. Non-teachers are the only ones who need it here.
   let ownerRow: { user_id: string; username: string; isTeacher: boolean } | null = null;
@@ -192,7 +211,7 @@ async function resolveTargets(prisma: PrismaTxnClient, user: AuthUser): Promise<
   const ownerIsTeacher = Boolean(ownerRow?.isTeacher);
   // A role they do not own themselves is a class/group role (non-teachers
   // cannot own group roles). Without one they have no classmates.
-  const hasGroupRole = roleRows.some(role => role.owner_user_id !== user.user_id);
+  const hasGroupRole = classRows.some(role => role.owner_user_id !== user.user_id);
   const standalone = !statusView && !hasGroupRole && !ownerIsTeacher;
 
   // Teachers and standalone users may address the administration; students
@@ -270,8 +289,8 @@ async function resolveTargets(prisma: PrismaTxnClient, user: AuthUser): Promise<
       ? { scopeType: "USER", scopeId: adminRows[0].user_id }
       : ownerIsTeacher && !hasGroupRole && ownerRow
         ? { scopeType: "USER", scopeId: ownerRow.user_id }
-        : roleRows.length
-          ? { scopeType: "ROLE", scopeId: roleRows[0].role_id }
+        : classRows.length
+          ? { scopeType: "ROLE", scopeId: classRows[0].role_id }
           : userRows.length
             ? { scopeType: "USER", scopeId: userRows[0].user_id }
             : null;
@@ -279,7 +298,7 @@ async function resolveTargets(prisma: PrismaTxnClient, user: AuthUser): Promise<
   return {
     canPostGlobal: statusView,
     defaultScope,
-    roles: roleRows.map(role => ({ id: role.role_id, name: role.role_name })),
+    roles: classRows.map(role => ({ id: role.role_id, name: role.role_name })),
     users: userRows.map(user => ({ id: user.user_id, username: user.username })),
   };
 }

@@ -5455,6 +5455,40 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 150. Fix: "Classes" in the pinboard lists real groups only
+
+**Files:**
+- `packages/mws/src/new-managers/PinboardRoutes.ts`
+
+**Problem.** In the admin's pinboard composer every account appeared twice:
+`User1`, `User2` and `Schüler 1` were listed under "Classes" through their
+personal role and again under "People" as a person. A personal role is a
+single-user role named after its owner, not a class, so the entry was both
+redundant and wrong — a teacher would also have seen their own name as a
+"class".
+
+**Fix.** `resolveTargets` drops a role from the class list when its name is one
+of the personal-role candidates of the account that owns it
+(`personalRoleNameCandidates`, the same definition the user and file dialogs
+use). The person entry addresses the same account as a `USER` note, so no
+recipient is lost; the new-note default now picks a real class role instead of
+the personal role when one exists. `assertScopeAllowed` checks the same list, so
+a note pinned to a personal role is rejected with 403.
+
+**Verified.** Against a fresh copy of the dev store (own server on port 5055):
+
+- as `admin`, "Classes" no longer lists `Schüler 1`, `User1` or `User2`; they
+  remain under "People";
+- as `Schüler 1` the "Classes" group disappears entirely (it held only the
+  personal role) and "People → Frau Meyer" stays preselected; a forced
+  `ROLE:<own personal role>` request is rejected with 403;
+- as `User1` only "People → admin" remains, preselected;
+- after adding a real class role `Klasse 9a` (owner `admin`, member `User1`) in
+  the throwaway copy, it appears under "Classes", becomes the default, and the
+  personal role stays hidden.
+
+`npm run tsc2`, the admin typecheck and `npm run build` are clean.
+
 ## 149. Fix: pinboard recipients follow the account owner and the class
 
 **Files:**
@@ -13328,6 +13362,42 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 150. Fix: „Klassen" in der Pinnwand zeigt nur echte Gruppen
+
+**Dateien:**
+- `packages/mws/src/new-managers/PinboardRoutes.ts`
+
+**Problem.** Im Pinnwand-Composer des Admins erschien jedes Konto doppelt:
+`User1`, `User2` und `Schüler 1` standen über ihre persönliche Rolle unter
+„Klassen" und noch einmal unter „Personen". Eine persönliche Rolle ist eine
+Ein-Nutzer-Rolle, die nach ihrem Eigentümer benannt ist, keine Klasse — der
+Eintrag war also redundant und falsch; eine Lehrkraft hätte auch den eigenen
+Namen als „Klasse" gesehen.
+
+**Lösung.** `resolveTargets` wirft eine Rolle aus der Klassenliste, wenn ihr
+Name einer der Kandidaten für die persönliche Rolle des Kontos ist, dem sie
+gehört (`personalRoleNameCandidates`, dieselbe Definition wie in Benutzer- und
+Datei-Dialogen). Der Personen-Eintrag adressiert dasselbe Konto als
+`USER`-Zettel, es geht also kein Empfänger verloren; der Standard-Empfänger
+eines neuen Zettels nimmt jetzt eine echte Klassenrolle statt der persönlichen
+Rolle, wenn es eine gibt. `assertScopeAllowed` prüft dieselbe Liste, ein Zettel
+an eine persönliche Rolle wird daher mit 403 abgewiesen.
+
+**Geprüft.** Gegen eine frische Kopie des Dev-Stores (eigener Server auf Port
+5055):
+
+- als `admin` listet „Klassen" weder `Schüler 1` noch `User1` oder `User2`;
+  diese bleiben unter „Personen";
+- als `Schüler 1` verschwindet die Gruppe „Klassen" ganz (sie enthielt nur die
+  persönliche Rolle), „Personen → Frau Meyer" bleibt vorausgewählt; eine
+  erzwungene `ROLE:<eigene persönliche Rolle>`-Anfrage wird mit 403 abgewiesen;
+- als `User1` bleibt nur „Personen → admin", vorausgewählt;
+- nachdem in der Wegwerf-Kopie eine echte Klassenrolle `Klasse 9a` (Eigentümer
+  `admin`, Mitglied `User1`) angelegt wurde, erscheint sie unter „Klassen", wird
+  der Standard, und die persönliche Rolle bleibt verborgen.
+
+`npm run tsc2`, der Admin-Typecheck und `npm run build` sind sauber.
 
 ## 149. Fix: Pinnwand-Empfänger folgen Kontoeigentümer und Klasse
 
