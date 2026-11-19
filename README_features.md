@@ -51,7 +51,10 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
   Die Seitenverweise `[Text](wiki:Seite)` und `[Text](<wiki:Seite>)` aus
   SimpleWiki werden zu `[[Text|Seite]]`; `[[Seite]]` bleibt, Code bleibt Code. Der
   Text bleibt Markdown – wer ihn gerendert haben will, braucht das Plugin
-  `tiddlywiki/markdown` im Wiki-Rezept
+  `tiddlywiki/markdown` im Wiki-Rezept. Die Darstellungseinstellungen der
+  Datei (Sprache, Thema, Farbwelt, eigene Farben, Hintergrundbilder,
+  Werkzeugleiste, Seiteninhalt) landen auf dem Startseiten-Tiddler; nennt sie
+  die Datei nicht, bleiben die Einstellungen der Wiki unangetastet
 - **SimpleWiki-Wiki anlegen (ein Klick):** Im Dropdown „Wiki erstellen" steht
   **„1-Klick SimpleWiki erstellen"** – derselbe Dialog wie beim 1-Klick-Eintrag,
   nur mit dem Template SimpleWiki vorbelegt. Die neue Wiki wird unter
@@ -264,7 +267,10 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
   one of the pages, a page without a title, a truncated JSON file. The page
   references `[Text](wiki:Page)` and `[Text](<wiki:Page>)` from SimpleWiki become
   `[[Text|Page]]`; `[[Page]]` stays, code stays code. The text stays Markdown –
-  to have it rendered, the wiki recipe needs the `tiddlywiki/markdown` plugin
+  to have it rendered, the wiki recipe needs the `tiddlywiki/markdown` plugin.
+  The file's display settings (language, theme, palette, custom colours,
+  background pictures, toolbar, page content) land on the start-page tiddler;
+  when the file does not name them, the wiki's own settings stay untouched
 - **Creating a SimpleWiki wiki (one click):** the "Create a wiki" dropdown
   carries **"1-click SimpleWiki creation"** – the same dialog as the
   1-click entry, only with the SimpleWiki template pre-set. The new wiki is

@@ -5455,6 +5455,34 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 151. Fix: a SimpleWiki import keeps the display settings
+
+**Files:**
+- `packages/mws/src/new-managers/SimpleWikiFile.ts`
+
+**Problem.** A SimpleWiki file carries more than pages: `sprache`, `thema`,
+`palette`, `eigeneFarben`, `hintergrund`, `toolbar` and `seiteninhalt` sit
+beside `startseite` in its payload. `readSimpleWikiFile` read only the first
+two and handed them to the start-page tiddler; the other five were parsed and
+dropped. After importing a saved file the wiki therefore opened in the
+default colours, with the default toolbar and without the imported
+background pictures — even though the file had all of them.
+
+**Fix.** `SimpleWikiPayload` now carries all seven settings, and
+`simpleWikiTiddlers` writes them onto the tiddler that is the start page —
+the same place SimpleWiki keeps them at runtime. `settingsText` keeps JSON
+objects as JSON text and leaves strings alone; `settingsBool` normalises
+switches to `"true"`/`"false"`; a missing or unusable value stays empty so
+the wiki falls back to its own default instead of inheriting `"null"` or
+`"undefined"`. The page is matched by title, so a file whose start page is
+absent still imports its pages without settings, as before.
+
+**Verified.** `npm run tsc2` is clean. A direct esbuild/node check of the
+reader and the tiddler builder against a file with all seven settings found
+every value on the start-page tiddler, while an older file without them
+produced the same tiddlers as before. No UI changed, so there is nothing new
+to click through.
+
 ## 150. Fix: "Classes" in the pinboard lists real groups only
 
 **Files:**
@@ -13362,6 +13390,35 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 151. Fix: der SimpleWiki-Import behält die Darstellungseinstellungen
+
+**Dateien:**
+- `packages/mws/src/new-managers/SimpleWikiFile.ts`
+
+**Problem.** Eine SimpleWiki-Datei trägt mehr als Seiten: `sprache`, `thema`,
+`palette`, `eigeneFarben`, `hintergrund`, `toolbar` und `seiteninhalt` stehen
+neben `startseite` in ihren Daten. `readSimpleWikiFile` las nur die ersten
+beiden und gab sie an den Startseiten-Tiddler weiter; die anderen fünf wurden
+gelesen und verworfen. Nach dem Import einer gesicherten Datei öffnete die
+Wiki deshalb mit Standardfarben, Standard-Werkzeugleiste und ohne die
+Hintergrundbilder aus der Datei — obwohl sie alle enthielt.
+
+**Lösung.** `SimpleWikiPayload` trägt jetzt alle sieben Einstellungen, und
+`simpleWikiTiddlers` schreibt sie auf den Tiddler, der die Startseite ist —
+dorthin, wo SimpleWiki sie zur Laufzeit auch ablegt. `settingsText` lässt
+JSON-Objekte als JSON-Text und Zeichenketten unverändert; `settingsBool`
+normalisiert Schalter auf `"true"`/`"false"`; ein fehlender oder unbrauchbarer
+Wert bleibt leer, damit die Wiki auf ihren eigenen Standard zurückfällt statt
+`"null"` oder `"undefined"` als Einstellung zu erben. Die Seite wird über
+ihren Titel gefunden; eine Datei ohne Startseite importiert ihre Seiten wie
+bisher ohne Einstellungen.
+
+**Geprüft.** `npm run tsc2` ist sauber. Eine direkte esbuild/node-Prüfung von
+Leser und Tiddler-Bauer mit allen sieben Einstellungen fand jeden Wert am
+Startseiten-Tiddler; eine ältere Datei ohne die Felder ergab dieselben
+Tiddler wie vorher. Die Oberfläche hat sich nicht geändert, es gibt also
+nichts Neues anzuklicken.
 
 ## 150. Fix: „Klassen" in der Pinnwand zeigt nur echte Gruppen
 

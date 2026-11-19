@@ -8,7 +8,8 @@ import { TiddlerFields } from "tiddlywiki";
  * write it as a bare JSON file, and both carry the same payload:
  *
  *   {version, seiten: [{id, title, content, links, tags, created, updated}],
- *    startseite, sprache, thema}
+ *    startseite, sprache, thema, palette, eigeneFarben, hintergrund,
+ *    toolbar, seiteninhalt}
  *
  * Three things follow from that and shape everything below.
  *
@@ -67,6 +68,15 @@ export interface SimpleWikiPayload {
   startTitle: string;
   language: string;
   theme: string;
+  /** Display settings, already in the shape SimpleWiki keeps in tiddler
+   *  fields: objects as JSON text, switches as "true"/"false". Empty when the
+   *  file does not name them. They travel on the start page tiddler, the same
+   *  place SimpleWiki writes them to at runtime. */
+  palette: string;
+  eigeneFarben: string;
+  hintergrund: string;
+  toolbar: string;
+  seiteninhalt: string;
 }
 
 /**
@@ -190,6 +200,11 @@ export function readSimpleWikiFile(text: string, options: { pageLimit?: number }
     startTitle: startPage?.title ?? "",
     language: typeof record.sprache === "string" ? record.sprache : "",
     theme: typeof record.thema === "string" ? record.thema : "",
+    palette: typeof record.palette === "string" ? record.palette : "",
+    eigeneFarben: settingsText(record.eigeneFarben),
+    hintergrund: settingsText(record.hintergrund),
+    toolbar: settingsBool(record, "toolbar"),
+    seiteninhalt: settingsBool(record, "seiteninhalt"),
   };
 }
 
@@ -201,6 +216,30 @@ function stringList(value: unknown): string[] | undefined {
 }
 
 /**
+ * A display setting as the SimpleWiki store keeps it: JSON text for objects,
+ * left alone when the file already wrote a string. A missing or unusable value
+ * stays empty, so the wiki falls back to its own default instead of inheriting
+ * "null" or "undefined" as a setting.
+ */
+function settingsText(value: unknown): string {
+  if (value === undefined || value === null || value === "") return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "object") {
+    try { return JSON.stringify(value); } catch { return ""; }
+  }
+  return "";
+}
+
+/** A switch as the SimpleWiki store keeps it: the strings "true"/"false". */
+function settingsBool(record: Record<string, unknown>, key: string): string {
+  if (!Object.prototype.hasOwnProperty.call(record, key)) return "";
+  const value = record[key];
+  if (typeof value === "boolean") return value ? "true" : "false";
+  if (typeof value === "string") return value === "true" || value === "1" ? "true" : "false";
+  return "";
+}
+
+/**
  * The tiddler fields of a SimpleWiki file, plus the one system tiddler that
  * makes the wiki open on the page the file wanted.
  */
@@ -208,12 +247,27 @@ export function simpleWikiTiddlers(payload: SimpleWikiPayload): {
   tiddlers: TiddlerFields[];
   systemTiddlers: TiddlerFields[];
 } {
+  // SimpleWiki keeps language, theme and the display settings on the tiddler
+  // that is the start page. The file names that page by id, the store by title,
+  // so the settings go to the page readSimpleWikiFile resolved as the start.
+  const startSettings: Record<string, string> = {};
+  if (payload.startTitle) {
+    if (payload.language) startSettings.sprache = payload.language;
+    if (payload.theme) startSettings.thema = payload.theme;
+    if (payload.palette) startSettings.palette = payload.palette;
+    if (payload.eigeneFarben) startSettings.eigeneFarben = payload.eigeneFarben;
+    if (payload.hintergrund) startSettings.hintergrund = payload.hintergrund;
+    if (payload.toolbar) startSettings.toolbar = payload.toolbar;
+    if (payload.seiteninhalt) startSettings.seiteninhalt = payload.seiteninhalt;
+  }
+
   const tiddlers: TiddlerFields[] = payload.pages.map(page => ({
     title: page.title,
     text: wikiLinks(page.content),
     ...(page.tags?.length ? { tags: tiddlyWikiList(page.tags) } : {}),
     ...(page.created ? { created: tiddlyWikiDate(page.created) } : {}),
     ...(page.updated ? { modified: tiddlyWikiDate(page.updated) } : {}),
+    ...(page.title === payload.startTitle ? startSettings : {}),
   }));
   // Not optional: a wiki whose start page is not on the first screen is not
   // what the file asked for. Only a file without a start page stays silent.
