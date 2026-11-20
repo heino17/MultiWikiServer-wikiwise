@@ -2,7 +2,7 @@
 <html lang="de"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="mws-shell-version" content="v0.1.52">
+    <meta name="mws-shell-version" content="v0.1.56">
     <meta name="simplewiki-doc-id" content="">
     <meta name="simplewiki-exported" content="">
     <meta name="simplewiki-title" content="">
@@ -3169,9 +3169,132 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
             font-size: 0.85rem;
         }
 
-        /* Die Dateiauswahl ist nur technisch sichtbar. */
-        .datei-feld {
+        /* Die Dateiauswahl ist nur technisch sichtbar. Die Bilder der
+           Hintergrund-Einstellung haben eine eigene Klasse, damit die
+           Wiki-Dateiauswahl weiterhin die erste mit .datei-feld ist -
+           weitere Stellen suchen sie genau so. */
+        .datei-feld,
+        .bg-datei-feld {
             display: none;
+        }
+
+        /* Hintergrundbild: zwei feste Schichten hinter der ganzen Seite.
+           "sw-bg-bild" zeigt das Bild des aktiven Modus (ausfuellend,
+           fixiert), "sw-bg-schleier" legt die eingestellte Hintergrund-
+           farbe der Farbwelt darueber. Die Sichtbarkeit (0-100) bestimmt
+           den Anteil des Bildes: 100 = voll sichtbar, 0 = nur die Farbe. */
+        .sw-bg-bild,
+        .sw-bg-schleier {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .sw-bg-bild {
+            z-index: -2;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: cover;
+            background-image: none;
+        }
+
+        .sw-bg-schleier {
+            z-index: -1;
+            background: var(--bg-primary);
+            opacity: 0;
+        }
+
+        body.hat-hintergrund .header,
+        body.hat-hintergrund .footer,
+        body.hat-hintergrund .toc-menu,
+        body.hat-hintergrund .main-content,
+        body.hat-hintergrund .app {
+            background-color: transparent;
+        }
+
+        /* Der Kopf des Hintergrundbereichs: Beschriftung links, Schalter
+           rechts. Zugeklappt bleibt nur diese Zeile im Panel stehen. */
+        .hintergrund-kopf {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .hintergrund-kopf .settings-label {
+            margin-bottom: 0;
+        }
+
+        .hintergrund-schalter {
+            padding: 4px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-primary);
+            color: var(--text-muted);
+            font: inherit;
+            font-size: 0.8rem;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .hintergrund-schalter:hover {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .hintergrund-inhalt {
+            margin-top: 10px;
+        }
+
+        .hintergrund-section .settings-hint {
+            margin: 0 0 0.5rem;
+        }
+
+        .hintergrund-block {
+            margin-top: 0.65rem;
+        }
+
+        .hintergrund-modus {
+            margin: 0 0 0.3rem;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        .hintergrund-vorschau {
+            width: 100%;
+            height: 72px;
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: cover;
+            margin-bottom: 0.35rem;
+        }
+
+        .hintergrund-zeile {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .hintergrund-btn {
+            width: auto;
+            padding: 0.35rem 0.55rem;
+            font-size: 0.82rem;
+        }
+
+        .hintergrund-sicht-label {
+            display: block;
+            margin-top: 0.35rem;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+        }
+
+        .hintergrund-regler {
+            width: 100%;
+            margin: 0.2rem 0 0;
         }
 
         /* Hinweis nach dem Sichern oder Laden */
@@ -4871,6 +4994,13 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
 </head>
 <body>
     <div id="app">
+        <!-- Hintergrundbild: ausfuellend und fixiert hinter der Seite.
+             "sw-bg-bild" traegt das Bild des aktiven Modus, "sw-bg-schleier"
+             ueberdeckt es anteilig mit der eingestellten Hintergrundfarbe
+             der Farbwelt, damit der Text lesbar bleibt. Beide liegen hinter
+             dem Inhalt und reagieren nicht auf Eingaben. -->
+        <div id="sw-bg-bild" ref="bgBild" class="sw-bg-bild" aria-hidden="true"></div>
+        <div id="sw-bg-schleier" ref="bgSchleier" class="sw-bg-schleier" aria-hidden="true"></div>
         <div class="app" :class="{ zen: zenModus }">
             <header class="header">
                 <div class="kopf-titel">
@@ -5044,7 +5174,9 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                      derselben Reihenfolge; die Einrückung zeigt die
                      Verschachtelung: eine Seite steht unter ihrer
                      eltern-Seite. Verschoben wird mit dem Griff (drei
-                     Zonen: davor, darunter, danach) oder mit Alt + Pfeil.
+                     Zonen: davor, als Kind, danach - die Linie setzt
+                      die Zeile auf die Ebene der Zielzeile) oder mit
+                      Alt + Pfeil.
                      Eine Seite zieht bei diesen Schritten ihren ganzen
                      Unterbaum mit, und beim Löschen rücken die Kinder
                      eine Ebene hoch. -->
@@ -5418,6 +5550,39 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                         <button type="button" class="settings-btn" @click="eigeneZuruecksetzen">{{ t('farbenZuruecksetzen') }}</button>
                     </div>
                 </div>
+                <div class="settings-section hintergrund-section">
+                    <div class="hintergrund-kopf">
+                        <label class="settings-label">{{ t('backgroundSection') }}</label>
+                        <button type="button" class="hintergrund-schalter" :aria-expanded="hintergrundOffen" @click="hintergrundOffen = !hintergrundOffen">
+                            {{ (hintergrundOffen ? '▾ ' : '▸ ') + t(hintergrundOffen ? 'farbenVerbergen' : 'farbenAnzeigen') }}
+                        </button>
+                    </div>
+                    <div v-show="hintergrundOffen" class="hintergrund-inhalt">
+                        <p class="settings-hint">{{ t('backgroundHint') }}</p>
+                        <div class="hintergrund-block">
+                            <p class="hintergrund-modus">{{ t('farbenHell') }}</p>
+                            <div class="hintergrund-vorschau" v-if="hintergrund.hell.bild" :style="{ backgroundImage: 'url(' + hintergrund.hell.bild + ')' }"></div>
+                            <input ref="bgHellDatei" type="file" accept="image/*" class="bg-datei-feld" @change="hintergrundLaden('hell', $event)">
+                            <div class="hintergrund-zeile">
+                                <button type="button" class="settings-btn hintergrund-btn" @click="$refs.bgHellDatei.click()">{{ hintergrund.hell.bild ? t('backgroundChange') : t('backgroundChoose') }}</button>
+                                <button type="button" class="settings-btn hintergrund-btn" v-if="hintergrund.hell.bild" @click="hintergrundEntfernen('hell')">{{ t('backgroundRemove') }}</button>
+                            </div>
+                            <label class="hintergrund-sicht-label">{{ t('backgroundVisible') }}: {{ hintergrund.hell.sicht }}%</label>
+                            <input type="range" class="hintergrund-regler" min="0" max="100" :value="hintergrund.hell.sicht" @input="hintergrundSicht('hell', $event.target.value)">
+                        </div>
+                        <div class="hintergrund-block">
+                            <p class="hintergrund-modus">{{ t('farbenDunkel') }}</p>
+                            <div class="hintergrund-vorschau" v-if="hintergrund.dunkel.bild" :style="{ backgroundImage: 'url(' + hintergrund.dunkel.bild + ')' }"></div>
+                            <input ref="bgDunkelDatei" type="file" accept="image/*" class="bg-datei-feld" @change="hintergrundLaden('dunkel', $event)">
+                            <div class="hintergrund-zeile">
+                                <button type="button" class="settings-btn hintergrund-btn" @click="$refs.bgDunkelDatei.click()">{{ hintergrund.dunkel.bild ? t('backgroundChange') : t('backgroundChoose') }}</button>
+                                <button type="button" class="settings-btn hintergrund-btn" v-if="hintergrund.dunkel.bild" @click="hintergrundEntfernen('dunkel')">{{ t('backgroundRemove') }}</button>
+                            </div>
+                            <label class="hintergrund-sicht-label">{{ t('backgroundVisible') }}: {{ hintergrund.dunkel.sicht }}%</label>
+                            <input type="range" class="hintergrund-regler" min="0" max="100" :value="hintergrund.dunkel.sicht" @input="hintergrundSicht('dunkel', $event.target.value)">
+                        </div>
+                    </div>
+                </div>
                 <div class="settings-section">
                     <label class="settings-label" for="settings-startpage">{{ t('startPage') }}</label>
                     <select id="settings-startpage" class="select-input" :value="startPageId" @change="startseiteWaehlen($event)">
@@ -5589,7 +5754,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "seitenN": "{n} Seiten",
                     "noticeError": "In dieser Datei steckt kein SimpleWiki.",
                     "noticeSaveError": "Das Sichern hat nicht geklappt.",
-                    "reorderHint": "Reihenfolge: Zeile am ⠿ ziehen (davor, darunter, danach) oder Alt + ↑/↓ verschieben und Alt + →/← ein-/ausrücken",
+                    "reorderHint": "Reihenfolge: Zeile am ⠿ ziehen (Linie davor/danach = gleiche Ebene, Balken = als Kind) oder Alt + ↑/↓ verschieben und Alt + →/← ein-/ausrücken",
                     "tocZuklappen": "Unter-Seiten verbergen",
                     "tocAufklappen": "Unter-Seiten zeigen",
                     "reorderBlocked": "Zum Ändern der Reihenfolge die Suche leeren.",
@@ -5651,6 +5816,13 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "untitled": "Neue Seite",
                     "language": "Sprache",
                     "palette": "Farbwelt",
+                    "backgroundSection": "Hintergrundbild",
+                    "backgroundHint": "Ein Bild pro Modus (hell/dunkel), max. 1 MB. Es wird im Wiki gespeichert und ist so auch fuer andere Nutzer sichtbar. Die Sichtbarkeit mischt das Bild mit der eingestellten Hintergrundfarbe.",
+                    "backgroundChoose": "Bild waehlen",
+                    "backgroundChange": "Bild aendern",
+                    "backgroundRemove": "Entfernen",
+                    "backgroundVisible": "Sichtbarkeit",
+                    "backgroundTooBig": "Das Bild ist zu gross (max. 1 MB).",
                     "paletteHint": "Wählt die Farbstimmung des Wikis. Der 🌙/☀️-Knopf oben schaltet darin Hell und Dunkel.",
                     "toolbarAria": "Werkzeugleiste",
                     "toolbarLabel": "Werkzeugleiste anzeigen",
@@ -5792,7 +5964,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "seitenN": "{n} pages",
                     "noticeError": "This file does not contain a SimpleWiki.",
                     "noticeSaveError": "Saving did not work.",
-                    "reorderHint": "Order: drag a row by ⠿ (before, as child, after) or use Alt + ↑/↓ to move and Alt + →/← to indent / outdent",
+                    "reorderHint": "Order: drag a row by ⠿ (line before/after = same level, bar = as child) or use Alt + ↑/↓ to move and Alt + →/← to indent / outdent",
                     "tocZuklappen": "Hide sub-pages",
                     "tocAufklappen": "Show sub-pages",
                     "reorderBlocked": "Clear the search to change the order.",
@@ -5830,6 +6002,13 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "searchReset": "Reset search",
                     "language": "Language",
                     "palette": "Colour palette",
+                    "backgroundSection": "Background image",
+                    "backgroundHint": "One image per mode (light/dark), max. 1 MB. It is stored in the wiki so other users can see it too. Visibility blends the image with the active background colour.",
+                    "backgroundChoose": "Choose image",
+                    "backgroundChange": "Change image",
+                    "backgroundRemove": "Remove",
+                    "backgroundVisible": "Visibility",
+                    "backgroundTooBig": "The image is too large (max. 1 MB).",
                     "paletteHint": "Sets the wiki's colour mood. The 🌙/☀️ button above switches light and dark within it.",
                     "toolbarAria": "Toolbar",
                     "toolbarLabel": "Show toolbar",
@@ -5995,7 +6174,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "seitenN": "{n} страниц",
                     "noticeError": "В этом файле нет SimpleWiki.",
                     "noticeSaveError": "Сохранение не удалось.",
-                    "reorderHint": "Порядок: перетащите строку за ⠿ (перед, как дочерняя, после) или используйте Alt + ↑/↓ для перемещения и Alt + →/← для сдвига вправо / влево",
+                    "reorderHint": "Порядок: перетащите строку за ⠿ (линия до/после — тот же уровень, полоса — как дочерняя) или используйте Alt + ↑/↓ для перемещения и Alt + →/← для сдвига вправо / влево",
                     "tocZuklappen": "Скрыть подстраницы",
                     "tocAufklappen": "Показать подстраницы",
                     "reorderBlocked": "Очистите поиск, чтобы изменить порядок.",
@@ -6057,6 +6236,13 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "untitled": "Новая страница",
                     "language": "Язык",
                     "palette": "Палитра цветов",
+                    "backgroundSection": "Фоновое изображение",
+                    "backgroundHint": "Одно изображение для каждого режима (светлый/тёмный), макс. 1 МБ. Оно хранится в вики и видно другим пользователям. Видимость смешивает изображение с активным цветом фона.",
+                    "backgroundChoose": "Выбрать изображение",
+                    "backgroundChange": "Изменить изображение",
+                    "backgroundRemove": "Удалить",
+                    "backgroundVisible": "Видимость",
+                    "backgroundTooBig": "Изображение слишком большое (макс. 1 МБ).",
                     "paletteHint": "Задаёт цветовое настроение вики. Кнопка 🌙/☀️ выше переключает в ней светлую и тёмную тему.",
                     "toolbarAria": "Панель инструментов",
                     "toolbarLabel": "Показывать панель инструментов",
@@ -6196,7 +6382,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "seitenN": "{n} páginas",
                     "noticeError": "Este archivo no contiene un SimpleWiki.",
                     "noticeSaveError": "No se pudo guardar.",
-                    "reorderHint": "Orden: arrastra una fila por ⠿ (antes, como hija, después) o usa Alt + ↑/↓ para mover y Alt + →/← para indentar / desindentar",
+                    "reorderHint": "Orden: arrastra una fila por ⠿ (línea antes/después = mismo nivel, barra = como hija) o usa Alt + ↑/↓ para mover y Alt + →/← para indentar / desindentar",
                     "tocZuklappen": "Ocultar subpáginas",
                     "tocAufklappen": "Mostrar subpáginas",
                     "reorderBlocked": "Borra la búsqueda para cambiar el orden.",
@@ -6258,6 +6444,13 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "untitled": "Nueva página",
                     "language": "Idioma",
                     "palette": "Paleta de colores",
+                    "backgroundSection": "Imagen de fondo",
+                    "backgroundHint": "Una imagen por modo (claro/oscuro), máx. 1 MB. Se guarda en la wiki y también es visible para otros usuarios. La visibilidad mezcla la imagen con el color de fondo activo.",
+                    "backgroundChoose": "Elegir imagen",
+                    "backgroundChange": "Cambiar imagen",
+                    "backgroundRemove": "Quitar",
+                    "backgroundVisible": "Visibilidad",
+                    "backgroundTooBig": "La imagen es demasiado grande (máx. 1 MB).",
                     "paletteHint": "Define el ánimo de color del wiki. El botón 🌙/☀️ de arriba cambia entre claro y oscuro dentro de él.",
                     "toolbarAria": "Barra de herramientas",
                     "toolbarLabel": "Mostrar la barra de herramientas",
@@ -6397,7 +6590,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "seitenN": "{n} pages",
                     "noticeError": "Ce fichier ne contient pas de SimpleWiki.",
                     "noticeSaveError": "L'enregistrement n'a pas fonctionné.",
-                    "reorderHint": "Ordre : faites glisser une ligne par ⠿ (avant, comme enfant, après) ou utilisez Alt + ↑/↓ pour déplacer et Alt + →/← pour indenter / désindenter",
+                    "reorderHint": "Ordre : faites glisser une ligne par ⠿ (ligne avant/après = même niveau, barre = comme enfant) ou utilisez Alt + ↑/↓ pour déplacer et Alt + →/← pour indenter / désindenter",
                     "tocZuklappen": "Masquer les sous-pages",
                     "tocAufklappen": "Afficher les sous-pages",
                     "reorderBlocked": "Videz la recherche pour changer l'ordre.",
@@ -6459,6 +6652,13 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "untitled": "Nouvelle page",
                     "language": "Langue",
                     "palette": "Palette de couleurs",
+                    "backgroundSection": "Image d’arrière-plan",
+                    "backgroundHint": "Une image par mode (clair/sombre), 1 Mo max. Elle est enregistrée dans le wiki et visible par les autres utilisateurs. La visibilité mélange l’image avec la couleur de fond active.",
+                    "backgroundChoose": "Choisir une image",
+                    "backgroundChange": "Changer l’image",
+                    "backgroundRemove": "Supprimer",
+                    "backgroundVisible": "Visibilité",
+                    "backgroundTooBig": "L’image est trop volumineuse (1 Mo max.).",
                     "paletteHint": "Définit l'ambiance colorée du wiki. Le bouton 🌙/☀️ ci-dessus bascule clair et sombre à l'intérieur.",
                     "toolbarAria": "Barre d'outils",
                     "toolbarLabel": "Afficher la barre d'outils",
@@ -6598,7 +6798,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "seitenN": "{n} ページ",
                     "noticeError": "このファイルには SimpleWiki が含まれていません。",
                     "noticeSaveError": "保存できませんでした。",
-                    "reorderHint": "順序: ⠿ で行をドラッグ（前・子として・後）するか、Alt + ↑/↓ で移動、Alt + →/← で字下げ / 字上げ",
+                    "reorderHint": "順序: ⠿ で行をドラッグ（前・後の線は同じ階層、左のバーは子として）するか、Alt + ↑/↓ で移動、Alt + →/← で字下げ / 字上げ",
                     "tocZuklappen": "下位ページを隠す",
                     "tocAufklappen": "下位ページを表示",
                     "reorderBlocked": "順序を変更するには検索を消してください。",
@@ -6660,6 +6860,13 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "untitled": "新しいページ",
                     "language": "言語",
                     "palette": "カラーパレット",
+                    "backgroundSection": "背景画像",
+                    "backgroundHint": "モードごと（ライト/ダーク）に1枚、最大1 MB。Wikiに保存され、他のユーザーにも表示されます。表示度は画像と現在の背景色を混ぜます。",
+                    "backgroundChoose": "画像を選択",
+                    "backgroundChange": "画像を変更",
+                    "backgroundRemove": "削除",
+                    "backgroundVisible": "表示度",
+                    "backgroundTooBig": "画像が大きすぎます（最大1 MB）。",
                     "paletteHint": "Wiki の色の雰囲気を決めます。上の 🌙/☀️ ボタンで、その中でライトとダークを切り替えます。",
                     "toolbarAria": "ツールバー",
                     "toolbarLabel": "ツールバーを表示",
@@ -6799,7 +7006,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "seitenN": "{n}페이지",
                     "noticeError": "이 파일에는 SimpleWiki가 들어 있지 않습니다.",
                     "noticeSaveError": "저장하지 못했습니다.",
-                    "reorderHint": "순서: ⠿로 행을 끌어(앞, 자식으로, 뒤) 옮기거나 Alt + ↑/↓로 옮기고 Alt + →/←로 들여쓰기 / 내어쓰기",
+                    "reorderHint": "순서: ⠿로 행을 끌어(앞/뒤 선은 같은 단계, 막대는 자식으로) 옮기거나 Alt + ↑/↓로 옮기고 Alt + →/←로 들여쓰기 / 내어쓰기",
                     "tocZuklappen": "하위 페이지 숨기기",
                     "tocAufklappen": "하위 페이지 표시",
                     "reorderBlocked": "순서를 바꾸려면 검색을 지우세요.",
@@ -6861,6 +7068,13 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "untitled": "새 페이지",
                     "language": "언어",
                     "palette": "색상 팔레트",
+                    "backgroundSection": "배경 이미지",
+                    "backgroundHint": "모드별(밝게/어둡게) 이미지 1개, 최대 1MB. 위키에 저장되어 다른 사용자에게도 보입니다. 표시 정도는 이미지와 현재 배경색을 섞습니다.",
+                    "backgroundChoose": "이미지 선택",
+                    "backgroundChange": "이미지 변경",
+                    "backgroundRemove": "제거",
+                    "backgroundVisible": "표시 정도",
+                    "backgroundTooBig": "이미지가 너무 큽니다(최대 1MB).",
                     "paletteHint": "위키의 색 분위기를 정합니다. 위쪽 🌙/☀️ 버튼으로 그 안에서 라이트와 다크를 전환합니다.",
                     "toolbarAria": "도구 모음",
                     "toolbarLabel": "도구 모음 표시",
@@ -7000,7 +7214,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "seitenN": "{n} 个页面",
                     "noticeError": "该文件中没有 SimpleWiki。",
                     "noticeSaveError": "保存未成功。",
-                    "reorderHint": "顺序：拖动 ⠿ 移动行（之前、作为子级、之后），或用 Alt + ↑/↓ 移动、Alt + →/← 缩进 / 取消缩进",
+                    "reorderHint": "顺序：拖动 ⠿ 移动行（前/后的线为同一层级，竖条为作为子级），或用 Alt + ↑/↓ 移动、Alt + →/← 缩进 / 取消缩进",
                     "tocZuklappen": "隐藏子页面",
                     "tocAufklappen": "显示子页面",
                     "reorderBlocked": "清除搜索以更改顺序。",
@@ -7062,6 +7276,13 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     "untitled": "新页面",
                     "language": "语言",
                     "palette": "配色方案",
+                    "backgroundSection": "背景图片",
+                    "backgroundHint": "每种模式（浅色/深色）一张图片，最大 1 MB。图片保存在 wiki 中，其他用户也可看到。可见度会将图片与当前背景色混合。",
+                    "backgroundChoose": "选择图片",
+                    "backgroundChange": "更换图片",
+                    "backgroundRemove": "移除",
+                    "backgroundVisible": "可见度",
+                    "backgroundTooBig": "图片太大（最大 1 MB）。",
                     "paletteHint": "设定 Wiki 的色彩氛围。上方的 🌙/☀️ 按钮在其中切换浅色与深色。",
                     "toolbarAria": "工具栏",
                     "toolbarLabel": "显示工具栏",
@@ -7263,6 +7484,35 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
             return hat ? raus : null;
         }
 
+        /* Hintergrundbilder lesen: je Modus ein Bild (Data-URL) und die
+           Sichtbarkeit 0-100. 100 heisst: das Bild ist voll sichtbar; ein
+           kleinerer Wert ueberdeckt es anteilig mit der eingestellten
+           Hintergrundfarbe der aktiven Farbwelt (siehe applyHintergrund).
+           Das Bild soll auch anderen Nutzern des Wikis zur Verfuegung
+           stehen und wird deshalb wie andere Darstellungseinstellungen in
+           den Speichern gefuehrt; ungueltiges faellt still weg. */
+        function hintergrundLesen(roh) {
+            let d = roh;
+            if (typeof d === 'string') {
+                try { d = JSON.parse(d); } catch (e) { d = null; }
+            }
+            const leer = function () {
+                return { hell: { bild: '', sicht: 100 }, dunkel: { bild: '', sicht: 100 } };
+            };
+            if (!d || typeof d !== 'object' || Array.isArray(d)) return leer();
+            const raus = leer();
+            ['hell', 'dunkel'].forEach(function (modus) {
+                const q = d[modus];
+                if (!q || typeof q !== 'object') return;
+                if (typeof q.bild === 'string') raus[modus].bild = q.bild;
+                const s = Number(q.sicht);
+                if (!isNaN(s)) {
+                    raus[modus].sicht = Math.max(0, Math.min(100, Math.round(s)));
+                }
+            });
+            return raus;
+        }
+
         /* Nur echte CSS-Farben annehmen, damit ein Tippfehler die
            Oberflaeche nicht unlesbar macht. Erlaubt sind #rgb, #rrggbb,
            #rrggbbaa und rgba(...)/rgb(...) mit Zahlen oder Prozenten. */
@@ -7362,7 +7612,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
         const ARCHIV_SCHLUESSEL = ['simplewiki_pages', 'simplewiki_startpage',
             'simplewiki_refs', 'simplewiki_lang', 'simplewiki_theme',
             'simplewiki_palette', 'simplewiki_toolbar', 'simplewiki_seiteninhalt',
-            'simplewiki_eigene_farben', 'simplewiki_datei_warnung',
+            'simplewiki_eigene_farben', 'simplewiki_hintergrund', 'simplewiki_datei_warnung',
             'simplewiki_draft_time', 'simplewiki_digest', 'simplewiki_titel',
             'simplewiki_untertitel'];
 
@@ -7766,6 +8016,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
              themaSetzen(thema)     'light' oder 'dark'
              paletteSetzen(palette) eine Palette aus SIMPLEWIKI_PALETTEN
              eigeneFarbenSetzen(werte)  die eigenen Farben (Objekt, s. u.)
+             hintergrundSetzen(werte)   Hintergrundbilder je Modus (Objekt, s. u.)
              spracheSetzen(sprache) ein Code aus SIMPLEWIKI_LANGS
              toolbarSetzen(an)      Werkzeugleiste ein- oder ausschalten
              seiteninhaltSetzen(an) Inhaltsverzeichnis der Seite ein- oder
@@ -7780,7 +8031,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
 
         const SPEICHER_METHODEN = ['laden', 'uebernehmen', 'seiteSichern',
             'seiteLoeschen', 'startseiteSetzen', 'themaSetzen', 'paletteSetzen',
-            'eigeneFarbenSetzen', 'spracheSetzen', 'toolbarSetzen',
+            'eigeneFarbenSetzen', 'hintergrundSetzen', 'spracheSetzen', 'toolbarSetzen',
             'seiteninhaltSetzen'];
 
         function pruefeSpeicher(speicher, name) {
@@ -7832,6 +8083,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     toolbar: SimpleWikiStore.get('simplewiki_toolbar') === '1',
                     seiteninhalt: SimpleWikiStore.get('simplewiki_seiteninhalt') === '1',
                     eigeneFarben: eigeneFarbenLesen(SimpleWikiStore.get('simplewiki_eigene_farben')),
+                    hintergrund: hintergrundLesen(SimpleWikiStore.get('simplewiki_hintergrund')),
                     nurLesen: false,
                     wikiTitel: '',
                     wikiUntertitel: '',
@@ -7892,6 +8144,13 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                 return true;
             },
 
+            hintergrundSetzen: function (werte) {
+                const hg = hintergrundLesen(werte);
+                this.einstellungen.hintergrund = hg;
+                SimpleWikiStore.set('simplewiki_hintergrund', JSON.stringify(hg));
+                return true;
+            },
+
             spracheSetzen: function (sprache) {
                 this.einstellungen.sprache = sprache;
                 SimpleWikiStore.set('simplewiki_lang', sprache == null ? '' : String(sprache));
@@ -7921,6 +8180,21 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
         function mwsSlug() {
             const m = String(window.location.pathname || '').match(/\/wiki\/([^/]+)/);
             return m ? decodeURIComponent(m[1]) : '';
+        }
+
+        /* Ein Shell-Angebot, das weggelegt wurde, ist fuer diese Benutzerin
+           erledigt. "Beim naechsten Update erinnern" merkt sich die Nummer
+           der angebotenen Fassung, "in einem Monat erinnern" einen Stichtag.
+           Beides liegt im Browser und nicht beim Server: es ist eine
+           Entscheidung dieser Benutzerin, nicht eine Eigenschaft des Wikis. */
+        function shellAngebotWeg(latest) {
+            try {
+                if (localStorage.getItem('simplewiki_update_weg_' + latest)) return true;
+                const bis = Number(localStorage.getItem('simplewiki_update_bis_' + latest)) || 0;
+                if (bis > Date.now()) return true;
+                if (bis) localStorage.removeItem('simplewiki_update_bis_' + latest);
+            } catch (e) { /* ohne Speicher kein Wegdrucken */ }
+            return false;
         }
 
         function MwsStore(tiddler) {
@@ -7973,6 +8247,74 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                 return antwort.json();
             }).catch(function () {
                 return null;
+            });
+        };
+
+        /* Was der Server ueber die Oberflaechen-Version sagt.
+
+           MWS liefert die Fassung als Konfigurations-Tiddler mit, nicht im
+           Status: shell-policy, shell-release, shell-latest-release und die
+           beiden Beschriftungen. Nur bei der Politik "notify" und nur, wenn
+           eine neuere Nummer bereitliegt, gibt es hier etwas anzubieten.
+
+           Wer sie uebernehmen darf, sagt der Status: die Besitzerin und die
+           Administratoren - dieselbe Grenze wie beim Einstellungsformular.
+           Ein Angebot, das diese Benutzerin schon weggelegt hat, kommt nicht
+           wieder. Antwortet der Server nicht, gibt es kein Angebot; es wird
+           nichts erfunden. */
+        MwsStore.prototype.shellStatus = function () {
+            const konfig = {};
+            try {
+                (window.$tw && window.$tw.preloadTiddlers || []).forEach(function (t) {
+                    if (t && t.title && String(t.title).indexOf('$:/config/multiwikiclient/shell-') === 0) {
+                        konfig[String(t.title).replace('$:/config/multiwikiclient/', '')] = String(t.text || '');
+                    } else if (t && t.title === '$:/config/multiwikiclient/owner') {
+                        konfig.owner = String(t.text || '');
+                    }
+                });
+            } catch (e) { /* ohne Vormerkung ist hier nichts zu lesen */ }
+
+            if (konfig['shell-policy'] !== 'notify') return Promise.resolve(null);
+
+            const geliefert = Number(konfig['shell-release']) || 0;
+            const neueste = Number(konfig['shell-latest-release']) || 0;
+            if (!geliefert || !neueste || neueste === geliefert) return Promise.resolve(null);
+            if (shellAngebotWeg(neueste)) return Promise.resolve(null);
+
+            return fetch('/recipe/' + encodeURIComponent(this.slug) + '/status', {
+                headers: { 'X-Requested-With': 'fetch' },
+                credentials: 'same-origin'
+            }).then(function (antwort) {
+                if (!antwort.ok) return null;
+                return antwort.json();
+            }).then(function (status) {
+                if (!status || !status.isLoggedIn) return null;
+                if (!(status.isAdmin || (konfig.owner && status.username === konfig.owner))) return null;
+                return {
+                    alt: konfig['shell-release-label'] || String(geliefert),
+                    neu: konfig['shell-latest-release-label'] || String(neueste),
+                    latest: neueste
+                };
+            }).catch(function () {
+                return null;
+            });
+        };
+
+        /* Die angebotene Oberflaeche uebernehmen. Der Server entscheidet:
+           200 heisst uebernommen, alles andere heisst nicht. */
+        MwsStore.prototype.shellAktualisieren = function () {
+            return fetch('/recipe/' + encodeURIComponent(this.slug) + '/shell/update', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'fetch'
+                },
+                body: JSON.stringify({}),
+                credentials: 'same-origin'
+            }).then(function (antwort) {
+                return antwort.ok;
+            }).catch(function () {
+                return false;
             });
         };
 
@@ -8133,6 +8475,10 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
             } else {
                 delete felder.eigeneFarben;
             }
+            /* Hintergrundbilder gehoeren zur Darstellung des Wikis und
+               sollen wie Thema oder Farbwelt allen Nutzern zur Verfuegung
+               stehen; deshalb traegt sie der Startseiten-Tiddler. */
+            felder.hintergrund = JSON.stringify(hintergrundLesen(this.einstellungen.hintergrund));
             if (this.einstellungen.sprache) felder.sprache = this.einstellungen.sprache;
             felder.toolbar = this.einstellungen.toolbar ? 'true' : 'false';
             felder.seiteninhalt = this.einstellungen.seiteninhalt ? 'true' : 'false';
@@ -8195,6 +8541,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                 thema: traeger.thema === 'dark' ? 'dark' : (traeger.thema === 'light' ? 'light' : ''),
                 palette: traeger.palette ? String(traeger.palette) : '',
                 eigeneFarben: eigeneFarbenLesen(traeger.eigeneFarben),
+                hintergrund: hintergrundLesen(traeger.hintergrund),
                 sprache: traeger.sprache ? String(traeger.sprache) : '',
                 toolbar: wahlWahr(traeger.toolbar),
                 seiteninhalt: wahlWahr(traeger.seiteninhalt)
@@ -8218,6 +8565,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                 toolbar: this.einstellungen.toolbar,
                 seiteninhalt: this.einstellungen.seiteninhalt,
                 eigeneFarben: this.einstellungen.eigeneFarben,
+                hintergrund: this.einstellungen.hintergrund,
                 nurLesen: this.nurLesen,
                 wikiTitel: this.wikiTitel,
                 wikiUntertitel: this.wikiUntertitel,
@@ -8248,6 +8596,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                 if (this.einstellungen.eigeneFarben) {
                     t.eigeneFarben = JSON.stringify(this.einstellungen.eigeneFarben);
                 }
+                t.hintergrund = JSON.stringify(hintergrundLesen(this.einstellungen.hintergrund));
                 if (this.einstellungen.sprache) t.sprache = this.einstellungen.sprache;
                 /* Der Schalter der Werkzeugleiste ist ein echtes Ja/Nein:
                    er wird immer mitgeschrieben, nicht nur wenn an. */
@@ -8306,6 +8655,11 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
 
         MwsStore.prototype.eigeneFarbenSetzen = function (werte) {
             this.einstellungen.eigeneFarben = werte || null;
+            return this.einstellungenSchreiben();
+        };
+
+        MwsStore.prototype.hintergrundSetzen = function (werte) {
+            this.einstellungen.hintergrund = hintergrundLesen(werte);
             return this.einstellungenSchreiben();
         };
 
@@ -8398,6 +8752,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
             this.serverseitig = true;
             this.datenUrl = tiddlyhostMeta('simplewiki-data-url');
             this.statusUrl = tiddlyhostMeta('simplewiki-status-url');
+            this.shellUpdateUrl = tiddlyhostMeta('simplewiki-shell-update-url');
             this.seiten = [];
             this.startId = '';
             this.einstellungen = {};
@@ -8436,10 +8791,55 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     username: angemeldet ? String(daten.logged_in_as || '') : '',
                     /* Schreiben darf, wer angemeldet ist; ob er es auf
                        diesem Wiki darf, sagt erst der PUT (403). */
-                    bags: [{ canUserWrite: angemeldet }]
+                    bags: [{ canUserWrite: angemeldet }],
+                    /* Was der Server ueber die Oberflaechen-Version sagt:
+                       served, latest, update_available, can_update. Die
+                       Grenze "nur Besitzerin und Superuser" steckt schon
+                       in can_update. */
+                    shell: daten.shell || null
                 };
             }).catch(function () {
                 return null;
+            });
+        };
+
+        /* Ob dieses Wiki eine neuere Oberflaeche anbietet.
+
+           Tiddlyhost entscheidet das im Status: update_available sagt, ob
+           die bereitliegende Fassung wirklich neuer ist, can_update, ob
+           diese Benutzerin sie uebernehmen darf. Hier wird nichts
+           nachgerechnet, was der Server schon entschieden hat. */
+        TiddlyhostStore.prototype.shellStatus = function () {
+            return this.status().then(function (status) {
+                if (!status || !status.shell) return null;
+                const shell = status.shell;
+                if (!shell.update_available || !shell.can_update) return null;
+                const neueste = shell.latest == null ? '' : String(shell.latest);
+                if (!neueste || shellAngebotWeg(neueste)) return null;
+                return {
+                    alt: shell.served == null ? '' : String(shell.served),
+                    neu: neueste,
+                    latest: neueste
+                };
+            });
+        };
+
+        /* Die angebotene Oberflaeche uebernehmen. Der Server tauscht nur
+           die Huelle; die Seiten liegen in der Dateninsel und bleiben. */
+        TiddlyhostStore.prototype.shellAktualisieren = function () {
+            if (!this.shellUpdateUrl) return Promise.resolve(false);
+            return fetch(this.shellUpdateUrl, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'fetch'
+                },
+                body: JSON.stringify({}),
+                credentials: 'same-origin'
+            }).then(function (antwort) {
+                return antwort.ok;
+            }).catch(function () {
+                return false;
             });
         };
 
@@ -8488,6 +8888,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
             daten.toolbar = !!this.einstellungen.toolbar;
             daten.seiteninhalt = !!this.einstellungen.seiteninhalt;
             daten.eigeneFarben = this.einstellungen.eigeneFarben || null;
+            daten.hintergrund = hintergrundLesen(this.einstellungen.hintergrund);
             return daten;
         };
 
@@ -8577,6 +8978,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                     thema: daten.thema === 'dark' ? 'dark' : (daten.thema === 'light' ? 'light' : ''),
                     palette: daten.palette == null ? '' : String(daten.palette),
                     eigeneFarben: eigeneFarbenLesen(daten.eigeneFarben),
+                    hintergrund: hintergrundLesen(daten.hintergrund),
                     sprache: daten.sprache == null ? '' : String(daten.sprache),
                     toolbar: wahlWahr(daten.toolbar),
                     seiteninhalt: wahlWahr(daten.seiteninhalt)
@@ -8611,7 +9013,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
             this.startId = insel.startseite == null ? '' : String(insel.startseite);
 
             const bekannt = ['version', 'seiten', 'startseite', 'sprache', 'thema',
-                'palette', 'toolbar', 'seiteninhalt', 'eigeneFarben'];
+                'palette', 'toolbar', 'seiteninhalt', 'eigeneFarben', 'hintergrund'];
             const fremd = {};
             Object.keys(insel).forEach(k => {
                 if (bekannt.indexOf(k) < 0) fremd[k] = insel[k];
@@ -8622,6 +9024,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                 thema: insel.thema === 'dark' ? 'dark' : (insel.thema === 'light' ? 'light' : ''),
                 palette: insel.palette == null ? '' : String(insel.palette),
                 eigeneFarben: eigeneFarbenLesen(insel.eigeneFarben),
+                hintergrund: hintergrundLesen(insel.hintergrund),
                 sprache: insel.sprache == null ? '' : String(insel.sprache),
                 toolbar: wahlWahr(insel.toolbar),
                 seiteninhalt: wahlWahr(insel.seiteninhalt)
@@ -8641,6 +9044,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                 toolbar: this.einstellungen.toolbar,
                 seiteninhalt: this.einstellungen.seiteninhalt,
                 eigeneFarben: this.einstellungen.eigeneFarben,
+                hintergrund: this.einstellungen.hintergrund,
                 nurLesen: this.nurLesen,
                 wikiTitel: this.wikiTitel,
                 wikiUntertitel: this.wikiUntertitel,
@@ -8685,6 +9089,11 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
 
         TiddlyhostStore.prototype.eigeneFarbenSetzen = function (werte) {
             this.einstellungen.eigeneFarben = werte || null;
+            return this.buchen();
+        };
+
+        TiddlyhostStore.prototype.hintergrundSetzen = function (werte) {
+            this.einstellungen.hintergrund = hintergrundLesen(werte);
             return this.buchen();
         };
 
@@ -9016,6 +9425,11 @@ showSettings: false,
                        { basis, hell: {name: wert}, dunkel: {...} }. null,
                        solange niemand eine eigene Welt angelegt hat. */
                     eigeneFarben: null,
+                    /* Hintergrundbilder je Modus: { hell: { bild, sicht }, dunkel: {...} }.
+                       "bild" ist eine Data-URL (Bestandteil des Wikis) oder leer,
+                       "sicht" (0-100) bestimmt, wie stark das Bild sichtbar bleibt
+                       und wie viel die eingestellte Hintergrundfarbe ueberdeckt. */
+                    hintergrund: { hell: { bild: '', sicht: 100 }, dunkel: { bild: '', sicht: 100 } },
                     /* Welcher Zweig im Farb-Editor gerade bearbeitet wird
                        und aus welcher Welt geklont wird. */
                     farbModus: 'hell',
@@ -9024,6 +9438,10 @@ showSettings: false,
                        jemand ihn aufschlaegt - die lange Farbenliste soll
                        nicht dauerhaft im Panel stehen. */
                     farbEditorOffen: false,
+                    /* Der Hintergrundbereich bleibt zu, bis jemand ihn
+                       aufschlaegt - zwei Bilder mit Vorschau und Regler
+                       brauchen im Panel mehr Platz als der Rest. */
+                    hintergrundOffen: false,
                     startPageId: '',
                     mdEditor: null,
                     editorReady: false,
@@ -9335,10 +9753,10 @@ showSettings: false,
                     this.kannSchreiben = false;
                     this.statusHolen();
                     /* Liegt eine neuere Oberfläche bereit, entscheidet das
-                       hier - der Status wird dafür noch einmal gefragt.
-                       Nur MWS kennt diesen Weg (die Tiddler tragen die
-                       Fassung); Tiddlyhost braucht ihn nicht. */
-                    if (SPEICHER.art === 'mws') this.pruefeShellUpdate();
+                       hier - wenn der Speicher sie anbieten kann. MWS und
+                       Tiddlyhost tun das auf ihrem eigenen Weg; im Browser
+                       gibt es nichts zu fragen. */
+                    this.pruefeShellUpdate();
                 }
                 this.updateTheme();
                 this.applyPalette();
@@ -10315,11 +10733,13 @@ showSettings: false,
 
                 /* Ziehen: der Griff nimmt die Zeile mit, die Zeile
                    selbst ist das Ziel. Drei Zonen sagen, was geschieht:
-                   oben kostet den Platz vor der Zeile, die Mitte macht
-                   die Zeile zur Elternseite (die gezogene Seite wird ihr
-                   letztes Kind), unten kostet den Platz hinter dem
-                   ganzen Unterbaum der Zeile. Bei jeder Bewegung zieht
-                   der Unterbaum mit. */
+                   oben und unten setzen die gezogene Seite auf die Ebene
+                   der Zielzeile (davor bzw. hinter deren Unterbaum), die
+                   Mitte macht die Zielzeile zur Elternseite. Damit fuehrt
+                   derselbe Zug auch wieder aus der Verschachtelung
+                   heraus: wer neben einer Zeile der obersten Ebene
+                   landet, steht danach ebenfalls oben. Bei jeder
+                   Bewegung zieht der Unterbaum mit. */
                 onDragStart(i, event) {
                     if (this.searchQuery.trim()) return;
                     this.dragIndex = i;
@@ -10365,7 +10785,21 @@ showSettings: false,
                     if (art === 'kind') {
                         this.einruecken(von, ziel);
                     } else {
-                        this.blockAnPosition(von, art === 'unten' ? this.unterbaumEnde(ziel) : ziel);
+                        /* Die Linie davor oder danach bedeutet: gleiche
+                           Ebene wie die Zielzeile. Ihr eltern-Wert wird
+                           mitgenommen - ist die Zielzeile oben, ist es
+                           die gezogene danach auch. Ein verwaister oder
+                           in den eigenen Unterbaum zeigender Wert
+                           aendert nichts, damit keine Schleife entsteht. */
+                        const zielSeite = this.pages[ziel];
+                        const gezogenSeite = this.pages[von];
+                        let eltern = zielSeite ? (zielSeite.eltern || '') : '';
+                        const elternSeite = eltern ? this.pages.find(p => p.title === eltern) : null;
+                        if (elternSeite && (elternSeite.id === gezogenSeite.id
+                            || this.istNachkomme(elternSeite, gezogenSeite.title))) {
+                            eltern = gezogenSeite.eltern || '';
+                        }
+                        this.blockAnPosition(von, art === 'unten' ? this.unterbaumEnde(ziel) : ziel, eltern);
                     }
                 },
 
@@ -10379,21 +10813,32 @@ showSettings: false,
                    Stelle ziel anfaengt. ziel bezieht sich - wie beim
                    Verschieben einer einzelnen Seite vorher - auf die
                    Liste vor dem Verschieben; so bleibt die Rechnung in
-                   den Tests einfach. */
-                blockAnPosition(von, ziel) {
+                   den Tests einfach. Mit eltern wird zugleich die Ebene
+                   gesetzt; ohne das Argument bleibt sie, wie sie war. */
+                blockAnPosition(von, ziel, eltern) {
                     if (von < 0 || von >= this.pages.length) return;
+                    /* Das Ende vor dem Aendern des eltern-Werts
+                       berechnen - sonst zaehlt der Block sich selbst
+                       schon zum Unterbaum der neuen Elternseite. */
                     const ende = this.unterbaumEnde(von);
                     const breite = ende - von;
                     let z = ziel;
                     if (von < z) z -= breite;   /* der Rest rutscht vor */
                     z = Math.max(0, Math.min(z, this.pages.length - breite));
-                    if (z === von) return;
-                    const block = this.pages.slice(von, ende);
-                    /* Umstellen an Ort und Stelle, nicht ueber eine neue
-                       Liste: der Speicher zeigt auf dieselbe. */
-                    this.pages.splice(von, breite);
-                    this.pages.splice(z, 0, ...block);
-                    this.seitenSichern();
+                    const seite = this.pages[von];
+                    const alteEltern = seite.eltern || '';
+                    const neueEltern = eltern === undefined ? alteEltern : eltern;
+                    let geaendert = neueEltern !== alteEltern;
+                    if (geaendert) seite.eltern = neueEltern;
+                    if (z !== von) {
+                        const block = this.pages.slice(von, ende);
+                        /* Umstellen an Ort und Stelle, nicht ueber eine
+                           neue Liste: der Speicher zeigt auf dieselbe. */
+                        this.pages.splice(von, breite);
+                        this.pages.splice(z, 0, ...block);
+                        geaendert = true;
+                    }
+                    if (geaendert) this.seitenSichern();
                 },
 
                 /* Eine Seite mit ihrem Unterbaum zur letzten Kind-Seite
@@ -10872,6 +11317,9 @@ showSettings: false,
                     const eigen = eigeneFarbenLesen(daten.eigeneFarben);
                     this.eigeneFarben = eigen;
                     SPEICHER.eigeneFarbenSetzen(eigen);
+                    const hg = hintergrundLesen(daten.hintergrund);
+                    this.hintergrund = hg;
+                    SPEICHER.hintergrundSetzen(hg);
                     if (daten.sprache && SIMPLEWIKI_LANGS[daten.sprache]) {
                         this.currentLang = daten.sprache;
                         this.applyLanguage();
@@ -10898,6 +11346,7 @@ showSettings: false,
                         this.seiteninhaltAn = wahlWahr(daten.seiteninhalt);
                         SPEICHER.seiteninhaltSetzen(this.seiteninhaltAn);
                     }
+                    this.applyHintergrund();
                 },
 
                 /* "1 Seite" oder "3 Seiten" – für Hinweise und den Fluss. */
@@ -10924,6 +11373,7 @@ showSettings: false,
                     daten.toolbar = !!this.toolbarSichtbar;
                     daten.seiteninhalt = !!this.seiteninhaltAn;
                     daten.eigeneFarben = this.eigeneFarben;
+                    daten.hintergrund = hintergrundLesen(this.hintergrund);
                     return daten;
                 },
 
@@ -10935,7 +11385,7 @@ showSettings: false,
                         this.fremdeDaten = {};
                         return;
                     }
-                    const bekannt = ['version', 'seiten', 'startseite', 'sprache', 'thema', 'palette', 'toolbar', 'seiteninhalt', 'eigeneFarben'];
+                    const bekannt = ['version', 'seiten', 'startseite', 'sprache', 'thema', 'palette', 'toolbar', 'seiteninhalt', 'eigeneFarben', 'hintergrund'];
                     const raus = {};
                     Object.keys(daten).forEach(k => {
                         if (bekannt.indexOf(k) < 0) raus[k] = daten[k];
@@ -11119,7 +11569,8 @@ showSettings: false,
                             sprache: this.currentLang,
                             thema: this.isDarkMode ? 'dark' : 'light',
                             palette: this.palette,
-                            eigeneFarben: this.eigeneFarben
+                            eigeneFarben: this.eigeneFarben,
+                            hintergrund: hintergrundLesen(this.hintergrund)
                         };
                         this.dateiHerunterladen(this.bauExport(leer, neueKennung(), '', ''), 'simplewiki-leer.html', 'text/html');
                         this.hinweis(this.t('noticeLeerSaved'));
@@ -11391,6 +11842,7 @@ showSettings: false,
                             this.seitenUebernehmen();
                             this.startPageId = geladen.startseite || '';
                             this.einstellungenMerken(geladen);
+                            this.applyHintergrund();
                             /* Hier gilt der Entwurf, weil er juenger ist
                                als die Datei: was zu sehen ist, kennt die
                                Datei noch nicht. Die Warnung sagt es, statt
@@ -11516,6 +11968,7 @@ showSettings: false,
                         this.isDarkMode = geladen.thema === 'dark';
                     }
                     this.eigeneFarben = geladen.eigeneFarben || null;
+                    this.hintergrund = hintergrundLesen(geladen.hintergrund);
                     if (SIMPLEWIKI_PALETTEN.indexOf(geladen.palette) >= 0) {
                         this.palette = geladen.palette;
                     }
@@ -11667,100 +12120,44 @@ showSettings: false,
 
                 /* ---------- Neue Oberflächen-Version anbieten ----------
 
-                   MWS meldet in der Antwort von /recipe/<name>/status unter
-                   "shell", auf welcher Template-Version diese Wiki steht.
-                   Bei der Politik "notify" mit bereitliegender neuerer
-                   Version zeigt diese Wiki der Besitzerin und den
+                   Ob eine neuere Oberfläche bereitliegt, weiss der Speicher
+                   am besten - er kennt seinen Server. MWS liest die Fassung
+                   aus den Konfigurations-Tiddlern, Tiddlyhost aus dem
+                   Status. Beide geben hier dasselbe zurueck: alt, neu und
+                   die Nummer der angebotenen Fassung - oder null.
+
+                   Bei einem Angebot zeigt diese Wiki der Besitzerin und den
                    Administratoren den Hinweis im Einstellungen-Dialog (der
-                   Punkt am Zahnrad sagt es), mit einem Knopf, der
-                   PUT /recipe/<name>/shell/update aufruft (eine eigene
-                   Route, nur für Besitzerin und Administratoren).
+                   Punkt am Zahnrad sagt es), mit einem Knopf, der den
+                   Speicher die neue Oberfläche übernehmen lässt.
 
                    Weggedrückt wird der Hinweis je angebotener Version:
                    "Beim nächsten Update erinnern" legt einen Schlüssel für
                    die Nummer der angebotenen Version, das nächste Angebot
                    bekommt einen neuen Schlüssel und meldet sich wieder;
                    "In einem Monat erinnern" legt stattdessen einen
-                   Stichtag, nach dem derselbe Hinweis zurückkehrt. */
+                   Stichtag, nach dem derselbe Hinweis zurückkehrt. Die
+                   Frage, ob ein Angebot weggelegt ist, stellt der Speicher
+                   selbst (shellAngebotWeg). */
                 pruefeShellUpdate() {
-                    /* Nur im MWS-Betrieb: die Wiki kommt von /wiki/<name>/. */
-                    const m = String(window.location.pathname || '').match(/\/wiki\/([^/]+)/);
-                    if (!m) return;
-
-                    /* Die Konfiguration steht in den Tiddlern, die der Server
-                       mitgeschickt hat - in derselben Form, in der die App sie
-                       liest. Ohne "shell-policy"-Tiddler ist das ein Wiki ohne
-                       Versionsbetrachtung, und dann ist hier nichts zu tun. */
-                    const konfig = {};
-                    try {
-                        (window.$tw && window.$tw.preloadTiddlers || []).forEach(function (t) {
-                            if (t && t.title && String(t.title).indexOf('$:/config/multiwikiclient/shell-') === 0) {
-                                konfig[String(t.title).replace('$:/config/multiwikiclient/', '')] = String(t.text || '');
-                            } else if (t && t.title === '$:/config/multiwikiclient/owner') {
-                                konfig.owner = String(t.text || '');
-                            }
-                        });
-                    } catch (e) { /* ohne Vormerkung ist hier nichts zu lesen */ }
-
-                    if (konfig['shell-policy'] !== 'notify') return;
-
-                    const slug = decodeURIComponent(m[1]);
-                    const geliefert = Number(konfig['shell-release']) || 0;
-                    const neueste = Number(konfig['shell-latest-release']) || 0;
-                    if (!geliefert || !neueste || neueste === geliefert) return;
-
-                    /* Weggedrückt? "bis zum nächsten Update" liegt ein
-                       Schlüssel für die angebotene Version, "für einen
-                       Monat" ein Stichtag. Fehlt localStorage, ist der
-                       Hinweis eben nicht weggedrückt - schlimmer ist,
-                       dass er nie wieder käme. */
-                    try {
-                        if (localStorage.getItem('simplewiki_update_weg_' + neueste)) return;
-                        const bis = Number(localStorage.getItem('simplewiki_update_bis_' + neueste)) || 0;
-                        if (bis > Date.now()) return;
-                        if (bis) localStorage.removeItem('simplewiki_update_bis_' + neueste);
-                    } catch (e) { /* ohne Speicher kein Wegdrucken */ }
-
+                    if (typeof SPEICHER.shellStatus !== 'function') return;
                     const selbst = this;
-                    fetch('/recipe/' + encodeURIComponent(slug) + '/status', {
-                        headers: { 'X-Requested-With': 'fetch' },
-                        credentials: 'same-origin'
-                    }).then(function (antwort) {
-                        if (!antwort.ok) return null;
-                        return antwort.json();
-                    }).then(function (status) {
-                        /* Der Status sagt, wer hier am Werk ist. Der Status
-                           selbst fehlt, wenn der Server nicht antwortet -
-                           dann wird nichts erfunden, auch kein Hinweis. */
-                        if (!status || !status.isLoggedIn) return;
-                        if (!(status.isAdmin || (konfig.owner && status.username === konfig.owner))) return;
-
-                        selbst.shellUpdate = {
-                            alt: konfig['shell-release-label'] || String(geliefert),
-                            neu: konfig['shell-latest-release-label'] || String(neueste),
-                            latest: neueste
-                        };
+                    SPEICHER.shellStatus().then(function (angebot) {
+                        if (!angebot) return;
+                        selbst.shellUpdate = angebot;
+                    }).catch(function () {
+                        /* Kein Angebot ist auch eine Antwort. */
                     });
                 },
 
                 shellUebernehmen() {
                     if (!this.shellUpdate) return;
-                    const m = String(window.location.pathname || '').match(/\/wiki\/([^/]+)/);
-                    if (!m) return;
-                    const slug = decodeURIComponent(m[1]);
+                    if (typeof SPEICHER.shellAktualisieren !== 'function') return;
                     this.shellTaetig = true;
                     this.shellFehler = false;
                     const selbst = this;
-                    fetch('/recipe/' + encodeURIComponent(slug) + '/shell/update', {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Requested-With': 'fetch'
-                        },
-                        body: JSON.stringify({}),
-                        credentials: 'same-origin'
-                    }).then(function (antwort) {
-                        if (antwort.ok) { window.location.reload(); return; }
+                    SPEICHER.shellAktualisieren().then(function (ok) {
+                        if (ok) { window.location.reload(); return; }
                         selbst.shellFehler = true;
                         selbst.shellTaetig = false;
                     }).catch(function () {
@@ -12519,6 +12916,79 @@ createNewPage() {
                     SPEICHER.themaSetzen(this.isDarkMode ? 'dark' : 'light');
                 },
 
+                /* Das Hintergrundbild des aktiven Modus hinter die Seite
+                   legen. Zwei feste Schichten (im Markup ganz oben in #app)
+                   malen das Bild ausfuellend und fixiert und darueber einen
+                   Schleier in der eingestellten Hintergrundfarbe der aktiven
+                   Farbwelt (--bg-primary). "sicht" (0-100) ist der sichtbare
+                   Anteil des Bildes; der Rest wird vom Schleier ueberdeckt.
+                   Ohne Bild fuer den aktiven Modus bleibt alles wie bisher. */
+                applyHintergrund() {
+                    const hg = hintergrundLesen(this.hintergrund);
+                    this.hintergrund = hg;
+                    const modus = this.isDarkMode ? 'dunkel' : 'hell';
+                    const ein = hg[modus] || { bild: '', sicht: 100 };
+                    const bild = (ein && ein.bild) ? String(ein.bild) : '';
+                    const sicht = (ein && typeof ein.sicht === 'number')
+                        ? Math.max(0, Math.min(100, ein.sicht)) : 100;
+                    const bildEl = (this.$refs && this.$refs.bgBild) || document.getElementById('sw-bg-bild');
+                    const schleierEl = (this.$refs && this.$refs.bgSchleier) || document.getElementById('sw-bg-schleier');
+                    if (bild) {
+                        document.body.classList.add('hat-hintergrund');
+                        if (bildEl) bildEl.style.backgroundImage = 'url("' + bild.replace(/"/g, '\\"') + '")';
+                        if (schleierEl) schleierEl.style.opacity = String((100 - sicht) / 100);
+                    } else {
+                        document.body.classList.remove('hat-hintergrund');
+                        if (bildEl) bildEl.style.backgroundImage = 'none';
+                        if (schleierEl) schleierEl.style.opacity = '0';
+                    }
+                },
+
+                /* Ein Bild fuer hell oder dunkel laden. Nur Dateigroesse
+                   wird begrenzt (max. 1 MB), dann als Data-URL im Wiki
+                   gespeichert, damit es Bestandteil des Wikis ist. */
+                hintergrundLaden(modus, event) {
+                    const datei = event && event.target && event.target.files && event.target.files[0];
+                    if (!datei) return;
+                    if (datei.size > 1048576) {
+                        this.hinweis(this.t('backgroundTooBig'));
+                        if (event.target) event.target.value = '';
+                        return;
+                    }
+                    const self = this;
+                    const leser = new FileReader();
+                    leser.onload = function (e) {
+                        const bild = e && e.target ? String(e.target.result || '') : '';
+                        const hg = hintergrundLesen(self.hintergrund);
+                        if (!hg[modus]) hg[modus] = { bild: '', sicht: 100 };
+                        hg[modus].bild = bild;
+                        self.hintergrund = hg;
+                        self.applyHintergrund();
+                        SPEICHER.hintergrundSetzen(self.hintergrund);
+                    };
+                    leser.readAsDataURL(datei);
+                    if (event.target) event.target.value = '';
+                },
+
+                hintergrundEntfernen(modus) {
+                    const hg = hintergrundLesen(this.hintergrund);
+                    if (!hg[modus]) hg[modus] = { bild: '', sicht: 100 };
+                    hg[modus].bild = '';
+                    this.hintergrund = hg;
+                    this.applyHintergrund();
+                    SPEICHER.hintergrundSetzen(this.hintergrund);
+                },
+
+                hintergrundSicht(modus, wert) {
+                    const hg = hintergrundLesen(this.hintergrund);
+                    if (!hg[modus]) hg[modus] = { bild: '', sicht: 100 };
+                    const s = Number(wert);
+                    hg[modus].sicht = isNaN(s) ? 100 : Math.max(0, Math.min(100, Math.round(s)));
+                    this.hintergrund = hg;
+                    this.applyHintergrund();
+                    SPEICHER.hintergrundSetzen(this.hintergrund);
+                },
+
                 /* Die gewaehlte Farbwelt an den body tragen. Die CSS-Namen
                    sind <body class="pal-<name>">; Pergament ist die Basis
                    ohne eigene Regel (es sind :root und body.dark-mode
@@ -12557,6 +13027,7 @@ createNewPage() {
                         this.farbModus = this.isDarkMode ? 'dunkel' : 'hell';
                     }
                     this.applyPalette();
+                    this.applyHintergrund();
                     SPEICHER.paletteSetzen(this.palette);
                 },
 
@@ -12685,6 +13156,8 @@ createNewPage() {
                        nach dem Umschalten muss der andere Zweig an den
                        body. */
                     if (this.palette === 'eigene') this.applyPalette();
+                    /* Je nach Hell/Dunkel das passende Hintergrundbild zeigen. */
+                    this.applyHintergrund();
                     this.applyEditorTheme();
                 }
             }

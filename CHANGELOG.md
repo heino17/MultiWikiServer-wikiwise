@@ -5455,6 +5455,29 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 152. Refresh: the bundled SimpleWiki shell reaches v0.1.56
+
+**Files:**
+- `templates/simplewiki.html`
+
+**Change.** The build artifact shipped with MWS moves from `v0.1.52` to
+`v0.1.56`; four shell releases arrived since the last refresh. The shell can
+now offer its own update on Tiddlyhost as well as under MWS, a page carries
+one background picture per colour mode with a visibility slider, the
+background settings section starts collapsed so the panel stays short, and
+the drag grip puts a page back on the top level: the line before or after a
+row sets the target level while the centre bar still nests it as a child.
+The help texts cover all eight languages. Together with §151, an imported
+saved file now also keeps those settings.
+
+A fresh `init-store` provisions the new shell; an existing template is
+brought forward with `provision-simplewiki` (§132). A shell update swaps only
+the HTML shell, so the pages in the data island stay untouched.
+
+**Verified.** `npm run tsc2` and `npm run build` are clean. The packed tarball
+contains `templates/simplewiki.html` with `mws-shell-version v0.1.56`, and
+`package.json` says `0.7.8`.
+
 ## 151. Fix: a SimpleWiki import keeps the display settings
 
 **Files:**
@@ -13390,6 +13413,29 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 152. Auffrischung: die mitgelieferte SimpleWiki-Schale erreicht v0.1.56
+
+**Dateien:**
+- `templates/simplewiki.html`
+
+**Änderung.** Das Build-Artefakt im Paket wandert von `v0.1.52` auf
+`v0.1.56`; seit der letzten Auffrischung sind vier Fassungen dazugekommen.
+Die Schale kann ihr Update jetzt auch auf Tiddlyhost anbieten, eine Seite
+trägt je Farbmodus ein Hintergrundbild mit Sichtbarkeitsregler, der
+Hintergrundbereich startet zugeklappt, damit das Panel kurz bleibt, und der
+Griff setzt eine Seite per Linie davor oder danach wieder auf die oberste
+Ebene, während der Balken in der Mitte sie weiter als Kind einordnet. Die
+Hilfetexte gibt es in allen acht Sprachen. Zusammen mit §151 behält auch ein
+importiertes gespeichertes Wiki diese Einstellungen.
+
+Ein frisches `init-store` liefert die neue Schale; ein bestehendes Template
+wird mit `provision-simplewiki` nachgezogen (§132). Ein Schalen-Update tauscht
+nur die HTML-Hülle, die Seiten in der Dateninsel bleiben unangetastet.
+
+**Geprüft.** `npm run tsc2` und `npm run build` sind sauber. Das gepackte
+Tarball enthält `templates/simplewiki.html` mit `mws-shell-version v0.1.56`,
+und `package.json` sagt `0.7.8`.
 
 ## 151. Fix: der SimpleWiki-Import behält die Darstellungseinstellungen
 
