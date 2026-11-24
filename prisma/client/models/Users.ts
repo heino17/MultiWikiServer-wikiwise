@@ -30,10 +30,12 @@ export type AggregateUsers = {
 
 export type UsersAvgAggregateOutputType = {
   wiki_limit: number | null
+  avatar_size_bytes: number | null
 }
 
 export type UsersSumAggregateOutputType = {
   wiki_limit: number | null
+  avatar_size_bytes: number | null
 }
 
 export type UsersMinAggregateOutputType = {
@@ -46,6 +48,10 @@ export type UsersMinAggregateOutputType = {
   created_at: Date | null
   last_login: Date | null
   wiki_limit: number | null
+  avatar_sha256: string | null
+  avatar_content_type: string | null
+  avatar_extension: string | null
+  avatar_size_bytes: number | null
 }
 
 export type UsersMaxAggregateOutputType = {
@@ -58,6 +64,10 @@ export type UsersMaxAggregateOutputType = {
   created_at: Date | null
   last_login: Date | null
   wiki_limit: number | null
+  avatar_sha256: string | null
+  avatar_content_type: string | null
+  avatar_extension: string | null
+  avatar_size_bytes: number | null
 }
 
 export type UsersCountAggregateOutputType = {
@@ -70,16 +80,22 @@ export type UsersCountAggregateOutputType = {
   created_at: number
   last_login: number
   wiki_limit: number
+  avatar_sha256: number
+  avatar_content_type: number
+  avatar_extension: number
+  avatar_size_bytes: number
   _all: number
 }
 
 
 export type UsersAvgAggregateInputType = {
   wiki_limit?: true
+  avatar_size_bytes?: true
 }
 
 export type UsersSumAggregateInputType = {
   wiki_limit?: true
+  avatar_size_bytes?: true
 }
 
 export type UsersMinAggregateInputType = {
@@ -92,6 +108,10 @@ export type UsersMinAggregateInputType = {
   created_at?: true
   last_login?: true
   wiki_limit?: true
+  avatar_sha256?: true
+  avatar_content_type?: true
+  avatar_extension?: true
+  avatar_size_bytes?: true
 }
 
 export type UsersMaxAggregateInputType = {
@@ -104,6 +124,10 @@ export type UsersMaxAggregateInputType = {
   created_at?: true
   last_login?: true
   wiki_limit?: true
+  avatar_sha256?: true
+  avatar_content_type?: true
+  avatar_extension?: true
+  avatar_size_bytes?: true
 }
 
 export type UsersCountAggregateInputType = {
@@ -116,6 +140,10 @@ export type UsersCountAggregateInputType = {
   created_at?: true
   last_login?: true
   wiki_limit?: true
+  avatar_sha256?: true
+  avatar_content_type?: true
+  avatar_extension?: true
+  avatar_size_bytes?: true
   _all?: true
 }
 
@@ -215,6 +243,10 @@ export type UsersGroupByOutputType = {
   created_at: Date
   last_login: Date | null
   wiki_limit: number | null
+  avatar_sha256: string | null
+  avatar_content_type: string | null
+  avatar_extension: string | null
+  avatar_size_bytes: number | null
   _count: UsersCountAggregateOutputType | null
   _avg: UsersAvgAggregateOutputType | null
   _sum: UsersSumAggregateOutputType | null
@@ -250,6 +282,10 @@ export type UsersWhereInput = {
   created_at?: Prisma.DateTimeFilter<"Users"> | Date | string
   last_login?: Prisma.DateTimeNullableFilter<"Users"> | Date | string | null
   wiki_limit?: Prisma.IntNullableFilter<"Users"> | number | null
+  avatar_sha256?: Prisma.StringNullableFilter<"Users"> | string | null
+  avatar_content_type?: Prisma.StringNullableFilter<"Users"> | string | null
+  avatar_extension?: Prisma.StringNullableFilter<"Users"> | string | null
+  avatar_size_bytes?: Prisma.IntNullableFilter<"Users"> | number | null
   sessions?: Prisma.SessionsListRelationFilter
   roles?: Prisma.RolesListRelationFilter
 }
@@ -264,6 +300,10 @@ export type UsersOrderByWithRelationInput = {
   created_at?: Prisma.SortOrder
   last_login?: Prisma.SortOrderInput | Prisma.SortOrder
   wiki_limit?: Prisma.SortOrderInput | Prisma.SortOrder
+  avatar_sha256?: Prisma.SortOrderInput | Prisma.SortOrder
+  avatar_content_type?: Prisma.SortOrderInput | Prisma.SortOrder
+  avatar_extension?: Prisma.SortOrderInput | Prisma.SortOrder
+  avatar_size_bytes?: Prisma.SortOrderInput | Prisma.SortOrder
   sessions?: Prisma.SessionsOrderByRelationAggregateInput
   roles?: Prisma.RolesOrderByRelationAggregateInput
 }
@@ -281,6 +321,10 @@ export type UsersWhereUniqueInput = Prisma.AtLeast<{
   created_at?: Prisma.DateTimeFilter<"Users"> | Date | string
   last_login?: Prisma.DateTimeNullableFilter<"Users"> | Date | string | null
   wiki_limit?: Prisma.IntNullableFilter<"Users"> | number | null
+  avatar_sha256?: Prisma.StringNullableFilter<"Users"> | string | null
+  avatar_content_type?: Prisma.StringNullableFilter<"Users"> | string | null
+  avatar_extension?: Prisma.StringNullableFilter<"Users"> | string | null
+  avatar_size_bytes?: Prisma.IntNullableFilter<"Users"> | number | null
   sessions?: Prisma.SessionsListRelationFilter
   roles?: Prisma.RolesListRelationFilter
 }, "user_id" | "username" | "email" | "resetCode">
@@ -295,6 +339,10 @@ export type UsersOrderByWithAggregationInput = {
   created_at?: Prisma.SortOrder
   last_login?: Prisma.SortOrderInput | Prisma.SortOrder
   wiki_limit?: Prisma.SortOrderInput | Prisma.SortOrder
+  avatar_sha256?: Prisma.SortOrderInput | Prisma.SortOrder
+  avatar_content_type?: Prisma.SortOrderInput | Prisma.SortOrder
+  avatar_extension?: Prisma.SortOrderInput | Prisma.SortOrder
+  avatar_size_bytes?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.UsersCountOrderByAggregateInput
   _avg?: Prisma.UsersAvgOrderByAggregateInput
   _max?: Prisma.UsersMaxOrderByAggregateInput
@@ -315,6 +363,10 @@ export type UsersScalarWhereWithAggregatesInput = {
   created_at?: Prisma.DateTimeWithAggregatesFilter<"Users"> | Date | string
   last_login?: Prisma.DateTimeNullableWithAggregatesFilter<"Users"> | Date | string | null
   wiki_limit?: Prisma.IntNullableWithAggregatesFilter<"Users"> | number | null
+  avatar_sha256?: Prisma.StringNullableWithAggregatesFilter<"Users"> | string | null
+  avatar_content_type?: Prisma.StringNullableWithAggregatesFilter<"Users"> | string | null
+  avatar_extension?: Prisma.StringNullableWithAggregatesFilter<"Users"> | string | null
+  avatar_size_bytes?: Prisma.IntNullableWithAggregatesFilter<"Users"> | number | null
 }
 
 export type UsersCreateInput = {
@@ -327,6 +379,10 @@ export type UsersCreateInput = {
   created_at?: Date | string
   last_login?: Date | string | null
   wiki_limit?: number | null
+  avatar_sha256?: string | null
+  avatar_content_type?: string | null
+  avatar_extension?: string | null
+  avatar_size_bytes?: number | null
   sessions?: Prisma.SessionsCreateNestedManyWithoutUserInput
   roles?: Prisma.RolesCreateNestedManyWithoutUsersInput
 }
@@ -341,6 +397,10 @@ export type UsersUncheckedCreateInput = {
   created_at?: Date | string
   last_login?: Date | string | null
   wiki_limit?: number | null
+  avatar_sha256?: string | null
+  avatar_content_type?: string | null
+  avatar_extension?: string | null
+  avatar_size_bytes?: number | null
   sessions?: Prisma.SessionsUncheckedCreateNestedManyWithoutUserInput
   roles?: Prisma.RolesUncheckedCreateNestedManyWithoutUsersInput
 }
@@ -355,6 +415,10 @@ export type UsersUpdateInput = {
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   last_login?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   wiki_limit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  avatar_sha256?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_content_type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_extension?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_size_bytes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   sessions?: Prisma.SessionsUpdateManyWithoutUserNestedInput
   roles?: Prisma.RolesUpdateManyWithoutUsersNestedInput
 }
@@ -369,6 +433,10 @@ export type UsersUncheckedUpdateInput = {
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   last_login?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   wiki_limit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  avatar_sha256?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_content_type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_extension?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_size_bytes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   sessions?: Prisma.SessionsUncheckedUpdateManyWithoutUserNestedInput
   roles?: Prisma.RolesUncheckedUpdateManyWithoutUsersNestedInput
 }
@@ -383,6 +451,10 @@ export type UsersCreateManyInput = {
   created_at?: Date | string
   last_login?: Date | string | null
   wiki_limit?: number | null
+  avatar_sha256?: string | null
+  avatar_content_type?: string | null
+  avatar_extension?: string | null
+  avatar_size_bytes?: number | null
 }
 
 export type UsersUpdateManyMutationInput = {
@@ -395,6 +467,10 @@ export type UsersUpdateManyMutationInput = {
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   last_login?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   wiki_limit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  avatar_sha256?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_content_type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_extension?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_size_bytes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 export type UsersUncheckedUpdateManyInput = {
@@ -407,6 +483,10 @@ export type UsersUncheckedUpdateManyInput = {
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   last_login?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   wiki_limit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  avatar_sha256?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_content_type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_extension?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_size_bytes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 export type UsersListRelationFilter = {
@@ -429,10 +509,15 @@ export type UsersCountOrderByAggregateInput = {
   created_at?: Prisma.SortOrder
   last_login?: Prisma.SortOrder
   wiki_limit?: Prisma.SortOrder
+  avatar_sha256?: Prisma.SortOrder
+  avatar_content_type?: Prisma.SortOrder
+  avatar_extension?: Prisma.SortOrder
+  avatar_size_bytes?: Prisma.SortOrder
 }
 
 export type UsersAvgOrderByAggregateInput = {
   wiki_limit?: Prisma.SortOrder
+  avatar_size_bytes?: Prisma.SortOrder
 }
 
 export type UsersMaxOrderByAggregateInput = {
@@ -445,6 +530,10 @@ export type UsersMaxOrderByAggregateInput = {
   created_at?: Prisma.SortOrder
   last_login?: Prisma.SortOrder
   wiki_limit?: Prisma.SortOrder
+  avatar_sha256?: Prisma.SortOrder
+  avatar_content_type?: Prisma.SortOrder
+  avatar_extension?: Prisma.SortOrder
+  avatar_size_bytes?: Prisma.SortOrder
 }
 
 export type UsersMinOrderByAggregateInput = {
@@ -457,10 +546,15 @@ export type UsersMinOrderByAggregateInput = {
   created_at?: Prisma.SortOrder
   last_login?: Prisma.SortOrder
   wiki_limit?: Prisma.SortOrder
+  avatar_sha256?: Prisma.SortOrder
+  avatar_content_type?: Prisma.SortOrder
+  avatar_extension?: Prisma.SortOrder
+  avatar_size_bytes?: Prisma.SortOrder
 }
 
 export type UsersSumOrderByAggregateInput = {
   wiki_limit?: Prisma.SortOrder
+  avatar_size_bytes?: Prisma.SortOrder
 }
 
 export type UsersScalarRelationFilter = {
@@ -538,6 +632,10 @@ export type UsersCreateWithoutRolesInput = {
   created_at?: Date | string
   last_login?: Date | string | null
   wiki_limit?: number | null
+  avatar_sha256?: string | null
+  avatar_content_type?: string | null
+  avatar_extension?: string | null
+  avatar_size_bytes?: number | null
   sessions?: Prisma.SessionsCreateNestedManyWithoutUserInput
 }
 
@@ -551,6 +649,10 @@ export type UsersUncheckedCreateWithoutRolesInput = {
   created_at?: Date | string
   last_login?: Date | string | null
   wiki_limit?: number | null
+  avatar_sha256?: string | null
+  avatar_content_type?: string | null
+  avatar_extension?: string | null
+  avatar_size_bytes?: number | null
   sessions?: Prisma.SessionsUncheckedCreateNestedManyWithoutUserInput
 }
 
@@ -588,6 +690,10 @@ export type UsersScalarWhereInput = {
   created_at?: Prisma.DateTimeFilter<"Users"> | Date | string
   last_login?: Prisma.DateTimeNullableFilter<"Users"> | Date | string | null
   wiki_limit?: Prisma.IntNullableFilter<"Users"> | number | null
+  avatar_sha256?: Prisma.StringNullableFilter<"Users"> | string | null
+  avatar_content_type?: Prisma.StringNullableFilter<"Users"> | string | null
+  avatar_extension?: Prisma.StringNullableFilter<"Users"> | string | null
+  avatar_size_bytes?: Prisma.IntNullableFilter<"Users"> | number | null
 }
 
 export type UsersCreateWithoutSessionsInput = {
@@ -600,6 +706,10 @@ export type UsersCreateWithoutSessionsInput = {
   created_at?: Date | string
   last_login?: Date | string | null
   wiki_limit?: number | null
+  avatar_sha256?: string | null
+  avatar_content_type?: string | null
+  avatar_extension?: string | null
+  avatar_size_bytes?: number | null
   roles?: Prisma.RolesCreateNestedManyWithoutUsersInput
 }
 
@@ -613,6 +723,10 @@ export type UsersUncheckedCreateWithoutSessionsInput = {
   created_at?: Date | string
   last_login?: Date | string | null
   wiki_limit?: number | null
+  avatar_sha256?: string | null
+  avatar_content_type?: string | null
+  avatar_extension?: string | null
+  avatar_size_bytes?: number | null
   roles?: Prisma.RolesUncheckedCreateNestedManyWithoutUsersInput
 }
 
@@ -642,6 +756,10 @@ export type UsersUpdateWithoutSessionsInput = {
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   last_login?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   wiki_limit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  avatar_sha256?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_content_type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_extension?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_size_bytes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   roles?: Prisma.RolesUpdateManyWithoutUsersNestedInput
 }
 
@@ -655,6 +773,10 @@ export type UsersUncheckedUpdateWithoutSessionsInput = {
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   last_login?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   wiki_limit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  avatar_sha256?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_content_type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_extension?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_size_bytes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   roles?: Prisma.RolesUncheckedUpdateManyWithoutUsersNestedInput
 }
 
@@ -668,6 +790,10 @@ export type UsersUpdateWithoutRolesInput = {
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   last_login?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   wiki_limit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  avatar_sha256?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_content_type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_extension?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_size_bytes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   sessions?: Prisma.SessionsUpdateManyWithoutUserNestedInput
 }
 
@@ -681,6 +807,10 @@ export type UsersUncheckedUpdateWithoutRolesInput = {
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   last_login?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   wiki_limit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  avatar_sha256?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_content_type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_extension?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_size_bytes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   sessions?: Prisma.SessionsUncheckedUpdateManyWithoutUserNestedInput
 }
 
@@ -694,6 +824,10 @@ export type UsersUncheckedUpdateManyWithoutRolesInput = {
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   last_login?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   wiki_limit?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  avatar_sha256?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_content_type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_extension?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar_size_bytes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 
@@ -746,6 +880,10 @@ export type UsersSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   created_at?: boolean
   last_login?: boolean
   wiki_limit?: boolean
+  avatar_sha256?: boolean
+  avatar_content_type?: boolean
+  avatar_extension?: boolean
+  avatar_size_bytes?: boolean
   sessions?: boolean | Prisma.Users$sessionsArgs<ExtArgs>
   roles?: boolean | Prisma.Users$rolesArgs<ExtArgs>
   _count?: boolean | Prisma.UsersCountOutputTypeDefaultArgs<ExtArgs>
@@ -761,6 +899,10 @@ export type UsersSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   created_at?: boolean
   last_login?: boolean
   wiki_limit?: boolean
+  avatar_sha256?: boolean
+  avatar_content_type?: boolean
+  avatar_extension?: boolean
+  avatar_size_bytes?: boolean
 }, ExtArgs["result"]["users"]>
 
 export type UsersSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -773,6 +915,10 @@ export type UsersSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   created_at?: boolean
   last_login?: boolean
   wiki_limit?: boolean
+  avatar_sha256?: boolean
+  avatar_content_type?: boolean
+  avatar_extension?: boolean
+  avatar_size_bytes?: boolean
 }, ExtArgs["result"]["users"]>
 
 export type UsersSelectScalar = {
@@ -785,9 +931,13 @@ export type UsersSelectScalar = {
   created_at?: boolean
   last_login?: boolean
   wiki_limit?: boolean
+  avatar_sha256?: boolean
+  avatar_content_type?: boolean
+  avatar_extension?: boolean
+  avatar_size_bytes?: boolean
 }
 
-export type UsersOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"user_id" | "username" | "email" | "password" | "owner_user_id" | "resetCode" | "created_at" | "last_login" | "wiki_limit", ExtArgs["result"]["users"]>
+export type UsersOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"user_id" | "username" | "email" | "password" | "owner_user_id" | "resetCode" | "created_at" | "last_login" | "wiki_limit" | "avatar_sha256" | "avatar_content_type" | "avatar_extension" | "avatar_size_bytes", ExtArgs["result"]["users"]>
 export type UsersInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   sessions?: boolean | Prisma.Users$sessionsArgs<ExtArgs>
   roles?: boolean | Prisma.Users$rolesArgs<ExtArgs>
@@ -822,6 +972,15 @@ export type $UsersPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
      * Default 0 so accounts are locked until a teacher grants a limit.
      */
     wiki_limit: number | null
+    /**
+     * Own profile picture. The bytes live content-addressed under
+     * store/avatars/<sha256>.<extension>, not in the wiki files and not in the
+     * user-file list. All four fields are set together or are all NULL.
+     */
+    avatar_sha256: string | null
+    avatar_content_type: string | null
+    avatar_extension: string | null
+    avatar_size_bytes: number | null
   }, ExtArgs["result"]["users"]>
   composites: {}
 }
@@ -1256,6 +1415,10 @@ export interface UsersFieldRefs {
   readonly created_at: Prisma.FieldRef<"Users", 'DateTime'>
   readonly last_login: Prisma.FieldRef<"Users", 'DateTime'>
   readonly wiki_limit: Prisma.FieldRef<"Users", 'Int'>
+  readonly avatar_sha256: Prisma.FieldRef<"Users", 'String'>
+  readonly avatar_content_type: Prisma.FieldRef<"Users", 'String'>
+  readonly avatar_extension: Prisma.FieldRef<"Users", 'String'>
+  readonly avatar_size_bytes: Prisma.FieldRef<"Users", 'Int'>
 }
     
 

@@ -18,6 +18,7 @@ import { AdminStorage } from "./StorageRoutes";
 import { AdminStorageCleanup } from "./StorageCleanupRoutes";
 import { PinboardDeleteNote, PinboardList, PinboardMarkRead, PinboardSaveNote, PinboardSavePosition, PinboardUnreadCount } from "./PinboardRoutes";
 import { UserFileDelete, UserFileDownload, UserFileList, UserFilePreview, UserFileShareTargets, UserFileShareUpdate, UserFileSharedList, UserFileUpload, UserFileWikiFile, UserFileWikiFiles } from "./UserFileRoutes";
+import { AvatarGet, AvatarRemove, AvatarUpload } from "./AvatarRoutes";
 import { AdminWikiFileImport, AdminWikiFileInspect, AdminWikiFileRestore, AdminWikiFileSnapshotCounts, AdminWikiFileSnapshotCreate, AdminWikiFileSnapshotDelete, AdminWikiFileSnapshots } from "./WikiFileRoutes";
 import { serveWikiThumbnail } from "./WikiThumbnailRoutes";
 import { RecipeStatus, RecipeShellUpdate, RecipeStoreJS, RecipeStoreJSON, RecipeUpdates, TiddlerBatch, TiddlerList } from "./RecipeRoutes";
@@ -197,6 +198,9 @@ const ApiRoutes = {
   UserFileShareUpdate,
   UserFileWikiFile,
   UserFileWikiFiles,
+  AvatarUpload,
+  AvatarRemove,
+  AvatarGet,
   AdminWikiFileInspect,
   AdminWikiFileImport,
   AdminWikiFileSnapshots,
@@ -237,6 +241,9 @@ interface ClientRoutes {
   UserFileShareUpdate: ClientRoute<typeof UserFileShareUpdate>;
   UserFileWikiFile: ClientRoute<typeof UserFileWikiFile>;
   UserFileWikiFiles: ClientRoute<typeof UserFileWikiFiles>;
+  AvatarUpload: ClientRoute<typeof AvatarUpload>;
+  AvatarRemove: ClientRoute<typeof AvatarRemove>;
+  AvatarGet: ClientRoute<typeof AvatarGet>;
   AdminWikiFileInspect: ClientRoute<typeof AdminWikiFileInspect>;
   AdminWikiFileImport: ClientRoute<typeof AdminWikiFileImport>;
   AdminWikiFileSnapshots: ClientRoute<typeof AdminWikiFileSnapshots>;

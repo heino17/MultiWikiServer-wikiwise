@@ -5455,6 +5455,61 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 153. Feature: own profile picture in MWS and SimpleWiki
+
+**Files:**
+- `package.json`, `package-lock.json`, `tsup.config.ts`
+- `prisma/schema.prisma`,
+  `prisma/migrations/20261124120000_user_avatar/migration.sql`, `prisma/client/`
+- `packages/mws/src/new-managers/AvatarRoutes.ts`,
+  `packages/mws/src/new-managers/index.ts`,
+  `packages/mws/src/new-managers/sessions.ts`,
+  `packages/mws/src/startup.ts`,
+  `packages/mws/src/new-managers/RecipeRoutes.ts`
+- `packages/admin-vanilla/src/app-profile.tsx`,
+  `packages/admin-vanilla/src/app.inline.css`,
+  `packages/admin-vanilla/src/locales/de.ts`,
+  `packages/admin-vanilla/src/locales/en.ts`
+- `templates/simplewiki.html` (generated from the SimpleWiki source)
+
+**Change.** Every account now has one own profile picture. Upload, replace
+and removal are self-service on `/profile`; an admin may read a picture, but
+may never set somebody else's. JPEG, PNG, GIF and WebP are accepted, the real
+type is read from the magic bytes, the picture is scaled to at most 256 × 256
+px and must fit into 100 KB after encoding (with a WebP fallback before
+rejection). The raw upload is capped at 5 MB while it is streamed to disk.
+The bytes live content-addressed under `store/avatars/<sha256>.<ext>`, apart
+from the wiki data and from "My Files"; four nullable columns on `users` hold
+only metadata. `sharp@0.33.5` is pinned and kept external to the bundle,
+because it loads a platform-specific native binding and the package still
+declares `node >=18`.
+
+The session resolves a same-origin `avatarUrl` (with `pathPrefix`, and a short
+hash in the query for cache busting). `GET /recipe/<name>/status` passes that
+URL to SimpleWiki, which shows the picture in the header where `👤` stood
+before. A missing or foreign URL keeps `👤`; anonymous sessions keep `🔒`.
+The image route requires a session and an own referer, but deliberately no
+`X-Requested-With` header, because a browser does not send one for `<img>`.
+It explicitly accepts the cache-busting query key `v`; without that the strict
+query validation rejected the first preview with 400.
+
+**Why.** The Tiddlyhost fork attached a picture to the account with a
+100 KB / 256 px rule and self-service upload; this ports that behaviour. The
+picture is sent as a URL rather than stored in a tiddler, so it cannot bloat
+or fork the wiki data, cannot appear in the per-user page cache of the recipe
+index, and does not weaken the per-wiki CSP.
+
+**Verified.** `npm run tsc2`, the admin typecheck and `npm run build` are clean.
+The full SimpleWiki suite reports 1510 passed, 0 failed; its bookkeeping check
+reports 10 passed, 0 failed. The targeted `t_anmeldung.py` covers the picture,
+the foreign-URL fallback and the anonymous case. In the dev instance I opened
+`/profile`, uploaded a 600 × 600 PNG, saw the preview load at 256 × 256 with
+no console error, opened the SimpleWiki `wiki-user1` and applied the offered
+shell update: the header showed the picture with class `benutzer-bild` instead
+of `👤`. Removing the picture on `/profile` brought `👤` back after a reload.
+The first preview had failed with 400 because the strict query validation did
+not know `v`; the route now lists that key, and the retest was clean.
+
 ## 152. Refresh: the bundled SimpleWiki shell reaches v0.1.56
 
 **Files:**
@@ -13413,6 +13468,64 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 153. Feature: eigenes Profilbild in MWS und SimpleWiki
+
+**Dateien:**
+- `package.json`, `package-lock.json`, `tsup.config.ts`
+- `prisma/schema.prisma`,
+  `prisma/migrations/20261124120000_user_avatar/migration.sql`, `prisma/client/`
+- `packages/mws/src/new-managers/AvatarRoutes.ts`,
+  `packages/mws/src/new-managers/index.ts`,
+  `packages/mws/src/new-managers/sessions.ts`,
+  `packages/mws/src/startup.ts`,
+  `packages/mws/src/new-managers/RecipeRoutes.ts`
+- `packages/admin-vanilla/src/app-profile.tsx`,
+  `packages/admin-vanilla/src/app.inline.css`,
+  `packages/admin-vanilla/src/locales/de.ts`,
+  `packages/admin-vanilla/src/locales/en.ts`
+- `templates/simplewiki.html` (aus der SimpleWiki-Quelle erzeugt)
+
+**Änderung.** Jedes Konto hat jetzt ein eigenes Profilbild. Hochladen,
+Ersetzen und Entfernen gibt es selbstbedient unter `/profile`; ein Admin darf
+ein Bild lesen, aber keinem anderen Konto eines setzen. JPEG, PNG, GIF und
+WebP werden angenommen, der echte Typ aus den magic bytes gelesen, das Bild
+auf höchstens 256 × 256 px verkleinert und es muss nach dem Kodieren in
+100 KB passen (mit WebP als Zwischenschritt vor der Ablehnung). Der rohe Upload
+wird während des Streamens auf 5 MB begrenzt. Die Bytes liegen
+content-adressiert unter `store/avatars/<sha256>.<ext>`, getrennt von den
+Wiki-Daten und von „Meine Dateien"; vier nullable Spalten in `users` enthalten
+nur Metadaten. `sharp@0.33.5` ist festgehalten und bleibt außerhalb des
+Bundles, weil es eine plattformspezifische native Bibliothek lädt und das
+Paket weiterhin `node >=18` angibt.
+
+Die Sitzung liefert eine same-origin-`avatarUrl` (mit `pathPrefix` und einem
+kurzen Hash in der Abfrage gegen den Browser-Cache).
+`GET /recipe/<name>/status` gibt diese URL an SimpleWiki weiter, das sie im
+Kopf an die Stelle von `👤` setzt. Fehlt die URL oder kommt sie von einer
+fremden Quelle, bleibt `👤`; anonym bleibt `🔒`. Die Bildroute verlangt eine
+Sitzung und einen eigenen Referer, aber bewusst keinen
+`X-Requested-With`-Kopf, weil ein Browser den bei `<img>` nicht mitschickt.
+Sie nimmt ausdrücklich den Cache-Busting-Schlüssel `v` an; ohne ihn wies die
+strenge Abfrageprüfung die erste Vorschau mit 400 zurück.
+
+**Warum.** Der Tiddlyhost-Fork hängt das Bild an das Konto, mit 100 KB /
+256 px und selbstbedientem Upload; das wird hier übernommen. Das Bild geht als
+URL und nicht als Tiddler mit, damit es die Wiki-Daten nicht aufbläht oder
+verzweigt, nicht in den benutzerabhängigen Seitencache des Recipe-Index
+gerät und die per-Wiki-CSP nicht aufgeweicht werden muss.
+
+**Geprüft.** `npm run tsc2`, der Admin-Typecheck und `npm run build` sind sauber.
+Die volle SimpleWiki-Suite meldet 1510 bestanden, 0 fehlgeschlagen, ihre
+Buchhaltungsprüfung 10 bestanden, 0 fehlgeschlagen. Der gezielte
+`t_anmeldung.py` deckt Bild, fremde URL und anonymen Zustand ab. In der
+Dev-Instanz habe ich `/profile` geöffnet, ein 600 × 600-PNG hochgeladen, die
+Vorschau mit 256 × 256 ohne Konsolenfehler laden sehen, die SimpleWiki
+`wiki-user1` geöffnet und das angebotene Schalen-Update übernommen: Im Kopf
+stand das Bild mit der Klasse `benutzer-bild` statt `👤`. Nach dem Entfernen
+des Bildes unter `/profile` kam nach dem Neuladen wieder `👤`. Die erste
+Vorschau war mit 400 gescheitert, weil die strenge Abfrageprüfung `v` nicht
+kannte; die Route führt den Schlüssel jetzt, und der erneute Versuch war sauber.
 
 ## 152. Auffrischung: die mitgelieferte SimpleWiki-Schale erreicht v0.1.56
 

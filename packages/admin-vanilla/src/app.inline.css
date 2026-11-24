@@ -1412,6 +1412,72 @@ body:has(.modal-shell[open]) {
 	border-color: var(--color-border-input);
 }
 
+/* Own profile picture in the account profile form. The preview uses the same
+   round shape as the header avatar; the file input stays visually hidden while
+   the label remains a normal keyboard-focusable button. */
+.profile-avatar-row {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	flex-wrap: wrap;
+}
+
+.profile-avatar-preview {
+	width: 56px;
+	height: 56px;
+	flex: 0 0 56px;
+	border-radius: 50%;
+	overflow: hidden;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--color-surface-input);
+	border: 1px solid var(--color-border-soft);
+	color: var(--color-text-muted);
+}
+
+.profile-avatar-preview img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.profile-avatar-preview material-symbol,
+.profile-avatar-preview material-symbol svg {
+	width: 32px;
+	height: 32px;
+}
+
+.profile-avatar-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.profile-avatar-file {
+	position: relative;
+	cursor: pointer;
+}
+
+.profile-avatar-file input[type="file"] {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	opacity: 0;
+	cursor: pointer;
+}
+
+.profile-avatar-hint,
+.profile-avatar-message {
+	margin: 0;
+	font-size: 0.85rem;
+	line-height: 1.5;
+	color: var(--color-text-muted);
+}
+
 .login-options {
 	display: flex;
 	align-items: center;

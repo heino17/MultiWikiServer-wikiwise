@@ -236,15 +236,22 @@ model Users {
   // MySQL: multiple NULLs are allowed in unique columns and there is no way to make a partial index.
   // SQL Server: the `where` clause is required to get the "multiple NULLs allowed" behavior.
   // Everything else: multiple nulls are allowed in unique columns and partial indexes also work
-  resetCode  String?    @unique(where: { resetCode: { not: null } })
-  created_at DateTime   @default(now())
-  last_login DateTime?
+  resetCode           String?    @unique(where: { resetCode: { not: null } })
+  created_at          DateTime   @default(now())
+  last_login          DateTime?
   /// How many wikis this user may create. NULL means unlimited, 0 means
   /// none. Only enforced for non-teacher, non-admin users (students).
   /// Default 0 so accounts are locked until a teacher grants a limit.
-  wiki_limit Int?       @default(0)
-  sessions   Sessions[]
-  roles      Roles[]
+  wiki_limit          Int?       @default(0)
+  /// Own profile picture. The bytes live content-addressed under
+  /// store/avatars/<sha256>.<extension>, not in the wiki files and not in the
+  /// user-file list. All four fields are set together or are all NULL.
+  avatar_sha256       String?
+  avatar_content_type String?
+  avatar_extension    String?
+  avatar_size_bytes   Int?
+  sessions            Sessions[]
+  roles               Roles[]
 
   @@map("users")
 }

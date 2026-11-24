@@ -28,6 +28,9 @@ export default defineConfig({
     "@prisma/adapter-better-sqlite3",
     "@serenity-kit/opaque",
     "playwright-core",
+    // sharp loads a platform-specific native binding at runtime; bundling it
+    // would break that lookup. It stays a normal dependency of the tarball.
+    "sharp",
   ],
   dts: false,
   keepNames: true,

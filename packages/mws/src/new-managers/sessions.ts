@@ -8,7 +8,14 @@ import { serverEvents } from "@tiddlywiki/events";
 export interface SessionManagerObject {
   AdminRoleName: string;
   UserRoleName: string;
-  parseIncomingRequest(cookies: BetterCookie, config: ServerState): Promise<AuthUser>;
+  parseIncomingRequest(cookies: BetterCookie, config: ServerState, pathPrefix?: string): Promise<AuthUser>;
+}
+
+/** Same-origin URL for a user's own profile picture. `v` is a short prefix of
+ *  the content hash so a new picture cannot be served from the browser cache.
+ *  The hash itself is never secret; the route still checks the session. */
+export function avatarUrlFor(userId: string, sha256: string, pathPrefix = ""): string {
+  return `${pathPrefix}/api/users/${encodeURIComponent(userId)}/avatar?v=${sha256.slice(0, 12)}`;
 }
 
 export interface AuthUser {
@@ -163,7 +170,7 @@ export class SessionManager {
 
   private static roleLookup: Record<string, string> = undefined as any;
 
-  static async parseIncomingRequest(cookies: BetterCookie, config: ServerState): Promise<AuthUser> {
+  static async parseIncomingRequest(cookies: BetterCookie, config: ServerState, pathPrefix = ""): Promise<AuthUser> {
 
     this.roleLookup ??= Object.fromEntries((await config.engine.roles.findMany({
       where: { role_name: { in: [this.AdminRoleName, this.UserRoleName, this.AnonRoleName] } },
@@ -173,7 +180,17 @@ export class SessionManager {
     const sessionId = cookies.getAll("session") as PrismaField<"Sessions", "session_id">[];
     const session = sessionId && await config.engine.sessions.findFirst({
       where: { session_id: { in: sessionId } },
-      select: { session_id: true, last_accessed: true, user: { select: { user_id: true, username: true, email: true, wiki_limit: true, roles: { select: { role_id: true, role_name: true, is_teacher: true } } } } }
+      select: {
+        session_id: true,
+        last_accessed: true,
+        user: {
+          select: {
+            user_id: true, username: true, email: true, wiki_limit: true,
+            avatar_sha256: true,
+            roles: { select: { role_id: true, role_name: true, is_teacher: true } },
+          },
+        },
+      },
     });
 
     if (sessionId && session) {
@@ -193,6 +210,9 @@ export class SessionManager {
       isAdmin: session.user.roles.some(e => e.role_name === "ADMIN"),
       isTeacher: session.user.roles.some(e => e.is_teacher),
       wikiLimit: session.user.wiki_limit,
+      avatarUrl: session.user.avatar_sha256
+        ? avatarUrlFor(session.user.user_id, session.user.avatar_sha256, pathPrefix)
+        : undefined,
       roles: session.user.roles.map(e => ({
         role_id: e.role_id,
         role_name: e.role_name,

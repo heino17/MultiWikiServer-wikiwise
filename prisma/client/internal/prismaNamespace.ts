@@ -2008,7 +2008,11 @@ export const UsersScalarFieldEnum = {
   resetCode: 'resetCode',
   created_at: 'created_at',
   last_login: 'last_login',
-  wiki_limit: 'wiki_limit'
+  wiki_limit: 'wiki_limit',
+  avatar_sha256: 'avatar_sha256',
+  avatar_content_type: 'avatar_content_type',
+  avatar_extension: 'avatar_extension',
+  avatar_size_bytes: 'avatar_size_bytes'
 } as const
 
 export type UsersScalarFieldEnum = (typeof UsersScalarFieldEnum)[keyof typeof UsersScalarFieldEnum]

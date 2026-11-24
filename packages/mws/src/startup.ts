@@ -144,7 +144,7 @@ serverEvents.on("listen.router.init", async (listen, router) => {
 
   router.sendAdmin = await setupClientBuild(clientBuildDef);
   router.createServerRequest = async (request, ...args) => {
-    const user = await SessionManager.parseIncomingRequest(request.cookies, router.config);
+    const user = await SessionManager.parseIncomingRequest(request.cookies, router.config, request.pathPrefix);
     return new StateObject(user, router, request, ...args);
   }
   router.hono = router.hono.use(secureHeaders({

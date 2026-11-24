@@ -28,12 +28,16 @@ export const RecipeStatus = zodRoute({
     });
     return await state.$transaction(async (prisma) => {
       const r = new RecipeResolver(recipe, prisma, state.user);
-      const { isAdmin, user_id, username, isLoggedIn } = state.user;
+      const { isAdmin, user_id, username, isLoggedIn, avatarUrl } = state.user;
       return {
         isAdmin,
         user_id,
         username,
         isLoggedIn,
+        // Same-origin URL of the logged-in user's own profile picture; empty
+        // for anonymous sessions and for users without a picture. SimpleWiki
+        // uses it in place of the 👤 marker, with a graceful fallback.
+        avatarUrl: isLoggedIn ? avatarUrl ?? "" : "",
         // which template shell release this wiki serves, and whether a newer
         // one exists — the wiki's update banner reads it from here
         shell: await resolveShellVersionStatus(prisma, recipe),

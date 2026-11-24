@@ -2,7 +2,7 @@
 <html lang="de"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="mws-shell-version" content="v0.1.56">
+    <meta name="mws-shell-version" content="v0.1.57">
     <meta name="simplewiki-doc-id" content="">
     <meta name="simplewiki-exported" content="">
     <meta name="simplewiki-title" content="">
@@ -208,7 +208,9 @@ MWS stellt die Tiddler nicht als Datenblock bereit, sondern als
 
         Aufrufe an den Server
           GET  /recipe/<name>/status        wer angemeldet ist und ob dieser
-                                            Tab schreiben darf
+                                            Tab schreiben darf; "avatarUrl"
+                                            ist eine URL auf dem eigenen Server
+                                            und leer ohne Profilbild
           PUT  /recipe/<name>/batch/list     {}
           PUT  /recipe/<name>/batch/read     { "titles": ["…"] }
           PUT  /recipe/<name>/batch/save     { "tiddlers": [ {feld: …} ] }
@@ -3336,6 +3338,17 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
             opacity: 0.8;
         }
 
+        /* Das Profilbild derselben Person steht dort, wo sonst 👤 steht.
+           Es bleibt im .zeichen, damit die schmale Fensterregel es genauso
+           ausblendet wie das Zeichen. */
+        .benutzer-anzeige .benutzer-bild {
+            width: 1em;
+            height: 1em;
+            border-radius: 50%;
+            object-fit: cover;
+            display: block;
+        }
+
         /* Dieselbe Schale, aber als Link: "Nicht angemeldet" ist ein
            Wegweiser zum Anmelden. Ohne diese Ruecksetzung kaeme der
            Link mit Unterstreichung und eigener Schrift daher. */
@@ -5119,7 +5132,7 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                 </a>
                 <template v-else-if="statusBekannt">
                     <span class="benutzer-anzeige ist-angemeldet" :title="benutzerName">
-                        <span class="zeichen" aria-hidden="true">👤</span>{{ benutzerName }}
+                        <span class="zeichen" aria-hidden="true"><img v-if="benutzerBild" class="benutzer-bild" :src="benutzerBild" alt=""><template v-else>👤</template></span>{{ benutzerName }}
                     </span>
                     <button class="abmelden-btn" @click="abmelden" :disabled="meldeAb"
                             :title="t('abmeldenTitel')" :aria-label="t('abmeldenTitel')">⎋</button>
@@ -9357,6 +9370,11 @@ showSettings: false,
                    wenn der Server ihn genannt hat. */
                 angemeldet: false,
                 benutzerName: '',
+                /* Das Profilbild der angemeldeten Person. Der Server nennt
+                   nur eine URL auf dem gleichen Ursprung; Bilder bleiben
+                   dadurch aus den Wiki-Dateien heraus. Fehlt sie oder ist
+                   sie unbrauchbar, zeigt der Kopf weiterhin 👤. */
+                benutzerBild: '',
                 /* Darf dieser Tab schreiben? Im Browser gibt es niemanden
                    zu fragen, dort bleibt es bei true. */
                 kannSchreiben: true,
@@ -12102,6 +12120,14 @@ showSettings: false,
                             this.benutzerName = this.angemeldet
                                 ? String(antwort.username || '')
                                 : '';
+                            /* Nur relative Pfade auf dem eigenen Server als
+                               Bildquelle akzeptieren. Fremde URLs wären von
+                               der Wiki-CSP blockiert und könnten den Kopf
+                               ueberdies ausspaehen. */
+                            const bild = String(antwort.avatarUrl || '');
+                            this.benutzerBild = this.angemeldet
+                                && bild.startsWith('/')
+                                && !bild.startsWith('//') ? bild : '';
                             this.statusBekannt = true;
                             this.rechteWeg = this.rechteWeg
                                 || !(antwort.bags || []).some(b => b.canUserWrite);
@@ -12215,6 +12241,7 @@ showSettings: false,
                         }
                         selbst.angemeldet = false;
                         selbst.benutzerName = '';
+                        selbst.benutzerBild = '';
                         return selbst.statusHolen().then(function () {
                             return true;
                         });

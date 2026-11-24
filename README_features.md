@@ -29,6 +29,7 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
 - **Sichere Passwort-Generierung:** „🎲 Generator" unter jedem Neupasswort-Feld mit Länge (8–32), garantiert gemischtem Zeichensatz, **Entropie-Anzeige** und farbigem **Stärkebalken**; Ergebnis wird in beide Felder übernommen
 - **Rollen & ACL:** Rollen mit abgestuften Rechten (Lesen/`A_read`, Schreiben/`B_write`, Verwalten/`C_admin`); System-Rollen (`ADMIN`/`USER`/`ANON`) und Lehrer-Rollen sind **unlöschbar** und nur über den Site-Admin editierbar
 - **Owner-Schutz überall:** Der **Ersteller** eines Wikis/Bags/Templates/Rolle/Users behält die Kontrolle – nur er oder das `admin`-Konto darf bearbeiten/löschen; *keine* Self-Promotion über die API möglich
+- **Eigenes Profilbild (§153):** Ein Konto lädt sein Bild selbst unter `/profile` hoch und entfernt es auch selbst – JPEG, PNG, GIF oder WebP, auf 256 × 256 px verkleinert und höchstens 100 KB. Die Bytes liegen content-adressiert außerhalb der Wiki-Daten und der Dateiliste; der Admin darf das Bild sehen, aber nicht für andere setzen. SimpleWiki zeigt es im Kopf anstelle von `👤`
 
 ### Wikis verwalten
 
@@ -247,6 +248,7 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
 - **Secure password generation:** the "🎲 Generate" button under every new-password field with length (8–32), a guaranteed mixed character set, an **entropy display** and a colored **strength bar**; the result fills both fields
 - **Roles & ACL:** roles with graded rights (read/`A_read`, write/`B_write`, manage/`C_admin`); system roles (`ADMIN`/`USER`/`ANON`) and teacher roles are **undeletable** and only editable by the site admin
 - **Owner protection everywhere:** the **creator** of a wiki/bag/template/role/user stays in control – only they or the `admin` account may edit/delete; *no* self-promotion over the API
+- **Own profile picture (§153):** an account uploads and removes its own picture under `/profile` – JPEG, PNG, GIF or WebP, scaled to 256 × 256 px and at most 100 KB. The bytes are content-addressed outside the wiki data and the file list; an admin may view the picture but may not set it for somebody else. SimpleWiki shows it in the header in place of `👤`
 
 ### **Managing Wikis**
 - **One-click wiki creation:** just enter a display name – slug, default bag, recipe and start tiddlers are created atomically server-side; alternatively "Create a defined wiki" with the full form (both in a single dropdown)
