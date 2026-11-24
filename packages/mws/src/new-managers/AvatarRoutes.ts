@@ -4,7 +4,8 @@
 // metadata lives on the `users` row. This is deliberately separate from the
 // user files ("Meine Dateien"): an avatar is not a shareable file and must not
 // appear in that list. Only the account owner may upload or remove a picture;
-// admins may read it for the user list, but never change it.
+// admins and teachers may read the pictures of the accounts they see in the
+// user list, but never change them.
 //
 // Input follows the Tiddlyhost fork: JPEG, PNG, GIF and WebP, at most 256 px
 // and 100 KB after processing. An oversized picture is scaled down first; only
@@ -212,7 +213,8 @@ export const AvatarRemove = zodRoute({
 /** Serve the picture. Same-origin URL only; an <img> request has no
  *  X-Requested-With header, so this route deliberately has no CSRF header
  *  check. The session cookie is still required, and the referer must be one of
- *  ours. Admins may read pictures for the user list, but cannot change them. */
+ *  ours. Readers are limited to the account itself and the accounts an admin
+ *  or teacher sees in the user list; nobody can change another user's picture. */
 export const AvatarGet = zodRoute({
   method: ["GET", "HEAD"],
   path: "/api/users/:user_id/avatar",
@@ -227,11 +229,17 @@ export const AvatarGet = zodRoute({
     state.assertReferer(["/", "/wiki", "/profile"]);
     state.asserted = true;
     const userId = state.pathParams.user_id;
-    if (!state.user.isAdmin && state.user.user_id !== userId)
-      throw state.sendEmpty(403, { "x-reason": "Not your picture" });
-
-    const row = await state.$transaction(async prisma => prisma.users.findUnique({
-      where: { user_id: userId },
+    // The user list shows an admin every account and a teacher only their own
+    // and invited accounts. The picture route uses the same scope, so seeing a
+    // row always implies being allowed to load its avatar.
+    const visible = state.user.isAdmin
+      ? { user_id: userId }
+      : { user_id: userId, OR: [
+          { user_id: state.user.user_id },
+          { owner_user_id: state.user.user_id },
+        ] };
+    const row = await state.$transaction(async prisma => prisma.users.findFirst({
+      where: visible,
       select: {
         avatar_sha256: true,
         avatar_content_type: true,
@@ -239,7 +247,9 @@ export const AvatarGet = zodRoute({
         avatar_size_bytes: true,
       },
     }));
-    if (!row?.avatar_sha256 || !row.avatar_extension
+    if (!row)
+      throw state.sendEmpty(403, { "x-reason": "Not your picture" });
+    if (!row.avatar_sha256 || !row.avatar_extension
       || !ALLOWED_EXTENSIONS.has(row.avatar_extension)
       || !/^[a-f0-9]{64}$/.test(row.avatar_sha256))
       return state.sendEmpty(404, { cacheControl: "no-store" });

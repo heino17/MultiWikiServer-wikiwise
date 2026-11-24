@@ -49,7 +49,7 @@ import { createHash } from "crypto";
 import { debuglog } from "util";
 import { Debug } from "@prisma/client/runtime/client";
 import { WikiStore } from "./RecipeResolver";
-import { SessionManager } from "./sessions";
+import { avatarUrlFor, SessionManager } from "./sessions";
 import { deleteThumbnail } from "./WikiThumbnailRoutes";
 import { pruneSnapshotBags } from "./WikiSnapshotBag";
 import { HIDDEN_PREFIX } from "./LandingRoutes";
@@ -1634,6 +1634,13 @@ export class UserDataAdapter extends TabDataAdapter<"users"> {
         })
       : [];
 
+    // Read by id, not by the pre-save username: a renamed account must keep
+    // its picture in the list immediately after the save.
+    const avatar = await prisma.users.findUnique({
+      where: { user_id: user.user_id },
+      select: { avatar_sha256: true },
+    });
+
     return {
       id: new IdString(user.user_id),
       username: user.username,
@@ -1646,6 +1653,7 @@ export class UserDataAdapter extends TabDataAdapter<"users"> {
       groupRoles: roleGroupNamesForUser(user.username, roleInfos),
       wikiLimit: user.wiki_limit == null ? "" : String(user.wiki_limit),
       ownWikiUsage: formatOwnWikiUsage(ownWikiCount, limitExempt ? null : user.wiki_limit),
+      avatarUrl: avatar?.avatar_sha256 ? avatarUrlFor(user.user_id, avatar.avatar_sha256) : "",
     }
   }
   // roles aren't connected to data tables so they can be swapped out for SSO
@@ -1667,6 +1675,7 @@ export class UserDataAdapter extends TabDataAdapter<"users"> {
         owner_user_id: true,
         wiki_limit: true,
         created_at: true,
+        avatar_sha256: true,
         roles: {
           select: {
             role_name: true,
@@ -1708,6 +1717,8 @@ export class UserDataAdapter extends TabDataAdapter<"users"> {
         ownWikiCounts.get(user.user_id) ?? 0,
         user.roles.some(role => role.role_name === "ADMIN" || role.is_teacher) ? null : user.wiki_limit,
       ),
+      // Route fragment only; the admin client adds its own pathPrefix (§113).
+      avatarUrl: user.avatar_sha256 ? avatarUrlFor(user.user_id, user.avatar_sha256) : "",
     }));
   }
 }

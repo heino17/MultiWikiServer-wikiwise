@@ -2581,10 +2581,11 @@ export class App extends JSXElement {
                       rel="noreferrer"
                       onclick={(event) => event.stopPropagation()}
                       onkeydown={(event) => event.stopPropagation()}
-                    >{renderListCellValue(column.key, value, (src) => { this.thumbnailSrc = src; }, column.truncate)}</a>;
+                    >{renderUsernameAvatar(currentTab.id, column.key, row.item)}{renderListCellValue(column.key, value, (src) => { this.thumbnailSrc = src; }, column.truncate)}</a>;
                   }
                   return (
                     <div class={"list-cell" + (column.width && column.width > 1 ? " span-" + column.width : "") + (column.wrap ? " list-cell-wrap" : "")}>
+                      {renderUsernameAvatar(currentTab.id, column.key, row.item)}
                       {renderListCellValue(column.key, value, (src) => { this.thumbnailSrc = src; }, column.truncate)}
                       {/* {(() => {
 
@@ -2793,6 +2794,25 @@ function buildListGridTemplate(columns: readonly ColumnDefinition[]): string {
         : "minmax(max-content, 1fr)";
     return Array.from({ length: column.width ?? 1 }, () => track).join(" ");
   }).join(" ");
+}
+
+/** A user's own profile picture sits in front of the username in the users
+ *  list. Anyone who may see the row may see the picture, so there is no
+ *  permission check here — the avatar route applies the same rule. */
+function renderUsernameAvatar(tabId: TabId, columnKey: string, item: AdminRecord) {
+  if (tabId !== "users" || columnKey !== "username") return null;
+  const url = (item as Partial<UserAdminRecord>).avatarUrl;
+  if (!url) return null;
+  return (
+    <img
+      class="list-avatar"
+      src={url}
+      alt=""
+      title={t("Profile picture")}
+      loading="lazy"
+      decoding="async"
+    />
+  );
 }
 
 function renderListCellValue(columnKey: string, value: string | undefined, onThumbnailClick?: (src: string) => void, truncate?: number) {

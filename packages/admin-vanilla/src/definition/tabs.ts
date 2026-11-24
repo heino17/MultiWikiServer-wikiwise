@@ -759,6 +759,7 @@ const tabs = {
         architecture: "Server-computed: for a user with a teacher function this is that function role name; otherwise the group/class role name(s) the user belongs to (the user's own personal role and the system roles are excluded).",
       },
       { key: "ownWikiUsage", label: "Own wikis", type: "string", section: "runtime", mode: "server" },
+      { key: "avatarUrl", label: "Profile picture", type: "string", section: "runtime", mode: "server", architecture: "Same-origin route to the account's own profile picture, without the installation's pathPrefix. Empty when no picture is set. The client prepends pathPrefix when it renders the image in the users list." },
       { key: "userRoles", label: "Roles", type: "search-multiselect", section: "authored", mode: "create edit" },
       { key: "wikiLimit", label: "Own wiki limit", type: "number", section: "authored", mode: "create edit", description: "How many wikis this user may create on their own. Leave empty for unlimited, 0 to disallow." },
       { key: "resetCode", label: "Reset Code", type: "string", section: "authored", mode: "create edit" },
@@ -1038,6 +1039,10 @@ export interface UserAdminRecord {
   groupRoles: readonly string[];
   wikiLimit: string;
   ownWikiUsage: string;
+  /** Route to this account's profile picture, relative to pathPrefix; "" when
+   *  the account has no picture. Read-only: users change their own picture on
+   *  the profile page, never in the users list. */
+  avatarUrl: string;
 }
 
 export interface WritablePrefixRow {

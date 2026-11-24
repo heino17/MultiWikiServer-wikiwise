@@ -355,6 +355,9 @@ function deriveItems(items: DataStore & ExtraServerStuff): AdminRecordStore {
 
   const users = items.users.map(e => ({
     ...e,
+    // The server sends the avatar route without pathPrefix (§113); every
+    // fetch and image source in the admin app is prefixed the same way.
+    avatarUrl: e.avatarUrl ? pathPrefix + e.avatarUrl : "",
     confirmPassword: "",
   }))
 

@@ -1118,6 +1118,20 @@ h6 {
 	font-variant-numeric: tabular-nums;
 }
 
+/* The account picture in front of the username in the users list. Inline so
+   the name keeps the cell's normal text overflow and ellipsis behaviour. */
+.list-avatar {
+	display: inline-block;
+	width: 24px;
+	height: 24px;
+	margin-right: 8px;
+	vertical-align: middle;
+	object-fit: cover;
+	border-radius: 50%;
+	border: 1px solid var(--color-border-soft);
+	background: var(--color-surface-input);
+}
+
 .list-cell-link {
 	color: inherit;
 	text-decoration: underline;

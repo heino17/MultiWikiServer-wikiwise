@@ -49,6 +49,7 @@ export const enStrings: Record<string, string> = {
   "Email": "Email",
   "Roles": "Roles",
   "Own profile picture": "Own profile picture",
+  "Profile picture": "Profile picture",
   "Choose picture": "Choose picture",
   "Remove picture": "Remove picture",
   "At most 100 KB and 256 × 256 px (JPEG, PNG, GIF, WebP). Larger pictures are scaled down.": "At most 100 KB and 256 × 256 px (JPEG, PNG, GIF, WebP). Larger pictures are scaled down.",

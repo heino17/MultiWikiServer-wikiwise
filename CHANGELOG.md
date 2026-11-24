@@ -5455,6 +5455,53 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 154. Feature: profile pictures in the users list, larger picture in SimpleWiki
+
+**Files:**
+- `packages/admin-vanilla/src/app.tsx`,
+  `packages/admin-vanilla/src/app.inline.css`,
+  `packages/admin-vanilla/src/definition/store.ts`,
+  `packages/admin-vanilla/src/definition/tabs.ts`,
+  `packages/admin-vanilla/src/locales/de.ts`,
+  `packages/admin-vanilla/src/locales/en.ts`
+- `packages/mws/src/new-managers/AvatarRoutes.ts`,
+  `packages/mws/src/new-managers/TabDataAdapter.ts`
+- `templates/simplewiki.html` (generated from the SimpleWiki source)
+
+**Change.** In the users tab, every row that has a picture now shows it in
+front of the username; rows without one look as before. `UserDataAdapter` puts
+a same-origin avatar route with a short content hash into the read-only
+`avatarUrl` field, and the admin client prepends `pathPrefix` to it just like
+its other image paths. The field is part of the server zod object but is never
+saved — pictures continue to be changed only on `/profile`, never through the
+user list.
+
+The picture route now uses the same visibility rule as the user list itself: an
+admin may read every picture, a teacher only their own and those of the
+accounts they invited, and everybody else only their own. Upload and removal
+stay strictly self-service.
+
+The SimpleWiki header picture grows from `1em` to `2em` in width and height.
+The shell declares `v0.1.58`; its suite reports 1514 passed, 0 failed and adds
+a check that measures the computed size against the font size. The bundled
+shell was regenerated from that source, so `init-store` and the offered shell
+update carry the larger picture.
+
+**Why.** Whoever sees an account row may also see the account's picture; the
+list previously hid it even from admins. Making the SimpleWiki picture twice
+as large fixes the other half of §153: at `1em` it was hardly bigger than the
+name beside it.
+
+**Verified.** `npm run tsc2`, the admin typecheck and `npm run build` are clean.
+The SimpleWiki suite reports 1514 passed, 0 failed; its bookkeeping check
+reports 10 passed, 0 failed. In the dev instance the admin users list showed
+the pictures of `admin` and `Frau Meyer` in front of their names, both loaded
+with no console error. With temporary teacher and student sessions, the avatar
+route answered 403 for accounts outside the teacher's list, 404 for a visible
+account without a picture and 200 for the teacher's own uploaded picture.
+After applying shell `v0.1.58` in `wiki-user1`, the header picture measured
+23.04 × 23.04 px at an 11.52 px font size, i.e. exactly `2em`.
+
 ## 153. Feature: own profile picture in MWS and SimpleWiki
 
 **Files:**
@@ -13468,6 +13515,54 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 154. Feature: Profilbilder im Benutzer-Tab, größeres Bild in SimpleWiki
+
+**Dateien:**
+- `packages/admin-vanilla/src/app.tsx`,
+  `packages/admin-vanilla/src/app.inline.css`,
+  `packages/admin-vanilla/src/definition/store.ts`,
+  `packages/admin-vanilla/src/definition/tabs.ts`,
+  `packages/admin-vanilla/src/locales/de.ts`,
+  `packages/admin-vanilla/src/locales/en.ts`
+- `packages/mws/src/new-managers/AvatarRoutes.ts`,
+  `packages/mws/src/new-managers/TabDataAdapter.ts`
+- `templates/simplewiki.html` (aus der SimpleWiki-Quelle erzeugt)
+
+**Änderung.** Im Benutzer-Tab steht das Profilbild eines Kontos jetzt vor dem
+Benutzernamen, sofern eines gesetzt ist; Zeilen ohne Bild sehen wie bisher aus.
+`UserDataAdapter` legt eine same-origin-Bildroute mit kurzem Inhalts-Hash in das
+nur lesbare Feld `avatarUrl`; der Admin-Client setzt wie bei seinen anderen
+Bildpfaden `pathPrefix` davor. Das Feld ist im Server-Zod-Objekt bekannt, wird
+aber nie gespeichert — Bilder ändern sich weiterhin nur unter `/profile`, nie
+über die Benutzerliste.
+
+Die Bildroute wendet jetzt dieselbe Sichtbarkeitsregel an wie die Benutzerliste:
+Ein Admin darf jedes Bild lesen, eine Lehrkraft nur ihres und die ihrer
+eingeladenen Konten, alle anderen nur ihr eigenes. Hochladen und Entfernen
+bleiben ausschließlich selbstbedient.
+
+Das Profilbild im SimpleWiki-Kopf wächst in Breite und Höhe von `1em` auf `2em`.
+Die Schale meldet `v0.1.58`; ihre Suite meldet 1514 bestanden, 0 fehlgeschlagen
+und prüft neu die berechnete Größe gegen die Schriftgröße. Die mitgelieferte
+Schale wurde aus dieser Quelle neu erzeugt, damit `init-store` und das
+angebotene Schalen-Update das größere Bild mitbringen.
+
+**Warum.** Wer eine Kontozeile sieht, darf auch das Bild dieses Kontos sehen;
+bisher war es selbst für Admins in der Liste verborgen. Die Verdoppelung des
+SimpleWiki-Bildes behebt die andere Hälfte von §153: Bei `1em` war es kaum
+größer als der Name daneben.
+
+**Geprüft.** `npm run tsc2`, der Admin-Typecheck und `npm run build` sind sauber.
+Die SimpleWiki-Suite meldet 1514 bestanden, 0 fehlgeschlagen, ihre
+Buchhaltungsprüfung 10 bestanden, 0 fehlgeschlagen. In der Dev-Instanz zeigte
+die Admin-Benutzerliste die Bilder von `admin` und `Frau Meyer` vor den Namen,
+beide ohne Konsolenfehler geladen. Mit temporären Lehrkraft- und
+Schüler-Sitzungen antwortete die Bildroute mit 403 für Konten außerhalb der
+Lehrkraftliste, mit 404 für ein sichtbares Konto ohne Bild und mit 200 für das
+eigene hochgeladene Bild der Lehrkraft. Nach Übernahme der Schale `v0.1.58` in
+`wiki-user1` maß das Kopf-Bild 23,04 × 23,04 px bei 11,52 px Schriftgröße,
+also genau `2em`.
 
 ## 153. Feature: eigenes Profilbild in MWS und SimpleWiki
 

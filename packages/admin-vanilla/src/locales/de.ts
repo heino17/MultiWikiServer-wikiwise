@@ -48,6 +48,7 @@ export const deStrings: Record<string, string> = {
   "Email": "E-Mail",
   "Roles": "Rollen",
   "Own profile picture": "Eigenes Profilbild",
+  "Profile picture": "Profilbild",
   "Choose picture": "Bild auswählen",
   "Remove picture": "Bild entfernen",
   "At most 100 KB and 256 × 256 px (JPEG, PNG, GIF, WebP). Larger pictures are scaled down.": "Höchstens 100 KB und 256 × 256 px (JPEG, PNG, GIF, WebP). Größere Bilder werden verkleinert.",
