@@ -2,7 +2,7 @@
 <html lang="de"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="mws-shell-version" content="v0.1.58">
+    <meta name="mws-shell-version" content="v0.1.59">
     <meta name="simplewiki-doc-id" content="">
     <meta name="simplewiki-exported" content="">
     <meta name="simplewiki-title" content="">
@@ -8785,9 +8785,11 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
 
         /* Wer hier arbeitet und ob dieser Tab schreiben darf.
 
-           Der Server antwortet mit {logged_in, logged_in_as}. Die App
-           erwartet die MWS-Form; die wird hier gebaut - so braucht die
-           Oberflaeche den Unterschied nicht zu kennen. */
+           Der Server antwortet mit {logged_in, logged_in_as, avatar_url}.
+           avatar_url ist eine relative URL auf dem eigenen Server und leer
+           ohne Profilbild. Die App erwartet die MWS-Form; die wird hier
+           gebaut - so braucht die Oberflaeche den Unterschied nicht zu
+           kennen. */
         TiddlyhostStore.prototype.status = function () {
             if (!this.statusUrl) return Promise.resolve(null);
             return fetch(this.statusUrl, {
@@ -8802,6 +8804,10 @@ var e=function(t,n){return e=Object.setPrototypeOf||{__proto__:[]}instanceof Arr
                 return {
                     isLoggedIn: angemeldet,
                     username: angemeldet ? String(daten.logged_in_as || '') : '',
+                    /* Dasselbe Feld wie bei MWS: eine URL auf dem eigenen
+                       Server, leer ohne Bild. statusHolen() laesst fremde
+                       Quellen weg und zeigt dann weiterhin 👤. */
+                    avatarUrl: angemeldet ? String(daten.avatar_url || '') : '',
                     /* Schreiben darf, wer angemeldet ist; ob er es auf
                        diesem Wiki darf, sagt erst der PUT (403). */
                     bags: [{ canUserWrite: angemeldet }],

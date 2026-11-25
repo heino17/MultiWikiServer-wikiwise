@@ -5455,6 +5455,37 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 156. Chore: bundled SimpleWiki shell refreshed to v0.1.59
+
+**Files:**
+- `CHANGELOG.md`
+- `templates/simplewiki.html` (generated from the SimpleWiki source)
+
+**Change.** The bundled shell is now the v0.1.59 build of
+`heino17s_SimpleWiki` (commit `3244dab1a118393f4db8bf4e5d62527b1b5b9d46`).
+It keeps the `2em` header picture from §154 and additionally reads the owner's
+picture from a Tiddlyhost status response (`avatar_url`) through the same
+`avatarUrl` field MWS already sends. Only same-origin relative paths are
+accepted as image sources; without a picture `👤` remains, anonymous visitors
+still see `🔒`. The SimpleWiki suite reports 1517 checks, 0 failures.
+
+**Why.** §153 and §154 shipped with the v0.1.58 shell because the MWS release
+was cut before the last SimpleWiki commit was pushed. A fresh `init-store`
+from 0.8.0 therefore offered v0.1.58 although SimpleWiki itself was already
+at v0.1.59. The bundled file is a build artifact: it is copied from the
+SimpleWiki build and never edited here (§132). This patch brings the artifact
+and the release back in step.
+
+**Verified.** `npm run tsc2`, the admin typecheck and `npm run build` are clean.
+In a store created from the 0.8.0 tarball, `update-simplewiki` with the new
+artifact reported "updated (v0.1.58 -> v0.1.59, release 2)"; the store then
+held releases 1 and 2 and the template definition contained `v0.1.59`. In a
+second 0.8.0 store, `provision-simplewiki` with the `simplewiki.html`
+downloaded from the SimpleWiki repository produced the same release 2 and
+kept the existing `TEACHER` permission. The 0.8.1 tarball installs into a
+fresh data folder and `init-store` creates the `SimpleWiki` template as
+release 1 with label `v0.1.59`.
+
 ## 155. Feature: login rate limiting
 
 **Files:**
@@ -13575,6 +13606,39 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 156. Chore: mitgelieferte SimpleWiki-Schale auf v0.1.59 auffrischen
+
+**Dateien:**
+- `CHANGELOG.md`
+- `templates/simplewiki.html` (aus der SimpleWiki-Quelle erzeugt)
+
+**Änderung.** Die mitgelieferte Schale ist jetzt der v0.1.59-Build von
+`heino17s_SimpleWiki` (Commit `3244dab1a118393f4db8bf4e5d62527b1b5b9d46`).
+Sie behält das `2em`-große Profilbild im Kopf aus §154 und liest zusätzlich
+das Bild des Besitzers aus einer Tiddlyhost-Statusantwort (`avatar_url`) über
+dasselbe Feld `avatarUrl`, das MWS schon sendet. Als Bildquelle gelten nur
+relative Pfade auf dem eigenen Server; ohne Bild bleibt `👤`, anonyme
+Besucher sehen weiterhin `🔒`. Die SimpleWiki-Suite meldet 1517 Prüfungen,
+0 fehlgeschlagen.
+
+**Warum.** §153 und §154 sind mit der Schale v0.1.58 ausgeliefert worden, weil
+das MWS-Release geschnitten wurde, bevor der letzte SimpleWiki-Commit gepusht
+war. Ein frisches `init-store` aus 0.8.0 bot deshalb v0.1.58 an, obwohl
+SimpleWiki selbst schon v0.1.59 war. Die mitgelieferte Datei ist ein
+Build-Artefakt: Sie wird aus dem SimpleWiki-Build kopiert und hier nie von
+Hand bearbeitet (§132). Dieser Patch bringt Artefakt und Release wieder
+zusammen.
+
+**Geprüft.** `npm run tsc2`, der Admin-Typecheck und `npm run build` sind sauber.
+In einem Store aus dem 0.8.0-Tarball meldete `update-simplewiki` mit dem neuen
+Artefakt „updated (v0.1.58 -> v0.1.59, release 2)"; danach lagen die Releases 1
+und 2 im Store und die Template-Definition enthielt `v0.1.59`. In einem
+zweiten 0.8.0-Store erzeugte `provision-simplewiki` mit dem aus dem
+SimpleWiki-Repository geladenen `simplewiki.html` dasselbe Release 2 und
+behielt die bestehende `TEACHER`-Berechtigung. Das 0.8.1-Tarball installiert
+in einen frischen Datenordner, und `init-store` legt das `SimpleWiki`-
+Template als Release 1 mit dem Label `v0.1.59` an.
 
 ## 155. Feature: Login-Rate-Limit
 
