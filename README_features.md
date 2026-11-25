@@ -178,6 +178,7 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
 - **Namespace-Partition pro Owner** (`editions/<owner-id>/<slug>`): kein Vorgreifen auf fremde Bag-Namen; die öffentliche URL bleibt unverändert
 - **CSP-Header** auf Wiki-Seiten, **Existenz-Orakel** (404 statt 403), „Meine Bereiche"-UI mit Vertrauens-Labeln; klassifizierte kollaborative (fremd-beschreibbare) Bags mit Warnung
 - CSRF-/Referer-Checks und `X-Requested-With`-Schutz auf allen Admin-/Schreibpfaden
+- **Login-Rate-Limit** (§155): standardmäßig 5 Anmeldeversuche pro IP und 5 Fehlversuche pro Konto in 5 Minuten, im Einstellungen-Tab einstellbar; 429 mit `Retry-After` und übersetzter Meldung. Die Zähler liegen nur pro Prozess im Speicher; das Tier-Rätsel bleibt unabhängig davon
 - **Passwörter nur als OPAQUE-aPAKE-Hashes**, nie im Klartext; keine E-Mail-Pflicht
 - **Cookie-Consent** mit Kategorien (technisch erforderlich / Einstellungen lokal / extern nur nach Zustimmung), kein Tracking, **keine externen Fonts** (Icons eingebettet, Roboto lokal, SIL-OFL)
 - **Impressum-Seite** unter `/legal-notice` – eigener Markdown-Text, HTML wird escaped; auch im Footer der Startseite und der Verwaltung verlinkt
@@ -380,6 +381,7 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
 - **Per-owner namespace partitioning** (`editions/<owner-id>/<slug>`): no squatting foreign bag names; the public URL stays unchanged
 - **CSP headers** on wiki pages, an **existence oracle** (404 instead of 403), a "My areas" UI with trust labels; collaborative (foreign-writable) bags are classified and warned about
 - CSRF/referer checks and `X-Requested-With` protection on all admin/write paths
+- **Login rate limiting** (§155): by default 5 login attempts per IP and 5 failures per account in 5 minutes, configurable in the Settings tab; 429 with `Retry-After` and a translated message. The counters are in memory per process; the animal puzzle stays independent of them
 - **Passwords only as OPAQUE-aPAKE hashes,** never plaintext; no e-mail required
 - **Cookie consent** with categories (technically required / preferences stored locally / external only after consent), no tracking, **no external fonts** (embedded icons, local Roboto, SIL OFL)
 - **Legal notice page** at `/legal-notice` – your own Markdown text, HTML is escaped; linked in the footer of the start page and the admin app

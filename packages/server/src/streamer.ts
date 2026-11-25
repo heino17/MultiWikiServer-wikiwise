@@ -16,7 +16,7 @@ import SuperHeaders, { SetCookie, SuperHeadersInit, SuperHeadersPropertyInit } f
 import { URLSearchParamsTyped } from './URLSearchParamsTyped';
 import { serveStatic, ServeStaticOptions } from '@hono/node-server/serve-static';
 import { Context } from 'hono';
-import { getConnInfo } from 'hono/cloudflare-workers';
+import { getConnInfo } from '@hono/node-server/conninfo';
 import { contentType } from 'mime-types';
 import { extname } from 'node:path';
 import { BetterCookie } from './better-headers';
@@ -558,9 +558,10 @@ export class Streamer extends StreamerRequest {
     }, msg, "utf8");
   }
   /** Stringify the value (unconditionally) and send it with content-type `application/json` */
-  sendJSON<T>(status: number, obj: T): typeof STREAM_ENDED {
+  sendJSON<T>(status: number, obj: T, headers?: StreamerHeadersInput): typeof STREAM_ENDED {
     return this.sendString(status, {
-      contentType: "application/json"
+      contentType: "application/json",
+      ...headers,
     }, JSON.stringify(obj), "utf8");
   }
 

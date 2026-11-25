@@ -5455,6 +5455,66 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 155. Feature: login rate limiting
+
+**Files:**
+- `CHANGELOG.md`, `README.md`, `README_features.md`
+- `packages/admin-vanilla/src/FomController.tsx`,
+  `packages/admin-vanilla/src/app-settings.tsx`,
+  `packages/admin-vanilla/src/locales/de.ts`,
+  `packages/admin-vanilla/src/locales/en.ts`,
+  `packages/admin-vanilla/src/main.tsx`
+- `packages/mws/src/new-managers/LoginRateLimit.ts`,
+  `packages/mws/src/new-managers/PrefsRoutes.ts`,
+  `packages/mws/src/new-managers/sessions.ts`
+- `packages/server/src/streamer.ts`
+
+**Change.** The login is now throttled in a way similar to Tiddlyhost's
+Rack::Attack rules. MWS needs two requests for one OPAQUE login, so `/login/1`
+counts as one attempt and `/login/2` is checked against the account's failure
+counter instead of counting a second attempt. By default at most five login
+starts per IP address and five failures per username are allowed in a five
+minute window. Unknown users in `/login/1` and rejected OPAQUE finishes in
+`/login/2` count as failures; a correct password clears the account's counter.
+A rejected login gets HTTP 429 with a `Retry-After` header and the stable reason
+`LOGIN_RATE_LIMITED`, which the admin client turns into a translated message.
+The OPAQUE wrong-password error is also normalised from a 500 to the ordinary
+400 `Login failed.` response.
+
+The Settings page gains a "Login rate limiting" switch and three number fields
+for the two limits and the window. Empty fields mean "use the code default", so
+stores created before this change get the defaults without a migration. The
+four values live in the existing `settings` table. `state.remoteAddress` now
+comes from the real socket via `@hono/node-server/conninfo` instead of the
+Cloudflare-only header helper; a forged `cf-connecting-ip` header no longer
+moves a request into another bucket. `sendJSON` can now set response headers.
+
+The counters live in memory in the server process. They reset on restart and
+are not shared between multiple server instances; no Prisma model or migration
+was added.
+
+**Why.** Tiddlyhost had protected its sign-in form against brute-force attempts
+for a long time; MWS had only the optional animal puzzle, which stops careless
+clicking but not an automated password search. The IP counter limits attempts
+from one machine, the account counter also catches attempts spread over
+several addresses. Both are deliberately independent of `showLoginPuzzle`:
+operators can keep the puzzle, switch it off, or change either counter without
+the other setting being affected.
+
+**Verified.** `npm run tsc2`, the admin typecheck and `npm run build` are clean.
+With curl against the dev server, six `/login/1` requests for an unknown user
+returned 400 five times and then 429 with `Retry-After: 300`; a spoofed
+`cf-connecting-ip` header did not evade that counter. With the account limit set
+to three and the IP limit raised to 100, two bad finishes followed by the
+correct password succeeded; three further failures then blocked the correct
+password with 429. With the switch stored as `false`, seven attempts all
+returned 400. In the browser, the Settings page showed the new switch and
+empty number fields, and saving removed the explicit rows again. After
+logging out, six failed form logins showed `User not found.` five times and the
+German "Zu viele Anmeldeversuche …" message on the sixth. No unexpected console
+errors appeared. The dev settings and the temporary test sessions were removed
+again afterwards.
+
 ## 154. Feature: profile pictures in the users list, larger picture in SimpleWiki
 
 **Files:**
@@ -13515,6 +13575,69 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 155. Feature: Login-Rate-Limit
+
+**Dateien:**
+- `CHANGELOG.md`, `README.md`, `README_features.md`
+- `packages/admin-vanilla/src/FomController.tsx`,
+  `packages/admin-vanilla/src/app-settings.tsx`,
+  `packages/admin-vanilla/src/locales/de.ts`,
+  `packages/admin-vanilla/src/locales/en.ts`,
+  `packages/admin-vanilla/src/main.tsx`
+- `packages/mws/src/new-managers/LoginRateLimit.ts`,
+  `packages/mws/src/new-managers/PrefsRoutes.ts`,
+  `packages/mws/src/new-managers/sessions.ts`
+- `packages/server/src/streamer.ts`
+
+**Änderung.** Die Anmeldung wird jetzt ähnlich wie bei Tiddlyhosts
+Rack::Attack-Regeln gedrosselt. MWS braucht zwei Requests für eine OPAQUE-
+Anmeldung: `/login/1` zählt als ein Versuch, `/login/2` wird statt als weiterer
+Versuch gegen den Fehlzähler des Kontos geprüft. Standardmäßig sind fünf
+Anmeldeversuche pro IP-Adresse und fünf Fehlversuche pro Benutzername in einem
+Fünf-Minuten-Fenster erlaubt. Unbekannte Benutzer in `/login/1` und abgelehnte
+OPAQUE-Abschlüsse in `/login/2` zählen als Fehler; ein richtiges Passwort setzt
+den Zähler des Kontos zurück. Eine abgelehnte Anmeldung liefert HTTP 429 mit
+`Retry-After`-Header und dem stabilen Grund `LOGIN_RATE_LIMITED`, den der
+Admin-Client in eine übersetzte Meldung umsetzt. Der OPAQUE-Fehler bei falschem
+Passwort wird außerdem von einem 500er in die übliche 400-Antwort `Login
+failed.` überführt.
+
+Die Einstellungsseite bekommt einen Schalter „Login-Rate-Limit" und drei
+Zahlenfelder für die beiden Grenzen und das Zeitfenster. Leere Felder bedeuten
+„Standardwert aus dem Code", sodass ältere Stores ohne Migration die
+Standardwerte bekommen. Die vier Werte liegen in der vorhandenen Tabelle
+`settings`. `state.remoteAddress` kommt jetzt über `@hono/node-server/conninfo`
+vom echten Socket statt aus dem Cloudflare-spezifischen Header-Helfer; ein
+gefälschter `cf-connecting-ip`-Header verschiebt einen Request nicht mehr in
+einen anderen Zähler. `sendJSON` kann nun Antwort-Header setzen.
+
+Die Zähler liegen nur im Speicher des Serverprozesses. Sie werden beim Neustart
+zurückgesetzt und sind nicht zwischen mehreren Serverinstanzen geteilt; ein
+Prisma-Modell oder eine Migration gibt es nicht.
+
+**Warum.** Tiddlyhost schützt sein Anmeldeformular schon lange vor
+Brute-Force-Versuchen; MWS hatte nur das optionale Tier-Rätsel, das unüberlegtes
+Klicken, aber keine automatisierte Passwortsuche stoppt. Der IP-Zähler begrenzt
+Versuche von einem Rechner, der Konten-Zähler trifft auch Versuche von
+mehreren Adressen aus. Beide sind bewusst unabhängig von `showLoginPuzzle`:
+Betreiber können das Rätsel behalten, abschalten oder einen der beiden Zähler
+ändern, ohne dass die jeweils andere Einstellung beeinflusst wird.
+
+**Geprüft.** `npm run tsc2`, der Admin-Typecheck und `npm run build` sind sauber.
+Mit curl gegen die Dev-Instanz lieferten sechs `/login/1`-Requests für einen
+unbekannten Benutzer fünfmal 400 und dann 429 mit `Retry-After: 300`; ein
+gefälschter `cf-connecting-ip`-Header umging diesen Zähler nicht. Mit einem
+Kontenlimit von drei und erhöhtem IP-Limit folgten auf zwei falsche Abschlüsse
+mit dem richtigen Passwort erfolgreiche Anmeldungen; drei weitere Fehlversuche
+blockierten danach auch das richtige Passwort mit 429. Mit auf `false` gesetztem
+Schalter lieferten sieben Versuche durchgehend 400. Im Browser zeigte die
+Einstellungsseite den neuen Schalter und leere Zahlenfelder; nach dem Speichern
+waren die expliziten Zeilen wieder entfernt. Nach dem Abmelden zeigten sechs
+fehlgeschlagene Formular-Anmeldungen fünfmal `User not found.` und beim sechsten
+Mal die deutsche Meldung „Zu viele Anmeldeversuche …". Es traten keine
+unerwarteten Konsolenfehler auf. Die Dev-Einstellungen und die temporären
+Test-Sitzungen wurden danach wieder entfernt.
 
 ## 154. Feature: Profilbilder im Benutzer-Tab, größeres Bild in SimpleWiki
 

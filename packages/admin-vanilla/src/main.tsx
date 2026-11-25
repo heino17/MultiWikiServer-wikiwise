@@ -43,6 +43,10 @@ declare global {
       showLocaleSelect: boolean;
       showThumbnails: boolean;
       showLoginPuzzle: boolean;
+      loginRateLimitEnabled: boolean;
+      loginRateLimitIpAttempts: number | null;
+      loginRateLimitEmailFailures: number | null;
+      loginRateLimitPeriodMinutes: number | null;
       thumbnailTtlHours: number | null;
       wikisPerPage: number | null;
       showLanding: boolean;

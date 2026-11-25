@@ -17,6 +17,10 @@ export const PREF_KEYS = {
   showLocaleSelect: "admin.showLocaleSelect",
   showThumbnails: "admin.showThumbnails",
   showLoginPuzzle: "admin.showLoginPuzzle",
+  loginRateLimitEnabled: "admin.loginRateLimitEnabled",
+  loginRateLimitIpAttempts: "admin.loginRateLimitIpAttempts",
+  loginRateLimitEmailFailures: "admin.loginRateLimitEmailFailures",
+  loginRateLimitPeriodMinutes: "admin.loginRateLimitPeriodMinutes",
   thumbnailTtlHours: "admin.thumbnailTtlHours",
   wikisPerPage: "admin.wikisPerPage",
   showLanding: "admin.showLanding",
@@ -49,6 +53,14 @@ export interface ServerPrefs {
   showThumbnails: boolean;
   /** Animal-tap puzzle on the login form ("login CAPTCHA"). */
   showLoginPuzzle: boolean;
+  /** Throttle repeated login attempts. Independent of the puzzle. */
+  loginRateLimitEnabled: boolean;
+  /** All login starts per IP within the window. `null` = install default (5). */
+  loginRateLimitIpAttempts: number | null;
+  /** Failed logins per username within the window. `null` = install default (5). */
+  loginRateLimitEmailFailures: number | null;
+  /** Counting window in minutes. `null` = install default (5). */
+  loginRateLimitPeriodMinutes: number | null;
   /** Thumbnail cache time in hours. `null` = install default (24h). */
   thumbnailTtlHours: number | null;
   /** Wikis shown at once in the admin "Wikis" list. `null` = install default
@@ -91,6 +103,10 @@ export const INSTALL_DEFAULTS: { key: string; value: string }[] = [
   { key: PREF_KEYS.showLocaleSelect, value: "true" },
   { key: PREF_KEYS.showThumbnails, value: "true" },
   { key: PREF_KEYS.showLoginPuzzle, value: "true" },
+  { key: PREF_KEYS.loginRateLimitEnabled, value: "true" },
+  { key: PREF_KEYS.loginRateLimitIpAttempts, value: "5" },
+  { key: PREF_KEYS.loginRateLimitEmailFailures, value: "5" },
+  { key: PREF_KEYS.loginRateLimitPeriodMinutes, value: "5" },
   { key: PREF_KEYS.thumbnailTtlHours, value: "24" },
   { key: PREF_KEYS.wikisPerPage, value: "10" },
   { key: PREF_KEYS.showLanding, value: "true" },
@@ -146,6 +162,15 @@ function boolPref(map: Map<string, string>, key: string, fallback: boolean): boo
   return fallback;
 }
 
+/** Integer prefs are stored as decimal strings. `null` means "use the code
+ *  default", which also covers stores created before the key existed. */
+function intPref(map: Map<string, string>, key: string, min: number, max: number): number | null {
+  const raw = map.get(key);
+  if (raw == null) return null;
+  const value = Number.parseInt(raw, 10);
+  return Number.isFinite(value) && value >= min && value <= max ? value : null;
+}
+
 export async function readPrefs(prisma: PrismaTxnClient): Promise<ServerPrefs> {
   const rows = await prisma.settings.findMany({
     where: { key: { in: ALL_KEYS } },
@@ -170,6 +195,10 @@ export async function readPrefs(prisma: PrismaTxnClient): Promise<ServerPrefs> {
     showLocaleSelect: boolPref(map, PREF_KEYS.showLocaleSelect, true),
     showThumbnails: boolPref(map, PREF_KEYS.showThumbnails, true),
     showLoginPuzzle: boolPref(map, PREF_KEYS.showLoginPuzzle, true),
+    loginRateLimitEnabled: boolPref(map, PREF_KEYS.loginRateLimitEnabled, true),
+    loginRateLimitIpAttempts: intPref(map, PREF_KEYS.loginRateLimitIpAttempts, 1, 100),
+    loginRateLimitEmailFailures: intPref(map, PREF_KEYS.loginRateLimitEmailFailures, 1, 100),
+    loginRateLimitPeriodMinutes: intPref(map, PREF_KEYS.loginRateLimitPeriodMinutes, 1, 60),
     thumbnailTtlHours: ttlHours != null && Number.isFinite(ttlHours) && ttlHours > 0 ? ttlHours : null,
     wikisPerPage: perPage != null && Number.isFinite(perPage) && perPage >= 0 ? perPage : null,
     showLanding: boolPref(map, PREF_KEYS.showLanding, true),
@@ -211,6 +240,10 @@ export const AdminPrefsPut = zodRoute({
     showLocaleSelect: z.boolean().nullable(),
     showThumbnails: z.boolean().nullable(),
     showLoginPuzzle: z.boolean().nullable(),
+    loginRateLimitEnabled: z.boolean().nullable(),
+    loginRateLimitIpAttempts: z.number().int().min(1).max(100).nullable(),
+    loginRateLimitEmailFailures: z.number().int().min(1).max(100).nullable(),
+    loginRateLimitPeriodMinutes: z.number().int().min(1).max(60).nullable(),
     thumbnailTtlHours: z.number().int().min(1).max(2160).nullable(),
     wikisPerPage: z.number().int().min(0).max(200).nullable(),
     showLanding: z.boolean().nullable(),
@@ -235,6 +268,10 @@ export const AdminPrefsPut = zodRoute({
       showLocaleSelect,
       showThumbnails,
       showLoginPuzzle,
+      loginRateLimitEnabled,
+      loginRateLimitIpAttempts,
+      loginRateLimitEmailFailures,
+      loginRateLimitPeriodMinutes,
       thumbnailTtlHours,
       wikisPerPage,
       showLanding,
@@ -254,6 +291,10 @@ export const AdminPrefsPut = zodRoute({
     if (showLocaleSelect != null) entries.push({ key: PREF_KEYS.showLocaleSelect, value: showLocaleSelect ? "true" : "false" });
     if (showThumbnails != null) entries.push({ key: PREF_KEYS.showThumbnails, value: showThumbnails ? "true" : "false" });
     if (showLoginPuzzle != null) entries.push({ key: PREF_KEYS.showLoginPuzzle, value: showLoginPuzzle ? "true" : "false" });
+    if (loginRateLimitEnabled != null) entries.push({ key: PREF_KEYS.loginRateLimitEnabled, value: loginRateLimitEnabled ? "true" : "false" });
+    if (loginRateLimitIpAttempts != null) entries.push({ key: PREF_KEYS.loginRateLimitIpAttempts, value: String(loginRateLimitIpAttempts) });
+    if (loginRateLimitEmailFailures != null) entries.push({ key: PREF_KEYS.loginRateLimitEmailFailures, value: String(loginRateLimitEmailFailures) });
+    if (loginRateLimitPeriodMinutes != null) entries.push({ key: PREF_KEYS.loginRateLimitPeriodMinutes, value: String(loginRateLimitPeriodMinutes) });
     if (thumbnailTtlHours != null) entries.push({ key: PREF_KEYS.thumbnailTtlHours, value: String(thumbnailTtlHours) });
     if (wikisPerPage != null) entries.push({ key: PREF_KEYS.wikisPerPage, value: String(wikisPerPage) });
     if (showLanding != null) entries.push({ key: PREF_KEYS.showLanding, value: showLanding ? "true" : "false" });

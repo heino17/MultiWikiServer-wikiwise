@@ -3,6 +3,7 @@ import { BetterCookie, jsonify, JsonValue, registerZodRoutes, RouterKeyMap, Send
 import { createHash, randomBytes } from "node:crypto";
 import { ServerState } from "../ServerState";
 import { serverEvents } from "@tiddlywiki/events";
+import { checkLoginFinish, checkLoginStart, clearFailedLogins, forgetLogin, noteFailedLogin, rememberLogin } from "./LoginRateLimit";
 
 
 export interface SessionManagerObject {
@@ -247,7 +248,10 @@ export class SessionManager {
   login1 = zodSession("/login/1", z => z.object({
     username: z.prismaField("Users", "username", "string"),
     startLoginRequest: z.string(),
-  }), async (state) => { state.assertReferer(["/login", "/profile", "/wiki"]); }, async (state, prisma) => {
+  }), async (state) => {
+    state.assertReferer(["/login", "/profile", "/wiki"]);
+    await checkLoginStart(state, state.data.username);
+  }, async (state, prisma) => {
     const { username, startLoginRequest } = state.data;
 
     const user = await prisma.users.findUnique({
@@ -255,7 +259,10 @@ export class SessionManager {
       select: { user_id: true, password: true, }
     });
 
-    if (!user) throw "User not found.";
+    if (!user) {
+      await noteFailedLogin(state, username);
+      throw "User not found.";
+    }
 
     const { user_id, password } = user;
 
@@ -270,6 +277,7 @@ export class SessionManager {
     if (loginResponse.done) throw "Login failed.";
 
     const loginSession = await state.PasswordService.startLoginSession(stater);
+    rememberLogin(loginSession, username);
 
     return { loginResponse: loginResponse.value, loginSession };
 
@@ -279,18 +287,37 @@ export class SessionManager {
     finishLoginRequest: z.string(),
     loginSession: z.string(),
     skipCookie: z.boolean().optional().default(false),
-  }), async (state) => { state.assertReferer(["/login", "/profile", "/wiki"]); }, async (state, prisma) => {
+  }), async (state) => {
+    state.assertReferer(["/login", "/profile", "/wiki"]);
+    await checkLoginFinish(state, state.data.loginSession);
+  }, async (state, prisma) => {
     const { finishLoginRequest, skipCookie, loginSession } = state.data;
 
     if (!loginSession) throw "Login session not found.";
 
-    const stater = state.PasswordService.serverState.get(loginSession);
+    // A login session is single-use. Taking it out of the map here both stops
+    // replays and stops the OPAQUE states from piling up in memory.
+    const stater = await state.PasswordService.finishLoginSession(loginSession);
+    const username = forgetLogin(loginSession);
 
     if (!stater) throw "Login session not found.";
 
-    const { value } = await stater.next(1, finishLoginRequest);
+    let value;
+    try {
+      value = (await stater.next(1, finishLoginRequest)).value;
+    } catch {
+      // OPAQUE throws an Error for a wrong password, which the router would
+      // otherwise report as a 500. Treat it like the other login failures.
+      if (username) await noteFailedLogin(state, username);
+      throw "Login failed.";
+    }
 
-    if (!value?.session?.sessionKey) throw "Login failed.";
+    if (!value?.session?.sessionKey) {
+      if (username) await noteFailedLogin(state, username);
+      throw "Login failed.";
+    }
+
+    if (username) clearFailedLogins(username);
 
     const session_id = await createSession(prisma, value.user_id, value.session.sessionKey);
 

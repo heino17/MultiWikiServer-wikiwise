@@ -31,6 +31,13 @@ const newsStyleOptions = [
   { value: "danger", labelKey: "Danger" },
 ] as const;
 
+/** Empty input means "use the server default"; out-of-range input is ignored. */
+function parseSettingInt(value: string, min: number, max: number): number | null {
+  if (value.trim() === "") return null;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed >= min && parsed <= max ? parsed : null;
+}
+
 @addstyles(css)
 
 @addstyles(css)
@@ -49,7 +56,12 @@ export class SettingsForm extends JSXElement {
   @state() accessor showLocaleSelect = embeddedServerResponse.prefs?.showLocaleSelect ?? true;
   @state() accessor showThumbnails = embeddedServerResponse.prefs?.showThumbnails ?? true;
   @state() accessor showLoginPuzzle = embeddedServerResponse.prefs?.showLoginPuzzle ?? true;
+  @state() accessor loginRateLimitEnabled = embeddedServerResponse.prefs?.loginRateLimitEnabled ?? true;
   @state() accessor showCookieConsent = embeddedServerResponse.prefs?.showCookieConsent ?? true;
+
+  @state() accessor loginRateLimitIpAttempts = embeddedServerResponse.prefs?.loginRateLimitIpAttempts ?? null;
+  @state() accessor loginRateLimitEmailFailures = embeddedServerResponse.prefs?.loginRateLimitEmailFailures ?? null;
+  @state() accessor loginRateLimitPeriodMinutes = embeddedServerResponse.prefs?.loginRateLimitPeriodMinutes ?? null;
 
   @state() accessor thumbnailTtlHours = embeddedServerResponse.prefs?.thumbnailTtlHours ?? null;
 
@@ -92,6 +104,10 @@ export class SettingsForm extends JSXElement {
       if (typeof prefs.showLocaleSelect === "boolean") this.showLocaleSelect = prefs.showLocaleSelect;
       if (typeof prefs.showThumbnails === "boolean") this.showThumbnails = prefs.showThumbnails;
       if (typeof prefs.showLoginPuzzle === "boolean") this.showLoginPuzzle = prefs.showLoginPuzzle;
+      if (typeof prefs.loginRateLimitEnabled === "boolean") this.loginRateLimitEnabled = prefs.loginRateLimitEnabled;
+      if (typeof prefs.loginRateLimitIpAttempts === "number") this.loginRateLimitIpAttempts = prefs.loginRateLimitIpAttempts;
+      if (typeof prefs.loginRateLimitEmailFailures === "number") this.loginRateLimitEmailFailures = prefs.loginRateLimitEmailFailures;
+      if (typeof prefs.loginRateLimitPeriodMinutes === "number") this.loginRateLimitPeriodMinutes = prefs.loginRateLimitPeriodMinutes;
       if (typeof prefs.thumbnailTtlHours === "number") this.thumbnailTtlHours = prefs.thumbnailTtlHours;
       if (typeof prefs.wikisPerPage === "number") this.wikisPerPage = prefs.wikisPerPage;
       if (typeof prefs.showLanding === "boolean") this.showLanding = prefs.showLanding;
@@ -129,6 +145,10 @@ export class SettingsForm extends JSXElement {
           showLocaleSelect: this.showLocaleSelect,
           showThumbnails: this.showThumbnails,
           showLoginPuzzle: this.showLoginPuzzle,
+          loginRateLimitEnabled: this.loginRateLimitEnabled,
+          loginRateLimitIpAttempts: this.loginRateLimitIpAttempts,
+          loginRateLimitEmailFailures: this.loginRateLimitEmailFailures,
+          loginRateLimitPeriodMinutes: this.loginRateLimitPeriodMinutes,
           thumbnailTtlHours: this.thumbnailTtlHours,
           wikisPerPage: this.wikisPerPage,
           showLanding: this.showLanding,
@@ -158,6 +178,8 @@ export class SettingsForm extends JSXElement {
 
   private readonly onLoginPuzzleChange = (checked: boolean) => { this.touched = true; this.showLoginPuzzle = checked; };
 
+  private readonly onLoginRateLimitChange = (checked: boolean) => { this.touched = true; this.loginRateLimitEnabled = checked; };
+
   private readonly onCookieConsentChange = (checked: boolean) => { this.touched = true; this.showCookieConsent = checked; };
 
   private readonly onLegalNoticeChange = (value: string) => { this.touched = true; this.legalNotice = value; };
@@ -169,6 +191,21 @@ export class SettingsForm extends JSXElement {
   private readonly onLandingMessageChange = (value: string) => { this.touched = true; this.landingMessage = value; };
 
   private readonly onLandingNewsChange = (value: string) => { this.touched = true; this.landingNews = value; };
+
+  private readonly onLoginRateLimitIpAttemptsChange = (value: string) => {
+    this.touched = true;
+    this.loginRateLimitIpAttempts = parseSettingInt(value, 1, 100);
+  };
+
+  private readonly onLoginRateLimitEmailFailuresChange = (value: string) => {
+    this.touched = true;
+    this.loginRateLimitEmailFailures = parseSettingInt(value, 1, 100);
+  };
+
+  private readonly onLoginRateLimitPeriodMinutesChange = (value: string) => {
+    this.touched = true;
+    this.loginRateLimitPeriodMinutes = parseSettingInt(value, 1, 60);
+  };
 
   private readonly onThumbnailTtlChange = (value: string) => {
     this.touched = true;
@@ -350,6 +387,74 @@ export class SettingsForm extends JSXElement {
                   <span class="header-switch-thumb"></span>
                 </span>
               </label>
+
+              <label class="settings-toggle-row">
+                <span class="settings-toggle-copy">
+                  <strong>{t("Login rate limiting")}</strong>
+                  <p>{t("Limits repeated login attempts per IP address and account.")}</p>
+                </span>
+                <input
+                  class="header-switch-input"
+                  type="checkbox"
+                  checked={this.loginRateLimitEnabled}
+                  disabled={!this.isAdmin}
+                  onchange={(event) => this.onLoginRateLimitChange((event.currentTarget as HTMLInputElement).checked)}
+                />
+                <span class={this.loginRateLimitEnabled ? "header-switch-track is-checked" : "header-switch-track"} aria-hidden="true">
+                  <span class="header-switch-thumb"></span>
+                </span>
+              </label>
+
+              <div class="settings-toggle-row is-input-row">
+                <span class="settings-toggle-copy">
+                  <strong>{t("Max. login attempts per IP")}</strong>
+                  <p>{t("Login attempts from one IP address within the time window. Leave empty to use the default of 5.")}</p>
+                </span>
+                <input
+                  class="field-input settings-number-input"
+                  type="number"
+                  min="1"
+                  max="100"
+                  step="1"
+                  value={this.loginRateLimitIpAttempts ?? ""}
+                  disabled={!this.isAdmin}
+                  oninput={(event) => this.onLoginRateLimitIpAttemptsChange((event.target as HTMLInputElement).value)}
+                />
+              </div>
+
+              <div class="settings-toggle-row is-input-row">
+                <span class="settings-toggle-copy">
+                  <strong>{t("Max. failed attempts per account")}</strong>
+                  <p>{t("Failed logins for one username within the time window. Leave empty to use the default of 5.")}</p>
+                </span>
+                <input
+                  class="field-input settings-number-input"
+                  type="number"
+                  min="1"
+                  max="100"
+                  step="1"
+                  value={this.loginRateLimitEmailFailures ?? ""}
+                  disabled={!this.isAdmin}
+                  oninput={(event) => this.onLoginRateLimitEmailFailuresChange((event.target as HTMLInputElement).value)}
+                />
+              </div>
+
+              <div class="settings-toggle-row is-input-row">
+                <span class="settings-toggle-copy">
+                  <strong>{t("Rate limit window (minutes)")}</strong>
+                  <p>{t("Time window in which login attempts are counted. Leave empty to use the default of 5 minutes.")}</p>
+                </span>
+                <input
+                  class="field-input settings-number-input"
+                  type="number"
+                  min="1"
+                  max="60"
+                  step="1"
+                  value={this.loginRateLimitPeriodMinutes ?? ""}
+                  disabled={!this.isAdmin}
+                  oninput={(event) => this.onLoginRateLimitPeriodMinutesChange((event.target as HTMLInputElement).value)}
+                />
+              </div>
 
               <label class="settings-toggle-row">
                 <span class="settings-toggle-copy">

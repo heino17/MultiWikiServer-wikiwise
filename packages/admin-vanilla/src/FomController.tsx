@@ -80,6 +80,10 @@ export class FomController<T extends AdminRecord> {
       if (error instanceof Error) {
         try {
           const se = JSON.parse(error.message);
+          if (se.reason === "LOGIN_RATE_LIMITED") {
+            this.submitMessage = t("Too many login attempts. Please try again in a few minutes.");
+            return;
+          }
           if (se.reason && se.status) {
             this.submitMessage = se.reason;
             if (se.details) {
