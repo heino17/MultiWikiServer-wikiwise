@@ -11,14 +11,18 @@ Standard-Sprache und Standard-Theme fürs erste Laden stellt der Betreiber in de
 
 > ⚠️ `@tiddlywiki/mws` auf npm ist das **Upstream**-Projekt. `npm init @tiddlywiki/mws@latest` installiert nicht diesen Fork. Dieser Fork wird als GitHub-Release verteilt, nicht über npm.
 >
-> **Schnellster Weg:** `mkdir mein-ordner && cd mein-ordner && npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.8.1/mws-wikiwise-0.8.1.tgz && npx mws init-data-folder`, dann `npx mws update-tiddlywiki`, `npx mws init-store`, `npx mws listen --listener`. `npx mws init-data-folder` ist Pflicht: der Server startet nur, wenn die `package.json` des Datenordners `@tiddlywiki/mws-instance` heißt, `private` ist und Version `0.2.x` trägt.
+> **Schnellster Weg:** `mkdir mein-ordner && cd mein-ordner && npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.8.2/mws-wikiwise-0.8.2.tgz && npx mws init-data-folder`, dann `npx mws update-tiddlywiki`, `npx mws init-store`, `npx mws listen --listener`. `npx mws init-data-folder` ist Pflicht: der Server startet nur, wenn die `package.json` des Datenordners `@tiddlywiki/mws-instance` heißt, `private` ist und Version `0.2.x` trägt.
 
 1. Repository holen und installieren: `git clone https://github.com/heino17/MultiWikiServer-wikiwise.git && cd MultiWikiServer-wikiwise && npm install`
 2. Entwicklungs-Wiki starten: `npm start` → Port `5000` unter `/dev/`
-3. Eigener Datenordner (empfohlen für den Betrieb): `npm pack`, dann `mkdir mein-ordner && cp create-package/files/* mein-ordner/`, `cd mein-ordner && npm install ../mws-wikiwise-0.8.1.tgz`, `npx mws update-tiddlywiki`, `npx mws init-store`, `npx mws listen --listener`
+3. Eigener Datenordner (empfohlen für den Betrieb): `npm pack`, dann `mkdir mein-ordner && cp create-package/files/* mein-ordner/`, `cd mein-ordner && npm install ../mws-wikiwise-0.8.2.tgz`, `npx mws update-tiddlywiki`, `npx mws init-store`, `npx mws listen --listener`
 4. Im Browser öffnen: Port `8080` (bzw. wie konfiguriert) – Erstanmeldung mit `admin` / `1234` (Passwort danach ändern).
 
 Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Cert möglich (z. B. hinter einem Reverse-Proxy wie Apache). Die Daten liegen in einer SQLite-Datei im `store`-Ordner – **immer komplett sichern** (⇒ Admin-Backup). Updates: MWS liegt nicht auf npm, `npm update` bringt hier also nichts — installiere stattdessen das Tarball des neuen Releases; TiddlyWiki per `npx mws update-tiddlywiki`.
+
+### Voraussetzungen für Vorschaubilder
+
+Die Vorschauen sind Headless-Screenshots: MWS bringt `playwright-core` mit, aber **keinen** Browser und keine Fonts. Auf Debian/Ubuntu: `npx playwright install chromium`, `sudo npx playwright install-deps chromium`, `sudo apt install -y fonts-noto-color-emoji fonts-noto-cjk fonts-nanum fonts-dejavu-core`, `sudo fc-cache -f`. In einem Systemd-Dienst `Environment=MWS_CHROMIUM_PATH=/usr/bin/chromium` setzen statt sich auf `HOME` zu verlassen. `npx mws doctor` prüft Browser, Bibliotheken und Schriften und schreibt `store/thumbnail-check.png`; nach Font-Installationen `npx mws refresh-thumbnails` ausführen. Ohne Browser fehlen nur die Bilder, nicht die Wikis.
 
 ## Funktionen
 
@@ -156,7 +160,7 @@ Hinweise: Der Server spricht standardmäßig HTTP; HTTPS ist über eigene Key/Ce
 - Die Wiki-Liste zeigt echte **Vorschaubilder** (Headless-Screenshots der Wiki-Seite, per-User-Sicht): 640×400 auf `store/thumbnails/`, Klick öffnet das große Bild
 - **Die Vorschau verschwindet beim Bearbeiten nicht mehr:** Sie bleibt nach der letzten Änderung stehen und wird erst nach einer kurzen **Schonfrist** (Vorgabe 30 s, `MWS_THUMBNAIL_GRACE_SECONDS`) im Hintergrund erneuert – wer kein Schreibrecht hat, sieht also nie ein leeres Feld. Die Schonfrist wird aus dem Datenbank-Stand ermittelt (jüngster Tiddler der Wiki), überlebt damit auch einen Server-Neustart
 - Veraltete PNGs werden **ersetzt, nicht gelöscht**; erst ein gelöschtes Wiki räumt sein Vorschaubild weg (sofort und beim nächsten Serverstart)
-- Rendering serverseitig mit **Chromium** (Vorgabe 2 parallel, `MWS_THUMBNAIL_RENDER_CONCURRENCY` 1–8), anonyme Besucher bekommen nur aus dem Cache bedient (DoS-Schutz); ein Chromium-Pfad ist über `MWS_CHROMIUM_PATH`/`CHROME_PATH` vorgebbar
+- Rendering serverseitig mit **Chromium** (Vorgabe 2 parallel, `MWS_THUMBNAIL_RENDER_CONCURRENCY` 1–8), anonyme Besucher bekommen nur aus dem Cache bedient (DoS-Schutz); ein Chromium-Pfad ist über `MWS_CHROMIUM_PATH`/`CHROME_PATH`/`PLAYWRIGHT_BROWSERS_PATH` vorgebbar, `npx mws doctor` prüft die Umgebung und `npx mws refresh-thumbnails` verwirft den Cache
 - Harte Cache-Obergrenze: `MWS_THUMBNAIL_TTL_HOURS` → Einstellung „Vorschaubild-Cache-Zeit" → Vorgabe 24 h
 
 ### Speicher & Backups
@@ -232,14 +236,18 @@ The operator sets the default language and theme for the very first load in "Set
 
 > ⚠️ `@tiddlywiki/mws` on npm is the **upstream** project. `npm init @tiddlywiki/mws@latest` does not install this fork. This fork is distributed as a GitHub release, not on npm.
 >
-> **Fastest route:** `mkdir my-folder && cd my-folder && npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.8.1/mws-wikiwise-0.8.1.tgz && npx mws init-data-folder`, then `npx mws update-tiddlywiki`, `npx mws init-store`, `npx mws listen --listener`. `npx mws init-data-folder` is not optional: the server only starts if the data folder's `package.json` is named `@tiddlywiki/mws-instance`, is `private` and carries a `0.2.x` version.
+> **Fastest route:** `mkdir my-folder && cd my-folder && npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.8.2/mws-wikiwise-0.8.2.tgz && npx mws init-data-folder`, then `npx mws update-tiddlywiki`, `npx mws init-store`, `npx mws listen --listener`. `npx mws init-data-folder` is not optional: the server only starts if the data folder's `package.json` is named `@tiddlywiki/mws-instance`, is `private` and carries a `0.2.x` version.
 
 1. Get and install the repository: `git clone https://github.com/heino17/MultiWikiServer-wikiwise.git && cd MultiWikiServer-wikiwise && npm install`
 2. Start the development wiki: `npm start` → port `5000` under `/dev/`
-3. Own data folder (recommended for real operation): `npm pack`, then `mkdir my-folder && cp create-package/files/* my-folder/`, `cd my-folder && npm install ../mws-wikiwise-0.8.1.tgz`, `npx mws update-tiddlywiki`, `npx mws init-store`, `npx mws listen --listener`
+3. Own data folder (recommended for real operation): `npm pack`, then `mkdir my-folder && cp create-package/files/* my-folder/`, `cd my-folder && npm install ../mws-wikiwise-0.8.2.tgz`, `npx mws update-tiddlywiki`, `npx mws init-store`, `npx mws listen --listener`
 4. Open in your browser: port `8080` (or as configured) – first login with `admin` / `1234` (change the password afterwards).
 
 Notes: The server speaks plain HTTP by default; HTTPS is possible via your own key/cert (e.g. behind a reverse proxy like Apache). Data lives in a single SQLite file inside the `store` folder – **always back it up completely** (⇒ admin backup). Updates: MWS is not on npm, so `npm update` does nothing here — install the tarball of the new release instead; TiddlyWiki via `npx mws update-tiddlywiki`.
+
+### Thumbnail prerequisites
+
+Previews are headless screenshots: MWS ships `playwright-core`, but **no** browser and no fonts. On Debian/Ubuntu: `npx playwright install chromium`, `sudo npx playwright install-deps chromium`, `sudo apt install -y fonts-noto-color-emoji fonts-noto-cjk fonts-nanum fonts-dejavu-core`, `sudo fc-cache -f`. In a systemd unit set `Environment=MWS_CHROMIUM_PATH=/usr/bin/chromium` rather than relying on `HOME`. `npx mws doctor` checks the browser, libraries and fonts and writes `store/thumbnail-check.png`; after installing fonts, run `npx mws refresh-thumbnails`. Without a browser, only the pictures are missing – not the wikis.
 
 ## **Features**
 
@@ -362,7 +370,7 @@ Notes: The server speaks plain HTTP by default; HTTPS is possible via your own k
 - The wiki list shows real **preview images** (headless screenshots of the wiki page, per-user view): 640×400 in `store/thumbnails/`, a click opens the large image
 - **The preview no longer vanishes while a wiki is edited:** it stays in place after the last change and is only refreshed in the background once a short **grace period** has passed (default 30 s, `MWS_THUMBNAIL_GRACE_SECONDS`) – so anyone without write access never sees an empty cell. The grace period is derived from the database state (the wiki's newest tiddler) and therefore survives a server restart
 - Outdated PNGs are **replaced, not deleted**; only a deleted wiki sweeps its preview away (immediately and on the next server start)
-- Rendered server-side with **Chromium** (default 2 parallel, `MWS_THUMBNAIL_RENDER_CONCURRENCY` 1–8); anonymous visitors are served only from cache (DoS protection); a Chromium path can be given via `MWS_CHROMIUM_PATH`/`CHROME_PATH`
+- Rendered server-side with **Chromium** (default 2 parallel, `MWS_THUMBNAIL_RENDER_CONCURRENCY` 1–8); anonymous visitors are served only from cache (DoS protection); a Chromium path can be given via `MWS_CHROMIUM_PATH`/`CHROME_PATH`/`PLAYWRIGHT_BROWSERS_PATH`, `npx mws doctor` checks the environment and `npx mws refresh-thumbnails` drops the cache
 - Hard cache limit: `MWS_THUMBNAIL_TTL_HOURS` → setting "Thumbnail cache time" → default 24 h
 
 ### **Storage & Backups**

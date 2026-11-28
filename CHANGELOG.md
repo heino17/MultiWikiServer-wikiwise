@@ -5455,6 +5455,50 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 157. Feature: thumbnail prerequisites made visible and fixable
+
+**Files:**
+- `CHANGELOG.md`, `README.md`, `README_features.md`, `create-package/README.md`
+- `editions/mws-docs/tiddlers/Installation.md`
+- `package.json`, `package-lock.json`
+- `packages/mws/src/new-commands/doctor.ts`,
+  `packages/mws/src/new-commands/refresh-thumbnails.ts`,
+  `packages/mws/src/new-commands/index.ts`
+- `packages/mws/src/new-managers/WikiThumbnailRoutes.ts`
+
+**Change.** Two new commands. `npx mws doctor` reports the Chromium path and
+version, the Korean and emoji font faces and the relevant environment
+variables, and writes `store/thumbnail-check.png` with
+`👤 안녕 Hallo 123 👋` so the glyphs can be inspected. It exits 1 with
+copy/paste remedies when something is missing. `npx mws refresh-thumbnails
+[--slug <slug>]` drops cached PNGs so the next admin view renders them with the
+current fonts; wiki content is untouched. The renderer now honours
+`PLAYWRIGHT_BROWSERS_PATH`, logs the resolved browser path once, and turns a
+missing-browser error into an actionable hint instead of only the first line of
+a Playwright stack trace. No new dependency: `playwright-core` was already
+there, the browser and fonts remain host prerequisites.
+
+**Why.** A fresh install on a VPS rendered no thumbnails because Chromium and
+the OS libraries were absent; after installing Chromium, emoji were rectangles
+without `fonts-noto-color-emoji`, and Korean text needed `fonts-noto-cjk` /
+`fonts-nanum`. The service also needed `HOME` so Playwright found its cache.
+None of that was in the installation docs, and a failed render only logged one
+quiet line. The prerequisites are now documented in both languages and can be
+checked with one command.
+
+**Verified.** `npm run tsc2`, the admin typecheck and `npm run build` are clean.
+The 0.8.2 tarball (4,689,095 bytes, sha256
+`14fe5553adb9e8484de2ef76fda9bc1976f6dddeed9d297ea15a4e78c00a906a`) installs
+into a fresh folder; `npx mws help` lists both commands. `doctor` found the
+headless shell in `~/.cache/ms-playwright/chromium_headless_shell-1243/…`,
+reported 30 Korean and 1 emoji font face, wrote the sample and exited 0. With
+`HOME=/nonexistent` plus `PLAYWRIGHT_BROWSERS_PATH=<cache>` it still found the
+browser — the VPS case. With `MWS_CHROMIUM_PATH=/etc/hostname` it exited 1 and
+printed the missing-browser hint and the apt commands. `refresh-thumbnails
+--slug mws-docs` removed exactly one PNG and left the other; without `--slug`
+it removed the remaining one; an unknown slug was rejected. The manual
+click-through in a browser is still open for the maintainer.
+
 ## 156. Chore: bundled SimpleWiki shell refreshed to v0.1.59
 
 **Files:**
@@ -13606,6 +13650,53 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 157. Feature: Vorschaubild-Voraussetzungen sichtbar und behebbar machen
+
+**Dateien:**
+- `CHANGELOG.md`, `README.md`, `README_features.md`, `create-package/README.md`
+- `editions/mws-docs/tiddlers/Installation.md`
+- `package.json`, `package-lock.json`
+- `packages/mws/src/new-commands/doctor.ts`,
+  `packages/mws/src/new-commands/refresh-thumbnails.ts`,
+  `packages/mws/src/new-commands/index.ts`
+- `packages/mws/src/new-managers/WikiThumbnailRoutes.ts`
+
+**Änderung.** Zwei neue Befehle. `npx mws doctor` meldet Chromium-Pfad und
+-version, die koreanischen und Emoji-Schriften sowie die relevanten
+Umgebungsvariablen und schreibt `store/thumbnail-check.png` mit
+`👤 안녕 Hallo 123 👋`, damit man die Zeichen selbst prüfen kann. Fehlt etwas,
+endet der Befehl mit Code 1 und zeigt kopierbare Abhilfebefehle.
+`npx mws refresh-thumbnails [--slug <slug>]` verwirft gecachte PNGs, sodass die
+nächste Admin-Ansicht sie mit den jetzigen Schriften neu rendert; Wiki-Inhalte
+bleiben unberührt. Der Renderer beachtet jetzt `PLAYWRIGHT_BROWSERS_PATH`,
+loggt den gefundenen Browserpfad einmalig und macht aus einem
+Browser-Fehler einen konkreten Hinweis statt nur der ersten Zeile eines
+Playwright-Stacktraces. Keine neue Abhängigkeit: `playwright-core` war schon
+da, Browser und Schriften bleiben Voraussetzungen des Servers.
+
+**Warum.** Eine frische VPS-Installation erzeugte keine Vorschaubilder, weil
+Chromium und die System-Bibliotheken fehlten; nach der Chromium-Installation
+waren Emoji ohne `fonts-noto-color-emoji` Rechtecke und koreanischer Text
+brauchte `fonts-noto-cjk` / `fonts-nanum`. Der Dienst brauchte außerdem `HOME`,
+damit Playwright seinen Cache findet. Davon stand nichts in der
+Installationsdoku, und ein fehlgeschlagener Render loggte nur eine leise Zeile.
+Die Voraussetzungen sind jetzt zweisprachig dokumentiert und mit einem Befehl
+prüfbar.
+
+**Geprüft.** `npm run tsc2`, der Admin-Typecheck und `npm run build` sind
+sauber. Das 0.8.2-Tarball (4.689.095 Bytes, sha256
+`14fe5553adb9e8484de2ef76fda9bc1976f6dddeed9d297ea15a4e78c00a906a`) installiert
+in einen frischen Ordner; `npx mws help` listet beide Befehle. `doctor` fand
+die Headless-Shell unter `~/.cache/ms-playwright/chromium_headless_shell-1243/…`,
+meldete 30 koreanische und 1 Emoji-Schrift, schrieb das Beispielbild und endete
+mit 0. Mit `HOME=/nonexistent` plus `PLAYWRIGHT_BROWSERS_PATH=<cache>` fand er
+den Browser weiterhin — der VPS-Fall. Mit `MWS_CHROMIUM_PATH=/etc/hostname`
+endete er mit 1 und zeigte den Browser-Hinweis und die apt-Befehle.
+`refresh-thumbnails --slug mws-docs` entfernte genau ein PNG und ließ das
+andere liegen; ohne `--slug` entfernte es das verbleibende; ein unbekannter
+Slug wurde abgewiesen. Der Klick-Durchlauf im Browser steht beim Maintainer
+noch aus.
 
 ## 156. Chore: mitgelieferte SimpleWiki-Schale auf v0.1.59 auffrischen
 

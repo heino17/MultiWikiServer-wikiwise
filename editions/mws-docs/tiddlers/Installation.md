@@ -2,9 +2,28 @@ These instructions require minimal knowledge of the terminal and require NodeJS 
 
 > **Note for the wikiwise fork:** the package `@tiddlywiki/mws` on npm is the *upstream* project. `npm init @tiddlywiki/mws@latest` therefore installs upstream MultiWikiServer without any fork feature. This fork is distributed as a GitHub release, not on npm.
 
+### Thumbnail prerequisites
+
+Wiki previews are real headless screenshots. MWS installs `playwright-core`, but neither the browser binary nor fonts – both come from the host. On Debian/Ubuntu, install them once:
+
+<<.copy-code-to-clipboard """npx playwright install chromium """>>
+<<.copy-code-to-clipboard """sudo npx playwright install-deps chromium """>>
+<<.copy-code-to-clipboard """sudo apt install -y fonts-noto-color-emoji fonts-noto-cjk fonts-nanum fonts-dejavu-core """>>
+<<.copy-code-to-clipboard """sudo fc-cache -f """>>
+
+Check the result with `npx mws doctor`:
+
+<<.copy-code-to-clipboard """npx mws doctor """>>
+<<.copy-code-to-clipboard """npx mws refresh-thumbnails """>>
+
+
+It prints the browser path MWS resolves, checks Korean and emoji fonts and writes `store/thumbnail-check.png`; open that file and make sure `👤 안녕 Hallo 123 👋` is readable. Run `refresh-thumbnails` after installing fonts so pictures rendered with the old fonts are replaced.
+
+When MWS runs as a service, do not rely on the service user's `HOME` for the Playwright cache. Set `Environment=MWS_CHROMIUM_PATH=/usr/bin/chromium` (or `Environment=PLAYWRIGHT_BROWSERS_PATH=<cache>`) in the systemd unit. Without a browser no wiki data is lost – only the previews are missing.
+
 - Recommended: install the finished package from a release. Download the `.tgz` from the [[releases page|https://github.com/heino17/MultiWikiServer-wikiwise/releases]], then:
 <<.copy-code-to-clipboard """mkdir "new_folder_name" && cd "new_folder_name" """>>
-<<.copy-code-to-clipboard """npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.8.1/mws-wikiwise-0.8.1.tgz """>>
+<<.copy-code-to-clipboard """npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.8.2/mws-wikiwise-0.8.2.tgz """>>
 <<.copy-code-to-clipboard """npx mws init-data-folder """>>
 <<.copy-code-to-clipboard """npx mws update-tiddlywiki """>>
 <<.copy-code-to-clipboard """npx mws init-store """>>
@@ -21,7 +40,7 @@ These instructions require minimal knowledge of the terminal and require NodeJS 
 <<.copy-code-to-clipboard """npm pack """>>
 <<.copy-code-to-clipboard """mkdir "new_folder_name" && cp create-package/files/* "new_folder_name"/ """>>
 <<.copy-code-to-clipboard """cd "new_folder_name" """>>
-<<.copy-code-to-clipboard """npm install ../mws-wikiwise-0.8.1.tgz """>>
+<<.copy-code-to-clipboard """npm install ../mws-wikiwise-0.8.2.tgz """>>
 - Initialize the TiddlyWiki files and the database 
 <<.copy-code-to-clipboard """npx mws update-tiddlywiki """>>
 <<.copy-code-to-clipboard """npx mws init-store """>>

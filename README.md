@@ -49,13 +49,36 @@ Highlights only – the full story, with file names, code and background, lives 
 > `npm init @tiddlywiki/mws@latest` installs upstream MultiWikiServer – without any of
 > the features listed above. This fork is distributed as a GitHub release, not on npm.
 
+### Thumbnail prerequisites
+
+Wiki previews are real headless screenshots. MWS ships `playwright-core`, but
+**not** the browser binary and no fonts – both come from the host. On
+Debian/Ubuntu, install them once:
+
+```
+npx playwright install chromium
+sudo npx playwright install-deps chromium
+sudo apt install -y fonts-noto-color-emoji fonts-noto-cjk fonts-nanum fonts-dejavu-core
+sudo fc-cache -f
+```
+
+The first command puts Chromium into `~/.cache/ms-playwright`. If MWS runs as a
+service, do not depend on its `HOME`: set `Environment=MWS_CHROMIUM_PATH=/usr/bin/chromium`
+or `Environment=PLAYWRIGHT_BROWSERS_PATH=<cache>` in the systemd unit instead.
+
+`npx mws doctor` reports the browser path, the library/font checks and writes a
+sample image to `store/thumbnail-check.png` (`👤 안녕 Hallo 123 👋` must be
+readable there). After installing fonts, run `npx mws refresh-thumbnails` so old
+previews are rendered again. Without a browser, no wiki data is lost – only the
+pictures are missing.
+
 ### Recommended: install the release package
 
 Every release contains a ready-to-install package. Download it, install it into a
 folder of your choice, and nothing has to be compiled:
 
 - `mkdir my-folder && cd my-folder`
-- `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.8.1/mws-wikiwise-0.8.1.tgz`
+- `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.8.2/mws-wikiwise-0.8.2.tgz`
 - `npx mws init-data-folder`
 - `npx mws update-tiddlywiki`
 - `npx mws init-store`
@@ -73,7 +96,7 @@ The download is an ordinary npm package, so `npm` resolves and installs all
 dependencies for you. Verify it before you trust it:
 
 ```
-sha256sum mws-wikiwise-0.8.1.tgz
+sha256sum mws-wikiwise-0.8.2.tgz
 ```
 
 The expected checksum is printed in the release notes. A mismatch means the file
@@ -99,9 +122,9 @@ listener config if you want a different port/prefix, see `mws.dev.mjs`).
 For your own data folder, independent of the development wiki, build a package once
 and install it into a new folder:
 
-- `npm pack` – creates `mws-wikiwise-0.8.1.tgz`
+- `npm pack` – creates `mws-wikiwise-0.8.2.tgz`
 - `mkdir my-folder && cp create-package/files/* my-folder/`
-- `cd my-folder && npm install ../mws-wikiwise-0.8.1.tgz`
+- `cd my-folder && npm install ../mws-wikiwise-0.8.2.tgz`
 - `npx mws update-tiddlywiki`
 - `npx mws init-store`
 - `npx mws listen --listener` – serves on <http://localhost:8080/>
@@ -285,13 +308,37 @@ Nur Highlights – die vollständige Geschichte mit Dateinamen, Code und Hinterg
 > einzige der oben genannten Funktionen. Dieser Fork wird als GitHub-Release verteilt,
 > nicht über npm.
 
+### Voraussetzungen für Vorschaubilder
+
+Die Wiki-Vorschauen sind echte Headless-Screenshots. MWS liefert `playwright-core`,
+aber **keinen** Browser und keine Schriften – beides kommt vom Server. Auf
+Debian/Ubuntu einmalig nachinstallieren:
+
+```
+npx playwright install chromium
+sudo npx playwright install-deps chromium
+sudo apt install -y fonts-noto-color-emoji fonts-noto-cjk fonts-nanum fonts-dejavu-core
+sudo fc-cache -f
+```
+
+Der erste Befehl legt Chromium unter `~/.cache/ms-playwright` ab. Läuft MWS als
+Dienst, verlasse dich nicht auf dessen `HOME`: setze stattdessen in der
+Systemd-Unit `Environment=MWS_CHROMIUM_PATH=/usr/bin/chromium` oder
+`Environment=PLAYWRIGHT_BROWSERS_PATH=<Cache>`.
+
+`npx mws doctor` meldet den gefundenen Browserpfad, prüft Bibliotheken und
+Schriften und schreibt ein Beispielbild nach `store/thumbnail-check.png`
+(dort muss `👤 안녕 Hallo 123 👋` lesbar sein). Nach einer Font-Installation
+`npx mws refresh-thumbnails` aufrufen, damit alte Vorschauen neu erzeugt werden.
+Ohne Browser gehen keine Wiki-Daten verloren – es fehlen nur die Bilder.
+
 ### Empfohlen: das Release-Paket installieren
 
 Jedes Release enthält ein fertiges Paket. Herunterladen, in einen Ordner deiner Wahl
 installieren – kompilieren musst du nichts:
 
 - `mkdir mein-ordner && cd mein-ordner`
-- `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.8.1/mws-wikiwise-0.8.1.tgz`
+- `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.8.2/mws-wikiwise-0.8.2.tgz`
 - `npx mws init-data-folder`
 - `npx mws update-tiddlywiki`
 - `npx mws init-store`
@@ -310,7 +357,7 @@ Der Download ist ein ganz normales npm-Paket, `npm` löst also alle Abhängigkei
 dich auf. Prüfe die Datei, bevor du ihr vertraust:
 
 ```
-sha256sum mws-wikiwise-0.8.1.tgz
+sha256sum mws-wikiwise-0.8.2.tgz
 ```
 
 Die erwartete Prüfsumme steht in den Release-Notizen. Bei Abweichung wurde die Datei
@@ -337,9 +384,9 @@ Erklärung in `mws.dev.mjs`).
 Für einen eigenen Datenordner, unabhängig vom Entwicklungs-Wiki, einmal ein Paket bauen
 und in einen neuen Ordner installieren:
 
-- `npm pack` – erzeugt `mws-wikiwise-0.8.1.tgz`
+- `npm pack` – erzeugt `mws-wikiwise-0.8.2.tgz`
 - `mkdir mein-ordner && cp create-package/files/* mein-ordner/`
-- `cd mein-ordner && npm install ../mws-wikiwise-0.8.1.tgz`
+- `cd mein-ordner && npm install ../mws-wikiwise-0.8.2.tgz`
 - `npx mws update-tiddlywiki`
 - `npx mws init-store`
 - `npx mws listen --listener` – liefert auf <http://localhost:8080/>

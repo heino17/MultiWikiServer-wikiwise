@@ -2,7 +2,9 @@
 // list. The server renders the wiki page in a headless browser using the
 // requester's own session cookie (so the picture matches what that user can
 // see) and caches the PNG under the store folder. Chromium is launched lazily
-// and reused; its location can be overridden with MWS_CHROMIUM_PATH.
+// and reused; its location can be overridden with MWS_CHROMIUM_PATH or
+// CHROME_PATH, and the Playwright cache with PLAYWRIGHT_BROWSERS_PATH.
+// `mws doctor` checks the browser and the host fonts.
 
 import { createReadStream, existsSync, readdirSync } from "node:fs";
 import { mkdir, readdir, rename, stat, unlink, writeFile } from "node:fs/promises";
@@ -20,6 +22,16 @@ import { ServerState } from "../ServerState";
 const VIEWPORT = { width: 1280, height: 800 };
 const THUMB_WIDTH = 640;
 const THUMB_HEIGHT = 400;
+
+/** The same flags are used by `mws doctor` for its sample render, so a
+ *  successful check really means the thumbnail renderer can launch Chromium. */
+export const THUMBNAIL_LAUNCH_ARGS = [
+  "--no-sandbox",
+  "--disable-setuid-sandbox",
+  "--disable-dev-shm-usage",
+  "--disable-gpu",
+  "--disable-extensions",
+];
 
 /** Remove the cached thumbnail files for a wiki (best effort). */
 async function unlinkThumbnail(storePath: string, slug: string): Promise<void> {
@@ -72,6 +84,35 @@ export async function deleteThumbnail(storePath: string, slug: string): Promise<
   await unlinkThumbnail(storePath, slug);
 }
 
+/** Drop cached thumbnails so the next admin view renders them again. Used by
+ *  `mws refresh-thumbnails` after a browser or font change: an existing PNG is
+ *  deliberately kept on ordinary edits (§75), so installing fonts alone would
+ *  otherwise leave the old tofu rectangles in place until the TTL expires. */
+export async function clearThumbnailCache(storePath: string, slug?: string): Promise<number> {
+  const dir = join(storePath, "thumbnails");
+  let names: string[];
+  if (slug) {
+    const base = slug.replace(/[^a-zA-Z0-9_-]/g, "_");
+    names = [base + ".png", base + ".png.tmp"];
+  } else {
+    try {
+      names = (await readdir(dir)).filter((name) => name.endsWith(".png") || name.endsWith(".png.tmp"));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException)?.code === "ENOENT") return 0;
+      throw error;
+    }
+  }
+  let removed = 0;
+  for (const name of names) {
+    const deleted = await unlink(join(dir, name)).then(() => true).catch((error: unknown) => {
+      if ((error as NodeJS.ErrnoException)?.code === "ENOENT") return false;
+      throw error;
+    });
+    if (deleted) removed++;
+  }
+  return removed;
+}
+
 /** Remove every file in `store/thumbnails/` that does not belong to a current
  *  recipe (deleted wikis, crashed `.tmp` leftovers). Runs once at startup.
  *  Slug sanitization stays lossy (non-safe characters → `_`), so the set of
@@ -115,10 +156,10 @@ serverEvents.on("mws.config.init.after", (config) => {
 /** Resolve a usable Chromium/Chrome executable once and remember it, so the
  *  fallback chain only runs on the first thumbnail visit:
  *  MWS_CHROMIUM_PATH → CHROME_PATH → Playwright's browser cache
- *  (~/.cache/ms-playwright, e.g. installed via `npx playwright install
- *  chromium`) → /usr/bin/chromium(-browser) → /snap/bin/chromium. Candidates
- *  that do not exist are skipped, so only the final error mentions the missing
- *  browser. */
+ *  (`$PLAYWRIGHT_BROWSERS_PATH` or `~/.cache/ms-playwright`, e.g. installed via
+ *  `npx playwright install chromium`) → /usr/bin/chromium(-browser) →
+ *  /snap/bin/chromium. Candidates that do not exist are skipped, so only the
+ *  final error mentions the missing browser. */
 let resolvedChromiumExecutable: string | undefined;
 
 function chromiumExecutable(): string {
@@ -127,19 +168,32 @@ function chromiumExecutable(): string {
   return resolvedChromiumExecutable;
 }
 
-function findChromium(): string {
-  const candidates: Array<string | undefined> = [
+/** Every path the fallback chain considers, in order. Exported for `mws doctor`
+ *  so its report names the same places the renderer actually looks at. */
+export function chromiumCandidates(): string[] {
+  const candidates = [
     process.env.MWS_CHROMIUM_PATH,
     process.env.CHROME_PATH,
     ...playwrightCacheCandidates(),
     "/usr/bin/chromium",
     "/usr/bin/chromium-browser",
     "/snap/bin/chromium",
-  ];
-  for (const candidate of candidates) {
-    if (candidate && existsSync(candidate)) return candidate;
-  }
-  return "/snap/bin/chromium";
+  ].filter((candidate): candidate is string => !!candidate);
+  return [...new Set(candidates)];
+}
+
+/** The last candidate is deliberately a plausible path even when nothing is
+ *  installed: Playwright's launch error then says which executable is missing. */
+export function findChromium(): string {
+  return chromiumCandidates().find((candidate) => existsSync(candidate)) ?? "/snap/bin/chromium";
+}
+
+/** Playwright's own override, when set, wins over the home cache. `0` is its
+ *  special value for "use the package default" and is treated as unset. */
+function playwrightCacheRoot(): string {
+  const override = process.env.PLAYWRIGHT_BROWSERS_PATH;
+  if (override && override !== "0") return override;
+  return join(homedir(), ".cache", "ms-playwright");
 }
 
 /** Chromium binaries that Playwright keeps in its cache, newest revision
@@ -147,13 +201,7 @@ function findChromium(): string {
  *  headless shell (`chromium_headless_shell-<rev>/…/headless_shell` — nested
  *  as `chrome-linux/` or, in newer Playwright, `chrome-headless-shell-linux64/`)
  *  are accepted; the full browser wins on equal versions. */
-function playwrightCacheCandidates(): string[] {
-  let cacheRoot: string;
-  try {
-    cacheRoot = join(homedir(), ".cache", "ms-playwright");
-  } catch {
-    return [];
-  }
+function playwrightCacheCandidates(cacheRoot = playwrightCacheRoot()): string[] {
   let dirs: string[];
   try {
     dirs = readdirSync(cacheRoot);
@@ -184,6 +232,22 @@ function playwrightCacheCandidates(): string[] {
   return found.map((entry) => entry.path);
 }
 
+/** Turn a launch failure into the next action an operator can take. The raw
+ *  Playwright error only says "Executable doesn't exist at …", which gave no
+ *  hint that a browser and a few apt packages were missing on a fresh VPS. */
+export function thumbnailSetupHint(error: unknown): string | undefined {
+  const message = error instanceof Error ? error.message : String(error);
+  if (!/executable doesn't exist|browser.*not found|failed to launch|ENOENT|error while loading shared libraries/i.test(message)) {
+    return undefined;
+  }
+  return [
+    'No usable Chromium. Install it with "npx playwright install chromium"',
+    'and its OS libraries with "npx playwright install-deps chromium" (as root),',
+    'or point MWS_CHROMIUM_PATH at a system browser. Then run "npx mws doctor"',
+    'and "npx mws refresh-thumbnails". See Installation → Thumbnail prerequisites.',
+  ].join(" ");
+}
+
 /** Thumbnail cache time. Resolution order: env override
  *  (MWS_THUMBNAIL_TTL_HOURS) → installation setting
  *  (admin.thumbnailTtlHours, set in the admin Einstellungen page) → 24 h. */
@@ -202,6 +266,7 @@ let browser: ThumbnailBrowser | null = null;
 // Serializes startBrowser() so that two thumbnail requests arriving together
 // share one Chromium instead of racing to launch a second one.
 let browserQueue: Promise<unknown> = Promise.resolve();
+let loggedChromiumPath = false;
 
 /** Hand out a live Chromium, launching or relaunching as needed. */
 function startBrowser(): Promise<ThumbnailBrowser> {
@@ -212,20 +277,22 @@ function startBrowser(): Promise<ThumbnailBrowser> {
     // has been closed". So the cached browser is only reused while it is alive.
     if (browser && browser.isConnected()) return browser;
     browser = null;
+    const executablePath = chromiumExecutable();
     const launched = await chromium.launch({
-      executablePath: chromiumExecutable(),
+      executablePath,
       headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--disable-extensions",
-      ],
+      args: THUMBNAIL_LAUNCH_ARGS,
     }).catch((error: unknown) => {
       browser = null;
       throw error;
     });
+    // Log the resolved path once. In a systemd unit the browser often lives in
+    // a cache under a service user's HOME; seeing that path in the log answers
+    // the most common "why are there no thumbnails?" question immediately.
+    if (!loggedChromiumPath) {
+      loggedChromiumPath = true;
+      console.log(`[thumbnail] Chromium: ${executablePath}`);
+    }
     browser = launched;
     return launched;
   });
@@ -378,7 +445,10 @@ export async function serveWikiThumbnail(state: ServerRequest) {
       // the list already handles for a wiki without a cached picture.
       await queue(outPath, () => withRenderSlot(() => renderThumbnail(state, recipe_slug, outPath)))
         .catch((error: unknown) => {
-          console.warn(`Could not render the thumbnail of "${recipe_slug}": ${(error as Error).message.split("\n")[0]}`);
+          const firstLine = (error as Error).message.split("\n")[0];
+          const hint = thumbnailSetupHint(error);
+          console.warn(`Could not render the thumbnail of "${recipe_slug}": ${firstLine}`);
+          if (hint) console.warn(`[thumbnail] ${hint}`);
         });
     }
   }

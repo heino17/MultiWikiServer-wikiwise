@@ -8,11 +8,16 @@ package to be published on npm under a reserved name. The fork is currently
 distributed as a GitHub release instead, so the documented installation is:
 
     mkdir my-folder && cd my-folder
-    npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.8.1/mws-wikiwise-0.8.1.tgz
+    npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.8.2/mws-wikiwise-0.8.2.tgz
     npx mws init-data-folder
     npx mws update-tiddlywiki
     npx mws init-store
     npx mws listen --listener
+
+Wiki previews need a Chromium browser and host fonts; MWS ships neither. See
+"Thumbnail prerequisites" in `README.md` or the installation wiki page.
+`npx mws doctor` checks the setup and `npx mws refresh-thumbnails` replaces
+previews after fonts were installed.
 
 `files/package.json` in this folder is the single source of truth for the
 instance manifest. `npx mws init-data-folder` copies it, which is why that command

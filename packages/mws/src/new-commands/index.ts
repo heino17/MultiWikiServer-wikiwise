@@ -1,5 +1,6 @@
 import { CommandClass } from "@tiddlywiki/commander";
 import { serverEvents } from "@tiddlywiki/events";
+import { DoctorCommand } from "./doctor";
 import { ListenCommand } from "./listen";
 import { InitDataFolderCommand } from "./init-data-folder";
 import { InitStoreCommand } from "./init-store";
@@ -8,6 +9,7 @@ import { LoadWikiFolderCommand } from "./load-wiki-folder";
 import { ProvisionSimpleWikiCommand } from "./provision-simplewiki";
 import { PruneTemplateReleasesCommand } from "./prune-template-releases";
 import { RenamePersonalRolesCommand } from "./rename-personal-roles";
+import { RefreshThumbnailsCommand } from "./refresh-thumbnails";
 import { RestoreWikiSnapshotCommand } from "./restore-wiki-snapshot";
 import { TestArgsCommand } from "./test-args";
 import { TestsCompleteCommand } from "./tests-complete";
@@ -33,6 +35,7 @@ import { UpdateTiddlyWikiCommand } from "./update-tiddlywiki";
  * The order of the table is the order of `mws help`.
  */
 export const COMMANDS = {
+  doctor: DoctorCommand,
   listen: ListenCommand,
   "init-data-folder": InitDataFolderCommand,
   "init-store": InitStoreCommand,
@@ -41,6 +44,7 @@ export const COMMANDS = {
   "provision-simplewiki": ProvisionSimpleWikiCommand,
   "prune-template-releases": PruneTemplateReleasesCommand,
   "rename-personal-roles": RenamePersonalRolesCommand,
+  "refresh-thumbnails": RefreshThumbnailsCommand,
   "restore-wiki-snapshot": RestoreWikiSnapshotCommand,
   "test-args": TestArgsCommand,
   done: TestsCompleteCommand,
@@ -55,6 +59,7 @@ serverEvents.on("cli.register", (commands) => {
   }
 });
 
+export * from "./doctor";
 export * from "./listen";
 export * from "./init-data-folder";
 export * from "./init-store";
@@ -63,6 +68,7 @@ export * from "./load-wiki-folder";
 export * from "./provision-simplewiki";
 export * from "./prune-template-releases";
 export * from "./rename-personal-roles";
+export * from "./refresh-thumbnails";
 export * from "./restore-wiki-snapshot";
 export * from "./test-args";
 export * from "./tests-complete";
