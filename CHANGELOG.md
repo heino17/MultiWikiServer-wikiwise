@@ -5477,9 +5477,9 @@ option parse errors and to the data-folder checks; in the latter case startup
 also continued into "You need to run update-tiddlywiki first".
 
 **Verified.** `npm run tsc2`, the admin typecheck and `npm run build` are clean.
-A locally rebuilt tarball (sha256
-`872ccf602022394e6fc2dc6ac741c252596932fbda297b83f27f932858384fee`, not
-published) installs into a fresh folder: an unknown slug now prints
+The 0.8.3 tarball (4,689,309 bytes, sha256
+`8cd245942ddfd1dc38aab553b5501d57d274a170315ff6de743f4912cf413a7b`) installs
+into a fresh folder: an unknown slug now prints
 `Error: No wiki with the slug "unknown".` and exits 1 with no Node rejection;
 an invalid option and an unknown command also exit 1, while a valid slug and
 `doctor` still exit 0. From a folder with a wrong `package.json` name, the
@@ -13705,9 +13705,9 @@ Optionsfehler und die Datenordner-Prüfung; bei letzterer lief der Start
 zusätzlich noch in „You need to run update-tiddlywiki first" weiter.
 
 **Geprüft.** `npm run tsc2`, der Admin-Typecheck und `npm run build` sind
-sauber. Ein lokal neu gebautes Tarball (sha256
-`872ccf602022394e6fc2dc6ac741c252596932fbda297b83f27f932858384fee`, nicht
-veröffentlicht) installiert in einen frischen Ordner: ein unbekannter Slug
+sauber. Das 0.8.3-Tarball (4.689.309 Bytes, sha256
+`8cd245942ddfd1dc38aab553b5501d57d274a170315ff6de743f4912cf413a7b`) installiert
+in einen frischen Ordner: ein unbekannter Slug
 gibt jetzt `Error: No wiki with the slug "unknown".` aus und endet mit 1, ohne
 Node-Rejection; ein ungültiger Optionsname und ein unbekannter Befehl enden
 ebenfalls mit 1, während ein gültiger Slug und `doctor` weiterhin mit 0 enden.

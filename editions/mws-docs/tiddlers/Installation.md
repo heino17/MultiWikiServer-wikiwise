@@ -23,7 +23,7 @@ When MWS runs as a service, do not rely on the service user's `HOME` for the Pla
 
 - Recommended: install the finished package from a release. Download the `.tgz` from the [[releases page|https://github.com/heino17/MultiWikiServer-wikiwise/releases]], then:
 <<.copy-code-to-clipboard """mkdir "new_folder_name" && cd "new_folder_name" """>>
-<<.copy-code-to-clipboard """npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.8.2/mws-wikiwise-0.8.2.tgz """>>
+<<.copy-code-to-clipboard """npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.8.3/mws-wikiwise-0.8.3.tgz """>>
 <<.copy-code-to-clipboard """npx mws init-data-folder """>>
 <<.copy-code-to-clipboard """npx mws update-tiddlywiki """>>
 <<.copy-code-to-clipboard """npx mws init-store """>>
@@ -40,7 +40,7 @@ When MWS runs as a service, do not rely on the service user's `HOME` for the Pla
 <<.copy-code-to-clipboard """npm pack """>>
 <<.copy-code-to-clipboard """mkdir "new_folder_name" && cp create-package/files/* "new_folder_name"/ """>>
 <<.copy-code-to-clipboard """cd "new_folder_name" """>>
-<<.copy-code-to-clipboard """npm install ../mws-wikiwise-0.8.2.tgz """>>
+<<.copy-code-to-clipboard """npm install ../mws-wikiwise-0.8.3.tgz """>>
 - Initialize the TiddlyWiki files and the database 
 <<.copy-code-to-clipboard """npx mws update-tiddlywiki """>>
 <<.copy-code-to-clipboard """npx mws init-store """>>
