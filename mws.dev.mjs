@@ -62,6 +62,9 @@ if (!existsSync("dev/wiki/package.json"))
 // change to the dev/wiki directory for development
 process.chdir("dev/wiki");
 // run the cli
-runMWS().catch(console.log);
+runMWS().catch(error => {
+  console.error(error instanceof Error ? (error.stack ?? error.message) : `Error: ${error}`);
+  process.exitCode = 1;
+});
 
 

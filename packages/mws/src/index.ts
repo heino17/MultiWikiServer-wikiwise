@@ -62,7 +62,9 @@ export default async function runMWS() {
     return;
   }
   const wikiPath = path.resolve(process.cwd());
-  (async () => {
+  // Await the validation: otherwise a rejection here is unhandled and the
+  // startup continues into a second, misleading error.
+  await (async () => {
     // init-data-folder is the command that creates this package.json, so the
     // checks below cannot apply to it.
     if (commandNamesThatNeedNoDataFolder().includes(wikiCommandName())) return;

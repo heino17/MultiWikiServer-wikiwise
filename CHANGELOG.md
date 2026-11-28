@@ -5455,6 +5455,37 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 158. Fix: CLI errors no longer surface as unhandled rejections
+
+**Files:**
+- `CHANGELOG.md`
+- `mws.run.mjs`, `mws.dev.mjs`
+- `packages/commander/src/runCLI.ts`, `packages/mws/src/index.ts`
+
+**Change.** The CLI entry points now catch a rejected `runMWS()`, print the
+reason as a normal CLI error and set `process.exitCode = 1`. Plain strings,
+which commands throw for user errors, get an `Error:` prefix; real `Error`
+objects keep their stack for diagnostics. The data-folder validation in
+`runMWS()` is now awaited instead of running fire-and-forget, so a bad folder
+no longer produces a second, misleading startup error. An unknown command name
+also exits with code 1. No new dependency.
+
+**Why.** In the v0.8.2 VPS test, `npx mws refresh-thumbnails --slug unknown`
+correctly rejected the slug but ended in Node's `UnhandledPromiseRejection`:
+`mws.run.mjs` called `mws.default()` without a catch. The same applied to
+option parse errors and to the data-folder checks; in the latter case startup
+also continued into "You need to run update-tiddlywiki first".
+
+**Verified.** `npm run tsc2`, the admin typecheck and `npm run build` are clean.
+A locally rebuilt tarball (sha256
+`872ccf602022394e6fc2dc6ac741c252596932fbda297b83f27f932858384fee`, not
+published) installs into a fresh folder: an unknown slug now prints
+`Error: No wiki with the slug "unknown".` and exits 1 with no Node rejection;
+an invalid option and an unknown command also exit 1, while a valid slug and
+`doctor` still exit 0. From a folder with a wrong `package.json` name, the
+validation error appears once and the server does not start. The dev runner
+behaves the same. The manual browser click-through remains with the maintainer.
+
 ## 157. Feature: thumbnail prerequisites made visible and fixable
 
 **Files:**
@@ -13650,6 +13681,39 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 158. Fix: CLI-Fehler enden nicht mehr in unhandled Rejections
+
+**Dateien:**
+- `CHANGELOG.md`
+- `mws.run.mjs`, `mws.dev.mjs`
+- `packages/commander/src/runCLI.ts`, `packages/mws/src/index.ts`
+
+**Änderung.** Die CLI-Einstiegspunkte fangen ein abgelehntes `runMWS()` jetzt
+ab, geben den Grund als normale CLI-Fehlermeldung aus und setzen
+`process.exitCode = 1`. Einfache Strings, die Befehle für Anwenderfehler
+werfen, bekommen ein `Error:`-Präfix; echte `Error`-Objekte behalten ihren
+Stack für die Diagnose. Die Datenordner-Prüfung in `runMWS()` wird jetzt
+erwartet statt fire-and-forget ausgeführt, sodass ein falscher Ordner nicht
+noch einen zweiten, irreführenden Startfehler erzeugt. Ein unbekannter
+Befehlsname endet ebenfalls mit Code 1. Keine neue Abhängigkeit.
+
+**Warum.** Beim VPS-Test von v0.8.2 lehnte `npx mws refresh-thumbnails --slug
+unknown` den Slug korrekt ab, endete aber in Nodes `UnhandledPromiseRejection`:
+`mws.run.mjs` rief `mws.default()` ohne `catch` auf. Das galt auch für
+Optionsfehler und die Datenordner-Prüfung; bei letzterer lief der Start
+zusätzlich noch in „You need to run update-tiddlywiki first" weiter.
+
+**Geprüft.** `npm run tsc2`, der Admin-Typecheck und `npm run build` sind
+sauber. Ein lokal neu gebautes Tarball (sha256
+`872ccf602022394e6fc2dc6ac741c252596932fbda297b83f27f932858384fee`, nicht
+veröffentlicht) installiert in einen frischen Ordner: ein unbekannter Slug
+gibt jetzt `Error: No wiki with the slug "unknown".` aus und endet mit 1, ohne
+Node-Rejection; ein ungültiger Optionsname und ein unbekannter Befehl enden
+ebenfalls mit 1, während ein gültiger Slug und `doctor` weiterhin mit 0 enden.
+Aus einem Ordner mit falschem `package.json`-Namen erscheint der Fehler nur
+einmal und der Server startet nicht. Der Dev-Einstieg verhält sich genauso.
+Der Klick-Durchlauf im Browser bleibt beim Maintainer.
 
 ## 157. Feature: Vorschaubild-Voraussetzungen sichtbar und behebbar machen
 

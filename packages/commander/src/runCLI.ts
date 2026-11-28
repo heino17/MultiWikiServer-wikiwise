@@ -46,6 +46,7 @@ export async function runCLI() {
   const cmdDef: CommandFile | undefined = Object.values(commands).find(e => e.info.name === cmd);
   if (!cmdDef) {
     console.log(chalk.red.bold("Error: "), `Command "${cmd}" not found`);
+    process.exitCode = 1;
     return void commander.outputHelp();
   }
 
