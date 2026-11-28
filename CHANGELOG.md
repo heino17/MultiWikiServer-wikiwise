@@ -5455,6 +5455,38 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 160. Fix: `--listener` works with the Zod 4.6 upgrade again
+
+**Files:**
+- `CHANGELOG.md`, `README.md`, `README_features.md`,
+  `create-package/README.md`
+- `editions/mws-docs/tiddlers/Installation.md`
+- `package.json`, `package-lock.json`
+- `packages/server/src/index.ts`
+
+**Change.** `secureServerOptions` in the listener schema is now
+`z.any().optional()` with a comment explaining why. No other code changes;
+version strings and install links move to 0.8.5.
+
+**Why.** §159 upgraded Zod from 4.3.6 to 4.6.7. In 4.6 a bare `z.any()` rejects
+a *missing* object key ("expected nonoptional, received undefined"), while the
+CLI parser only sends the keys the operator typed. A plain
+`mws listen --listener` behind a reverse proxy therefore failed before it could
+bind a port. On the maintainer's VPS the service stopped after the 0.8.4
+update; a one-line patch in the shipped `dist/mws.js` brought it back. The same
+fix is now in the source, so it survives the next `npm install`.
+
+**Verified.** The old error was reproduced with a fresh 0.8.4 install before
+the change. The 0.8.5 tarball (4,973,264 bytes, sha256
+`cd2c0e514030aeeeb010e74de4997aa9799d1a248e490c6ffeb8a45259920793`) installs
+into a fresh folder; `npm run tsc2`, the admin typecheck and `npm run build`
+are clean. Both `listen --listener` (default port) and
+`listen --listener host=127.0.0.1 port=18086` start, answer HTTP 200 with
+`<title>MWS Admin`, and leave no process behind after shutdown. `doctor` still
+exits 0, an unknown slug still exits 1 with a clean error, and `npm audit` in
+the fresh install reports 0 vulnerabilities. The manual browser click-through
+remains with the maintainer.
+
 ## 159. Chore: dependency advisories cleared from the release tarball
 
 **Files:**
@@ -13721,6 +13753,39 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 160. Fix: `--listener` funktioniert mit dem Zod-4.6-Upgrade wieder
+
+**Dateien:**
+- `CHANGELOG.md`, `README.md`, `README_features.md`,
+  `create-package/README.md`
+- `editions/mws-docs/tiddlers/Installation.md`
+- `package.json`, `package-lock.json`
+- `packages/server/src/index.ts`
+
+**Änderung.** `secureServerOptions` im Listener-Schema ist jetzt
+`z.any().optional()` – mit einem Kommentar, warum. Sonst keine Code-Änderung;
+Versionsnummern und Installationslinks gehen auf 0.8.5.
+
+**Warum.** §159 hob Zod von 4.3.6 auf 4.6.7 an. In 4.6 lehnt ein nacktes
+`z.any()` einen *fehlenden* Objekt-Key ab („expected nonoptional, received
+undefined"), während der CLI-Parser nur die vom Betreiber getippten Keys
+schickt. Ein einfaches `mws listen --listener` hinter einem Reverse-Proxy
+scheiterte dadurch, bevor ein Port gebunden wurde. Auf dem VPS des Maintainers
+blieb der Dienst nach dem 0.8.4-Update stehen; ein Einzeiler-Patch in der
+ausgelieferten `dist/mws.js` half. Der gleiche Fix steht jetzt im Source und
+überlebt damit das nächste `npm install`.
+
+**Geprüft.** Der alte Fehler wurde vor der Änderung mit einer frischen
+0.8.4-Installation reproduziert. Das 0.8.5-Tarball (4.973.264 Bytes, sha256
+`cd2c0e514030aeeeb010e74de4997aa9799d1a248e490c6ffeb8a45259920793`)
+installiert in einen frischen Ordner; `npm run tsc2`, der Admin-Typecheck und
+`npm run build` sind sauber. Sowohl `listen --listener` (Standardport) als
+auch `listen --listener host=127.0.0.1 port=18086` starten, antworten mit
+HTTP 200 und `<title>MWS Admin` und hinterlassen nach dem Stopp keinen
+Prozess. `doctor` endet weiterhin mit 0, ein unbekannter Slug mit sauberer
+Fehlermeldung und Code 1, und `npm audit` meldet in der frischen Installation
+0 Schwachstellen. Der Klick-Durchlauf im Browser bleibt beim Maintainer.
 
 ## 159. Chore: Abhängigkeits-Warnungen aus dem Release-Tarball entfernt
 

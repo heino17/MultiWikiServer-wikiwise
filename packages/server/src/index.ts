@@ -61,7 +61,8 @@ const listenOptionsCheck = z.object({
       "Listener path prefix must NOT end with a slash"),
   key: z.string().optional(),
   cert: z.string().optional(),
-  secureServerOptions: z.any(),
+  // The CLI never supplies this key; a bare z.any() became required in Zod 4.6.
+  secureServerOptions: z.any().optional(),
   secure: z.boolean().optional(),
   redirect: z.number().optional(),
 }).strict().array();
