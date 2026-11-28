@@ -15,7 +15,7 @@ import { zodRoute } from "@tiddlywiki/server";
 import { createHash, randomBytes } from "node:crypto";
 import { createWriteStream, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import sharp from "sharp";
+import sharp, { type Sharp } from "sharp";
 import { avatarUrlFor } from "./sessions";
 
 const AVATAR_MAX_DIMENSION = 256;
@@ -43,7 +43,7 @@ function detectImageMime(bytes: Buffer): string | null {
   return null;
 }
 
-function encode(pipeline: sharp.Sharp, mime: string): Promise<Buffer> {
+function encode(pipeline: Sharp, mime: string): Promise<Buffer> {
   switch (mime) {
     case "image/jpeg": return pipeline.jpeg({ quality: 84, mozjpeg: true }).toBuffer();
     case "image/png": return pipeline.png({ compressionLevel: 9, palette: true }).toBuffer();

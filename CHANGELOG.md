@@ -5455,6 +5455,46 @@ the same value an opened dev wiki declares. The click-through awaits the
 maintainer: the "Tiddlywiki" row of the templates tab now shows `5.4.1`
 instead of `1`.
 
+## 159. Chore: dependency advisories cleared from the release tarball
+
+**Files:**
+- `CHANGELOG.md`, `PLANNING.md`, `README.md`, `README_features.md`
+- `editions/mws-docs/tiddlers/Installation.md`
+- `package.json`, `package-lock.json`
+- `packages/mws/package.json`,
+  `packages/mws/src/new-managers/AvatarRoutes.ts`,
+  `packages/mws/src/old-commands/build-types.ts`
+- `packages/server/package.json`
+
+**Change.** `sharp` moves from 0.33.5 to 0.35.5, which clears the old
+libvips/libheif/librsvg advisories. `engines.node` now states
+`^20.19 || ^22.12 || >=24.0`, the range Prisma 7 already needs. The server
+packages take `compression@1.8.2`, `zod@4.6.7`, `hono@4.13.23` and
+`@hono/node-server@2.1.11`. The dev-only type generator `zod-to-ts` moves to
+2.1.0 and its three calls use the Zod 4 API (`createAuxiliaryTypeStore()` plus
+an options object); `zod` is pinned at the root so the peer dedupes onto
+4.6.7. `AvatarRoutes.ts` imports `Sharp` as a named type because 0.35 no
+longer exports a namespace. The Node requirement is documented in both
+languages. No runtime dependency was added.
+
+**Why.** A fresh 0.8.3 install reported two high-severity advisories, both
+from the old sharp stack; the developer tree also had highs in `compression`,
+`zod` and `zod-to-ts`. The old `node >=18` declaration was already impossible
+with Prisma 7.8 (`^20.19 || ^22.12 || >=24`) and Playwright (`>=20`). One
+moderate advisory remains (`html-jsx` → `esbuild`): the suggested fix is a
+major downgrade, it is build-time only and absent from the tarball, so it is
+recorded as an open point in `PLANNING.md`.
+
+**Verified.** `npm run tsc2`, the admin typecheck and `npm run build` are
+clean. The exact avatar pipeline (rotate/resize plus JPEG, PNG, GIF and WebP
+encoding) runs with sharp 0.35.5. `npm audit` in the repository now reports 0
+high and 2 dev-only moderate findings. The 0.8.4 tarball (4,973,190 bytes,
+sha256 `260e7354e152e91643b4b8977eba229df71ca33bd71e2fee0690fa84d7a3e166`)
+installs into a fresh folder with `npm audit` reporting **0 vulnerabilities**;
+`doctor` still exits 0 and an unknown slug still gives a clean error with exit
+1. The browser click-through for an actual avatar upload remains with the
+maintainer.
+
 ## 158. Fix: CLI errors no longer surface as unhandled rejections
 
 **Files:**
@@ -13681,6 +13721,49 @@ sind sauber. Der Dev-Plugin-Cache liefert `5.4.1`
 (`dev/wiki/tw5/5.4.1`) — derselbe Wert, den ein geöffnetes Dev-Wiki
 deklariert. Der Klick-Durchlauf wartet auf den Maintainer: Die Zeile
 „Tiddlywiki" im Templates-Tab zeigt jetzt `5.4.1` statt `1`.
+
+## 159. Chore: Abhängigkeits-Warnungen aus dem Release-Tarball entfernt
+
+**Dateien:**
+- `CHANGELOG.md`, `PLANNING.md`, `README.md`, `README_features.md`
+- `editions/mws-docs/tiddlers/Installation.md`
+- `package.json`, `package-lock.json`
+- `packages/mws/package.json`,
+  `packages/mws/src/new-managers/AvatarRoutes.ts`,
+  `packages/mws/src/old-commands/build-types.ts`
+- `packages/server/package.json`
+
+**Änderung.** `sharp` wechselt von 0.33.5 auf 0.35.5, womit die alten
+libvips/libheif/librsvg-Warnungen verschwinden. `engines.node` nennt jetzt
+`^20.19 || ^22.12 || >=24.0`, den Bereich, den Prisma 7 ohnehin braucht. Die
+Server-Pakete nehmen `compression@1.8.2`, `zod@4.6.7`, `hono@4.13.23` und
+`@hono/node-server@2.1.11`. Der nur zur Entwicklungszeit genutzte
+Typ-Generator `zod-to-ts` wechselt auf 2.1.0; seine drei Aufrufe nutzen die
+Zod-4-API (`createAuxiliaryTypeStore()` plus Optionsobjekt), und `zod` ist im
+Wurzelpaket festgehalten, damit das Peer auf 4.6.7 zusammengeführt wird.
+`AvatarRoutes.ts` importiert `Sharp` als benannten Typ, weil 0.35 keinen
+Namespace mehr exportiert. Die Node-Voraussetzung ist zweisprachig dokumentiert.
+Eine neue Laufzeit-Abhängigkeit gibt es nicht.
+
+**Warum.** Eine frische 0.8.3-Installation meldete zwei High-Findings, beide
+aus dem alten sharp-Stapel; im Entwicklungsbaum kamen Highs in `compression`,
+`zod` und `zod-to-ts` dazu. Die alte Angabe `node >=18` war mit Prisma 7.8
+(`^20.19 || ^22.12 || >=24`) und Playwright (`>=20`) schon nicht mehr
+einklagbar. Eine moderate Warnung bleibt (`html-jsx` → `esbuild`): der
+vorgeschlagene Fix ist ein Major-Downgrade, betrifft nur die Build-Zeit und
+kommt nicht ins Tarball – deshalb als offener Punkt in `PLANNING.md`
+vermerkt.
+
+**Geprüft.** `npm run tsc2`, der Admin-Typecheck und `npm run build` sind
+sauber. Die exakte Avatar-Pipeline (drehen/skalieren sowie JPEG, PNG, GIF und
+WebP) läuft mit sharp 0.35.5. `npm audit` im Repository meldet jetzt 0 High
+und 2 nur die Entwicklung betreffende Moderate. Das 0.8.4-Tarball
+(4.973.190 Bytes, sha256
+`260e7354e152e91643b4b8977eba229df71ca33bd71e2fee0690fa84d7a3e166`)
+installiert in einen frischen Ordner; `npm audit` meldet dort
+**0 Schwachstellen**; `doctor` endet weiterhin mit 0 und ein unbekannter Slug
+mit einer sauberen Fehlermeldung und Code 1. Der Browser-Klick-Durchlauf für
+einen echten Avatar-Upload bleibt beim Maintainer.
 
 ## 158. Fix: CLI-Fehler enden nicht mehr in unhandled Rejections
 

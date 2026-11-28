@@ -49,6 +49,12 @@ Highlights only – the full story, with file names, code and background, lives 
 > `npm init @tiddlywiki/mws@latest` installs upstream MultiWikiServer – without any of
 > the features listed above. This fork is distributed as a GitHub release, not on npm.
 
+### Node.js
+
+MWS needs `^20.19 || ^22.12 || >=24.0` – in practice Node 20.19+, 22.12+ or
+24+. That is the range Prisma 7 already requires; Playwright needs at least
+Node 20. The former `>=18` declaration was out of date.
+
 ### Thumbnail prerequisites
 
 Wiki previews are real headless screenshots. MWS ships `playwright-core`, but
@@ -78,7 +84,7 @@ Every release contains a ready-to-install package. Download it, install it into 
 folder of your choice, and nothing has to be compiled:
 
 - `mkdir my-folder && cd my-folder`
-- `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.8.3/mws-wikiwise-0.8.3.tgz`
+- `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.8.4/mws-wikiwise-0.8.4.tgz`
 - `npx mws init-data-folder`
 - `npx mws update-tiddlywiki`
 - `npx mws init-store`
@@ -96,7 +102,7 @@ The download is an ordinary npm package, so `npm` resolves and installs all
 dependencies for you. Verify it before you trust it:
 
 ```
-sha256sum mws-wikiwise-0.8.3.tgz
+sha256sum mws-wikiwise-0.8.4.tgz
 ```
 
 The expected checksum is printed in the release notes. A mismatch means the file
@@ -122,9 +128,9 @@ listener config if you want a different port/prefix, see `mws.dev.mjs`).
 For your own data folder, independent of the development wiki, build a package once
 and install it into a new folder:
 
-- `npm pack` – creates `mws-wikiwise-0.8.3.tgz`
+- `npm pack` – creates `mws-wikiwise-0.8.4.tgz`
 - `mkdir my-folder && cp create-package/files/* my-folder/`
-- `cd my-folder && npm install ../mws-wikiwise-0.8.3.tgz`
+- `cd my-folder && npm install ../mws-wikiwise-0.8.4.tgz`
 - `npx mws update-tiddlywiki`
 - `npx mws init-store`
 - `npx mws listen --listener` – serves on <http://localhost:8080/>
@@ -308,6 +314,12 @@ Nur Highlights – die vollständige Geschichte mit Dateinamen, Code und Hinterg
 > einzige der oben genannten Funktionen. Dieser Fork wird als GitHub-Release verteilt,
 > nicht über npm.
 
+### Node.js
+
+MWS braucht `^20.19 || ^22.12 || >=24.0` – also Node 20.19+, 22.12+ oder 24+.
+Das ist der Bereich, den Prisma 7 bereits verlangt; Playwright braucht
+mindestens Node 20. Die frühere Angabe `>=18` war veraltet.
+
 ### Voraussetzungen für Vorschaubilder
 
 Die Wiki-Vorschauen sind echte Headless-Screenshots. MWS liefert `playwright-core`,
@@ -338,7 +350,7 @@ Jedes Release enthält ein fertiges Paket. Herunterladen, in einen Ordner deiner
 installieren – kompilieren musst du nichts:
 
 - `mkdir mein-ordner && cd mein-ordner`
-- `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.8.3/mws-wikiwise-0.8.3.tgz`
+- `npm install https://github.com/heino17/MultiWikiServer-wikiwise/releases/download/v0.8.4/mws-wikiwise-0.8.4.tgz`
 - `npx mws init-data-folder`
 - `npx mws update-tiddlywiki`
 - `npx mws init-store`
@@ -357,7 +369,7 @@ Der Download ist ein ganz normales npm-Paket, `npm` löst also alle Abhängigkei
 dich auf. Prüfe die Datei, bevor du ihr vertraust:
 
 ```
-sha256sum mws-wikiwise-0.8.3.tgz
+sha256sum mws-wikiwise-0.8.4.tgz
 ```
 
 Die erwartete Prüfsumme steht in den Release-Notizen. Bei Abweichung wurde die Datei
@@ -384,9 +396,9 @@ Erklärung in `mws.dev.mjs`).
 Für einen eigenen Datenordner, unabhängig vom Entwicklungs-Wiki, einmal ein Paket bauen
 und in einen neuen Ordner installieren:
 
-- `npm pack` – erzeugt `mws-wikiwise-0.8.3.tgz`
+- `npm pack` – erzeugt `mws-wikiwise-0.8.4.tgz`
 - `mkdir mein-ordner && cp create-package/files/* mein-ordner/`
-- `cd mein-ordner && npm install ../mws-wikiwise-0.8.3.tgz`
+- `cd mein-ordner && npm install ../mws-wikiwise-0.8.4.tgz`
 - `npx mws update-tiddlywiki`
 - `npx mws init-store`
 - `npx mws listen --listener` – liefert auf <http://localhost:8080/>

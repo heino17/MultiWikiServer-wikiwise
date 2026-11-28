@@ -328,6 +328,10 @@ Markers used below:
 - ✗ pin `runs-on` before 19.10.2026 — GitHub migrates the `ubuntu-latest` label to
   Ubuntu 26, which is announced but not yet exercised here. If a runner change
   breaks the build, pin `ubuntu-24.04`; no reason to freeze it before that
+- ✗ `html-jsx@1.0.0` still pulls `esbuild@0.15.18`, which `npm audit` calls a
+  moderate dev-server issue (§159). The suggested fix `html-jsx@0.3.7` is a
+  major downgrade and would break the JSX packages, so it stays until they
+  move off 1.x. It is build-time only and absent from the release tarball.
 
 ## some ideas
 

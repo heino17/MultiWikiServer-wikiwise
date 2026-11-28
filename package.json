@@ -2,7 +2,7 @@
   "name": "@mws/wikiwise",
   "description": "TiddlyWiki Multiple Wiki Server",
   "private": false,
-  "version": "0.8.3",
+  "version": "0.8.4",
   "bin": {
     "mws": "./mws.run.mjs"
   },
@@ -36,7 +36,7 @@
     "mws.run.mjs"
   ],
   "engines": {
-    "node": ">=18"
+    "node": "^20.19 || ^22.12 || >=24.0"
   },
   "scripts": {
     "install-android": "GYP_DEFINES=\"android_ndk_path=''\" npm install",
@@ -62,11 +62,12 @@
     "@serenity-kit/opaque": "1.1.0",
     "escape-string-regexp": "^5.0.0",
     "playwright-core": "^1.63.0",
-    "sharp": "0.33.5",
+    "sharp": "0.35.5",
     "source-map-support": "0.5.21"
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
-    "@types/source-map-support": "0.5.10"
+    "@types/source-map-support": "0.5.10",
+    "zod": "4.6.7"
   }
 }

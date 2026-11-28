@@ -15,10 +15,10 @@
     "tar": "^7.5.20",
     "try": "^1.0.0-beta.5",
     "uuid": "^11.1.0",
-    "zod-to-ts": "^1.2.0"
+    "zod-to-ts": "^2.1.0"
   },
   "peerDependencies": {
     "@remix-run/headers": "*",
-    "hono": "^4.13.10"
+    "hono": "^4.13.23"
   }
 }

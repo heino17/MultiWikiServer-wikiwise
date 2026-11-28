@@ -7,7 +7,7 @@
   "types": "./src/index.ts",
   "module": "./src/index.ts",
   "dependencies": {
-    "@hono/node-server": "^2.0.8",
+    "@hono/node-server": "^2.1.11",
     "@remix-run/headers": "0.21.0",
     "@types/bytes": "^3.1.5",
     "@types/compression": "^1.8.0",
@@ -18,9 +18,9 @@
     "@types/wtfnode": "^0.10.0",
     "bytes": "^3.1.2",
     "compressible": "^2.0.18",
-    "compression": "^1.8.0",
+    "compression": "^1.8.2",
     "debug": "^4.4.1",
-    "hono": "^4.13.10",
+    "hono": "^4.13.23",
     "mime-types": "^2.1.35",
     "negotiator": "^1.0.0",
     "rxjs": "^7.8.2",
@@ -29,6 +29,6 @@
     "try": "^1.0.0-beta.5",
     "uuid": "^11.1.0",
     "vary": "^1.1.2",
-    "zod": "4.3.6"
+    "zod": "4.6.7"
   }
 }

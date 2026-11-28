@@ -20,23 +20,25 @@ export class Command extends BaseCommand<[], {}> {
 
   async execute() {
     //@ts-ignore
-    const { zodToTs, printNode } = await import('zod-to-ts').catch(e => {
+    const { zodToTs, printNode, createAuxiliaryTypeStore } = await import('zod-to-ts').catch(e => {
       console.log("The NPM package 'zod-to-ts' cannot be found.");
       throw "The NPM package 'zod-to-ts' cannot be found.";
     }) as any; // was giving an ""excessively deep type" error
+    // zod-to-ts 2.x works with Zod 4 and needs a shared store for nested types.
+    const auxiliaryTypeStore = createAuxiliaryTypeStore();
     console.log("interface ClientTypes {")
     this.getEndpoints().forEach(([key, endpoint]) => {
       console.log(`  ${key}: {`);
       if (endpoint.zodRequestBody) {
-        const { node } = zodToTs(endpoint.zodRequestBody(Z2), 'User');
+        const { node } = zodToTs(endpoint.zodRequestBody(Z2), { auxiliaryTypeStore });
         console.log("    RequestBody: ", printNode(node));
       }
       if (endpoint.zodPathParams) {
-        const { node } = zodToTs(Z2.object(endpoint.zodPathParams(Z2)), 'PathParams');
+        const { node } = zodToTs(Z2.object(endpoint.zodPathParams(Z2)), { auxiliaryTypeStore });
         console.log("    PathParams: ", printNode(node));
       }
       if (endpoint.zodQueryParams) {
-        const { node } = zodToTs(Z2.object(endpoint.zodQueryParams(Z2)), 'QueryParams');
+        const { node } = zodToTs(Z2.object(endpoint.zodQueryParams(Z2)), { auxiliaryTypeStore });
         console.log("    QueryParams: ", printNode(node));
       }
       console.log("  }");
